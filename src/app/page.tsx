@@ -18,6 +18,7 @@ import {
   MapPin,
   Menu,
   PenSquare,
+  RotateCcw,
   Search,
   Settings,
   Sparkles,
@@ -25,6 +26,7 @@ import {
   Users,
   X,
 } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 type TabKey = "editor" | "plot-grid" | "corkboard" | "timeline";
@@ -129,6 +131,9 @@ export default function Home() {
   const [rightCollapsed, setRightCollapsed] = useState(false);
   const [chapterIndex, setChapterIndex] = useState(7);
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>(null);
+  const [showDemo, setShowDemo] = useState(false);
+  const [demoStage, setDemoStage] = useState(0);
+  const [demoTyped, setDemoTyped] = useState("");
   const isMobile = useIsMobile();
   const isLandscape = useIsLandscape();
 
@@ -137,6 +142,45 @@ export default function Home() {
   const toggleMobilePanel = useCallback((panel: MobilePanel) => {
     setMobilePanel((prev) => (prev === panel ? null : panel));
   }, []);
+
+  useEffect(() => {
+    if (!showDemo) return;
+
+    setDemoStage(0);
+    setDemoTyped("");
+    setActiveTab("editor");
+
+    const script = "Elena traced the etched symbols in the dim corridor, hearing The Archives hum awake beneath her fingertips.";
+    let i = 0;
+    const typer = setInterval(() => {
+      i += Math.random() > 0.75 ? 2 : 1;
+      setDemoTyped(script.slice(0, i));
+      if (i >= script.length) clearInterval(typer);
+    }, 45 + Math.random() * 40);
+
+    const timers = [
+      setTimeout(() => setDemoStage(1), 1600),
+      setTimeout(() => setDemoStage(2), 3000),
+      setTimeout(() => setDemoStage(3), 4500),
+      setTimeout(() => {
+        setActiveTab("plot-grid");
+        setDemoStage(4);
+      }, 6100),
+      setTimeout(() => setDemoStage(5), 7600),
+      setTimeout(() => setDemoStage(6), 9000),
+      setTimeout(() => setDemoStage(7), 10300),
+      setTimeout(() => setDemoStage(8), 11600),
+      setTimeout(() => setDemoStage(9), 12900),
+      setTimeout(() => setDemoStage(10), 14200),
+      setTimeout(() => setDemoStage(11), 15500),
+      setTimeout(() => setDemoStage(12), 16800),
+    ];
+
+    return () => {
+      clearInterval(typer);
+      timers.forEach((t) => clearTimeout(t));
+    };
+  }, [showDemo, setActiveTab]);
 
   // Mobile landscape: show two-pane (nav + stage) or (stage + inspector)
   // Mobile portrait: stage only, panels as overlays
@@ -158,11 +202,18 @@ export default function Home() {
           )}
 
           <div className="flex min-w-0 items-center gap-2">
-            <div className="rounded-lg border border-violet-300/40 bg-violet-500/15 p-1.5 sm:p-2">
-              <Sparkles className="h-4 w-4 text-violet-300 sm:h-5 sm:w-5" />
+            <div className="rounded-lg border border-teal-300/40 bg-teal-500/15 p-1.5 sm:p-2">
+              <svg viewBox="0 0 32 32" className="h-5 w-5 sm:h-6 sm:w-6" fill="none">
+                <path d="M16 4c-4.4 0-8 2.7-8 6 0 2.5 1.8 4.6 4.5 5.5C14.2 16.4 16 18.5 16 21c0-2.5 1.8-4.6 3.5-5.5C22.2 14.6 24 12.5 24 10c0-3.3-3.6-6-8-6z" fill="url(#sgrad)" />
+                <path d="M16 28c4.4 0 8-2.7 8-6 0-2.5-1.8-4.6-4.5-5.5C17.8 15.6 16 13.5 16 11c0 2.5-1.8 4.6-3.5 5.5C9.8 17.4 8 19.5 8 22c0 3.3 3.6 6 8 6z" fill="url(#sgrad2)" />
+                <defs>
+                  <linearGradient id="sgrad" x1="8" y1="4" x2="24" y2="16"><stop stopColor="#2dd4bf"/><stop offset="1" stopColor="#06b6d4"/></linearGradient>
+                  <linearGradient id="sgrad2" x1="8" y1="16" x2="24" y2="28"><stop stopColor="#06b6d4"/><stop offset="1" stopColor="#0891b2"/></linearGradient>
+                </defs>
+              </svg>
             </div>
             <div className="min-w-0">
-              <div className="truncate text-base font-semibold tracking-tight text-violet-200 sm:text-xl">StorySyncHQ</div>
+              <div className="truncate text-base font-semibold tracking-tight text-teal-200 sm:text-xl">StorySyncHQ</div>
               <div className="hidden text-xs text-slate-400 sm:block">The Echoing Realm • Book 1</div>
             </div>
           </div>
@@ -344,6 +395,39 @@ export default function Home() {
             </div>
           )}
         </section>
+
+        <AnimatePresence>
+          {showDemo && (
+            <StoryDemoOverlay
+              stage={demoStage}
+              typed={demoTyped}
+              onSkip={() => {
+                setDemoStage(12);
+                setActiveTab("plot-grid");
+              }}
+              onClose={() => setShowDemo(false)}
+            />
+          )}
+        </AnimatePresence>
+
+        <div className="pointer-events-none fixed bottom-6 right-6 z-40 flex flex-col gap-2">
+          <button
+            onClick={() => setShowDemo(true)}
+            className="pointer-events-auto rounded-full border border-teal-300/40 bg-teal-500 px-5 py-3 text-sm font-semibold text-slate-950 shadow-[0_0_30px_rgba(20,184,166,0.45)] transition hover:bg-teal-400"
+          >
+            ✨ See It In Action
+          </button>
+          <button
+            onClick={() => {
+              setShowDemo(true);
+              setDemoStage(0);
+              setDemoTyped("");
+            }}
+            className="pointer-events-auto ml-auto inline-flex items-center gap-1 rounded-full border border-white/20 bg-slate-900/85 px-3 py-1.5 text-xs text-slate-200"
+          >
+            <RotateCcw className="h-3.5 w-3.5" /> Reset demo
+          </button>
+        </div>
 
         {/* ─── FOOTER ─── */}
         <footer className="glass-panel mt-2 flex items-center justify-between px-3 py-1.5 text-[11px] text-slate-400 sm:mt-3 sm:py-2 sm:text-xs">
@@ -618,6 +702,89 @@ function TimelineView() {
         </div>
       </div>
     </div>
+  );
+}
+
+function StoryDemoOverlay({
+  stage,
+  typed,
+  onSkip,
+  onClose,
+}: {
+  stage: number;
+  typed: string;
+  onSkip: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-30 rounded-2xl bg-[#071116]/85 p-4 backdrop-blur-sm">
+      <div className="mb-3 flex items-center justify-between">
+        <div className="text-sm text-teal-200">StorySync Orchestrated Demo</div>
+        <div className="flex gap-2">
+          <button onClick={onSkip} className="rounded-md border border-white/20 px-2 py-1 text-xs">Skip</button>
+          <button onClick={onClose} className="rounded-md border border-white/20 px-2 py-1 text-xs">Close</button>
+        </div>
+      </div>
+
+      <div className="grid h-[calc(100%-40px)] gap-3 md:grid-cols-[1.1fr_0.9fr]">
+        <div className="rounded-xl border border-white/10 bg-slate-950/70 p-3">
+          <p className="mb-2 text-xs text-slate-400">Phase 1 • Writing Flow</p>
+          <div className="min-h-24 rounded-lg border border-teal-300/30 bg-slate-900/70 p-3 text-sm leading-relaxed text-slate-100">
+            {typed}
+            <span className="ml-1 inline-block h-4 w-0.5 animate-pulse bg-teal-300" />
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2 text-xs">
+            <motion.div animate={{ opacity: stage >= 1 ? 1 : 0.2, scale: stage >= 1 ? 1 : 0.9 }} className="rounded-full border border-amber-300/50 bg-amber-500/15 px-3 py-1 text-amber-200">@Elena linked</motion.div>
+            <motion.div animate={{ opacity: stage >= 2 ? 1 : 0.2, scale: stage >= 2 ? 1 : 0.9 }} className="rounded-full border border-emerald-300/50 bg-emerald-500/15 px-3 py-1 text-emerald-200">@The Archives linked</motion.div>
+          </div>
+          <motion.div animate={{ opacity: stage >= 4 ? 1 : 0.2, y: stage >= 4 ? 0 : 8 }} className="mt-4 rounded-lg border border-violet-300/40 bg-violet-500/10 p-3 text-xs text-violet-100">
+            Plot Grid activated → new scene inserted with relationship metadata.
+          </motion.div>
+
+          <motion.div animate={{ opacity: stage >= 7 ? 1 : 0.08, y: stage >= 7 ? 0 : 10 }} className="mt-4 rounded-lg border border-cyan-300/35 bg-cyan-500/10 p-3">
+            <p className="text-xs text-cyan-100">Phase 2 • Relational Database View</p>
+            <div className="mt-2 space-y-2 text-xs">
+              <div className="rounded border border-white/10 bg-slate-900/60 p-2">Character Card: <span className="text-amber-200">Elena</span> → Scenes: Ch1.3, Ch4.2, Ch7.1</div>
+              <div className="rounded border border-white/10 bg-slate-900/60 p-2">Location Click: <span className="text-emerald-200">The Archives</span> → Characters: Elena, Kaelen • Plot points: Discovery, Betrayal</div>
+            </div>
+          </motion.div>
+        </div>
+
+        <div className="space-y-3">
+          <motion.div animate={{ opacity: stage >= 5 ? 1 : 0.3 }} className="rounded-xl border border-white/10 bg-slate-950/70 p-3">
+            <p className="text-xs text-slate-400">Inspector Updates</p>
+            <div className="mt-2 space-y-2 text-sm">
+              <div className="rounded bg-amber-500/10 p-2">POV Character: {stage >= 5 ? "Elena" : "—"}</div>
+              <div className="rounded bg-emerald-500/10 p-2">Location: {stage >= 5 ? "The Archives" : "—"}</div>
+              <div className="rounded bg-cyan-500/10 p-2">Word Count: {stage >= 5 ? "2,914" : "—"}</div>
+            </div>
+          </motion.div>
+
+          <motion.div animate={{ opacity: stage >= 8 ? 1 : 0.06, y: stage >= 8 ? 0 : 8 }} className="rounded-xl border border-violet-300/35 bg-violet-500/10 p-3 text-xs text-violet-100">
+            Rename event: <span className="text-violet-200">Elena</span> → <span className="text-violet-50">Elara</span>
+            <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
+              <div className="rounded bg-slate-900/65 p-2">Manuscript: updated ✓</div>
+              <div className="rounded bg-slate-900/65 p-2">Plot Grid: updated ✓</div>
+              <div className="rounded bg-slate-900/65 p-2">Inspector: updated ✓</div>
+              <div className="rounded bg-slate-900/65 p-2">Timeline: updated ✓</div>
+            </div>
+          </motion.div>
+
+          <motion.div animate={{ opacity: stage >= 10 ? 1 : 0.05, y: stage >= 10 ? 0 : 10 }} className="rounded-xl border border-amber-300/35 bg-amber-500/10 p-3 text-xs text-amber-100">
+            Scene snapshots: <span className="font-semibold">v1 → v2 → v3</span>
+            <div className="mt-2 space-y-1 text-[11px]">
+              <div className="rounded bg-slate-900/60 p-1.5">v1: "Elena reached the archives."</div>
+              <div className="rounded bg-slate-900/60 p-1.5">v2: "+ Added sensory detail and lore cue"</div>
+              <div className="rounded bg-slate-900/60 p-1.5">v3: "+ Conflict beat with Kaelen (diff highlighted)"</div>
+            </div>
+          </motion.div>
+
+          <motion.div animate={{ opacity: stage >= 12 ? 1 : 0, y: stage >= 12 ? 0 : 10 }} className="rounded-xl border border-teal-300/40 bg-teal-500/10 p-4 text-center text-teal-100 shadow-[0_0_30px_rgba(45,212,191,0.25)]">
+            Every element connected. Change one, update all.
+          </motion.div>
+        </div>
+      </div>
+    </motion.div>
   );
 }
 
