@@ -1,0 +1,184 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://storysynchq.com/protocol/v1.schema.json",
+  "title": "SSYNC Protocol v1.0",
+  "description": "StorySync Protocol — Universal Immersive Storybook Format",
+  "type": "object",
+  "required": ["version", "metadata", "pages"],
+  "properties": {
+    "version": { "type": "string", "const": "1.0" },
+    "metadata": {
+      "type": "object",
+      "required": ["title"],
+      "properties": {
+        "title": { "type": "string" },
+        "author": { "type": "string" },
+        "narrator": { "type": "string" },
+        "genre": { "type": "string" },
+        "ageRange": { "type": "string" },
+        "language": { "type": "string", "default": "en" },
+        "duration": { "type": "string" },
+        "created": { "type": "string", "format": "date-time" },
+        "description": { "type": "string" },
+        "coverImage": { "type": "string" },
+        "hash": { "type": "string" }
+      }
+    },
+    "settings": {
+      "type": "object",
+      "properties": {
+        "autoPlay": { "type": "boolean", "default": true },
+        "pageTransition": { "enum": ["turn", "fade", "slide", "none"], "default": "turn" },
+        "transitionDuration": { "type": "string", "default": "1.2s" },
+        "pageTurnSound": { "type": "boolean", "default": true },
+        "focusMode": { "type": "boolean", "default": true },
+        "orientation": { "enum": ["auto", "portrait", "landscape"], "default": "auto" },
+        "readAlongHighlight": { "type": "boolean", "default": true },
+        "accessibility": {
+          "type": "object",
+          "properties": {
+            "timingMultiplier": { "type": "number", "default": 1.0, "minimum": 0.25, "maximum": 4.0 },
+            "highContrast": { "type": "boolean", "default": false },
+            "dyslexiaFont": { "type": "boolean", "default": false },
+            "pauseBetweenPages": { "type": "string", "default": "3s" }
+          }
+        }
+      }
+    },
+    "voices": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "provider": { "type": "string" },
+          "voiceId": { "type": "string" },
+          "style": { "type": "string" },
+          "emotion": { "type": "string" },
+          "speed": { "type": "number", "default": 1.0 },
+          "url": { "type": "string", "description": "Direct URL to pre-rendered audio" }
+        }
+      }
+    },
+    "music": {
+      "type": "object",
+      "properties": {
+        "tracks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id"],
+            "properties": {
+              "id": { "type": "string" },
+              "source": { "enum": ["file", "generated", "url"], "default": "file" },
+              "url": { "type": "string" },
+              "prompt": { "type": "string", "description": "AI music generation prompt" },
+              "mood": { "type": "string" },
+              "loop": { "type": "boolean", "default": true },
+              "volume": { "type": "number", "default": 0.3, "minimum": 0, "maximum": 1 },
+              "fadeIn": { "type": "string" },
+              "fadeOut": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "pages": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id"],
+        "properties": {
+          "id": { "type": "integer" },
+          "layout": { "enum": ["illustration-top", "illustration-full", "illustration-left", "illustration-right", "text-only", "split"], "default": "illustration-top" },
+          "illustration": {
+            "type": "object",
+            "properties": {
+              "source": { "enum": ["file", "url", "generated"] },
+              "url": { "type": "string" },
+              "prompt": { "type": "string" },
+              "style": { "type": "string" },
+              "alt": { "type": "string" },
+              "animation": { "enum": ["none", "fade-in", "slide-up", "slide-left", "zoom-in", "parallax"], "default": "fade-in" },
+              "animationDuration": { "type": "string", "default": "1s" }
+            }
+          },
+          "text": {
+            "type": "object",
+            "properties": {
+              "content": { "type": "string" },
+              "voice": { "type": "string", "description": "Key referencing voices object" },
+              "audioUrl": { "type": "string", "description": "Pre-rendered narration audio URL" },
+              "wordHighlight": { "type": "boolean", "default": true },
+              "animation": { "enum": ["none", "fade-in", "typewriter", "words-fade-in", "slide-up"], "default": "fade-in" },
+              "animationDelay": { "type": "string", "default": "0.5s" },
+              "fontSize": { "enum": ["small", "medium", "large", "xl"], "default": "medium" }
+            }
+          },
+          "music": {
+            "oneOf": [
+              { "type": "string", "description": "Track ID from music.tracks" },
+              { "type": "object", "properties": {
+                "crossfade": { "type": "string" },
+                "duration": { "type": "string" },
+                "sting": { "type": "string" }
+              }}
+            ]
+          },
+          "sfx": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "trigger": { "enum": ["page-enter", "page-exit", "narration-start", "narration-end", "delay"], "default": "page-enter" },
+                "sound": { "type": "string" },
+                "volume": { "type": "number", "default": 0.5 },
+                "delay": { "type": "string" }
+              }
+            }
+          },
+          "timing": {
+            "type": "object",
+            "properties": {
+              "minDuration": { "type": "string" },
+              "autoPause": { "type": "string", "default": "3s" },
+              "readingSpeed": { "enum": ["slow", "medium", "fast"], "default": "medium" },
+              "turnPageCue": { "type": "boolean", "default": false }
+            }
+          },
+          "interactivity": {
+            "type": "object",
+            "properties": {
+              "type": { "enum": ["choice", "tap-to-reveal", "drag", "none"], "default": "none" },
+              "prompt": { "type": "string" },
+              "choices": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "text": { "type": "string" },
+                    "nextPage": { "type": "integer" },
+                    "trigger": { "enum": ["tap", "swipe", "voice"], "default": "tap" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "signature": {
+      "type": "object",
+      "properties": {
+        "qrCode": {
+          "type": "object",
+          "properties": {
+            "type": { "enum": ["static", "dynamic"], "default": "dynamic" },
+            "data": { "type": "string" },
+            "style": { "enum": ["standard", "illustrated", "branded"], "default": "illustrated" }
+          }
+        }
+      }
+    }
+  }
+}

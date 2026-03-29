@@ -1,0 +1,240 @@
+{
+  "version": "1.0",
+  "metadata": {
+    "title": "The Brave Little Star",
+    "author": "Island Development Crew",
+    "genre": "children",
+    "ageRange": "3-8",
+    "language": "en",
+    "description": "A tiny star discovers her purpose by sharing her light with the world.",
+    "created": "2026-03-29T18:30:00Z"
+  },
+  "settings": {
+    "autoPlay": true,
+    "pageTransition": "turn",
+    "transitionDuration": "1.2s",
+    "pageTurnSound": true,
+    "focusMode": true,
+    "orientation": "auto",
+    "readAlongHighlight": true,
+    "accessibility": {
+      "timingMultiplier": 1.0,
+      "pauseBetweenPages": "3s"
+    }
+  },
+  "voices": {
+    "narrator": {
+      "provider": "browser-tts",
+      "style": "warm-storyteller",
+      "speed": 0.9
+    }
+  },
+  "music": {
+    "tracks": [
+      {
+        "id": "wonder",
+        "source": "generated",
+        "prompt": "Soft piano and celeste, gentle wonder, children's storybook, 72bpm, dreamy",
+        "mood": "wonder",
+        "loop": true,
+        "volume": 0.2
+      },
+      {
+        "id": "adventure",
+        "source": "generated",
+        "prompt": "Uplifting strings and woodwinds, adventure theme, hopeful, 100bpm",
+        "mood": "courage",
+        "loop": true,
+        "volume": 0.25
+      },
+      {
+        "id": "peaceful",
+        "source": "generated",
+        "prompt": "Gentle lullaby, music box and soft pads, peaceful ending, 60bpm",
+        "mood": "calm",
+        "loop": true,
+        "volume": 0.2,
+        "fadeIn": "3s"
+      }
+    ]
+  },
+  "pages": [
+    {
+      "id": 1,
+      "layout": "illustration-top",
+      "illustration": {
+        "source": "file",
+        "alt": "A tiny star shining brighter than all the others in a beautiful night sky",
+        "animation": "fade-in",
+        "animationDuration": "2s",
+        "url": "/demo/images/page1.jpg"
+      },
+      "text": {
+        "content": "Once upon a time, in a sky full of stars, there was one little star who shone just a bit brighter than the rest.",
+        "voice": "narrator",
+        "wordHighlight": true,
+        "animation": "words-fade-in",
+        "animationDelay": "1s"
+      },
+      "music": "wonder",
+      "timing": {
+        "autoPause": "3s",
+        "readingSpeed": "slow"
+      }
+    },
+    {
+      "id": 2,
+      "layout": "illustration-full",
+      "illustration": {
+        "source": "file",
+        "alt": "The little star looking down at a peaceful village",
+        "animation": "slide-up",
+        "animationDuration": "1.5s",
+        "url": "/demo/images/page2.jpg"
+      },
+      "text": {
+        "content": "Every night, she watched the world below. She saw children sleeping, parents reading stories, and cats prowling on rooftops.",
+        "voice": "narrator",
+        "wordHighlight": true,
+        "animation": "fade-in"
+      },
+      "music": "wonder",
+      "timing": {
+        "autoPause": "3s"
+      }
+    },
+    {
+      "id": 3,
+      "layout": "illustration-top",
+      "illustration": {
+        "source": "file",
+        "alt": "The little star among bigger, sleepy stars",
+        "animation": "fade-in",
+        "url": "/demo/images/page3.jpg"
+      },
+      "text": {
+        "content": "\"Why do I shine so bright?\" she wondered. The bigger stars just yawned. \"Stars shine. That's what we do. Don't overthink it.\"",
+        "voice": "narrator",
+        "wordHighlight": true,
+        "animation": "words-fade-in"
+      },
+      "music": "wonder",
+      "timing": {
+        "autoPause": "4s"
+      }
+    },
+    {
+      "id": 4,
+      "layout": "illustration-full",
+      "illustration": {
+        "source": "file",
+        "alt": "The star flying bravely through colorful clouds",
+        "animation": "zoom-in",
+        "animationDuration": "2s",
+        "url": "/demo/images/page4.jpg"
+      },
+      "text": {
+        "content": "But the little star wasn't satisfied. One night, she took a deep breath and flew \u2014 right through the clouds, past the moon, toward the world below.",
+        "voice": "narrator",
+        "wordHighlight": true,
+        "animation": "typewriter"
+      },
+      "music": {
+        "crossfade": "adventure",
+        "duration": "2s"
+      },
+      "timing": {
+        "autoPause": "3s"
+      }
+    },
+    {
+      "id": 5,
+      "layout": "illustration-top",
+      "illustration": {
+        "source": "file",
+        "alt": "The star lighting up a child's bedroom window",
+        "animation": "fade-in",
+        "animationDuration": "2s",
+        "url": "/demo/images/page5.jpg"
+      },
+      "text": {
+        "content": "She found a child who was afraid of the dark. The little star pressed herself against the window and glowed with all her might.",
+        "voice": "narrator",
+        "wordHighlight": true,
+        "animation": "words-fade-in"
+      },
+      "music": "adventure",
+      "timing": {
+        "autoPause": "4s"
+      }
+    },
+    {
+      "id": 6,
+      "layout": "illustration-top",
+      "illustration": {
+        "source": "file",
+        "alt": "The child smiling at the star's warm light",
+        "animation": "fade-in",
+        "url": "/demo/images/page6.jpg"
+      },
+      "text": {
+        "content": "The child smiled, pulled the blanket up, and whispered, \"Thank you, little star.\" And for the first time, the star knew exactly why she shone so bright.",
+        "voice": "narrator",
+        "wordHighlight": true,
+        "animation": "words-fade-in",
+        "animationDelay": "0.5s"
+      },
+      "music": {
+        "crossfade": "peaceful",
+        "duration": "3s"
+      },
+      "timing": {
+        "autoPause": "5s",
+        "readingSpeed": "slow"
+      }
+    },
+    {
+      "id": 7,
+      "layout": "illustration-full",
+      "illustration": {
+        "source": "file",
+        "alt": "All the stars shining brighter together",
+        "animation": "fade-in",
+        "animationDuration": "3s",
+        "url": "/demo/images/page7.jpg"
+      },
+      "text": {
+        "content": "She flew back to the sky, and something magical happened \u2014 all the other stars began to shine a little brighter too. Because sometimes, all it takes is one brave little star to light up the whole sky.",
+        "voice": "narrator",
+        "wordHighlight": true,
+        "animation": "words-fade-in",
+        "fontSize": "large"
+      },
+      "music": "peaceful",
+      "timing": {
+        "autoPause": "6s",
+        "readingSpeed": "slow"
+      }
+    },
+    {
+      "id": 8,
+      "layout": "text-only",
+      "text": {
+        "content": "The End \u2b50",
+        "animation": "fade-in",
+        "fontSize": "xl"
+      },
+      "music": "peaceful",
+      "timing": {
+        "autoPause": "5s"
+      }
+    }
+  ],
+  "signature": {
+    "qrCode": {
+      "type": "dynamic",
+      "data": "https://storysynchq.com/read/brave-little-star",
+      "style": "illustrated"
+    }
+  }
+}
