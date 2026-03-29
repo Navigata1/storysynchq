@@ -1,631 +1,454 @@
 "use client";
 
-import { clsx } from "clsx";
-import {
-  BookOpen,
-  CalendarDays,
-  ChevronDown,
-  ChevronRight,
-  Clapperboard,
-  FileText,
-  Folder,
-  FolderOpen,
-  Grid2x2,
-  Library,
-  Link2,
-  ListTree,
-  LocateFixed,
-  MapPin,
-  Menu,
-  PenSquare,
-  Search,
-  Settings,
-  Sparkles,
-  User,
-  Users,
-  X,
-} from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-type TabKey = "editor" | "plot-grid" | "corkboard" | "timeline";
-type MobilePanel = "nav" | "inspector" | null;
-
-const manuscript = [
-  "Prologue",
-  "Chapter 1: The Awakening",
-  "Chapter 2: Whispers in the Dark",
-  "Chapter 3: The Lost Key",
-  "Chapter 4: Crossings",
-  "Chapter 5: The Trial",
-  "Chapter 6: Betrayal",
-  "Chapter 7: The Confrontation",
-  "Chapter 8: Resolution",
-];
-
-const characters = ["Elena", "Kaelen", "The Archivist", "Rylan"];
-const locations = [
-  "The Citadel",
-  "Ancient Ruins",
-  "The Archives",
-  "Whispering Woods",
-  "Crystal Spire",
-  "Sunken City",
-];
-const plotPoints = [
-  "Inciting Incident",
-  "The Discovery",
-  "The Confrontation",
-  "Climax",
-  "Resolution",
-  "Key Twists",
-];
-
-const plotLines = ["Main Plot", "Elena's Arc", "Kaelen's Journey", "The Archives Mystery"];
-
-const gridScenes: Record<string, Record<number, { title: string; tone: "lore" | "location" | "character" }>> = {
-  "Main Plot": {
-    1: { title: "Citadel Introduction", tone: "lore" },
-    2: { title: "Whispers in the Dark", tone: "lore" },
-    3: { title: "The Lost Key Map", tone: "lore" },
-    4: { title: "Crossings", tone: "lore" },
-    5: { title: "The Trial", tone: "lore" },
-    6: { title: "Betrayal", tone: "lore" },
-    7: { title: "The Confrontation", tone: "lore" },
-    8: { title: "Resolution", tone: "lore" },
-  },
-  "Elena's Arc": {
-    3: { title: "Elena Finds the Map", tone: "location" },
-    6: { title: "Trust Broken", tone: "location" },
-  },
-  "Kaelen's Journey": {
-    5: { title: "Kaelen's Choice", tone: "character" },
-    7: { title: "Redeems the Oath", tone: "character" },
-  },
-  "The Archives Mystery": {
-    2: { title: "Deciphering the First Riddle", tone: "lore" },
-    4: { title: "Deciphering the Text", tone: "lore" },
-    6: { title: "Hidden Chamber Discovered", tone: "location" },
-  },
-};
-
-const tabs: { key: TabKey; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-  { key: "editor", label: "Editor", icon: PenSquare },
-  { key: "plot-grid", label: "Plot Grid", icon: Grid2x2 },
-  { key: "corkboard", label: "Corkboard", icon: Clapperboard },
-  { key: "timeline", label: "Timeline", icon: CalendarDays },
-];
-
-function toneClasses(tone: "lore" | "location" | "character") {
-  if (tone === "location") return "border-emerald-300/50 bg-emerald-400/10 shadow-[0_0_24px_rgba(16,185,129,0.28)]";
-  if (tone === "character") return "border-amber-300/60 bg-amber-400/10 shadow-[0_0_24px_rgba(251,191,36,0.24)]";
-  return "border-violet-300/60 bg-violet-400/10 shadow-[0_0_24px_rgba(168,85,247,0.3)]";
+/* ─── Types ─── */
+interface SSyncPage {
+  id: number;
+  layout?: string;
+  illustration?: { url?: string; alt?: string; animation?: string; animationDuration?: string };
+  text?: { content: string; voice?: string; wordHighlight?: boolean; animation?: string; fontSize?: string };
+  music?: string | { crossfade?: string; duration?: string };
+  timing?: { autoPause?: string; readingSpeed?: string; minDuration?: string };
 }
 
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(false);
+interface SSyncData {
+  version: string;
+  metadata: { title: string; author?: string; description?: string; coverImage?: string };
+  settings?: {
+    autoPlay?: boolean; pageTransition?: string; readAlongHighlight?: boolean;
+    orientation?: string; accessibility?: { timingMultiplier?: number; pauseBetweenPages?: string };
+  };
+  pages: SSyncPage[];
+}
+
+/* ─── Utility ─── */
+function parseDuration(s?: string): number {
+  if (!s) return 3000;
+  const n = parseFloat(s);
+  return s.includes("ms") ? n : n * 1000;
+}
+
+/* ════════════════════════════════════════════
+   IMMERSIVE READER
+   ════════════════════════════════════════════ */
+function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void }) {
+  const [currentPage, setCurrentPage] = useState(0);
+  const [transitioning, setTransitioning] = useState(false);
+  const [direction, setDirection] = useState<"next" | "prev">("next");
+  const [narrating, setNarrating] = useState(false);
+  const [highlightIdx, setHighlightIdx] = useState(-1);
+  const [paused, setPaused] = useState(false);
+  const [showControls, setShowControls] = useState(true);
+  const [fontsizeMult, setFontsizeMult] = useState(1);
+  const synthRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const controlsTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const autoTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  const page = data.pages[currentPage];
+  const totalPages = data.pages.length;
+  const timingMult = data.settings?.accessibility?.timingMultiplier ?? 1;
+
+  /* Navigate */
+  const goTo = useCallback((dir: "next" | "prev") => {
+    if (transitioning) return;
+    const next = dir === "next" ? currentPage + 1 : currentPage - 1;
+    if (next < 0 || next >= totalPages) return;
+    window.speechSynthesis?.cancel();
+    setDirection(dir);
+    setTransitioning(true);
+    setHighlightIdx(-1);
+    setTimeout(() => { setCurrentPage(next); setTransitioning(false); }, 500);
+  }, [currentPage, totalPages, transitioning]);
+
+  /* Keyboard */
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 1024);
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
-  }, []);
-  return isMobile;
-}
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "ArrowRight" || e.key === " ") { e.preventDefault(); goTo("next"); }
+      else if (e.key === "ArrowLeft") goTo("prev");
+      else if (e.key === "Escape") onExit();
+      else if (e.key === "p") setPaused(p => !p);
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [goTo, onExit]);
 
-function useIsLandscape() {
-  const [isLandscape, setIsLandscape] = useState(false);
+  /* Auto-hide controls */
   useEffect(() => {
-    const check = () => setIsLandscape(window.innerWidth > window.innerHeight && window.innerWidth < 1024);
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
-  }, []);
-  return isLandscape;
+    if (controlsTimer.current) clearTimeout(controlsTimer.current);
+    if (showControls) {
+      controlsTimer.current = setTimeout(() => setShowControls(false), 4000);
+    }
+    return () => { if (controlsTimer.current) clearTimeout(controlsTimer.current); };
+  }, [showControls, currentPage]);
+
+  /* TTS Narration */
+  useEffect(() => {
+    if (paused || !page?.text?.content) return;
+    if (typeof window === "undefined" || !window.speechSynthesis) return;
+
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(page.text.content);
+    utterance.rate = 0.85;
+    utterance.pitch = 1.05;
+    synthRef.current = utterance;
+
+    const words = page.text.content.split(/\s+/);
+    let wordIdx = 0;
+    utterance.onboundary = (e) => {
+      if (e.name === "word") { setHighlightIdx(wordIdx); wordIdx++; }
+    };
+    utterance.onstart = () => setNarrating(true);
+    utterance.onend = () => {
+      setNarrating(false);
+      setHighlightIdx(-1);
+      if (!paused && data.settings?.autoPlay !== false) {
+        const pause = parseDuration(page.timing?.autoPause) * timingMult;
+        autoTimer.current = setTimeout(() => goTo("next"), pause);
+      }
+    };
+
+    const startDelay = setTimeout(() => window.speechSynthesis.speak(utterance), 800);
+    return () => {
+      clearTimeout(startDelay);
+      if (autoTimer.current) clearTimeout(autoTimer.current);
+      window.speechSynthesis.cancel();
+    };
+  }, [currentPage, paused]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* Tap zones */
+  const handleTap = (e: React.MouseEvent) => {
+    setShowControls(true);
+    const x = e.clientX / window.innerWidth;
+    if (x < 0.25) goTo("prev");
+    else if (x > 0.75) goTo("next");
+  };
+
+  /* Render highlighted text */
+  const renderText = () => {
+    if (!page?.text?.content) return null;
+    const words = page.text.content.split(/\s+/);
+    const fontSize = page.text.fontSize === "xl" ? "text-4xl md:text-5xl"
+      : page.text.fontSize === "large" ? "text-2xl md:text-3xl"
+      : "text-lg md:text-xl";
+
+    return (
+      <p className={`${fontSize} leading-relaxed font-serif text-gray-100 transition-all duration-500`}
+         style={{ fontSize: `${fontsizeMult}em` }}>
+        {words.map((word, i) => (
+          <span key={i} className={`inline-block mr-[0.3em] transition-all duration-300 ${
+            i < highlightIdx ? "text-white opacity-100"
+            : i === highlightIdx ? "text-amber-300 scale-105 opacity-100"
+            : highlightIdx === -1 ? "text-gray-200 opacity-90"
+            : "text-gray-400 opacity-50"
+          }`}>{word}</span>
+        ))}
+      </p>
+    );
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-[#060a14] flex flex-col select-none"
+         onClick={handleTap}>
+
+      {/* Top bar */}
+      <div className={`absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/80 to-transparent transition-opacity duration-500 ${showControls ? "opacity-100" : "opacity-0"}`}>
+        <button onClick={(e) => { e.stopPropagation(); onExit(); }}
+                className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-white/20 transition">
+          <span className="text-white text-lg">✕</span>
+        </button>
+        <div className="text-center">
+          <p className="text-white/80 text-sm font-medium">{data.metadata.title}</p>
+          <p className="text-white/40 text-xs">{currentPage + 1} / {totalPages}</p>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={(e) => { e.stopPropagation(); setPaused(p => !p); }}
+                  className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-white/20 transition text-white text-sm">
+            {paused ? "▶" : "⏸"}
+          </button>
+          <button onClick={(e) => { e.stopPropagation(); setFontsizeMult(m => m >= 1.5 ? 0.8 : m + 0.1); }}
+                  className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-white/20 transition text-white text-xs font-bold">
+            Aa
+          </button>
+        </div>
+      </div>
+
+      {/* Page content */}
+      <div className={`flex-1 flex flex-col items-center justify-center px-6 md:px-16 py-20 transition-all duration-500 ${
+        transitioning
+          ? direction === "next" ? "translate-x-[-100%] opacity-0" : "translate-x-[100%] opacity-0"
+          : "translate-x-0 opacity-100"
+      }`}>
+
+        {/* Illustration */}
+        {page?.illustration?.url && (
+          <div className="w-full max-w-2xl mb-8 rounded-2xl overflow-hidden shadow-2xl shadow-amber-900/20 animate-fadeIn">
+            <img src={page.illustration.url} alt={page.illustration.alt || ""}
+                 className="w-full h-auto object-cover" />
+          </div>
+        )}
+
+        {/* Text */}
+        <div className="w-full max-w-2xl text-center animate-fadeInUp">
+          {renderText()}
+        </div>
+      </div>
+
+      {/* Bottom progress */}
+      <div className={`absolute bottom-0 left-0 right-0 z-30 transition-opacity duration-500 ${showControls ? "opacity-100" : "opacity-0"}`}>
+        {/* Narration indicator */}
+        {narrating && (
+          <div className="flex justify-center mb-2">
+            <div className="flex gap-1 items-end h-4">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="w-1 bg-amber-400/70 rounded-full animate-pulse"
+                     style={{ height: `${8 + Math.random() * 12}px`, animationDelay: `${i * 0.15}s` }} />
+              ))}
+            </div>
+          </div>
+        )}
+        {/* Progress bar */}
+        <div className="h-1 bg-white/10">
+          <div className="h-full bg-gradient-to-r from-amber-500 to-violet-500 transition-all duration-500"
+               style={{ width: `${((currentPage + 1) / totalPages) * 100}%` }} />
+        </div>
+        {/* Nav hint */}
+        <div className="flex justify-between px-6 py-3 bg-gradient-to-t from-black/80 to-transparent">
+          <button onClick={(e) => { e.stopPropagation(); goTo("prev"); }}
+                  className={`text-white/40 text-sm hover:text-white/70 transition ${currentPage === 0 ? "invisible" : ""}`}>
+            ← Previous
+          </button>
+          <button onClick={(e) => { e.stopPropagation(); goTo("next"); }}
+                  className={`text-white/40 text-sm hover:text-white/70 transition ${currentPage === totalPages - 1 ? "invisible" : ""}`}>
+            Next →
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
+/* ════════════════════════════════════════════
+   LANDING PAGE
+   ════════════════════════════════════════════ */
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<TabKey>("plot-grid");
-  const [leftCollapsed, setLeftCollapsed] = useState(false);
-  const [rightCollapsed, setRightCollapsed] = useState(false);
-  const [chapterIndex, setChapterIndex] = useState(7);
-  const [mobilePanel, setMobilePanel] = useState<MobilePanel>(null);
-  const isMobile = useIsMobile();
-  const isLandscape = useIsLandscape();
+  const [readerData, setReaderData] = useState<SSyncData | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const chapterTitle = useMemo(() => manuscript[chapterIndex] ?? manuscript[0], [chapterIndex]);
+  const openDemo = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/demo/brave-little-star.ssync.json");
+      const data = await res.json();
+      setReaderData(data);
+    } catch (e) { console.error("Failed to load demo:", e); }
+    setLoading(false);
+  };
 
-  const toggleMobilePanel = useCallback((panel: MobilePanel) => {
-    setMobilePanel((prev) => (prev === panel ? null : panel));
-  }, []);
-
-  // Mobile landscape: show two-pane (nav + stage) or (stage + inspector)
-  // Mobile portrait: stage only, panels as overlays
-  // Desktop: full three-pane
+  if (readerData) {
+    return <ImmersiveReader data={readerData} onExit={() => setReaderData(null)} />;
+  }
 
   return (
-    <main className="h-screen w-screen overflow-hidden bg-[#0f1419] text-slate-100">
-      <div className="flex h-full flex-col p-2 sm:p-3 lg:p-4">
-        {/* ─── HEADER ─── */}
-        <header className="glass-panel mb-2 flex items-center gap-2 p-2 sm:mb-3 sm:gap-3 sm:p-3">
-          {/* Mobile hamburger */}
-          {isMobile && (
-            <button
-              className="icon-btn shrink-0"
-              onClick={() => toggleMobilePanel("nav")}
-            >
-              {mobilePanel === "nav" ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
-            </button>
-          )}
+    <div className="min-h-screen bg-[#0a0e1a] text-white overflow-x-hidden">
 
-          <div className="flex min-w-0 items-center gap-2">
-            <div className="rounded-lg border border-violet-300/40 bg-violet-500/15 p-1.5 sm:p-2">
-              <Sparkles className="h-4 w-4 text-violet-300 sm:h-5 sm:w-5" />
-            </div>
-            <div className="min-w-0">
-              <div className="truncate text-base font-semibold tracking-tight text-violet-200 sm:text-xl">StorySyncHQ</div>
-              <div className="hidden text-xs text-slate-400 sm:block">The Echoing Realm • Book 1</div>
-            </div>
-          </div>
-
-          {/* Tab bar — icons only on mobile, full on desktop */}
-          <nav className="mx-auto flex items-center gap-1 rounded-xl border border-white/10 bg-slate-900/50 p-1">
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              const active = tab.key === activeTab;
-              return (
-                <button
-                  key={tab.key}
-                  onClick={() => {
-                    setActiveTab(tab.key);
-                    if (isMobile) setMobilePanel(null);
-                  }}
-                  className={clsx(
-                    "flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs transition sm:px-3 sm:py-2 sm:text-sm",
-                    active
-                      ? "bg-violet-500/20 text-violet-100 ring-1 ring-violet-300/50 shadow-[0_0_16px_rgba(168,85,247,0.3)]"
-                      : "text-slate-400 hover:bg-white/5",
-                  )}
-                  title={tab.label}
-                >
-                  <Icon className="h-4 w-4" />
-                  <span className="hidden sm:inline">{tab.label}</span>
-                </button>
-              );
-            })}
-          </nav>
-
-          <div className="ml-auto flex items-center gap-2">
-            {/* Inspector toggle on mobile */}
-            {isMobile && (
-              <button
-                className="icon-btn shrink-0"
-                onClick={() => toggleMobilePanel("inspector")}
-              >
-                <Settings className="h-4 w-4" />
-              </button>
-            )}
-            {/* Desktop search + settings */}
-            {!isMobile && (
-              <>
-                <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-slate-950/40 px-3 py-2 text-sm text-slate-400">
-                  <Search className="h-4 w-4" />
-                  <input className="w-40 bg-transparent outline-none" placeholder="Search..." />
-                </label>
-                <button className="icon-btn">
-                  <Settings className="h-4 w-4" />
-                </button>
-              </>
-            )}
-            <div className="avatar">J</div>
-          </div>
-        </header>
-
-        {/* ─── MAIN CONTENT ─── */}
-        <section className="relative min-h-0 flex-1">
-          {/* DESKTOP: Three-pane grid */}
-          {!isMobile && (
-            <div className="grid h-full grid-cols-[auto_1fr_auto] gap-3">
-              {!leftCollapsed ? (
-                <aside className="glass-panel flex w-[300px] flex-col p-3 xl:w-[330px]">
-                  <div className="mb-3 flex items-center justify-between">
-                    <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-200">
-                      <ListTree className="h-4 w-4 text-violet-300" /> Navigator
-                    </h2>
-                    <button className="icon-btn" onClick={() => setLeftCollapsed(true)}>
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
-                  </div>
-                  <NavigatorContent chapterIndex={chapterIndex} onChapterSelect={(i) => { setChapterIndex(i); setActiveTab("editor"); }} />
-                </aside>
-              ) : (
-                <button className="glass-panel h-fit p-2" onClick={() => setLeftCollapsed(false)}>
-                  <ChevronRight className="h-4 w-4 rotate-180" />
-                </button>
-              )}
-
-              <section className="glass-panel min-h-0 overflow-hidden p-4 sm:p-5">
-                <StageContent activeTab={activeTab} chapterTitle={chapterTitle} />
-              </section>
-
-              {!rightCollapsed ? (
-                <aside className="glass-panel flex w-[300px] flex-col p-3 xl:w-[340px]">
-                  <div className="mb-3 flex items-center justify-between">
-                    <h2 className="text-lg font-semibold">Inspector</h2>
-                    <button className="icon-btn" onClick={() => setRightCollapsed(true)}>
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
-                  </div>
-                  <InspectorContent />
-                </aside>
-              ) : (
-                <button className="glass-panel h-fit p-2" onClick={() => setRightCollapsed(false)}>
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* MOBILE LANDSCAPE: Two-pane side-by-side */}
-          {isMobile && isLandscape && (
-            <div className="flex h-full gap-2">
-              {/* If nav panel open, show nav + stage */}
-              {mobilePanel === "nav" && (
-                <aside className="glass-panel flex w-[260px] shrink-0 flex-col overflow-hidden p-3">
-                  <div className="mb-2 flex items-center justify-between">
-                    <h2 className="flex items-center gap-2 text-sm font-semibold">
-                      <ListTree className="h-4 w-4 text-violet-300" /> Navigator
-                    </h2>
-                    <button className="icon-btn" onClick={() => setMobilePanel(null)}>
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                  <NavigatorContent chapterIndex={chapterIndex} onChapterSelect={(i) => { setChapterIndex(i); setActiveTab("editor"); setMobilePanel(null); }} />
-                </aside>
-              )}
-              {/* If inspector open, show stage + inspector */}
-              <section className="glass-panel min-h-0 min-w-0 flex-1 overflow-hidden p-3">
-                <StageContent activeTab={activeTab} chapterTitle={chapterTitle} />
-              </section>
-              {mobilePanel === "inspector" && (
-                <aside className="glass-panel flex w-[280px] shrink-0 flex-col overflow-hidden p-3">
-                  <div className="mb-2 flex items-center justify-between">
-                    <h2 className="text-base font-semibold">Inspector</h2>
-                    <button className="icon-btn" onClick={() => setMobilePanel(null)}>
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                  <InspectorContent />
-                </aside>
-              )}
-            </div>
-          )}
-
-          {/* MOBILE PORTRAIT: Stage full-screen + overlay panels */}
-          {isMobile && !isLandscape && (
-            <div className="relative h-full">
-              {/* Stage always visible */}
-              <section className="glass-panel h-full overflow-hidden p-3">
-                <StageContent activeTab={activeTab} chapterTitle={chapterTitle} />
-              </section>
-
-              {/* Navigator overlay */}
-              {mobilePanel === "nav" && (
-                <div className="absolute inset-0 z-30 flex">
-                  <aside className="glass-panel flex w-[85%] max-w-[320px] flex-col overflow-hidden p-3 shadow-2xl">
-                    <div className="mb-3 flex items-center justify-between">
-                      <h2 className="flex items-center gap-2 text-sm font-semibold">
-                        <ListTree className="h-4 w-4 text-violet-300" /> Navigator
-                      </h2>
-                      <button className="icon-btn" onClick={() => setMobilePanel(null)}>
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-                    <NavigatorContent chapterIndex={chapterIndex} onChapterSelect={(i) => { setChapterIndex(i); setActiveTab("editor"); setMobilePanel(null); }} />
-                  </aside>
-                  <div className="flex-1 bg-black/50" onClick={() => setMobilePanel(null)} />
-                </div>
-              )}
-
-              {/* Inspector overlay */}
-              {mobilePanel === "inspector" && (
-                <div className="absolute inset-0 z-30 flex justify-end">
-                  <div className="flex-1 bg-black/50" onClick={() => setMobilePanel(null)} />
-                  <aside className="glass-panel flex w-[85%] max-w-[340px] flex-col overflow-hidden p-3 shadow-2xl">
-                    <div className="mb-3 flex items-center justify-between">
-                      <h2 className="text-lg font-semibold">Inspector</h2>
-                      <button className="icon-btn" onClick={() => setMobilePanel(null)}>
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-                    <InspectorContent />
-                  </aside>
-                </div>
-              )}
-            </div>
-          )}
-        </section>
-
-        {/* ─── FOOTER ─── */}
-        <footer className="glass-panel mt-2 flex items-center justify-between px-3 py-1.5 text-[11px] text-slate-400 sm:mt-3 sm:py-2 sm:text-xs">
-          <div>45,920 words</div>
-          <div className="flex items-center gap-3">
-            <span className="hidden sm:inline">Last saved: 2 min ago</span>
-            <span className="flex items-center gap-1.5 text-emerald-300">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Online
-            </span>
-            <span>2,847</span>
-          </div>
-        </footer>
-      </div>
-    </main>
-  );
-}
-
-/* ─── NAVIGATOR CONTENT ─── */
-function NavigatorContent({ chapterIndex, onChapterSelect }: { chapterIndex: number; onChapterSelect: (i: number) => void }) {
-  return (
-    <div className="custom-scroll min-h-0 flex-1 space-y-2 overflow-y-auto pr-1 text-sm">
-      <TreeGroup title="Manuscript" tone="lore" defaultOpen>
-        <div className="ml-1 rounded-md bg-white/5 p-2">
-          <div className="mb-1 text-xs text-slate-400">Book 1: The Echoing Realm</div>
-          {manuscript.map((ch, i) => (
-            <button
-              key={ch}
-              onClick={() => onChapterSelect(i)}
-              className={clsx(
-                "mt-0.5 w-full rounded-md px-2 py-1 text-left text-xs text-slate-300 transition hover:bg-white/5",
-                i === chapterIndex && "bg-violet-400/15 text-violet-100",
-              )}
-            >
-              {ch}
-            </button>
+      {/* ── Hero ── */}
+      <section className="relative min-h-screen flex flex-col items-center justify-center px-6 text-center">
+        {/* Ambient stars */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {[...Array(40)].map((_, i) => (
+            <div key={i} className="absolute w-1 h-1 bg-white rounded-full animate-twinkle"
+                 style={{
+                   left: `${Math.random() * 100}%`, top: `${Math.random() * 100}%`,
+                   animationDelay: `${Math.random() * 5}s`, animationDuration: `${2 + Math.random() * 4}s`,
+                   opacity: 0.2 + Math.random() * 0.6,
+                 }} />
           ))}
         </div>
-      </TreeGroup>
-      <TreeGroup title="Characters" tone="character" defaultOpen>
-        {characters.map((item) => (
-          <TreeLeaf key={item} icon={<User className="h-3.5 w-3.5" />} label={item} />
-        ))}
-      </TreeGroup>
-      <TreeGroup title="Locations" tone="location" defaultOpen>
-        {locations.map((item) => (
-          <TreeLeaf key={item} icon={<MapPin className="h-3.5 w-3.5" />} label={item} />
-        ))}
-      </TreeGroup>
-      <TreeGroup title="Plot Points" tone="lore" defaultOpen>
-        {plotPoints.map((item) => (
-          <TreeLeaf key={item} icon={<Link2 className="h-3.5 w-3.5" />} label={item} />
-        ))}
-      </TreeGroup>
-    </div>
-  );
-}
 
-/* ─── STAGE CONTENT ─── */
-function StageContent({ activeTab, chapterTitle }: { activeTab: TabKey; chapterTitle: string }) {
-  return (
-    <div className="h-full">
-      {activeTab === "editor" && <EditorView title={chapterTitle} />}
-      {activeTab === "plot-grid" && <PlotGridView />}
-      {activeTab === "corkboard" && <CorkboardView />}
-      {activeTab === "timeline" && <TimelineView />}
-    </div>
-  );
-}
+        {/* Glow orb */}
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-amber-500/10 blur-[120px] pointer-events-none" />
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] rounded-full bg-violet-500/10 blur-[80px] pointer-events-none" />
 
-/* ─── INSPECTOR CONTENT ─── */
-function InspectorContent() {
-  return (
-    <div className="custom-scroll min-h-0 flex-1 space-y-4 overflow-y-auto pr-1 text-sm">
-      <InspectorField label="Scene Status">
-        <select className="inspector-input">
-          <option>Draft</option>
-          <option>In Progress</option>
-          <option>Revision</option>
-          <option>Final</option>
-        </select>
-      </InspectorField>
-      <InspectorField label="POV Character">
-        <div className="chip chip-character">Elena</div>
-      </InspectorField>
-      <InspectorField label="Location">
-        <div className="chip chip-location">The Archives</div>
-      </InspectorField>
-      <InspectorField label="Word Count">
-        <div className="inspector-input text-right font-medium">2,847</div>
-      </InspectorField>
-      <InspectorField label="Linked Characters">
-        <div className="flex flex-wrap gap-2">
-          {characters.slice(0, 3).map((name) => (
-            <div className="chip chip-character" key={name}>{name}</div>
-          ))}
+        {/* Star icon */}
+        <div className="relative mb-8 animate-float">
+          <div className="w-24 h-24 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/30">
+            <span className="text-5xl">⭐</span>
+          </div>
+          <div className="absolute -inset-3 rounded-full border border-amber-400/20 animate-ping-slow" />
         </div>
-      </InspectorField>
-      <InspectorField label="Linked Plot Points">
-        <div className="chip chip-lore">The Confrontation</div>
-      </InspectorField>
-      <InspectorField label="Notes">
-        <textarea
-          className="inspector-input min-h-24 resize-y"
-          defaultValue="Crucial turning point. Emphasize the scale of The Archives and Elena's internal conflict. Plant a seed for betrayal in the next chapter."
-        />
-      </InspectorField>
-      <InspectorField label="Associated Media">
-        <div className="grid grid-cols-3 gap-2">
-          <div className="h-14 rounded-lg bg-gradient-to-br from-cyan-600/35 to-violet-500/35" />
-          <div className="h-14 rounded-lg bg-gradient-to-br from-amber-500/35 to-rose-500/35" />
-          <button className="h-14 rounded-lg border border-dashed border-violet-300/50 bg-violet-500/10 text-lg text-violet-200">+</button>
-        </div>
-      </InspectorField>
-    </div>
-  );
-}
 
-/* ─── TREE COMPONENTS ─── */
-function TreeGroup({
-  title,
-  tone,
-  defaultOpen,
-  children,
-}: {
-  title: string;
-  tone: "lore" | "location" | "character";
-  defaultOpen?: boolean;
-  children: React.ReactNode;
-}) {
-  const [open, setOpen] = useState(Boolean(defaultOpen));
-  const toneIcon = tone === "character" ? Users : tone === "location" ? LocateFixed : Library;
-  const Icon = toneIcon;
-
-  return (
-    <div className="rounded-lg border border-white/10 bg-slate-950/25 p-2">
-      <button onClick={() => setOpen((v) => !v)} className="flex w-full items-center gap-2 rounded-md px-1 py-1 text-left">
-        {open ? <ChevronDown className="h-3.5 w-3.5 text-slate-400" /> : <ChevronRight className="h-3.5 w-3.5 text-slate-400" />}
-        <Icon className={clsx("h-4 w-4", tone === "character" ? "text-amber-300" : tone === "location" ? "text-emerald-300" : "text-violet-300")} />
-        <span className="font-medium">{title}</span>
-      </button>
-      {open && <div className="mt-1 space-y-0.5 pl-6">{children}</div>}
-    </div>
-  );
-}
-
-function TreeLeaf({ icon, label }: { icon: React.ReactNode; label: string }) {
-  return (
-    <button className="flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-slate-300 transition hover:bg-white/5">
-      <span className="text-slate-500">{icon}</span> {label}
-    </button>
-  );
-}
-
-/* ─── VIEWS ─── */
-function EditorView({ title }: { title: string }) {
-  return (
-    <div className="flex h-full flex-col">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold tracking-tight sm:text-2xl lg:text-4xl">{title}</h1>
-        <div className="floating-toolbar">
-          {["B", "I", "U", "H1", "•", "1.", "↔"].map((item) => (
-            <button key={item} className="toolbar-btn">{item}</button>
-          ))}
-        </div>
-      </div>
-      <article className="manuscript custom-scroll min-h-0 flex-1 overflow-y-auto pr-2 text-lg leading-relaxed text-slate-100/95 [font-family:Georgia,'Times_New_Roman',serif] sm:text-xl lg:text-[29px] lg:leading-[1.5]">
-        <p>
-          The dust motes danced in the shafts of pale light filtering through the high, narrow windows of The Archives.
-          Elena adjusted the strap of her satchel, the weight of the ancient tome she had just unearthed pressing against
-          her side. The silence here was profound, a heavy blanket woven from centuries of undisturbed knowledge.
+        {/* Title */}
+        <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-3">
+          <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-300 via-white to-violet-300">
+            StorySyncHQ
+          </span>
+        </h1>
+        <p className="text-lg md:text-xl text-amber-200/80 font-medium mb-2">
+          The Immersive Storybook Protocol
         </p>
-        <p className="mt-6 lg:mt-8">
-          Kaelen was close, his presence a low hum in the back of her mind, a beacon in the labyrinth of towering shelves.
-          The air grew cooler as she approached the central rotunda, where the colossal data sphere hung suspended,
-          pulsing with a faint, rhythmic blue light. It was here, amidst the whispers of forgotten lore, that the truth
-          about the Echoing Realm would finally be revealed — and the cost of that revelation would have to be paid.
+        <p className="text-gray-400 text-base md:text-lg max-w-xl mb-10">
+          Read along. Listen. Feel. A new universal standard for storytelling that brings the magic of childhood storybooks to every screen.
         </p>
-      </article>
-    </div>
-  );
-}
 
-function PlotGridView() {
-  return (
-    <div className="flex h-full flex-col">
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-lg font-semibold sm:text-2xl">Plot Grid</h2>
-        <div className="rounded-md border border-white/10 bg-slate-900/60 px-2 py-1 text-[10px] text-slate-300 sm:px-3 sm:py-1.5 sm:text-xs">
-          PLOT GRID VIEW
+        {/* CTA Buttons */}
+        <div className="flex flex-col sm:flex-row gap-4 mb-16">
+          <button onClick={openDemo} disabled={loading}
+                  className="px-8 py-4 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 text-black font-bold text-lg shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40 hover:scale-105 transition-all duration-300 disabled:opacity-50">
+            {loading ? "Loading..." : "✨ Read Demo Storybook"}
+          </button>
+          <button disabled
+                  className="px-8 py-4 rounded-2xl bg-white/5 border border-white/10 text-gray-300 font-medium text-lg backdrop-blur-sm hover:bg-white/10 transition-all duration-300 opacity-50 cursor-not-allowed">
+            🛠 Create Your Story (Coming Soon)
+          </button>
         </div>
-      </div>
 
-      <div className="custom-scroll min-h-0 flex-1 overflow-auto rounded-xl border border-violet-300/20 bg-slate-950/30 p-2 shadow-[inset_0_0_0_1px_rgba(168,85,247,0.15)] sm:p-3">
-        <div className="min-w-[700px]">
-          {/* Chapter headers */}
-          <div className="mb-2 grid grid-cols-[140px_repeat(8,minmax(0,1fr))] gap-1.5 text-xs text-slate-300 sm:grid-cols-[180px_repeat(8,minmax(0,1fr))] sm:gap-2 sm:text-sm">
-            <div />
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="rounded-md border border-white/10 bg-white/5 p-1.5 text-center sm:p-2">
-                Ch{i + 1}
-              </div>
-            ))}
-          </div>
-
-          {/* Plotline rows */}
-          <div className="space-y-1.5 sm:space-y-2">
-            {plotLines.map((line) => (
-              <div key={line} className="grid grid-cols-[140px_repeat(8,minmax(0,1fr))] gap-1.5 sm:grid-cols-[180px_repeat(8,minmax(0,1fr))] sm:gap-2">
-                <div className="flex items-center rounded-lg border border-white/10 bg-white/5 p-2 text-xs font-medium sm:p-3 sm:text-sm">
-                  {line}
-                </div>
-                {Array.from({ length: 8 }).map((_, i) => {
-                  const scene = gridScenes[line]?.[i + 1];
-                  return (
-                    <div key={i} className="min-h-[70px] rounded-lg border border-white/10 bg-[#101924] p-1.5 sm:min-h-[100px] sm:p-2">
-                      {scene ? (
-                        <div className={clsx("h-full rounded-md border p-1.5 text-[10px] sm:p-2 sm:text-xs", toneClasses(scene.tone))}>
-                          <div className="mb-0.5 text-slate-300">Scene:</div>
-                          <div className="text-[11px] font-medium text-white sm:text-sm">{scene.title}</div>
-                        </div>
-                      ) : null}
-                    </div>
-                  );
-                })}
-              </div>
-            ))}
+        {/* Scroll indicator */}
+        <div className="absolute bottom-8 animate-bounce">
+          <div className="w-6 h-10 rounded-full border-2 border-white/20 flex justify-center pt-2">
+            <div className="w-1.5 h-3 rounded-full bg-white/40 animate-scroll-dot" />
           </div>
         </div>
-      </div>
-    </div>
-  );
-}
+      </section>
 
-function CorkboardView() {
-  return (
-    <div className="flex h-full flex-col">
-      <h2 className="mb-4 text-lg font-semibold sm:text-2xl">Corkboard</h2>
-      <div className="custom-scroll min-h-0 flex-1 overflow-y-auto">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {manuscript.slice(1).map((ch, i) => (
-            <div key={ch} className="rounded-xl border border-white/10 bg-amber-100/10 p-3 shadow-[0_8px_30px_rgba(0,0,0,0.3)] sm:p-4">
-              <div className="mb-2 text-xs font-medium text-amber-200">{ch}</div>
-              <p className="text-xs text-slate-300">Scene summary and notes for this chapter go here. Click to expand and edit.</p>
+      {/* ── What is SSYNC ── */}
+      <section className="py-24 px-6 max-w-6xl mx-auto">
+        <div className="text-center mb-16">
+          <p className="text-amber-400 text-sm font-semibold uppercase tracking-widest mb-3">The Protocol</p>
+          <h2 className="text-3xl md:text-5xl font-bold mb-4">
+            Remember the magic?
+          </h2>
+          <p className="text-gray-400 text-lg max-w-2xl mx-auto">
+            Library books with cassette tapes. Reading along while the narrator guided you page by page. Background music that made every story feel alive. We&apos;re bringing that magic back — for every device, every story, every reader.
+          </p>
+        </div>
+
+        {/* Feature Cards */}
+        <div className="grid md:grid-cols-3 gap-6">
+          {[
+            {
+              icon: "🎙️", title: "Narrate",
+              desc: "Record your own voice, choose AI narrators, or clone a loved one's voice. Every word syncs to the page with real-time highlighting.",
+              color: "from-amber-500/20 to-amber-500/5", border: "border-amber-500/20"
+            },
+            {
+              icon: "🎨", title: "Illustrate",
+              desc: "Import existing art, generate AI illustrations, or photograph hand-drawn pages. Each image becomes an immersive canvas.",
+              color: "from-violet-500/20 to-violet-500/5", border: "border-violet-500/20"
+            },
+            {
+              icon: "✨", title: "Immerse",
+              desc: "Background music adapts to mood. Pages turn with cinematic flow. Focus mode silences everything else. The story is all that exists.",
+              color: "from-emerald-500/20 to-emerald-500/5", border: "border-emerald-500/20"
+            },
+          ].map((card) => (
+            <div key={card.title}
+                 className={`p-8 rounded-2xl bg-gradient-to-b ${card.color} border ${card.border} backdrop-blur-sm hover:scale-[1.02] transition-all duration-300`}>
+              <div className="text-4xl mb-4">{card.icon}</div>
+              <h3 className="text-xl font-bold text-white mb-2">{card.title}</h3>
+              <p className="text-gray-400 leading-relaxed">{card.desc}</p>
             </div>
           ))}
         </div>
-      </div>
-    </div>
-  );
-}
+      </section>
 
-function TimelineView() {
-  return (
-    <div className="flex h-full flex-col">
-      <h2 className="mb-4 text-lg font-semibold sm:text-2xl">Timeline</h2>
-      <div className="custom-scroll relative min-h-0 flex-1 overflow-auto rounded-xl border border-white/10 bg-slate-950/40 p-4 sm:p-6">
-        <div className="min-w-[600px]">
-          <div className="absolute left-6 right-6 top-1/2 h-[2px] -translate-y-1/2 bg-violet-400/30" />
-          <div className="grid h-full grid-cols-8 items-center gap-2 sm:gap-3">
-            {manuscript.slice(1).map((chapter, i) => (
-              <div key={chapter} className="relative text-center">
-                <div className="mx-auto mb-3 h-2.5 w-2.5 rounded-full bg-violet-300 shadow-[0_0_20px_rgba(168,85,247,0.7)] sm:mb-4 sm:h-3 sm:w-3" />
-                <div className="rounded-md border border-white/10 bg-white/5 p-1.5 text-[10px] text-slate-300 sm:p-2 sm:text-xs">
-                  {chapter.replace("Chapter ", "Ch")}
-                </div>
-                <div className={clsx("mt-1.5 text-[9px] sm:mt-2 sm:text-[10px]", i % 2 ? "text-emerald-300" : "text-amber-300")}>
-                  Milestone
-                </div>
+      {/* ── How It Works ── */}
+      <section className="py-24 px-6 max-w-4xl mx-auto">
+        <div className="text-center mb-16">
+          <p className="text-violet-400 text-sm font-semibold uppercase tracking-widest mb-3">Simple as 1-2-3</p>
+          <h2 className="text-3xl md:text-5xl font-bold mb-4">How It Works</h2>
+        </div>
+
+        <div className="space-y-8">
+          {[
+            { num: "01", title: "Bring Your Story", desc: "Type it, paste it, upload a PDF, photograph drawings, or let AI create it from a prompt." },
+            { num: "02", title: "Add Your Voice", desc: "Record narration, pick an AI voice, or import audio. Time each page. Choose background music." },
+            { num: "03", title: "Share the Magic", desc: "Get a link, QR code, or downloadable .ssync file. Anyone can read it on any device. No app needed." },
+          ].map((step) => (
+            <div key={step.num} className="flex gap-6 items-start group">
+              <div className="w-14 h-14 flex-shrink-0 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center group-hover:border-amber-500/40 transition-colors duration-300">
+                <span className="text-amber-400 font-bold text-lg">{step.num}</span>
               </div>
-            ))}
+              <div>
+                <h3 className="text-xl font-bold text-white mb-1">{step.title}</h3>
+                <p className="text-gray-400">{step.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Use Cases ── */}
+      <section className="py-24 px-6 max-w-6xl mx-auto">
+        <div className="text-center mb-16">
+          <p className="text-emerald-400 text-sm font-semibold uppercase tracking-widest mb-3">For Everyone</p>
+          <h2 className="text-3xl md:text-5xl font-bold mb-4">Who Is This For?</h2>
+        </div>
+
+        <div className="grid sm:grid-cols-2 gap-6">
+          {[
+            { emoji: "👶", title: "Children", desc: "A 4-year-old can narrate their own drawings. Build bedtime stories together." },
+            { emoji: "📚", title: "Authors", desc: "Turn your illustrated book into a premium immersive edition with narration and music." },
+            { emoji: "🏫", title: "Educators", desc: "Create curriculum-aligned interactive reading experiences. Multi-language support." },
+            { emoji: "💝", title: "Families", desc: "Preserve a loved one's voice reading their favorite story. A gift that lasts forever." },
+          ].map((card) => (
+            <div key={card.title}
+                 className="p-6 rounded-2xl bg-white/[0.03] border border-white/5 hover:border-white/15 transition-all duration-300">
+              <span className="text-3xl">{card.emoji}</span>
+              <h3 className="text-lg font-bold text-white mt-3 mb-1">{card.title}</h3>
+              <p className="text-gray-500 text-sm">{card.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Protocol CTA ── */}
+      <section className="py-24 px-6 text-center">
+        <div className="max-w-2xl mx-auto p-10 rounded-3xl bg-gradient-to-b from-white/5 to-transparent border border-white/10 backdrop-blur-sm">
+          <p className="text-amber-400 text-sm font-semibold uppercase tracking-widest mb-3">Open Standard</p>
+          <h2 className="text-3xl font-bold mb-4">The SSYNC Protocol</h2>
+          <p className="text-gray-400 mb-6">
+            SSYNC is an open JSON-based format for immersive storybooks. Like PDF for documents — but for narrated, illustrated, musical reading experiences. Build renderers, create tools, publish stories.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <a href="/protocol/v1.schema.json" target="_blank"
+               className="px-6 py-3 rounded-xl bg-white/10 border border-white/10 text-white font-medium hover:bg-white/15 transition">
+              📄 View Schema v1.0
+            </a>
+            <a href="https://github.com/Navigata1/storysynchq" target="_blank" rel="noopener"
+               className="px-6 py-3 rounded-xl bg-white/10 border border-white/10 text-white font-medium hover:bg-white/15 transition">
+              🐙 GitHub
+            </a>
           </div>
         </div>
-      </div>
-    </div>
-  );
-}
+      </section>
 
-function InspectorField({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <div className="mb-1.5 text-xs font-medium text-slate-200 sm:text-sm">{label}</div>
-      {children}
+      {/* ── Footer ── */}
+      <footer className="py-12 px-6 border-t border-white/5 text-center">
+        <p className="text-gray-500 text-sm">
+          StorySyncHQ · A product of <span className="text-gray-400">Island Development Crew</span>
+        </p>
+        <p className="text-gray-600 text-xs mt-2">
+          Part of the SyncHQ Suite · CareSyncHQ · StorySyncHQ · ListSyncHQ · BookSyncHQ
+        </p>
+      </footer>
+
+      {/* ── CSS Animations ── */}
+      <style jsx global>{`
+        @keyframes twinkle { 0%, 100% { opacity: 0.2; } 50% { opacity: 1; } }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        @keyframes ping-slow { 0% { transform: scale(1); opacity: 0.4; } 100% { transform: scale(1.5); opacity: 0; } }
+        @keyframes scroll-dot { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(8px); opacity: 0; } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-twinkle { animation: twinkle var(--tw-animate-duration, 3s) ease-in-out infinite; }
+        .animate-float { animation: float 4s ease-in-out infinite; }
+        .animate-ping-slow { animation: ping-slow 3s ease-out infinite; }
+        .animate-scroll-dot { animation: scroll-dot 1.5s ease-in-out infinite; }
+        .animate-fadeIn { animation: fadeIn 1s ease-out forwards; }
+        .animate-fadeInUp { animation: fadeInUp 1s ease-out forwards; animation-delay: 0.3s; opacity: 0; }
+        .font-serif { font-family: Georgia, "Times New Roman", serif; }
+      `}</style>
     </div>
   );
 }

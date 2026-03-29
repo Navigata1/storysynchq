@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "StorySyncHQ",
-  description: "Three-pane narrative collaboration platform",
+  title: "StorySyncHQ — The Immersive Storybook Protocol",
+  description: "Create and experience immersive, narrated storybooks. Read along. Listen. Feel. A new universal standard for storytelling.",
 };
 
 export default function RootLayout({
