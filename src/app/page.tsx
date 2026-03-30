@@ -1188,13 +1188,17 @@ function ImmersiveReader({ data, onExit, startInRemix }: { data: SSyncData; onEx
   return (
     <div
       className={`fixed inset-0 z-50 flex flex-col select-none ${highContrast ? "bg-black" : "bg-[#060a14]"}`}
+      style={{ overscrollBehavior: "none" }}
       onClick={handleTap}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
 
       {/* ── Top bar ── */}
-      <div className={`absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/80 to-transparent transition-opacity duration-500 ${showControls ? "opacity-100" : "opacity-0"}`}>
+      <div
+        className={`absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/80 to-transparent transition-opacity duration-500 ${showControls ? "opacity-100" : "opacity-0"}`}
+        style={{ paddingTop: "calc(12px + env(safe-area-inset-top, 0px))" }}
+      >
         <button onClick={(e) => { e.stopPropagation(); stopMusic(); onExit(); }}
                 className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-white/20 transition">
           <span className="text-white text-lg">✕</span>
@@ -2288,13 +2292,14 @@ function ImmersiveReader({ data, onExit, startInRemix }: { data: SSyncData; onEx
           <div className="h-full bg-gradient-to-r from-amber-500 to-violet-500 transition-all duration-500"
                style={{ width: `${((currentPage + 1) / totalPages) * 100}%` }} />
         </div>
-        <div className="flex justify-between px-6 py-3 bg-gradient-to-t from-black/80 to-transparent">
+        <div className="flex justify-between px-6 py-3 bg-gradient-to-t from-black/80 to-transparent"
+             style={{ paddingBottom: "calc(12px + env(safe-area-inset-bottom, 0px))" }}>
           <button onClick={(e) => { e.stopPropagation(); goTo("prev"); }}
-                  className={`text-white/40 text-sm hover:text-white/70 transition ${currentPage === 0 ? "invisible" : ""}`}>
+                  className={`text-white/40 text-sm hover:text-white/70 active:scale-95 transition-all duration-150 ${currentPage === 0 ? "invisible" : ""}`}>
             ← Previous
           </button>
           <button onClick={(e) => { e.stopPropagation(); goTo("next"); }}
-                  className={`text-white/40 text-sm hover:text-white/70 transition ${currentPage >= totalPages - (isLandscape ? 2 : 1) ? "invisible" : ""}`}>
+                  className={`text-white/40 text-sm hover:text-white/70 active:scale-95 transition-all duration-150 ${currentPage >= totalPages - (isLandscape ? 2 : 1) ? "invisible" : ""}`}>
             Next →
           </button>
         </div>
@@ -2775,6 +2780,57 @@ export default function Home() {
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [editName, setEditName] = useState("");
 
+  /* ── Phase 8: PWA & Mobile State ── */
+  const [showInstallBanner, setShowInstallBanner] = useState(false);
+  const [isOffline, setIsOffline] = useState(false);
+  const [deferredInstallPrompt, setDeferredInstallPrompt] = useState<Event | null>(null);
+
+  /* ── Phase 8: PWA install prompt & offline detection ── */
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    // Detect if already running as installed PWA
+    const isStandalone = window.matchMedia("(display-mode: standalone)").matches
+      || (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
+
+    if (!isStandalone) {
+      // Listen for the browser's install prompt
+      const handleBeforeInstallPrompt = (e: Event) => {
+        e.preventDefault();
+        setDeferredInstallPrompt(e);
+        setShowInstallBanner(true);
+      };
+      window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+      return () => window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    // Online/offline detection
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    setIsOffline(!navigator.onLine);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
+  const handleInstallApp = async () => {
+    if (!deferredInstallPrompt) return;
+    const promptEvent = deferredInstallPrompt as Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> };
+    await promptEvent.prompt();
+    const choice = await promptEvent.userChoice;
+    if (choice.outcome === "accepted") {
+      setShowInstallBanner(false);
+      setDeferredInstallPrompt(null);
+    }
+  };
+
   /* Load user from localStorage on mount */
   useEffect(() => {
     setUserState(getUser());
@@ -2873,7 +2929,57 @@ export default function Home() {
   const libraryCount = user ? getLibrary().length : 0;
 
   return (
-    <div className="min-h-screen bg-[#0a0e1a] text-white overflow-x-hidden" onClick={() => setShowUserDropdown(false)}>
+    <div
+      className="min-h-screen bg-[#0a0e1a] text-white overflow-x-hidden"
+      style={{
+        paddingTop: "env(safe-area-inset-top, 0px)",
+        /* Reserve space at bottom for gesture bar */
+        paddingBottom: "env(safe-area-inset-bottom, 0px)",
+      }}
+      onClick={() => setShowUserDropdown(false)}
+    >
+
+      {/* ── Phase 8: Offline Indicator ── */}
+      {isOffline && (
+        <div className="fixed top-0 left-0 right-0 z-[500] flex justify-center pointer-events-none"
+             style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
+          <div className="mt-3 px-4 py-2 rounded-full bg-slate-800/95 border border-slate-600/40 text-white text-xs font-medium flex items-center gap-2 shadow-lg backdrop-blur-sm">
+            <span>📴</span>
+            <span>Offline — reading from cache</span>
+          </div>
+        </div>
+      )}
+
+      {/* ── Phase 8: Install App Banner ── */}
+      {showInstallBanner && (
+        <div className="fixed bottom-0 left-0 right-0 z-[400]"
+             style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
+          <div className="mx-3 mb-3 px-4 py-3 rounded-2xl bg-[#0f1422]/98 border border-amber-400/20 backdrop-blur-xl shadow-2xl shadow-black/60 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-amber-500/30">
+              <span className="text-xl">⭐</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-white text-sm font-semibold leading-tight">Install StorySyncHQ</p>
+              <p className="text-gray-400 text-xs mt-0.5">Read stories offline, anytime</p>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                onClick={() => setShowInstallBanner(false)}
+                className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 hover:text-white active:scale-95 transition-all duration-150"
+                aria-label="Dismiss"
+              >
+                ✕
+              </button>
+              <button
+                onClick={handleInstallApp}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-black text-sm font-bold shadow-md shadow-amber-500/25 hover:shadow-amber-500/40 active:scale-95 transition-all duration-150"
+              >
+                Install
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Phase 5: Auth Modal ── */}
       {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} onAuth={handleAuth} />}
@@ -2993,11 +3099,11 @@ export default function Home() {
 
         <div className="flex flex-col sm:flex-row gap-4 mb-8">
           <button onClick={() => openDemo(false)} disabled={loading || loadingRemix}
-                  className="px-8 py-4 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 text-black font-bold text-lg shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40 hover:scale-105 transition-all duration-300 disabled:opacity-50">
+                  className="px-8 py-4 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 text-black font-bold text-lg shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40 hover:scale-105 active:scale-95 transition-all duration-300 disabled:opacity-50">
             {loading ? "Loading..." : "✨ Read Demo Storybook"}
           </button>
           <button onClick={() => setShowCreator(true)}
-                  className="px-8 py-4 rounded-2xl bg-white/5 border border-white/10 text-white font-medium text-lg backdrop-blur-sm hover:bg-white/10 hover:border-amber-400/30 hover:scale-105 transition-all duration-300">
+                  className="px-8 py-4 rounded-2xl bg-white/5 border border-white/10 text-white font-medium text-lg backdrop-blur-sm hover:bg-white/10 hover:border-amber-400/30 hover:scale-105 active:scale-95 transition-all duration-300">
             🛠 Create Your Story
           </button>
         </div>
@@ -3005,7 +3111,7 @@ export default function Home() {
         {/* Phase 7: Browse Library */}
         <button
           onClick={() => setShowPublicLibrary(true)}
-          className="mb-4 px-7 py-3.5 rounded-2xl bg-white/5 border border-white/10 text-white/80 font-medium text-base backdrop-blur-sm hover:bg-amber-500/10 hover:border-amber-400/30 hover:text-white hover:scale-105 transition-all duration-300 flex items-center gap-2"
+          className="mb-4 px-7 py-3.5 rounded-2xl bg-white/5 border border-white/10 text-white/80 font-medium text-base backdrop-blur-sm hover:bg-amber-500/10 hover:border-amber-400/30 hover:text-white hover:scale-105 active:scale-95 transition-all duration-300 flex items-center gap-2"
         >
           <span>📚</span> Browse Library
         </button>
@@ -3014,7 +3120,7 @@ export default function Home() {
         {user && (
           <button
             onClick={() => setShowMyStories(true)}
-            className="mb-4 px-7 py-3.5 rounded-2xl bg-white/5 border border-amber-400/20 text-amber-300/80 font-medium text-base backdrop-blur-sm hover:bg-amber-500/10 hover:border-amber-400/40 hover:text-amber-300 hover:scale-105 transition-all duration-300 flex items-center gap-2"
+            className="mb-4 px-7 py-3.5 rounded-2xl bg-white/5 border border-amber-400/20 text-amber-300/80 font-medium text-base backdrop-blur-sm hover:bg-amber-500/10 hover:border-amber-400/40 hover:text-amber-300 hover:scale-105 active:scale-95 transition-all duration-300 flex items-center gap-2"
           >
             <span>📚</span> My Stories
             {libraryCount > 0 && <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-xs font-bold">{libraryCount}</span>}
@@ -3025,7 +3131,7 @@ export default function Home() {
         <button
           onClick={() => openDemo(true)}
           disabled={loading || loadingRemix}
-          className="mb-16 px-7 py-3.5 rounded-2xl bg-white/5 border border-amber-400/20 text-amber-300/80 font-medium text-base backdrop-blur-sm hover:bg-amber-500/10 hover:border-amber-400/40 hover:text-amber-300 hover:scale-105 transition-all duration-300 disabled:opacity-40 flex items-center gap-2"
+          className="mb-16 px-7 py-3.5 rounded-2xl bg-white/5 border border-amber-400/20 text-amber-300/80 font-medium text-base backdrop-blur-sm hover:bg-amber-500/10 hover:border-amber-400/40 hover:text-amber-300 hover:scale-105 active:scale-95 transition-all duration-300 disabled:opacity-40 flex items-center gap-2"
         >
           {loadingRemix ? (
             <><span className="inline-block w-4 h-4 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin" /> Opening Remix...</>
