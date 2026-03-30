@@ -43,6 +43,12 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
   const [paused, setPaused] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const [fontsizeMult, setFontsizeMult] = useState(1);
+  const [showAccessibility, setShowAccessibility] = useState(false);
+  const [readingSpeed, setReadingSpeed] = useState<"slow" | "medium" | "fast">("medium");
+  const [dyslexiaFont, setDyslexiaFont] = useState(false);
+  const [highContrast, setHighContrast] = useState(false);
+  const [timingMult2, setTimingMult2] = useState(1.0); // user-adjustable multiplier
+  const [showSplash, setShowSplash] = useState(true);
   const synthRef = useRef<SpeechSynthesisUtterance | null>(null);
   const controlsTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const autoTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -60,7 +66,9 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
 
   const page = data.pages[currentPage];
   const totalPages = data.pages.length;
-  const timingMult = data.settings?.accessibility?.timingMultiplier ?? 1;
+  const baseTimingMult = data.settings?.accessibility?.timingMultiplier ?? 1;
+  const speedFactor = readingSpeed === "slow" ? 1.5 : readingSpeed === "fast" ? 0.6 : 1.0;
+  const timingMult = baseTimingMult * timingMult2 * speedFactor;
 
   const hasRecording = recordings[page?.id] !== undefined;
   const recordedCount = Object.keys(recordings).length;
@@ -132,6 +140,31 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
       Object.values(recordings).forEach(url => URL.revokeObjectURL(url));
       if (audioPlaybackRef.current) audioPlaybackRef.current.pause();
     };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* Splash screen — show for 2 seconds then fade */
+  useEffect(() => {
+    const timer = setTimeout(() => setShowSplash(false), 2200);
+    return () => clearTimeout(timer);
+  }, []);
+
+  /* Progress memory — save current page to localStorage */
+  useEffect(() => {
+    if (data.metadata.title) {
+      const key = `ssync-progress-${data.metadata.title.replace(/\s+/g, '-').toLowerCase()}`;
+      localStorage.setItem(key, String(currentPage));
+    }
+  }, [currentPage, data.metadata.title]);
+
+  /* Restore progress on mount */
+  useEffect(() => {
+    if (data.metadata.title) {
+      const key = `ssync-progress-${data.metadata.title.replace(/\s+/g, '-').toLowerCase()}`;
+      const saved = localStorage.getItem(key);
+      if (saved && parseInt(saved) > 0 && parseInt(saved) < totalPages) {
+        setCurrentPage(parseInt(saved));
+      }
+    }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* Navigate */
@@ -228,8 +261,11 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
       : page.text.fontSize === "large" ? "text-2xl md:text-3xl"
       : "text-lg md:text-xl";
 
+    const fontFamily = dyslexiaFont ? "font-sans tracking-wide" : "font-serif";
+    const contrastClass = highContrast ? "!text-white" : "";
+
     return (
-      <p className={`${fontSize} leading-relaxed font-serif text-gray-100 transition-all duration-500`}
+      <p className={`${fontSize} leading-relaxed ${fontFamily} text-gray-100 transition-all duration-500 ${contrastClass}`}
          style={{ fontSize: `${fontsizeMult}em` }}>
         {words.map((word, i) => (
           <span key={i} className={`inline-block mr-[0.3em] transition-all duration-300 ${
@@ -243,8 +279,33 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
     );
   };
 
+  /* Splash screen */
+  if (showSplash) {
+    return (
+      <div className="fixed inset-0 z-50 bg-[#060a14] flex flex-col items-center justify-center">
+        <div className="animate-float mb-6">
+          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/40">
+            <span className="text-4xl">⭐</span>
+          </div>
+        </div>
+        <h2 className="text-white text-2xl font-bold mb-2 animate-fadeIn">{data.metadata.title}</h2>
+        {data.metadata.author && (
+          <p className="text-white/40 text-sm animate-fadeIn" style={{ animationDelay: "0.3s" }}>
+            by {data.metadata.author}
+          </p>
+        )}
+        <div className="mt-8 flex gap-1">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"
+                 style={{ animationDelay: `${i * 0.3}s` }} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="fixed inset-0 z-50 bg-[#060a14] flex flex-col select-none"
+    <div className={`fixed inset-0 z-50 flex flex-col select-none ${highContrast ? "bg-black" : "bg-[#060a14]"}`}
          onClick={handleTap}>
 
       {/* Top bar */}
@@ -286,6 +347,12 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
           <button onClick={(e) => { e.stopPropagation(); setFontsizeMult(m => m >= 1.5 ? 0.8 : m + 0.1); }}
                   className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-white/20 transition text-white text-xs font-bold">
             Aa
+          </button>
+          <button onClick={(e) => { e.stopPropagation(); setShowAccessibility(p => !p); }}
+                  className={`w-10 h-10 rounded-full backdrop-blur-sm flex items-center justify-center transition ${
+                    showAccessibility ? "bg-violet-500/30 border border-violet-400/40" : "bg-white/10 hover:bg-white/20"
+                  } text-white text-sm`}>
+            ⚙️
           </button>
         </div>
       </div>
@@ -367,6 +434,85 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
                 )}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Accessibility Panel ── */}
+      {showAccessibility && (
+        <div className="absolute top-16 right-0 z-40 px-4 animate-fadeIn" onClick={e => e.stopPropagation()}
+             style={{ left: showRecordPanel ? "50%" : "0" }}>
+          <div className="max-w-sm ml-auto bg-[#0f1525]/95 backdrop-blur-xl border border-white/10 rounded-2xl p-5 shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-white font-semibold text-sm">⚙️ Reading Settings</h3>
+              <button onClick={() => setShowAccessibility(false)} className="text-white/40 hover:text-white text-lg">✕</button>
+            </div>
+
+            {/* Reading Speed */}
+            <div className="mb-4">
+              <p className="text-white/50 text-xs uppercase tracking-wider mb-2">Reading Speed</p>
+              <div className="flex gap-2">
+                {(["slow", "medium", "fast"] as const).map(s => (
+                  <button key={s} onClick={() => setReadingSpeed(s)}
+                    className={`flex-1 py-2 rounded-lg text-xs font-medium transition ${
+                      readingSpeed === s
+                        ? "bg-violet-500/30 border border-violet-400/40 text-violet-300"
+                        : "bg-white/5 border border-white/10 text-white/50 hover:text-white/70"
+                    }`}>
+                    {s === "slow" ? "🐢 Slow" : s === "medium" ? "🚶 Medium" : "🏃 Fast"}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Timing Multiplier */}
+            <div className="mb-4">
+              <p className="text-white/50 text-xs uppercase tracking-wider mb-2">
+                Page Pause: {timingMult2.toFixed(1)}×
+              </p>
+              <input type="range" min="0.5" max="3" step="0.1" value={timingMult2}
+                     onChange={e => setTimingMult2(parseFloat(e.target.value))}
+                     className="w-full accent-violet-500" />
+              <div className="flex justify-between text-white/30 text-xs mt-1">
+                <span>Quick</span><span>Long pause</span>
+              </div>
+            </div>
+
+            {/* Toggles */}
+            <div className="space-y-3">
+              <label className="flex items-center justify-between cursor-pointer">
+                <span className="text-white/70 text-sm">Dyslexia-friendly font</span>
+                <button onClick={() => setDyslexiaFont(d => !d)}
+                        className={`w-10 h-6 rounded-full transition-colors ${dyslexiaFont ? "bg-violet-500" : "bg-white/20"}`}>
+                  <div className={`w-4 h-4 rounded-full bg-white transition-transform ml-1 ${dyslexiaFont ? "translate-x-4" : ""}`} />
+                </button>
+              </label>
+
+              <label className="flex items-center justify-between cursor-pointer">
+                <span className="text-white/70 text-sm">High contrast</span>
+                <button onClick={() => setHighContrast(c => !c)}
+                        className={`w-10 h-6 rounded-full transition-colors ${highContrast ? "bg-violet-500" : "bg-white/20"}`}>
+                  <div className={`w-4 h-4 rounded-full bg-white transition-transform ml-1 ${highContrast ? "translate-x-4" : ""}`} />
+                </button>
+              </label>
+            </div>
+
+            {/* Font size */}
+            <div className="mt-4">
+              <p className="text-white/50 text-xs uppercase tracking-wider mb-2">Font Size</p>
+              <div className="flex gap-2">
+                {[0.8, 1.0, 1.2, 1.5].map(s => (
+                  <button key={s} onClick={() => setFontsizeMult(s)}
+                    className={`flex-1 py-2 rounded-lg font-medium transition ${
+                      Math.abs(fontsizeMult - s) < 0.05
+                        ? "bg-violet-500/30 border border-violet-400/40 text-violet-300"
+                        : "bg-white/5 border border-white/10 text-white/50 hover:text-white/70"
+                    }`} style={{ fontSize: `${10 + s * 4}px` }}>
+                    Aa
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       )}
