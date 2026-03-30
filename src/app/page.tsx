@@ -35,7 +35,6 @@ function playPageTurnSound() {
   try {
     const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
 
-    // White noise buffer (50ms)
     const bufferSize = Math.floor(ctx.sampleRate * 0.05);
     const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
     const data = noiseBuffer.getChannelData(0);
@@ -44,13 +43,11 @@ function playPageTurnSound() {
     const noiseSource = ctx.createBufferSource();
     noiseSource.buffer = noiseBuffer;
 
-    // Bandpass filter at 800Hz
     const filter = ctx.createBiquadFilter();
     filter.type = "bandpass";
     filter.frequency.value = 800;
     filter.Q.value = 1.5;
 
-    // Gain with exponential decay
     const gainNode = ctx.createGain();
     gainNode.gain.setValueAtTime(0.08, ctx.currentTime);
     gainNode.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.05);
@@ -62,7 +59,6 @@ function playPageTurnSound() {
     noiseSource.start(ctx.currentTime);
     noiseSource.stop(ctx.currentTime + 0.05);
 
-    // Close context after sound finishes
     setTimeout(() => ctx.close(), 200);
   } catch {
     // Silently ignore — audio not critical
@@ -97,7 +93,7 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
 
   /* ── Voice Recording State ── */
   const [voiceMode, setVoiceMode] = useState<VoiceMode>("ai");
-  const [recordings, setRecordings] = useState<Record<number, string>>({}); // pageId → blob URL
+  const [recordings, setRecordings] = useState<Record<number, string>>({});
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [showRecordPanel, setShowRecordPanel] = useState(false);
@@ -106,14 +102,29 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
   const recordTimerRef = useRef<ReturnType<typeof setInterval>>(undefined);
   const audioPlaybackRef = useRef<HTMLAudioElement | null>(null);
 
+  /* ── Phase 2: Voice Engine State ── */
+  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [selectedVoiceIndex, setSelectedVoiceIndex] = useState<number>(-1);
+  const [showVoicePicker, setShowVoicePicker] = useState(false);
+  const [pageVoicePrefs, setPageVoicePrefs] = useState<Record<number, { type: "tts" | "recorded"; voiceIndex?: number }>>({});
+  const [musicEnabled, setMusicEnabled] = useState(false);
+  const [narrationVolume, setNarrationVolume] = useState(80);
+  const [musicVolume, setMusicVolume] = useState(30);
+  const [previewingVoice, setPreviewingVoice] = useState<number | null>(null);
+
+  /* ── Phase 2: Audio Engine Refs ── */
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const musicGainRef = useRef<GainNode | null>(null);
+  const osc1Ref = useRef<OscillatorNode | null>(null);
+  const osc2Ref = useRef<OscillatorNode | null>(null);
+
   const page = data.pages[currentPage];
   const totalPages = data.pages.length;
   const baseTimingMult = data.settings?.accessibility?.timingMultiplier ?? 1;
   const speedFactor = readingSpeed === "slow" ? 1.5 : readingSpeed === "fast" ? 0.6 : 1.0;
   const timingMult = baseTimingMult * timingMult2 * speedFactor;
-  const soundEnabled = data.settings?.pageTurnSound !== false; // default true
+  const soundEnabled = data.settings?.pageTurnSound !== false;
 
-  // Landscape: next page index
   const nextPageIdx = currentPage + 1;
   const nextPage = nextPageIdx < totalPages ? data.pages[nextPageIdx] : null;
 
@@ -123,11 +134,8 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
 
   /* ── Landscape detection ── */
   useEffect(() => {
-    const check = () => {
-      setIsLandscape(window.innerWidth > window.innerHeight);
-    };
+    const check = () => { setIsLandscape(window.innerWidth > window.innerHeight); };
     check();
-
     const mq = window.matchMedia("(orientation: landscape)");
     const handler = () => check();
     mq.addEventListener("change", handler);
@@ -137,6 +145,96 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
       window.removeEventListener("resize", check);
     };
   }, []);
+
+  /* ── Load Web Speech API voices ── */
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.speechSynthesis) return;
+    const loadVoices = () => {
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length > 0) setAvailableVoices(voices);
+    };
+    loadVoices();
+    window.speechSynthesis.addEventListener("voiceschanged", loadVoices);
+    return () => window.speechSynthesis.removeEventListener("voiceschanged", loadVoices);
+  }, []);
+
+  /* ── Background Music (Web Audio API ambient pad) ── */
+  const startMusic = useCallback((vol: number) => {
+    try {
+      const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+      audioCtxRef.current = ctx;
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = "lowpass";
+      filter.frequency.value = 400;
+
+      const gainNode = ctx.createGain();
+      const targetGain = 0.03 * (vol / 100);
+      gainNode.gain.setValueAtTime(0, ctx.currentTime);
+      gainNode.gain.linearRampToValueAtTime(targetGain, ctx.currentTime + 2);
+      musicGainRef.current = gainNode;
+
+      const osc1 = ctx.createOscillator();
+      osc1.type = "sine";
+      osc1.frequency.value = 220;
+
+      const osc2 = ctx.createOscillator();
+      osc2.type = "sine";
+      osc2.frequency.value = 220.5;
+
+      osc1.connect(filter);
+      osc2.connect(filter);
+      filter.connect(gainNode);
+      gainNode.connect(ctx.destination);
+
+      osc1.start();
+      osc2.start();
+      osc1Ref.current = osc1;
+      osc2Ref.current = osc2;
+    } catch {
+      // Web Audio not supported
+    }
+  }, []);
+
+  const stopMusic = useCallback(() => {
+    if (musicGainRef.current && audioCtxRef.current) {
+      try {
+        musicGainRef.current.gain.linearRampToValueAtTime(0, audioCtxRef.current.currentTime + 1);
+        setTimeout(() => {
+          try { osc1Ref.current?.stop(); } catch { /* ignore */ }
+          try { osc2Ref.current?.stop(); } catch { /* ignore */ }
+          audioCtxRef.current?.close();
+        }, 1200);
+      } catch { /* ignore */ }
+      audioCtxRef.current = null;
+      musicGainRef.current = null;
+      osc1Ref.current = null;
+      osc2Ref.current = null;
+    }
+  }, []);
+
+  /* ── Music toggle effect ── */
+  useEffect(() => {
+    if (musicEnabled) {
+      startMusic(musicVolume);
+    } else {
+      stopMusic();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [musicEnabled]);
+
+  /* ── Music volume real-time update ── */
+  useEffect(() => {
+    if (musicGainRef.current && audioCtxRef.current) {
+      try {
+        musicGainRef.current.gain.setTargetAtTime(
+          0.03 * (musicVolume / 100),
+          audioCtxRef.current.currentTime,
+          0.1
+        );
+      } catch { /* ignore */ }
+    }
+  }, [musicVolume]);
 
   /* ── Voice Recording Functions ── */
   const startRecording = async () => {
@@ -162,16 +260,13 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
       setRecordingTime(0);
       recordTimerRef.current = setInterval(() => setRecordingTime(t => t + 1), 1000);
 
-      // Cancel TTS if playing
       window.speechSynthesis?.cancel();
     } catch {
       console.error("Microphone access denied");
     }
   };
 
-  const stopRecording = () => {
-    mediaRecorderRef.current?.stop();
-  };
+  const stopRecording = () => { mediaRecorderRef.current?.stop(); };
 
   const deleteRecording = (pageId: number) => {
     setRecordings(prev => {
@@ -181,22 +276,35 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
     });
   };
 
-  const playRecording = (pageId: number) => {
+  const playRecording = useCallback((pageId: number) => {
     const url = recordings[pageId];
     if (!url) return;
     window.speechSynthesis?.cancel();
     if (audioPlaybackRef.current) { audioPlaybackRef.current.pause(); }
     const audio = new Audio(url);
+    audio.volume = narrationVolume / 100;
     audioPlaybackRef.current = audio;
     audio.onplay = () => setNarrating(true);
     audio.onended = () => {
       setNarrating(false);
       if (!paused && data.settings?.autoPlay !== false) {
-        const pause = parseDuration(page.timing?.autoPause) * timingMult;
+        const pause = parseDuration(page?.timing?.autoPause) * timingMult;
         autoTimer.current = setTimeout(() => goTo("next"), pause);
       }
     };
     audio.play();
+  }, [recordings, narrationVolume, paused, data.settings?.autoPlay, page?.timing?.autoPause, timingMult]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* ── Voice Preview ── */
+  const previewVoice = (voiceIndex: number) => {
+    window.speechSynthesis?.cancel();
+    setPreviewingVoice(voiceIndex);
+    const utterance = new SpeechSynthesisUtterance("Once upon a time...");
+    if (availableVoices[voiceIndex]) utterance.voice = availableVoices[voiceIndex];
+    utterance.rate = 0.9;
+    utterance.onend = () => setPreviewingVoice(null);
+    utterance.onerror = () => setPreviewingVoice(null);
+    window.speechSynthesis.speak(utterance);
   };
 
   /* Splash screen */
@@ -205,7 +313,7 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
     return () => clearTimeout(timer);
   }, []);
 
-  /* Progress memory — save to localStorage */
+  /* Progress memory */
   useEffect(() => {
     if (data.metadata.title) {
       const key = `ssync-progress-${data.metadata.title.replace(/\s+/g, '-').toLowerCase()}`;
@@ -224,20 +332,21 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /* Cleanup recordings on unmount */
+  /* Cleanup on unmount */
   useEffect(() => {
     return () => {
       Object.values(recordings).forEach(url => URL.revokeObjectURL(url));
       if (audioPlaybackRef.current) audioPlaybackRef.current.pause();
+      // Stop ambient music
+      stopMusic();
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /* Navigate — advances by 2 in landscape mode */
+  /* Navigate */
   const goTo = useCallback((dir: "next" | "prev") => {
     if (transitioning) return;
     const step = isLandscape ? 2 : 1;
     const next = dir === "next" ? currentPage + step : currentPage - step;
-    // Clamp to valid range
     const clamped = Math.max(0, Math.min(next, totalPages - 1));
     if (clamped === currentPage) return;
     window.speechSynthesis?.cancel();
@@ -247,10 +356,8 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
     setHighlightIdx(-1);
     setNarrating(false);
 
-    // Play sound
     if (soundEnabled) playPageTurnSound();
 
-    // Phase 1: flipping (CSS 3D animation plays)
     setAnimPhase("flipping");
     setTimeout(() => {
       setCurrentPage(clamped);
@@ -264,25 +371,26 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
     const handler = (e: KeyboardEvent) => {
       if (e.key === "ArrowRight" || e.key === " ") { e.preventDefault(); goTo("next"); }
       else if (e.key === "ArrowLeft") goTo("prev");
-      else if (e.key === "Escape") onExit();
+      else if (e.key === "Escape") {
+        stopMusic();
+        onExit();
+      }
       else if (e.key === "p") setPaused(p => !p);
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [goTo, onExit]);
+  }, [goTo, onExit, stopMusic]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* Swipe gesture support */
   const touchStartX = useRef<number | null>(null);
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
-  };
+  const handleTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX; };
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (touchStartX.current === null) return;
     const delta = e.changedTouches[0].clientX - touchStartX.current;
     touchStartX.current = null;
-    if (Math.abs(delta) < 50) return; // minimum swipe distance
-    if (delta < 0) goTo("next");   // swipe left → next
-    else goTo("prev");              // swipe right → prev
+    if (Math.abs(delta) < 50) return;
+    if (delta < 0) goTo("next");
+    else goTo("prev");
   };
 
   /* Auto-hide controls */
@@ -294,26 +402,43 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
     return () => { if (controlsTimer.current) clearTimeout(controlsTimer.current); };
   }, [showControls, currentPage]);
 
-  /* Narration — TTS or recorded voice */
+  /* Narration — TTS or recorded voice (with per-page prefs + volume) */
   useEffect(() => {
     if (paused || !page?.text?.content || isRecording) return;
 
-    // If we have a recording for this page and voiceMode is "recorded", play it
-    if (voiceMode === "recorded" && recordings[page.id]) {
+    // Determine effective voice mode for this page
+    const pagePref = pageVoicePrefs[page.id];
+
+    // If page prefers recorded and has recording → play it
+    const useRecorded =
+      (pagePref?.type === "recorded" && recordings[page.id]) ||
+      (!pagePref && voiceMode === "recorded" && recordings[page.id]);
+
+    if (useRecorded) {
       const startDelay = setTimeout(() => playRecording(page.id), 800);
       return () => { clearTimeout(startDelay); if (autoTimer.current) clearTimeout(autoTimer.current); };
     }
 
-    // Otherwise use TTS
+    // Otherwise TTS
     if (typeof window === "undefined" || !window.speechSynthesis) return;
 
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(page.text.content);
     utterance.rate = 0.85;
     utterance.pitch = 1.05;
+    utterance.volume = narrationVolume / 100;
+
+    // Apply per-page voice override first, then global selection
+    const effectiveVoiceIndex = pagePref?.type === "tts" && pagePref.voiceIndex !== undefined
+      ? pagePref.voiceIndex
+      : selectedVoiceIndex;
+
+    if (effectiveVoiceIndex >= 0 && availableVoices[effectiveVoiceIndex]) {
+      utterance.voice = availableVoices[effectiveVoiceIndex];
+    }
+
     synthRef.current = utterance;
 
-    const words = page.text.content.split(/\s+/);
     let wordIdx = 0;
     utterance.onboundary = (e) => {
       if (e.name === "word") { setHighlightIdx(wordIdx); wordIdx++; }
@@ -334,12 +459,11 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
       if (autoTimer.current) clearTimeout(autoTimer.current);
       window.speechSynthesis.cancel();
     };
-  }, [currentPage, paused, voiceMode, recordings]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentPage, paused, voiceMode, recordings, selectedVoiceIndex, availableVoices, narrationVolume, pageVoicePrefs]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /* Tap zones (only on non-touch, since touch uses swipe) */
+  /* Tap zones */
   const handleTap = (e: React.MouseEvent) => {
     setShowControls(true);
-    // Only handle tap zones if not from a touch-initiated click
     const x = e.clientX / window.innerWidth;
     if (x < 0.2) goTo("prev");
     else if (x > 0.8) goTo("next");
@@ -378,8 +502,7 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
       <div className="flex flex-col items-center justify-center px-6 md:px-16 py-20 w-full h-full">
         {pg?.illustration?.url && (
           <div className="w-full max-w-2xl mb-8 rounded-2xl overflow-hidden shadow-2xl shadow-amber-900/20 animate-fadeIn">
-            <img src={pg.illustration.url} alt={pg.illustration.alt || ""}
-                 className="w-full h-auto object-cover" />
+            <img src={pg.illustration.url} alt={pg.illustration.alt || ""} className="w-full h-auto object-cover" />
           </div>
         )}
         <div className="w-full max-w-2xl text-center animate-fadeInUp">
@@ -393,9 +516,11 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
   /* ── Compute 3D flip animation class ── */
   const flipClass = animPhase === "flipping"
     ? direction === "next" ? "page-flip-next" : "page-flip-prev"
-    : animPhase === "settling"
-    ? "page-settle"
-    : "";
+    : animPhase === "settling" ? "page-settle" : "";
+
+  /* ── Group voices: English first, then others ── */
+  const englishVoices = availableVoices.filter(v => v.lang.startsWith("en"));
+  const otherVoices = availableVoices.filter(v => !v.lang.startsWith("en"));
 
   /* Splash screen */
   if (showSplash) {
@@ -427,9 +552,9 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
       onTouchEnd={handleTouchEnd}
     >
 
-      {/* Top bar */}
+      {/* ── Top bar ── */}
       <div className={`absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/80 to-transparent transition-opacity duration-500 ${showControls ? "opacity-100" : "opacity-0"}`}>
-        <button onClick={(e) => { e.stopPropagation(); onExit(); }}
+        <button onClick={(e) => { e.stopPropagation(); stopMusic(); onExit(); }}
                 className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-white/20 transition">
           <span className="text-white text-lg">✕</span>
         </button>
@@ -447,11 +572,31 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
                   className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-white/20 transition text-white text-sm">
             {paused ? "▶" : "⏸"}
           </button>
+
+          {/* 🎵 Music toggle */}
+          <button onClick={(e) => { e.stopPropagation(); setMusicEnabled(m => !m); }}
+                  className={`w-10 h-10 rounded-full backdrop-blur-sm flex items-center justify-center transition text-sm ${
+                    musicEnabled
+                      ? "bg-violet-500/30 border border-violet-400/40 text-violet-300"
+                      : "bg-white/10 hover:bg-white/20 text-white/70"
+                  }`}
+                  title="Background Music">
+            🎵
+          </button>
+
+          {/* 🗣 Voice picker */}
+          <button onClick={(e) => { e.stopPropagation(); setShowVoicePicker(p => !p); setShowAccessibility(false); setShowRecordPanel(false); }}
+                  className={`w-10 h-10 rounded-full backdrop-blur-sm flex items-center justify-center transition text-sm ${
+                    showVoicePicker || selectedVoiceIndex >= 0
+                      ? "bg-amber-500/30 border border-amber-400/40 text-amber-300"
+                      : "bg-white/10 hover:bg-white/20 text-white/70"
+                  }`}
+                  title="AI Voice Picker">
+            🗣
+          </button>
+
           {/* Voice mode toggle */}
-          <button onClick={(e) => {
-                    e.stopPropagation();
-                    setVoiceMode(m => m === "ai" ? "recorded" : "ai");
-                  }}
+          <button onClick={(e) => { e.stopPropagation(); setVoiceMode(m => m === "ai" ? "recorded" : "ai"); }}
                   className={`h-10 px-3 rounded-full backdrop-blur-sm flex items-center justify-center gap-1.5 transition text-xs font-medium ${
                     voiceMode === "recorded"
                       ? "bg-rose-500/30 border border-rose-400/40 text-rose-300"
@@ -459,8 +604,9 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
                   }`}>
             {voiceMode === "recorded" ? "🎙️ My Voice" : "🤖 AI Voice"}
           </button>
+
           {/* Record button */}
-          <button onClick={(e) => { e.stopPropagation(); setShowRecordPanel(p => !p); }}
+          <button onClick={(e) => { e.stopPropagation(); setShowRecordPanel(p => !p); setShowVoicePicker(false); setShowAccessibility(false); }}
                   className={`w-10 h-10 rounded-full backdrop-blur-sm flex items-center justify-center transition ${
                     hasRecording
                       ? "bg-emerald-500/30 border border-emerald-400/40 text-emerald-300"
@@ -472,23 +618,208 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
                   className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-white/20 transition text-white text-xs font-bold">
             Aa
           </button>
-          <button onClick={(e) => { e.stopPropagation(); setShowAccessibility(p => !p); }}
+          <button onClick={(e) => { e.stopPropagation(); setShowAccessibility(p => !p); setShowVoicePicker(false); setShowRecordPanel(false); }}
                   className={`w-10 h-10 rounded-full backdrop-blur-sm flex items-center justify-center transition ${showAccessibility ? "bg-violet-500/30 border border-violet-400/40" : "bg-white/10 hover:bg-white/20"} text-white text-sm`}>
             ⚙️
           </button>
         </div>
       </div>
 
-      {/* ── Recording Panel ── */}
+      {/* ════════════════════════════
+          VOICE PICKER PANEL (slide-in from right, full height)
+          ════════════════════════════ */}
+      <div
+        className={`absolute inset-y-0 right-0 z-50 w-80 max-w-[90vw] transition-transform duration-300 ease-out ${showVoicePicker ? "translate-x-0" : "translate-x-full"}`}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="h-full bg-[#0f1525]/95 backdrop-blur-xl border-l border-white/10 flex flex-col shadow-2xl">
+          {/* Header */}
+          <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+            <div>
+              <h3 className="text-white font-semibold text-sm">🗣 AI Voice Selection</h3>
+              <p className="text-white/40 text-xs mt-0.5">
+                {selectedVoiceIndex >= 0 ? availableVoices[selectedVoiceIndex]?.name : "Default system voice"}
+              </p>
+            </div>
+            <button onClick={() => setShowVoicePicker(false)} className="text-white/40 hover:text-white text-lg w-8 h-8 flex items-center justify-center">✕</button>
+          </div>
+
+          {/* Default option */}
+          <div className="px-4 pt-3">
+            <button
+              onClick={() => setSelectedVoiceIndex(-1)}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition text-left ${
+                selectedVoiceIndex === -1
+                  ? "bg-amber-500/20 border border-amber-400/30"
+                  : "hover:bg-white/5 border border-transparent"
+              }`}
+            >
+              <span className="text-lg">🤖</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-white text-sm font-medium">Default (System)</p>
+                <p className="text-white/40 text-xs">Browser&apos;s default voice</p>
+              </div>
+              {selectedVoiceIndex === -1 && <span className="text-amber-400 text-xs">✓</span>}
+            </button>
+          </div>
+
+          {/* Voice list scrollable */}
+          <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-4 mt-3">
+            {availableVoices.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <p className="text-white/30 text-sm">No voices loaded yet</p>
+                <p className="text-white/20 text-xs mt-1">Voices load after first TTS playback</p>
+              </div>
+            ) : (
+              <>
+                {/* English voices */}
+                {englishVoices.length > 0 && (
+                  <div>
+                    <p className="text-amber-400/70 text-xs uppercase tracking-widest mb-2 px-1">🇬🇧 English</p>
+                    <div className="space-y-1">
+                      {englishVoices.map((voice, _) => {
+                        const globalIdx = availableVoices.indexOf(voice);
+                        const isSelected = selectedVoiceIndex === globalIdx;
+                        const isPreviewing = previewingVoice === globalIdx;
+                        return (
+                          <div
+                            key={globalIdx}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-xl transition cursor-pointer ${
+                              isSelected
+                                ? "bg-amber-500/20 border border-amber-400/30"
+                                : "hover:bg-white/5 border border-transparent"
+                            }`}
+                            onClick={() => { setSelectedVoiceIndex(globalIdx); window.speechSynthesis?.cancel(); setPreviewingVoice(null); }}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <p className="text-white text-xs font-medium truncate">{voice.name}</p>
+                              <p className="text-white/30 text-xs">{voice.lang}</p>
+                            </div>
+                            {isSelected && <span className="text-amber-400 text-xs flex-shrink-0">✓</span>}
+                            <button
+                              onClick={(e) => { e.stopPropagation(); if (isPreviewing) { window.speechSynthesis.cancel(); setPreviewingVoice(null); } else { previewVoice(globalIdx); } }}
+                              className={`w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 transition text-xs ${
+                                isPreviewing
+                                  ? "bg-amber-500/30 text-amber-300"
+                                  : "bg-white/10 text-white/50 hover:bg-white/20 hover:text-white"
+                              }`}
+                              title="Preview voice"
+                            >
+                              {isPreviewing ? "■" : "▶"}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Other language voices */}
+                {otherVoices.length > 0 && (
+                  <div>
+                    <p className="text-white/30 text-xs uppercase tracking-widest mb-2 px-1">🌍 Other Languages</p>
+                    <div className="space-y-1">
+                      {otherVoices.map((voice) => {
+                        const globalIdx = availableVoices.indexOf(voice);
+                        const isSelected = selectedVoiceIndex === globalIdx;
+                        const isPreviewing = previewingVoice === globalIdx;
+                        return (
+                          <div
+                            key={globalIdx}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-xl transition cursor-pointer ${
+                              isSelected
+                                ? "bg-amber-500/20 border border-amber-400/30"
+                                : "hover:bg-white/5 border border-transparent"
+                            }`}
+                            onClick={() => { setSelectedVoiceIndex(globalIdx); window.speechSynthesis?.cancel(); setPreviewingVoice(null); }}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <p className="text-white text-xs font-medium truncate">{voice.name}</p>
+                              <p className="text-white/30 text-xs">{voice.lang}</p>
+                            </div>
+                            {isSelected && <span className="text-amber-400 text-xs flex-shrink-0">✓</span>}
+                            <button
+                              onClick={(e) => { e.stopPropagation(); if (isPreviewing) { window.speechSynthesis.cancel(); setPreviewingVoice(null); } else { previewVoice(globalIdx); } }}
+                              className={`w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 transition text-xs ${
+                                isPreviewing
+                                  ? "bg-amber-500/30 text-amber-300"
+                                  : "bg-white/10 text-white/50 hover:bg-white/20 hover:text-white"
+                              }`}
+                              title="Preview voice"
+                            >
+                              {isPreviewing ? "■" : "▶"}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ════════════════════════════
+          RECORDING PANEL
+          ════════════════════════════ */}
       {showRecordPanel && (
         <div className="absolute top-16 left-0 right-0 z-40 px-4 animate-fadeIn" onClick={e => e.stopPropagation()}>
           <div className="max-w-md mx-auto bg-[#0f1525]/95 backdrop-blur-xl border border-white/10 rounded-2xl p-5 shadow-2xl">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-white font-semibold text-sm">
-                🎤 Record Page {currentPage + 1}
-              </h3>
-              <button onClick={() => setShowRecordPanel(false)}
-                      className="text-white/40 hover:text-white text-lg">✕</button>
+              <h3 className="text-white font-semibold text-sm">🎤 Record Page {currentPage + 1}</h3>
+              <button onClick={() => setShowRecordPanel(false)} className="text-white/40 hover:text-white text-lg">✕</button>
+            </div>
+
+            {/* Per-page voice assignment */}
+            <div className="mb-4">
+              <p className="text-white/50 text-xs uppercase tracking-wider mb-2">Voice for this page</p>
+              <div className="flex gap-2 flex-wrap">
+                {/* Default AI */}
+                <button
+                  onClick={() => setPageVoicePrefs(prev => { const next = { ...prev }; delete next[page.id]; return next; })}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+                    !pageVoicePrefs[page.id]
+                      ? "bg-amber-500/30 border border-amber-400/40 text-amber-300"
+                      : "bg-white/5 border border-white/10 text-white/50 hover:bg-white/10"
+                  }`}
+                >
+                  🤖 Default (AI)
+                </button>
+                {/* My Recording (only if recording exists) */}
+                {hasRecording && (
+                  <button
+                    onClick={() => setPageVoicePrefs(prev => ({ ...prev, [page.id]: { type: "recorded" } }))}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+                      pageVoicePrefs[page.id]?.type === "recorded"
+                        ? "bg-rose-500/30 border border-rose-400/40 text-rose-300"
+                        : "bg-white/5 border border-white/10 text-white/50 hover:bg-white/10"
+                    }`}
+                  >
+                    🎙️ My Recording
+                  </button>
+                )}
+                {/* Specific voices (top 4 English) */}
+                {englishVoices.slice(0, 4).map((voice) => {
+                  const globalIdx = availableVoices.indexOf(voice);
+                  const isActive = pageVoicePrefs[page.id]?.type === "tts" && pageVoicePrefs[page.id]?.voiceIndex === globalIdx;
+                  return (
+                    <button
+                      key={globalIdx}
+                      onClick={() => setPageVoicePrefs(prev => ({ ...prev, [page.id]: { type: "tts", voiceIndex: globalIdx } }))}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition truncate max-w-[120px] ${
+                        isActive
+                          ? "bg-amber-500/30 border border-amber-400/40 text-amber-300"
+                          : "bg-white/5 border border-white/10 text-white/50 hover:bg-white/10"
+                      }`}
+                      title={voice.name}
+                    >
+                      {voice.name.split(" ")[0]}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Recording status */}
@@ -497,7 +828,7 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
                 <div className="flex justify-center gap-1 items-end h-8 mb-3">
                   {[...Array(7)].map((_, i) => (
                     <div key={i} className="w-1.5 bg-rose-400 rounded-full animate-pulse"
-                         style={{ height: `${12 + Math.sin(Date.now()/200 + i) * 16}px`, animationDelay: `${i * 0.1}s` }} />
+                         style={{ height: `${12 + Math.sin(Date.now() / 200 + i) * 16}px`, animationDelay: `${i * 0.1}s` }} />
                   ))}
                 </div>
                 <p className="text-rose-300 text-lg font-mono mb-1">
@@ -511,7 +842,6 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
               </div>
             ) : (
               <div>
-                {/* Show existing recording if any */}
                 {hasRecording && (
                   <div className="flex items-center gap-3 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 mb-4">
                     <span className="text-emerald-400">✓</span>
@@ -527,14 +857,12 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
                   </div>
                 )}
 
-                {/* Record button */}
                 <button onClick={startRecording}
                         className="w-full py-3 rounded-xl bg-rose-500/20 border border-rose-400/30 text-rose-300 font-medium hover:bg-rose-500/30 transition flex items-center justify-center gap-2">
                   <span className="w-3 h-3 rounded-full bg-rose-500 animate-pulse" />
                   {hasRecording ? "Re-record This Page" : "Start Recording"}
                 </button>
 
-                {/* Text preview for reference while recording */}
                 {page?.text?.content && (
                   <div className="mt-4 p-3 rounded-xl bg-white/5 border border-white/5">
                     <p className="text-white/30 text-xs uppercase tracking-wider mb-1">Read this:</p>
@@ -544,7 +872,6 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
                   </div>
                 )}
 
-                {/* Progress across all pages */}
                 {recordedCount > 0 && (
                   <div className="mt-4 flex items-center gap-2">
                     <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
@@ -560,7 +887,9 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
         </div>
       )}
 
-      {/* ── Accessibility Panel ── */}
+      {/* ════════════════════════════
+          ACCESSIBILITY PANEL (with audio mixer)
+          ════════════════════════════ */}
       {showAccessibility && (
         <div className="absolute top-16 right-4 z-40 animate-fadeIn" onClick={e => e.stopPropagation()}>
           <div className="w-72 bg-[#0f1525]/95 backdrop-blur-xl border border-white/10 rounded-2xl p-5 shadow-2xl">
@@ -568,6 +897,8 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
               <h3 className="text-white font-semibold text-sm">⚙️ Reading Settings</h3>
               <button onClick={() => setShowAccessibility(false)} className="text-white/40 hover:text-white text-lg">✕</button>
             </div>
+
+            {/* Reading Speed */}
             <div className="mb-4">
               <p className="text-white/50 text-xs uppercase tracking-wider mb-2">Reading Speed</p>
               <div className="flex gap-2">
@@ -579,12 +910,48 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
                 ))}
               </div>
             </div>
+
+            {/* Page Pause timing */}
             <div className="mb-4">
               <p className="text-white/50 text-xs uppercase tracking-wider mb-2">Page Pause: {timingMult2.toFixed(1)}×</p>
               <input type="range" min="0.5" max="3" step="0.1" value={timingMult2}
                      onChange={e => setTimingMult2(parseFloat(e.target.value))} className="w-full accent-violet-500" />
             </div>
-            <div className="space-y-3">
+
+            {/* ── Audio Mixer ── */}
+            <div className="mb-4 border-t border-white/10 pt-4">
+              <p className="text-white/50 text-xs uppercase tracking-wider mb-3">🎚️ Audio Mixer</p>
+              {/* Narration volume */}
+              <div className="mb-3">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-amber-300/80 text-xs">🗣 Narration</span>
+                  <span className="text-amber-400 text-xs font-mono">{narrationVolume}%</span>
+                </div>
+                <input
+                  type="range" min="0" max="100" step="5" value={narrationVolume}
+                  onChange={e => setNarrationVolume(parseInt(e.target.value))}
+                  className="w-full accent-amber-500"
+                />
+              </div>
+              {/* Music volume */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-violet-300/80 text-xs">🎵 Music</span>
+                  <span className="text-violet-400 text-xs font-mono">{musicVolume}%</span>
+                </div>
+                <input
+                  type="range" min="0" max="100" step="5" value={musicVolume}
+                  onChange={e => setMusicVolume(parseInt(e.target.value))}
+                  className="w-full accent-violet-500"
+                />
+                {!musicEnabled && (
+                  <p className="text-white/20 text-xs mt-1">Enable music with 🎵 button</p>
+                )}
+              </div>
+            </div>
+
+            {/* Font options */}
+            <div className="space-y-3 border-t border-white/10 pt-4">
               <label className="flex items-center justify-between cursor-pointer">
                 <span className="text-white/70 text-sm">Dyslexia font</span>
                 <button onClick={() => setDyslexiaFont(d => !d)}
@@ -600,6 +967,8 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
                 </button>
               </label>
             </div>
+
+            {/* Font size */}
             <div className="mt-4">
               <p className="text-white/50 text-xs uppercase tracking-wider mb-2">Font Size</p>
               <div className="flex gap-2">
@@ -617,15 +986,10 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
       {/* ══ LANDSCAPE: Two-Page Spread ══ */}
       {isLandscape ? (
         <div className={`flex-1 flex flex-row items-stretch relative overflow-hidden ${flipClass}`}>
-          {/* Left page (current) */}
           <div className="flex-1 flex flex-col items-center justify-center relative bg-[#070b16]">
             {renderSinglePage(page, currentPage)}
           </div>
-
-          {/* Book spine divider */}
           <div className="w-[2px] flex-shrink-0 bg-gradient-to-b from-transparent via-white/20 to-transparent self-stretch shadow-[0_0_12px_2px_rgba(255,255,255,0.06)]" />
-
-          {/* Right page (next) */}
           <div className="flex-1 flex flex-col items-center justify-center relative bg-[#060a13]">
             {nextPage
               ? renderSinglePage(nextPage, nextPageIdx)
@@ -637,8 +1001,6 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
               )
             }
           </div>
-
-          {/* Subtle center shadow (book depth) */}
           <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-8 bg-gradient-to-r from-black/30 via-transparent to-black/30 pointer-events-none" />
         </div>
       ) : (
@@ -646,8 +1008,7 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
         <div className={`flex-1 flex flex-col items-center justify-center ${flipClass}`}>
           {page?.illustration?.url && (
             <div className="w-full max-w-2xl mb-8 px-6 rounded-2xl overflow-hidden shadow-2xl shadow-amber-900/20 animate-fadeIn">
-              <img src={page.illustration.url} alt={page.illustration.alt || ""}
-                   className="w-full h-auto object-cover rounded-2xl" />
+              <img src={page.illustration.url} alt={page.illustration.alt || ""} className="w-full h-auto object-cover rounded-2xl" />
             </div>
           )}
           <div className="w-full max-w-2xl px-6 text-center animate-fadeInUp">
@@ -658,7 +1019,6 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
 
       {/* Bottom progress */}
       <div className={`absolute bottom-0 left-0 right-0 z-30 transition-opacity duration-500 ${showControls ? "opacity-100" : "opacity-0"}`}>
-        {/* Narration / Recording indicator */}
         {isRecording ? (
           <div className="flex justify-center items-center gap-2 mb-2">
             <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
@@ -675,12 +1035,10 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
             {voiceMode === "recorded" && <span className="text-rose-400/60 text-xs">Your voice</span>}
           </div>
         ) : null}
-        {/* Progress bar */}
         <div className="h-1 bg-white/10">
           <div className="h-full bg-gradient-to-r from-amber-500 to-violet-500 transition-all duration-500"
                style={{ width: `${((currentPage + 1) / totalPages) * 100}%` }} />
         </div>
-        {/* Nav hint */}
         <div className="flex justify-between px-6 py-3 bg-gradient-to-t from-black/80 to-transparent">
           <button onClick={(e) => { e.stopPropagation(); goTo("prev"); }}
                   className={`text-white/40 text-sm hover:text-white/70 transition ${currentPage === 0 ? "invisible" : ""}`}>
@@ -722,7 +1080,6 @@ export default function Home() {
 
       {/* ── Hero ── */}
       <section className="relative min-h-screen flex flex-col items-center justify-center px-6 text-center">
-        {/* Ambient stars */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           {[...Array(40)].map((_, i) => (
             <div key={i} className="absolute w-1 h-1 bg-white rounded-full animate-twinkle"
@@ -734,11 +1091,9 @@ export default function Home() {
           ))}
         </div>
 
-        {/* Glow orb */}
         <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-amber-500/10 blur-[120px] pointer-events-none" />
         <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] rounded-full bg-violet-500/10 blur-[80px] pointer-events-none" />
 
-        {/* Star icon */}
         <div className="relative mb-8 animate-float">
           <div className="w-24 h-24 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/30">
             <span className="text-5xl">⭐</span>
@@ -746,7 +1101,6 @@ export default function Home() {
           <div className="absolute -inset-3 rounded-full border border-amber-400/20 animate-ping-slow" />
         </div>
 
-        {/* Title */}
         <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-3">
           <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-300 via-white to-violet-300">
             StorySyncHQ
@@ -759,7 +1113,6 @@ export default function Home() {
           Read along. Listen. Feel. A new universal standard for storytelling that brings the magic of childhood storybooks to every screen.
         </p>
 
-        {/* CTA Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 mb-16">
           <button onClick={openDemo} disabled={loading}
                   className="px-8 py-4 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 text-black font-bold text-lg shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40 hover:scale-105 transition-all duration-300 disabled:opacity-50">
@@ -771,7 +1124,6 @@ export default function Home() {
           </button>
         </div>
 
-        {/* Scroll indicator */}
         <div className="absolute bottom-8 animate-bounce">
           <div className="w-6 h-10 rounded-full border-2 border-white/20 flex justify-center pt-2">
             <div className="w-1.5 h-3 rounded-full bg-white/40 animate-scroll-dot" />
@@ -783,15 +1135,12 @@ export default function Home() {
       <section className="py-24 px-6 max-w-6xl mx-auto">
         <div className="text-center mb-16">
           <p className="text-amber-400 text-sm font-semibold uppercase tracking-widest mb-3">The Protocol</p>
-          <h2 className="text-3xl md:text-5xl font-bold mb-4">
-            Remember the magic?
-          </h2>
+          <h2 className="text-3xl md:text-5xl font-bold mb-4">Remember the magic?</h2>
           <p className="text-gray-400 text-lg max-w-2xl mx-auto">
             Library books with cassette tapes. Reading along while the narrator guided you page by page. Background music that made every story feel alive. We&apos;re bringing that magic back — for every device, every story, every reader.
           </p>
         </div>
 
-        {/* Feature Cards */}
         <div className="grid md:grid-cols-3 gap-6">
           {[
             {
@@ -918,7 +1267,6 @@ export default function Home() {
         .font-serif { font-family: Georgia, "Times New Roman", serif; }
 
         /* ── 3D Page Turn Animations ── */
-        /* Perspective container wraps the page area */
         .page-flip-next,
         .page-flip-prev,
         .page-settle {
@@ -926,7 +1274,6 @@ export default function Home() {
           transform-style: preserve-3d;
         }
 
-        /* Next page: flip from right edge (rotateY goes 0 → -180 at the halfway point) */
         @keyframes pageFlipNext {
           0%   { transform: rotateY(0deg);    box-shadow: none; opacity: 1; }
           40%  { transform: rotateY(-35deg);  box-shadow: -20px 0 60px rgba(0,0,0,0.6); opacity: 1; }
@@ -934,7 +1281,6 @@ export default function Home() {
           100% { transform: rotateY(-90deg);  opacity: 0; }
         }
 
-        /* Prev page: flip from left edge (rotateY goes 0 → 180) */
         @keyframes pageFlipPrev {
           0%   { transform: rotateY(0deg);   box-shadow: none; opacity: 1; }
           40%  { transform: rotateY(35deg);  box-shadow: 20px 0 60px rgba(0,0,0,0.6); opacity: 1; }
@@ -942,7 +1288,6 @@ export default function Home() {
           100% { transform: rotateY(90deg);  opacity: 0; }
         }
 
-        /* New page settles in from behind */
         @keyframes pageSettle {
           0%   { transform: rotateY(-8deg); opacity: 0.6; }
           100% { transform: rotateY(0deg);  opacity: 1; }
