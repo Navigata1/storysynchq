@@ -30,6 +30,18 @@ function parseDuration(s?: string): number {
   return s.includes("ms") ? n : n * 1000;
 }
 
+/* ─── Mood Configurations ─── */
+const MOOD_CONFIGS = {
+  Wonder:     { emoji: "🌟", desc: "Magical and enchanting",   freq1: 220,  freq2: 220.5, gainMult: 1.0, glow: "rgba(245,158,11,0.35)",  pill: "bg-amber-500/20 border-amber-400/40 text-amber-300"  },
+  Adventure:  { emoji: "⚔️",  desc: "Bold and exciting",        freq1: 330,  freq2: 331,   gainMult: 1.7, glow: "rgba(234,88,12,0.35)",   pill: "bg-orange-500/20 border-orange-400/40 text-orange-300"},
+  Calm:       { emoji: "🌊", desc: "Peaceful and serene",       freq1: 110,  freq2: 110.3, gainMult: 0.5, glow: "rgba(59,130,246,0.35)",  pill: "bg-blue-500/20 border-blue-400/40 text-blue-300"     },
+  Suspense:   { emoji: "🌑", desc: "Tense and mysterious",      freq1: 155,  freq2: 156,   gainMult: 1.0, glow: "rgba(139,92,246,0.35)",  pill: "bg-purple-500/20 border-purple-400/40 text-purple-300"},
+  Joy:        { emoji: "☀️",  desc: "Bright and cheerful",      freq1: 440,  freq2: 441,   gainMult: 1.3, glow: "rgba(250,204,21,0.35)",  pill: "bg-yellow-500/20 border-yellow-400/40 text-yellow-300"},
+  Melancholy: { emoji: "🌧️", desc: "Wistful and reflective",   freq1: 185,  freq2: 185.5, gainMult: 0.8, glow: "rgba(100,116,139,0.35)", pill: "bg-slate-500/20 border-slate-400/40 text-slate-300"  },
+} as const;
+
+type MoodName = keyof typeof MOOD_CONFIGS;
+
 /* ─── Page Turn Sound (Web Audio API — no external files) ─── */
 function playPageTurnSound() {
   try {
@@ -71,7 +83,7 @@ function playPageTurnSound() {
 type VoiceMode = "ai" | "recorded";
 type AnimPhase = "idle" | "flipping" | "settling";
 
-function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void }) {
+function ImmersiveReader({ data, onExit, startInRemix }: { data: SSyncData; onExit: () => void; startInRemix?: boolean }) {
   const [currentPage, setCurrentPage] = useState(0);
   const [animPhase, setAnimPhase] = useState<AnimPhase>("idle");
   const [direction, setDirection] = useState<"next" | "prev">("next");
@@ -87,6 +99,16 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
   const [timingMult2, setTimingMult2] = useState(1.0);
   const [showSplash, setShowSplash] = useState(true);
   const [isLandscape, setIsLandscape] = useState(false);
+
+  /* ── Phase 4: Remix Engine State ── */
+  const [showRemix, setShowRemix] = useState(false);
+  const [remixTab, setRemixTab] = useState<"voice" | "mood" | "timing" | "style">("mood");
+  const [currentMood, setCurrentMood] = useState<MoodName>("Wonder");
+  const [hasRemixed, setHasRemixed] = useState(false);
+  const [pageTiming, setPageTiming] = useState<Record<number, number>>({});
+  const [globalPagePause, setGlobalPagePause] = useState(3);
+  const remixSheetRef = useRef<HTMLDivElement | null>(null);
+  const remixDragStart = useRef<number | null>(null);
   const synthRef = useRef<SpeechSynthesisUtterance | null>(null);
   const controlsTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const autoTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -131,6 +153,14 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
   const hasRecording = recordings[page?.id] !== undefined;
   const recordedCount = Object.keys(recordings).length;
   const transitioning = animPhase !== "idle";
+
+  /* ── Start in remix mode if requested ── */
+  useEffect(() => {
+    if (startInRemix) {
+      const timer = setTimeout(() => setShowRemix(true), 2400); // after splash
+      return () => clearTimeout(timer);
+    }
+  }, [startInRemix]);
 
   /* ── Landscape detection ── */
   useEffect(() => {
@@ -212,6 +242,22 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
       osc2Ref.current = null;
     }
   }, []);
+
+  /* ── setMusicMood: smooth crossfade to new mood frequencies ── */
+  const setMusicMood = useCallback((mood: MoodName) => {
+    setCurrentMood(mood);
+    if (!audioCtxRef.current || !osc1Ref.current || !osc2Ref.current || !musicGainRef.current) return;
+    const cfg = MOOD_CONFIGS[mood];
+    const ctx = audioCtxRef.current;
+    const now = ctx.currentTime;
+    const transitionTime = 1.0;
+    try {
+      osc1Ref.current.frequency.linearRampToValueAtTime(cfg.freq1, now + transitionTime);
+      osc2Ref.current.frequency.linearRampToValueAtTime(cfg.freq2, now + transitionTime);
+      const targetGain = 0.03 * cfg.gainMult * (musicVolume / 100);
+      musicGainRef.current.gain.linearRampToValueAtTime(targetGain, now + transitionTime);
+    } catch { /* ignore */ }
+  }, [musicVolume]);
 
   /* ── Music toggle effect ── */
   useEffect(() => {
@@ -622,6 +668,17 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
                   className={`w-10 h-10 rounded-full backdrop-blur-sm flex items-center justify-center transition ${showAccessibility ? "bg-violet-500/30 border border-violet-400/40" : "bg-white/10 hover:bg-white/20"} text-white text-sm`}>
             ⚙️
           </button>
+
+          {/* ✏️ Remix button */}
+          <button onClick={(e) => { e.stopPropagation(); setShowRemix(r => !r); setShowVoicePicker(false); setShowRecordPanel(false); setShowAccessibility(false); }}
+                  className={`h-10 px-3 rounded-full backdrop-blur-sm flex items-center justify-center gap-1 transition text-xs font-semibold ${
+                    showRemix
+                      ? "bg-amber-500/30 border border-amber-400/50 text-amber-300"
+                      : "bg-white/10 hover:bg-white/20 text-white/80"
+                  }`}
+                  title="Remix this story">
+            ✏️ Remix
+          </button>
         </div>
       </div>
 
@@ -979,6 +1036,311 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
                 ))}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ════════════════════════════
+          REMIX BOTTOM SHEET
+          ════════════════════════════ */}
+      {/* Backdrop */}
+      {showRemix && (
+        <div
+          className="absolute inset-0 z-40 bg-black/30 backdrop-blur-[2px]"
+          onClick={(e) => { e.stopPropagation(); setShowRemix(false); }}
+        />
+      )}
+
+      {/* Bottom sheet */}
+      <div
+        ref={remixSheetRef}
+        className={`absolute bottom-0 left-0 right-0 z-50 transition-transform duration-400 ease-out ${showRemix ? "translate-y-0" : "translate-y-full"}`}
+        onClick={e => e.stopPropagation()}
+        style={{ maxHeight: "60vh" }}
+        onTouchStart={(e) => { remixDragStart.current = e.touches[0].clientY; }}
+        onTouchEnd={(e) => {
+          if (remixDragStart.current !== null) {
+            const delta = e.changedTouches[0].clientY - remixDragStart.current;
+            if (delta > 60) setShowRemix(false);
+            remixDragStart.current = null;
+          }
+        }}
+      >
+        <div className="bg-[#0f1525]/95 backdrop-blur-xl border-t border-white/10 rounded-t-3xl shadow-2xl flex flex-col" style={{ maxHeight: "60vh" }}>
+          {/* Drag handle */}
+          <div className="flex justify-center pt-3 pb-1">
+            <div className="w-10 h-1.5 rounded-full bg-white/20" />
+          </div>
+
+          {/* Header */}
+          <div className="flex items-center justify-between px-5 pb-3">
+            <h3 className="text-white font-bold text-sm">✏️ Remix Story</h3>
+            <button onClick={() => setShowRemix(false)} className="text-white/40 hover:text-white text-lg w-8 h-8 flex items-center justify-center">✕</button>
+          </div>
+
+          {/* Tab pills */}
+          <div className="flex gap-2 px-5 pb-3 overflow-x-auto">
+            {(["voice", "mood", "timing", "style"] as const).map(tab => (
+              <button
+                key={tab}
+                onClick={() => setRemixTab(tab)}
+                className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-semibold transition-all duration-200 ${
+                  remixTab === tab
+                    ? "bg-amber-500 text-black shadow-lg shadow-amber-500/30"
+                    : "bg-white/5 text-white/60 hover:bg-white/10 hover:text-white/80"
+                }`}
+              >
+                {tab === "voice" ? "🎙️ Voice" : tab === "mood" ? "🎵 Mood" : tab === "timing" ? "⏱ Timing" : "🎨 Style"}
+              </button>
+            ))}
+          </div>
+
+          {/* Tab content */}
+          <div className="flex-1 overflow-y-auto px-5 pb-6">
+
+            {/* ── VOICE TAB ── */}
+            {remixTab === "voice" && (
+              <div className="space-y-4">
+                <div className="p-3 rounded-xl bg-white/5 border border-white/10">
+                  <p className="text-white/40 text-xs uppercase tracking-wider mb-1">Current Voice</p>
+                  <p className="text-white text-sm font-medium">
+                    {voiceMode === "recorded"
+                      ? "🎙️ My Recording"
+                      : selectedVoiceIndex >= 0
+                        ? `🗣 ${availableVoices[selectedVoiceIndex]?.name}`
+                        : "🤖 AI Default"}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-white/40 text-xs uppercase tracking-wider mb-2">Quick Switch</p>
+                  <div className="flex flex-col gap-2">
+                    <button
+                      onClick={() => { setVoiceMode("ai"); setSelectedVoiceIndex(-1); setHasRemixed(true); }}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition text-left ${
+                        voiceMode === "ai" && selectedVoiceIndex === -1
+                          ? "bg-amber-500/20 border-amber-400/40 text-amber-300"
+                          : "bg-white/5 border-white/10 text-white/70 hover:bg-white/10"
+                      }`}
+                    >
+                      <span className="text-xl">🤖</span>
+                      <div>
+                        <p className="text-sm font-medium">AI Voice (Default)</p>
+                        <p className="text-xs text-white/40">Browser default TTS</p>
+                      </div>
+                    </button>
+
+                    {Object.keys(recordings).length > 0 && (
+                      <button
+                        onClick={() => { setVoiceMode("recorded"); setHasRemixed(true); }}
+                        className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition text-left ${
+                          voiceMode === "recorded"
+                            ? "bg-rose-500/20 border-rose-400/40 text-rose-300"
+                            : "bg-white/5 border-white/10 text-white/70 hover:bg-white/10"
+                        }`}
+                      >
+                        <span className="text-xl">🎙️</span>
+                        <div>
+                          <p className="text-sm font-medium">My Recording</p>
+                          <p className="text-xs text-white/40">{Object.keys(recordings).length} page(s) recorded</p>
+                        </div>
+                      </button>
+                    )}
+
+                    {englishVoices.slice(0, 4).map((voice) => {
+                      const idx = availableVoices.indexOf(voice);
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() => { setVoiceMode("ai"); setSelectedVoiceIndex(idx); setHasRemixed(true); }}
+                          className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition text-left ${
+                            voiceMode === "ai" && selectedVoiceIndex === idx
+                              ? "bg-amber-500/20 border-amber-400/40 text-amber-300"
+                              : "bg-white/5 border-white/10 text-white/70 hover:bg-white/10"
+                          }`}
+                        >
+                          <span className="text-xl">🗣</span>
+                          <div>
+                            <p className="text-sm font-medium">{voice.name}</p>
+                            <p className="text-xs text-white/40">{voice.lang}</p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => { setShowRemix(false); setShowRecordPanel(true); }}
+                  className="w-full py-3 rounded-xl bg-rose-500/10 border border-rose-400/20 text-rose-300 text-sm font-medium hover:bg-rose-500/20 transition flex items-center justify-center gap-2"
+                >
+                  <span className="w-2 h-2 rounded-full bg-rose-400 animate-pulse" />
+                  Record new narration for this page
+                </button>
+              </div>
+            )}
+
+            {/* ── MOOD TAB ── */}
+            {remixTab === "mood" && (
+              <div className="space-y-4">
+                {!musicEnabled && (
+                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-400/20 flex items-center gap-3">
+                    <span>💡</span>
+                    <p className="text-amber-300/80 text-xs">Enable music (🎵 button) to hear mood changes</p>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-3">
+                  {(Object.entries(MOOD_CONFIGS) as [MoodName, typeof MOOD_CONFIGS[MoodName]][]).map(([mood, cfg]) => (
+                    <button
+                      key={mood}
+                      onClick={() => {
+                        setMusicMood(mood);
+                        if (!musicEnabled) setMusicEnabled(true);
+                        setHasRemixed(true);
+                      }}
+                      className={`relative flex flex-col items-center justify-center p-4 rounded-2xl border transition-all duration-300 ${
+                        currentMood === mood
+                          ? `${cfg.pill} scale-[1.03]`
+                          : "bg-white/5 border-white/10 hover:bg-white/10"
+                      }`}
+                      style={currentMood === mood ? { boxShadow: `0 0 20px 4px ${cfg.glow}` } : {}}
+                    >
+                      <span className="text-3xl mb-1">{cfg.emoji}</span>
+                      <p className="text-white text-sm font-semibold">{mood}</p>
+                      <p className="text-white/40 text-xs text-center mt-0.5">{cfg.desc}</p>
+                      {currentMood === mood && (
+                        <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    onClick={() => { setMusicMood(currentMood); setHasRemixed(true); }}
+                    className="flex-1 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white/60 text-xs font-medium hover:bg-white/10 transition"
+                  >
+                    Apply to This Page
+                  </button>
+                  <button
+                    onClick={() => { setMusicMood(currentMood); setHasRemixed(true); }}
+                    className="flex-1 py-2.5 rounded-xl bg-amber-500/20 border border-amber-400/30 text-amber-300 text-xs font-medium hover:bg-amber-500/30 transition"
+                  >
+                    Apply to Entire Story
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* ── TIMING TAB ── */}
+            {remixTab === "timing" && (
+              <div className="space-y-5">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-white/70 text-sm font-medium">Page Pause (after narration)</p>
+                    <span className="text-amber-400 text-sm font-mono font-bold">{pageTiming[page?.id] ?? globalPagePause}s</span>
+                  </div>
+                  <input
+                    type="range" min="1" max="15" step="0.5"
+                    value={pageTiming[page?.id] ?? globalPagePause}
+                    onChange={e => {
+                      const val = parseFloat(e.target.value);
+                      setPageTiming(prev => ({ ...prev, [page.id]: val }));
+                      setHasRemixed(true);
+                    }}
+                    className="w-full accent-amber-500"
+                  />
+                  <div className="flex justify-between text-white/30 text-xs mt-1">
+                    <span>1s</span><span>15s</span>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-white/40 text-xs uppercase tracking-wider mb-2">Global Speed</p>
+                  <div className="flex gap-2">
+                    {(["slow", "medium", "fast"] as const).map(s => (
+                      <button key={s} onClick={() => { setReadingSpeed(s); setHasRemixed(true); }}
+                        className={`flex-1 py-3 rounded-xl text-sm font-medium transition ${
+                          readingSpeed === s
+                            ? "bg-amber-500/30 border border-amber-400/40 text-amber-300"
+                            : "bg-white/5 border border-white/10 text-white/50 hover:bg-white/10"
+                        }`}>
+                        {s === "slow" ? "🐢 Slow" : s === "medium" ? "🚶 Med" : "🏃 Fast"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-white/40 text-xs uppercase tracking-wider mb-2">Global Page Pause</p>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="range" min="1" max="15" step="0.5"
+                      value={globalPagePause}
+                      onChange={e => { setGlobalPagePause(parseFloat(e.target.value)); setHasRemixed(true); }}
+                      className="flex-1 accent-amber-500"
+                    />
+                    <span className="text-amber-400 text-sm font-mono w-10 text-right">{globalPagePause}s</span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => {
+                    const allTimings: Record<number, number> = {};
+                    data.pages.forEach(p => { allTimings[p.id] = globalPagePause; });
+                    setPageTiming(allTimings);
+                    setHasRemixed(true);
+                  }}
+                  className="w-full py-3 rounded-xl bg-amber-500/20 border border-amber-400/30 text-amber-300 text-sm font-semibold hover:bg-amber-500/30 transition"
+                >
+                  Apply Global Pause to All Pages
+                </button>
+              </div>
+            )}
+
+            {/* ── STYLE TAB (placeholder) ── */}
+            {remixTab === "style" && (
+              <div className="space-y-4">
+                <p className="text-white/40 text-xs uppercase tracking-wider">Illustration Style</p>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { name: "Watercolor", emoji: "🎨" },
+                    { name: "Comic",      emoji: "💥" },
+                    { name: "Pencil",     emoji: "✏️" },
+                    { name: "Claymation",emoji: "🧸" },
+                    { name: "Pixel Art",  emoji: "🕹️" },
+                  ].map(style => (
+                    <button
+                      key={style.name}
+                      onClick={() => {
+                        // Coming soon toast (no-op)
+                      }}
+                      className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition group"
+                    >
+                      <span className="text-3xl">{style.emoji}</span>
+                      <p className="text-white/70 text-xs font-medium">{style.name}</p>
+                      <span className="text-white/20 text-xs group-hover:text-amber-400/60 transition">Coming soon</span>
+                    </button>
+                  ))}
+                </div>
+                <div className="mt-4 p-4 rounded-2xl bg-violet-500/10 border border-violet-400/20 text-center">
+                  <p className="text-violet-300 text-sm font-semibold mb-1">🚀 Coming Soon</p>
+                  <p className="text-violet-300/60 text-xs">AI illustration regeneration — select a style and we'll redraw every page in seconds</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Remix Attribution Badge ── */}
+      {hasRemixed && (
+        <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-30 animate-fadeIn pointer-events-none">
+          <div className="px-4 py-2 rounded-full bg-black/60 backdrop-blur-sm border border-white/10">
+            <p className="text-white/50 text-xs whitespace-nowrap">
+              Remixed version — Original by {data.metadata.author || "Unknown"}
+            </p>
           </div>
         </div>
       )}
@@ -1445,16 +1807,19 @@ function StoryCreator({ onExit, onPreview }: { onExit: () => void; onPreview: (d
 export default function Home() {
   const [readerData, setReaderData] = useState<SSyncData | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingRemix, setLoadingRemix] = useState(false);
   const [showCreator, setShowCreator] = useState(false);
+  const [startInRemix, setStartInRemix] = useState(false);
 
-  const openDemo = async () => {
-    setLoading(true);
+  const openDemo = async (remix = false) => {
+    if (remix) setLoadingRemix(true); else setLoading(true);
     try {
       const res = await fetch("/demo/brave-little-star.ssync.json");
       const data = await res.json();
+      setStartInRemix(remix);
       setReaderData(data);
     } catch (e) { console.error("Failed to load demo:", e); }
-    setLoading(false);
+    if (remix) setLoadingRemix(false); else setLoading(false);
   };
 
   if (showCreator && !readerData) {
@@ -1467,7 +1832,7 @@ export default function Home() {
   }
 
   if (readerData) {
-    return <ImmersiveReader data={readerData} onExit={() => { setReaderData(null); }} />;
+    return <ImmersiveReader data={readerData} onExit={() => { setReaderData(null); setStartInRemix(false); }} startInRemix={startInRemix} />;
   }
 
   return (
@@ -1508,8 +1873,8 @@ export default function Home() {
           Read along. Listen. Feel. A new universal standard for storytelling that brings the magic of childhood storybooks to every screen.
         </p>
 
-        <div className="flex flex-col sm:flex-row gap-4 mb-16">
-          <button onClick={openDemo} disabled={loading}
+        <div className="flex flex-col sm:flex-row gap-4 mb-8">
+          <button onClick={() => openDemo(false)} disabled={loading || loadingRemix}
                   className="px-8 py-4 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 text-black font-bold text-lg shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40 hover:scale-105 transition-all duration-300 disabled:opacity-50">
             {loading ? "Loading..." : "✨ Read Demo Storybook"}
           </button>
@@ -1518,6 +1883,19 @@ export default function Home() {
             🛠 Create Your Story
           </button>
         </div>
+
+        {/* Remix the Demo button */}
+        <button
+          onClick={() => openDemo(true)}
+          disabled={loading || loadingRemix}
+          className="mb-16 px-7 py-3.5 rounded-2xl bg-white/5 border border-amber-400/20 text-amber-300/80 font-medium text-base backdrop-blur-sm hover:bg-amber-500/10 hover:border-amber-400/40 hover:text-amber-300 hover:scale-105 transition-all duration-300 disabled:opacity-40 flex items-center gap-2"
+        >
+          {loadingRemix ? (
+            <><span className="inline-block w-4 h-4 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin" /> Opening Remix...</>
+          ) : (
+            <><span>✏️</span> Remix the Demo</>
+          )}
+        </button>
 
         <div className="absolute bottom-8 animate-bounce">
           <div className="w-6 h-10 rounded-full border-2 border-white/20 flex justify-center pt-2">
