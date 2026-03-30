@@ -17,7 +17,8 @@ interface SSyncData {
   metadata: { title: string; author?: string; description?: string; coverImage?: string };
   settings?: {
     autoPlay?: boolean; pageTransition?: string; readAlongHighlight?: boolean;
-    orientation?: string; accessibility?: { timingMultiplier?: number; pauseBetweenPages?: string };
+    orientation?: string; pageTurnSound?: boolean;
+    accessibility?: { timingMultiplier?: number; pauseBetweenPages?: string };
   };
   pages: SSyncPage[];
 }
@@ -29,14 +30,54 @@ function parseDuration(s?: string): number {
   return s.includes("ms") ? n : n * 1000;
 }
 
+/* ─── Page Turn Sound (Web Audio API — no external files) ─── */
+function playPageTurnSound() {
+  try {
+    const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+
+    // White noise buffer (50ms)
+    const bufferSize = Math.floor(ctx.sampleRate * 0.05);
+    const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+
+    const noiseSource = ctx.createBufferSource();
+    noiseSource.buffer = noiseBuffer;
+
+    // Bandpass filter at 800Hz
+    const filter = ctx.createBiquadFilter();
+    filter.type = "bandpass";
+    filter.frequency.value = 800;
+    filter.Q.value = 1.5;
+
+    // Gain with exponential decay
+    const gainNode = ctx.createGain();
+    gainNode.gain.setValueAtTime(0.08, ctx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.05);
+
+    noiseSource.connect(filter);
+    filter.connect(gainNode);
+    gainNode.connect(ctx.destination);
+
+    noiseSource.start(ctx.currentTime);
+    noiseSource.stop(ctx.currentTime + 0.05);
+
+    // Close context after sound finishes
+    setTimeout(() => ctx.close(), 200);
+  } catch {
+    // Silently ignore — audio not critical
+  }
+}
+
 /* ════════════════════════════════════════════
    IMMERSIVE READER
    ════════════════════════════════════════════ */
 type VoiceMode = "ai" | "recorded";
+type AnimPhase = "idle" | "flipping" | "settling";
 
 function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void }) {
   const [currentPage, setCurrentPage] = useState(0);
-  const [transitioning, setTransitioning] = useState(false);
+  const [animPhase, setAnimPhase] = useState<AnimPhase>("idle");
   const [direction, setDirection] = useState<"next" | "prev">("next");
   const [narrating, setNarrating] = useState(false);
   const [highlightIdx, setHighlightIdx] = useState(-1);
@@ -47,8 +88,9 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
   const [readingSpeed, setReadingSpeed] = useState<"slow" | "medium" | "fast">("medium");
   const [dyslexiaFont, setDyslexiaFont] = useState(false);
   const [highContrast, setHighContrast] = useState(false);
-  const [timingMult2, setTimingMult2] = useState(1.0); // user-adjustable multiplier
+  const [timingMult2, setTimingMult2] = useState(1.0);
   const [showSplash, setShowSplash] = useState(true);
+  const [isLandscape, setIsLandscape] = useState(false);
   const synthRef = useRef<SpeechSynthesisUtterance | null>(null);
   const controlsTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const autoTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -69,9 +111,32 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
   const baseTimingMult = data.settings?.accessibility?.timingMultiplier ?? 1;
   const speedFactor = readingSpeed === "slow" ? 1.5 : readingSpeed === "fast" ? 0.6 : 1.0;
   const timingMult = baseTimingMult * timingMult2 * speedFactor;
+  const soundEnabled = data.settings?.pageTurnSound !== false; // default true
+
+  // Landscape: next page index
+  const nextPageIdx = currentPage + 1;
+  const nextPage = nextPageIdx < totalPages ? data.pages[nextPageIdx] : null;
 
   const hasRecording = recordings[page?.id] !== undefined;
   const recordedCount = Object.keys(recordings).length;
+  const transitioning = animPhase !== "idle";
+
+  /* ── Landscape detection ── */
+  useEffect(() => {
+    const check = () => {
+      setIsLandscape(window.innerWidth > window.innerHeight);
+    };
+    check();
+
+    const mq = window.matchMedia("(orientation: landscape)");
+    const handler = () => check();
+    mq.addEventListener("change", handler);
+    window.addEventListener("resize", check);
+    return () => {
+      mq.removeEventListener("change", handler);
+      window.removeEventListener("resize", check);
+    };
+  }, []);
 
   /* ── Voice Recording Functions ── */
   const startRecording = async () => {
@@ -134,21 +199,13 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
     audio.play();
   };
 
-  /* Cleanup recordings on unmount */
-  useEffect(() => {
-    return () => {
-      Object.values(recordings).forEach(url => URL.revokeObjectURL(url));
-      if (audioPlaybackRef.current) audioPlaybackRef.current.pause();
-    };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  /* Splash screen — show for 2 seconds then fade */
+  /* Splash screen */
   useEffect(() => {
     const timer = setTimeout(() => setShowSplash(false), 2200);
     return () => clearTimeout(timer);
   }, []);
 
-  /* Progress memory — save current page to localStorage */
+  /* Progress memory — save to localStorage */
   useEffect(() => {
     if (data.metadata.title) {
       const key = `ssync-progress-${data.metadata.title.replace(/\s+/g, '-').toLowerCase()}`;
@@ -167,20 +224,40 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /* Navigate */
+  /* Cleanup recordings on unmount */
+  useEffect(() => {
+    return () => {
+      Object.values(recordings).forEach(url => URL.revokeObjectURL(url));
+      if (audioPlaybackRef.current) audioPlaybackRef.current.pause();
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* Navigate — advances by 2 in landscape mode */
   const goTo = useCallback((dir: "next" | "prev") => {
     if (transitioning) return;
-    const next = dir === "next" ? currentPage + 1 : currentPage - 1;
-    if (next < 0 || next >= totalPages) return;
+    const step = isLandscape ? 2 : 1;
+    const next = dir === "next" ? currentPage + step : currentPage - step;
+    // Clamp to valid range
+    const clamped = Math.max(0, Math.min(next, totalPages - 1));
+    if (clamped === currentPage) return;
     window.speechSynthesis?.cancel();
     if (audioPlaybackRef.current) { audioPlaybackRef.current.pause(); audioPlaybackRef.current = null; }
     if (isRecording) stopRecording();
     setDirection(dir);
-    setTransitioning(true);
     setHighlightIdx(-1);
     setNarrating(false);
-    setTimeout(() => { setCurrentPage(next); setTransitioning(false); }, 500);
-  }, [currentPage, totalPages, transitioning]);
+
+    // Play sound
+    if (soundEnabled) playPageTurnSound();
+
+    // Phase 1: flipping (CSS 3D animation plays)
+    setAnimPhase("flipping");
+    setTimeout(() => {
+      setCurrentPage(clamped);
+      setAnimPhase("settling");
+      setTimeout(() => setAnimPhase("idle"), 150);
+    }, 600);
+  }, [currentPage, totalPages, transitioning, isLandscape, soundEnabled, isRecording]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* Keyboard */
   useEffect(() => {
@@ -193,6 +270,20 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [goTo, onExit]);
+
+  /* Swipe gesture support */
+  const touchStartX = useRef<number | null>(null);
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const delta = e.changedTouches[0].clientX - touchStartX.current;
+    touchStartX.current = null;
+    if (Math.abs(delta) < 50) return; // minimum swipe distance
+    if (delta < 0) goTo("next");   // swipe left → next
+    else goTo("prev");              // swipe right → prev
+  };
 
   /* Auto-hide controls */
   useEffect(() => {
@@ -245,39 +336,66 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
     };
   }, [currentPage, paused, voiceMode, recordings]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /* Tap zones */
+  /* Tap zones (only on non-touch, since touch uses swipe) */
   const handleTap = (e: React.MouseEvent) => {
     setShowControls(true);
+    // Only handle tap zones if not from a touch-initiated click
     const x = e.clientX / window.innerWidth;
-    if (x < 0.25) goTo("prev");
-    else if (x > 0.75) goTo("next");
+    if (x < 0.2) goTo("prev");
+    else if (x > 0.8) goTo("next");
   };
 
   /* Render highlighted text */
-  const renderText = () => {
-    if (!page?.text?.content) return null;
-    const words = page.text.content.split(/\s+/);
-    const fontSize = page.text.fontSize === "xl" ? "text-4xl md:text-5xl"
-      : page.text.fontSize === "large" ? "text-2xl md:text-3xl"
+  const renderText = (pg: SSyncPage | null) => {
+    if (!pg?.text?.content) return null;
+    const words = pg.text.content.split(/\s+/);
+    const fontSize = pg.text.fontSize === "xl" ? "text-4xl md:text-5xl"
+      : pg.text.fontSize === "large" ? "text-2xl md:text-3xl"
       : "text-lg md:text-xl";
 
-    const fontFamily = dyslexiaFont ? "font-sans tracking-wide" : "font-serif";
-    const contrastClass = highContrast ? "!text-white" : "";
-
+    const isActivePage = pg === page;
     return (
-      <p className={`${fontSize} leading-relaxed ${fontFamily} text-gray-100 transition-all duration-500 ${contrastClass}`}
+      <p className={`${fontSize} leading-relaxed ${dyslexiaFont ? "font-sans tracking-wide" : "font-serif"} ${highContrast ? "!text-white" : "text-gray-100"} transition-all duration-500`}
          style={{ fontSize: `${fontsizeMult}em` }}>
         {words.map((word, i) => (
           <span key={i} className={`inline-block mr-[0.3em] transition-all duration-300 ${
-            i < highlightIdx ? "text-white opacity-100"
-            : i === highlightIdx ? "text-amber-300 scale-105 opacity-100"
-            : highlightIdx === -1 ? "text-gray-200 opacity-90"
-            : "text-gray-400 opacity-50"
+            isActivePage
+              ? (i < highlightIdx ? "text-white opacity-100"
+                : i === highlightIdx ? "text-amber-300 scale-105 opacity-100"
+                : highlightIdx === -1 ? "text-gray-200 opacity-90"
+                : "text-gray-400 opacity-50")
+              : "text-gray-300 opacity-70"
           }`}>{word}</span>
         ))}
       </p>
     );
   };
+
+  /* ── Single Page Layout ── */
+  const renderSinglePage = (pg: SSyncPage | null, pageIndex: number) => {
+    if (!pg) return null;
+    return (
+      <div className="flex flex-col items-center justify-center px-6 md:px-16 py-20 w-full h-full">
+        {pg?.illustration?.url && (
+          <div className="w-full max-w-2xl mb-8 rounded-2xl overflow-hidden shadow-2xl shadow-amber-900/20 animate-fadeIn">
+            <img src={pg.illustration.url} alt={pg.illustration.alt || ""}
+                 className="w-full h-auto object-cover" />
+          </div>
+        )}
+        <div className="w-full max-w-2xl text-center animate-fadeInUp">
+          {renderText(pg)}
+        </div>
+        <div className="mt-4 text-white/20 text-xs">{pageIndex + 1}</div>
+      </div>
+    );
+  };
+
+  /* ── Compute 3D flip animation class ── */
+  const flipClass = animPhase === "flipping"
+    ? direction === "next" ? "page-flip-next" : "page-flip-prev"
+    : animPhase === "settling"
+    ? "page-settle"
+    : "";
 
   /* Splash screen */
   if (showSplash) {
@@ -290,14 +408,11 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
         </div>
         <h2 className="text-white text-2xl font-bold mb-2 animate-fadeIn">{data.metadata.title}</h2>
         {data.metadata.author && (
-          <p className="text-white/40 text-sm animate-fadeIn" style={{ animationDelay: "0.3s" }}>
-            by {data.metadata.author}
-          </p>
+          <p className="text-white/40 text-sm animate-fadeIn" style={{ animationDelay: "0.3s" }}>by {data.metadata.author}</p>
         )}
         <div className="mt-8 flex gap-1">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"
-                 style={{ animationDelay: `${i * 0.3}s` }} />
+            <div key={i} className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" style={{ animationDelay: `${i * 0.3}s` }} />
           ))}
         </div>
       </div>
@@ -305,8 +420,12 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
   }
 
   return (
-    <div className={`fixed inset-0 z-50 flex flex-col select-none ${highContrast ? "bg-black" : "bg-[#060a14]"}`}
-         onClick={handleTap}>
+    <div
+      className={`fixed inset-0 z-50 flex flex-col select-none ${highContrast ? "bg-black" : "bg-[#060a14]"}`}
+      onClick={handleTap}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
 
       {/* Top bar */}
       <div className={`absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/80 to-transparent transition-opacity duration-500 ${showControls ? "opacity-100" : "opacity-0"}`}>
@@ -316,7 +435,12 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
         </button>
         <div className="text-center">
           <p className="text-white/80 text-sm font-medium">{data.metadata.title}</p>
-          <p className="text-white/40 text-xs">{currentPage + 1} / {totalPages}</p>
+          <p className="text-white/40 text-xs">
+            {isLandscape
+              ? `${currentPage + 1}–${Math.min(currentPage + 2, totalPages)} / ${totalPages}`
+              : `${currentPage + 1} / ${totalPages}`
+            }
+          </p>
         </div>
         <div className="flex gap-2">
           <button onClick={(e) => { e.stopPropagation(); setPaused(p => !p); }}
@@ -349,9 +473,7 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
             Aa
           </button>
           <button onClick={(e) => { e.stopPropagation(); setShowAccessibility(p => !p); }}
-                  className={`w-10 h-10 rounded-full backdrop-blur-sm flex items-center justify-center transition ${
-                    showAccessibility ? "bg-violet-500/30 border border-violet-400/40" : "bg-white/10 hover:bg-white/20"
-                  } text-white text-sm`}>
+                  className={`w-10 h-10 rounded-full backdrop-blur-sm flex items-center justify-center transition ${showAccessibility ? "bg-violet-500/30 border border-violet-400/40" : "bg-white/10 hover:bg-white/20"} text-white text-sm`}>
             ⚙️
           </button>
         </div>
@@ -440,76 +562,51 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
 
       {/* ── Accessibility Panel ── */}
       {showAccessibility && (
-        <div className="absolute top-16 right-0 z-40 px-4 animate-fadeIn" onClick={e => e.stopPropagation()}
-             style={{ left: showRecordPanel ? "50%" : "0" }}>
-          <div className="max-w-sm ml-auto bg-[#0f1525]/95 backdrop-blur-xl border border-white/10 rounded-2xl p-5 shadow-2xl">
+        <div className="absolute top-16 right-4 z-40 animate-fadeIn" onClick={e => e.stopPropagation()}>
+          <div className="w-72 bg-[#0f1525]/95 backdrop-blur-xl border border-white/10 rounded-2xl p-5 shadow-2xl">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-white font-semibold text-sm">⚙️ Reading Settings</h3>
               <button onClick={() => setShowAccessibility(false)} className="text-white/40 hover:text-white text-lg">✕</button>
             </div>
-
-            {/* Reading Speed */}
             <div className="mb-4">
               <p className="text-white/50 text-xs uppercase tracking-wider mb-2">Reading Speed</p>
               <div className="flex gap-2">
                 {(["slow", "medium", "fast"] as const).map(s => (
                   <button key={s} onClick={() => setReadingSpeed(s)}
-                    className={`flex-1 py-2 rounded-lg text-xs font-medium transition ${
-                      readingSpeed === s
-                        ? "bg-violet-500/30 border border-violet-400/40 text-violet-300"
-                        : "bg-white/5 border border-white/10 text-white/50 hover:text-white/70"
-                    }`}>
-                    {s === "slow" ? "🐢 Slow" : s === "medium" ? "🚶 Medium" : "🏃 Fast"}
+                    className={`flex-1 py-2 rounded-lg text-xs font-medium transition ${readingSpeed === s ? "bg-violet-500/30 border border-violet-400/40 text-violet-300" : "bg-white/5 border border-white/10 text-white/50"}`}>
+                    {s === "slow" ? "🐢 Slow" : s === "medium" ? "🚶 Med" : "🏃 Fast"}
                   </button>
                 ))}
               </div>
             </div>
-
-            {/* Timing Multiplier */}
             <div className="mb-4">
-              <p className="text-white/50 text-xs uppercase tracking-wider mb-2">
-                Page Pause: {timingMult2.toFixed(1)}×
-              </p>
+              <p className="text-white/50 text-xs uppercase tracking-wider mb-2">Page Pause: {timingMult2.toFixed(1)}×</p>
               <input type="range" min="0.5" max="3" step="0.1" value={timingMult2}
-                     onChange={e => setTimingMult2(parseFloat(e.target.value))}
-                     className="w-full accent-violet-500" />
-              <div className="flex justify-between text-white/30 text-xs mt-1">
-                <span>Quick</span><span>Long pause</span>
-              </div>
+                     onChange={e => setTimingMult2(parseFloat(e.target.value))} className="w-full accent-violet-500" />
             </div>
-
-            {/* Toggles */}
             <div className="space-y-3">
               <label className="flex items-center justify-between cursor-pointer">
-                <span className="text-white/70 text-sm">Dyslexia-friendly font</span>
+                <span className="text-white/70 text-sm">Dyslexia font</span>
                 <button onClick={() => setDyslexiaFont(d => !d)}
-                        className={`w-10 h-6 rounded-full transition-colors ${dyslexiaFont ? "bg-violet-500" : "bg-white/20"}`}>
+                  className={`w-10 h-6 rounded-full transition-colors ${dyslexiaFont ? "bg-violet-500" : "bg-white/20"}`}>
                   <div className={`w-4 h-4 rounded-full bg-white transition-transform ml-1 ${dyslexiaFont ? "translate-x-4" : ""}`} />
                 </button>
               </label>
-
               <label className="flex items-center justify-between cursor-pointer">
                 <span className="text-white/70 text-sm">High contrast</span>
                 <button onClick={() => setHighContrast(c => !c)}
-                        className={`w-10 h-6 rounded-full transition-colors ${highContrast ? "bg-violet-500" : "bg-white/20"}`}>
+                  className={`w-10 h-6 rounded-full transition-colors ${highContrast ? "bg-violet-500" : "bg-white/20"}`}>
                   <div className={`w-4 h-4 rounded-full bg-white transition-transform ml-1 ${highContrast ? "translate-x-4" : ""}`} />
                 </button>
               </label>
             </div>
-
-            {/* Font size */}
             <div className="mt-4">
               <p className="text-white/50 text-xs uppercase tracking-wider mb-2">Font Size</p>
               <div className="flex gap-2">
                 {[0.8, 1.0, 1.2, 1.5].map(s => (
                   <button key={s} onClick={() => setFontsizeMult(s)}
-                    className={`flex-1 py-2 rounded-lg font-medium transition ${
-                      Math.abs(fontsizeMult - s) < 0.05
-                        ? "bg-violet-500/30 border border-violet-400/40 text-violet-300"
-                        : "bg-white/5 border border-white/10 text-white/50 hover:text-white/70"
-                    }`} style={{ fontSize: `${10 + s * 4}px` }}>
-                    Aa
-                  </button>
+                    className={`flex-1 py-2 rounded-lg font-medium transition ${Math.abs(fontsizeMult - s) < 0.05 ? "bg-violet-500/30 border border-violet-400/40 text-violet-300" : "bg-white/5 border border-white/10 text-white/50"}`}
+                    style={{ fontSize: `${10 + s * 4}px` }}>Aa</button>
                 ))}
               </div>
             </div>
@@ -517,26 +614,47 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
         </div>
       )}
 
-      {/* Page content */}
-      <div className={`flex-1 flex flex-col items-center justify-center px-6 md:px-16 py-20 transition-all duration-500 ${
-        transitioning
-          ? direction === "next" ? "translate-x-[-100%] opacity-0" : "translate-x-[100%] opacity-0"
-          : "translate-x-0 opacity-100"
-      }`}>
-
-        {/* Illustration */}
-        {page?.illustration?.url && (
-          <div className="w-full max-w-2xl mb-8 rounded-2xl overflow-hidden shadow-2xl shadow-amber-900/20 animate-fadeIn">
-            <img src={page.illustration.url} alt={page.illustration.alt || ""}
-                 className="w-full h-auto object-cover" />
+      {/* ══ LANDSCAPE: Two-Page Spread ══ */}
+      {isLandscape ? (
+        <div className={`flex-1 flex flex-row items-stretch relative overflow-hidden ${flipClass}`}>
+          {/* Left page (current) */}
+          <div className="flex-1 flex flex-col items-center justify-center relative bg-[#070b16]">
+            {renderSinglePage(page, currentPage)}
           </div>
-        )}
 
-        {/* Text */}
-        <div className="w-full max-w-2xl text-center animate-fadeInUp">
-          {renderText()}
+          {/* Book spine divider */}
+          <div className="w-[2px] flex-shrink-0 bg-gradient-to-b from-transparent via-white/20 to-transparent self-stretch shadow-[0_0_12px_2px_rgba(255,255,255,0.06)]" />
+
+          {/* Right page (next) */}
+          <div className="flex-1 flex flex-col items-center justify-center relative bg-[#060a13]">
+            {nextPage
+              ? renderSinglePage(nextPage, nextPageIdx)
+              : (
+                <div className="flex flex-col items-center justify-center text-white/20 gap-4">
+                  <span className="text-5xl">📖</span>
+                  <p className="text-sm">End of story</p>
+                </div>
+              )
+            }
+          </div>
+
+          {/* Subtle center shadow (book depth) */}
+          <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-8 bg-gradient-to-r from-black/30 via-transparent to-black/30 pointer-events-none" />
         </div>
-      </div>
+      ) : (
+        /* ══ PORTRAIT: Single Page ══ */
+        <div className={`flex-1 flex flex-col items-center justify-center ${flipClass}`}>
+          {page?.illustration?.url && (
+            <div className="w-full max-w-2xl mb-8 px-6 rounded-2xl overflow-hidden shadow-2xl shadow-amber-900/20 animate-fadeIn">
+              <img src={page.illustration.url} alt={page.illustration.alt || ""}
+                   className="w-full h-auto object-cover rounded-2xl" />
+            </div>
+          )}
+          <div className="w-full max-w-2xl px-6 text-center animate-fadeInUp">
+            {renderText(page)}
+          </div>
+        </div>
+      )}
 
       {/* Bottom progress */}
       <div className={`absolute bottom-0 left-0 right-0 z-30 transition-opacity duration-500 ${showControls ? "opacity-100" : "opacity-0"}`}>
@@ -569,7 +687,7 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
             ← Previous
           </button>
           <button onClick={(e) => { e.stopPropagation(); goTo("next"); }}
-                  className={`text-white/40 text-sm hover:text-white/70 transition ${currentPage === totalPages - 1 ? "invisible" : ""}`}>
+                  className={`text-white/40 text-sm hover:text-white/70 transition ${currentPage >= totalPages - (isLandscape ? 2 : 1) ? "invisible" : ""}`}>
             Next →
           </button>
         </div>
@@ -798,6 +916,50 @@ export default function Home() {
         .animate-fadeIn { animation: fadeIn 1s ease-out forwards; }
         .animate-fadeInUp { animation: fadeInUp 1s ease-out forwards; animation-delay: 0.3s; opacity: 0; }
         .font-serif { font-family: Georgia, "Times New Roman", serif; }
+
+        /* ── 3D Page Turn Animations ── */
+        /* Perspective container wraps the page area */
+        .page-flip-next,
+        .page-flip-prev,
+        .page-settle {
+          perspective: 1200px;
+          transform-style: preserve-3d;
+        }
+
+        /* Next page: flip from right edge (rotateY goes 0 → -180 at the halfway point) */
+        @keyframes pageFlipNext {
+          0%   { transform: rotateY(0deg);    box-shadow: none; opacity: 1; }
+          40%  { transform: rotateY(-35deg);  box-shadow: -20px 0 60px rgba(0,0,0,0.6); opacity: 1; }
+          50%  { transform: rotateY(-90deg);  box-shadow: none; opacity: 0; }
+          100% { transform: rotateY(-90deg);  opacity: 0; }
+        }
+
+        /* Prev page: flip from left edge (rotateY goes 0 → 180) */
+        @keyframes pageFlipPrev {
+          0%   { transform: rotateY(0deg);   box-shadow: none; opacity: 1; }
+          40%  { transform: rotateY(35deg);  box-shadow: 20px 0 60px rgba(0,0,0,0.6); opacity: 1; }
+          50%  { transform: rotateY(90deg);  box-shadow: none; opacity: 0; }
+          100% { transform: rotateY(90deg);  opacity: 0; }
+        }
+
+        /* New page settles in from behind */
+        @keyframes pageSettle {
+          0%   { transform: rotateY(-8deg); opacity: 0.6; }
+          100% { transform: rotateY(0deg);  opacity: 1; }
+        }
+
+        .page-flip-next {
+          animation: pageFlipNext 600ms ease-in-out forwards;
+          transform-origin: left center;
+        }
+        .page-flip-prev {
+          animation: pageFlipPrev 600ms ease-in-out forwards;
+          transform-origin: right center;
+        }
+        .page-settle {
+          animation: pageSettle 150ms ease-out forwards;
+          transform-origin: center center;
+        }
       `}</style>
     </div>
   );
