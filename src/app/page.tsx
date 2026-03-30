@@ -386,6 +386,13 @@ function ImmersiveReader({ data, onExit, startInRemix }: { data: SSyncData; onEx
   const [showSplash, setShowSplash] = useState(true);
   const [isLandscape, setIsLandscape] = useState(false);
 
+  /* ── Phase 6: Distribution & Export State ── */
+  const [showSharePanel, setShowSharePanel] = useState(false);
+  const [shareTab, setShareTab] = useState<"share" | "embed">("share");
+  const [copyLinkDone, setCopyLinkDone] = useState(false);
+  const [copyEmbedDone, setCopyEmbedDone] = useState(false);
+  const [showVideoModal, setShowVideoModal] = useState(false);
+
   /* ── Phase 4: Remix Engine State ── */
   const [showRemix, setShowRemix] = useState(false);
   const [remixTab, setRemixTab] = useState<"voice" | "mood" | "timing" | "style">("mood");
@@ -955,8 +962,19 @@ function ImmersiveReader({ data, onExit, startInRemix }: { data: SSyncData; onEx
             ⚙️
           </button>
 
+          {/* 📤 Share button (Phase 6) */}
+          <button onClick={(e) => { e.stopPropagation(); setShowSharePanel(s => !s); setShowVoicePicker(false); setShowRecordPanel(false); setShowAccessibility(false); setShowRemix(false); }}
+                  className={`h-10 px-3 rounded-full backdrop-blur-sm flex items-center justify-center gap-1 transition text-xs font-semibold ${
+                    showSharePanel
+                      ? "bg-emerald-500/30 border border-emerald-400/50 text-emerald-300"
+                      : "bg-white/10 hover:bg-white/20 text-white/80"
+                  }`}
+                  title="Share this story">
+            📤 Share
+          </button>
+
           {/* ✏️ Remix button */}
-          <button onClick={(e) => { e.stopPropagation(); setShowRemix(r => !r); setShowVoicePicker(false); setShowRecordPanel(false); setShowAccessibility(false); }}
+          <button onClick={(e) => { e.stopPropagation(); setShowRemix(r => !r); setShowVoicePicker(false); setShowRecordPanel(false); setShowAccessibility(false); setShowSharePanel(false); }}
                   className={`h-10 px-3 rounded-full backdrop-blur-sm flex items-center justify-center gap-1 transition text-xs font-semibold ${
                     showRemix
                       ? "bg-amber-500/30 border border-amber-400/50 text-amber-300"
@@ -1327,6 +1345,264 @@ function ImmersiveReader({ data, onExit, startInRemix }: { data: SSyncData; onEx
       )}
 
       {/* ════════════════════════════
+          PHASE 6: SHARE PANEL (slide-in from right)
+          ════════════════════════════ */}
+      {showSharePanel && (
+        <div
+          className="absolute inset-0 z-40 bg-black/30 backdrop-blur-[2px]"
+          onClick={(e) => { e.stopPropagation(); setShowSharePanel(false); }}
+        />
+      )}
+      <div
+        className={`absolute inset-y-0 right-0 z-50 w-80 max-w-[92vw] transition-transform duration-300 ease-out ${showSharePanel ? "translate-x-0" : "translate-x-full"}`}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="h-full bg-[#0d1220]/96 backdrop-blur-xl border-l border-white/10 flex flex-col shadow-2xl overflow-hidden">
+          {/* Header */}
+          <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+            <div>
+              <h3 className="text-white font-bold text-sm">📤 Share Story</h3>
+              <p className="text-white/40 text-xs mt-0.5 truncate max-w-[180px]">{data.metadata.title}</p>
+            </div>
+            <button onClick={() => setShowSharePanel(false)} className="text-white/40 hover:text-white text-lg w-8 h-8 flex items-center justify-center">✕</button>
+          </div>
+
+          {/* Tabs */}
+          <div className="flex gap-1 px-4 pt-3 pb-2">
+            {(["share", "embed"] as const).map(tab => (
+              <button
+                key={tab}
+                onClick={() => setShareTab(tab)}
+                className={`flex-1 py-2 rounded-xl text-xs font-semibold transition ${shareTab === tab ? "bg-emerald-500/20 border border-emerald-400/30 text-emerald-300" : "bg-white/5 text-white/50 hover:bg-white/10"}`}
+              >
+                {tab === "share" ? "🌐 Share" : "🔗 Embed"}
+              </button>
+            ))}
+          </div>
+
+          {/* Tab content */}
+          <div className="flex-1 overflow-y-auto px-4 pb-6">
+
+            {/* ── SHARE TAB ── */}
+            {shareTab === "share" && (() => {
+              const storyId = (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("story")) || "demo";
+              const shareUrl = `https://storysynchq.com/read?story=${storyId}`;
+              const shareTitle = data.metadata.title;
+              const shareDesc = data.metadata.description || "An immersive storybook";
+              const waMsg = encodeURIComponent(`Check out this story: ${shareTitle} — ${shareUrl}`);
+              const twText = encodeURIComponent(`Check out "${shareTitle}" — an immersive storybook! ${shareUrl}`);
+              const fbUrl = encodeURIComponent(shareUrl);
+              const mailSubject = encodeURIComponent(shareTitle);
+              const mailBody = encodeURIComponent(`${shareUrl}\n\n${shareDesc}`);
+
+              return (
+                <div className="space-y-5 pt-2">
+                  {/* Copy link */}
+                  <div>
+                    <p className="text-white/40 text-xs uppercase tracking-wider mb-2">Story Link</p>
+                    <div className="flex items-center gap-2 p-3 rounded-xl bg-black/30 border border-white/10">
+                      <span className="text-white/40 text-xs font-mono truncate flex-1">{shareUrl.replace("https://", "")}</span>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(shareUrl).then(() => {
+                            setCopyLinkDone(true);
+                            setTimeout(() => setCopyLinkDone(false), 2500);
+                          }).catch(() => {});
+                        }}
+                        className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-semibold hover:bg-emerald-500/30 transition whitespace-nowrap"
+                      >
+                        {copyLinkDone ? "✅ Copied!" : "📋 Copy"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Social icons */}
+                  <div>
+                    <p className="text-white/40 text-xs uppercase tracking-wider mb-3">Share on</p>
+                    <div className="grid grid-cols-5 gap-2">
+                      {/* WhatsApp */}
+                      <a href={`https://wa.me/?text=${waMsg}`} target="_blank" rel="noopener noreferrer"
+                         className="flex flex-col items-center gap-1.5 group">
+                        <div className="w-12 h-12 rounded-full bg-[#25D366]/20 border border-[#25D366]/30 flex items-center justify-center text-xl group-hover:bg-[#25D366]/35 group-hover:scale-110 transition-all duration-200">💬</div>
+                        <span className="text-white/40 text-[10px]">WhatsApp</span>
+                      </a>
+                      {/* Twitter/X */}
+                      <a href={`https://twitter.com/intent/tweet?text=${twText}`} target="_blank" rel="noopener noreferrer"
+                         className="flex flex-col items-center gap-1.5 group">
+                        <div className="w-12 h-12 rounded-full bg-[#1DA1F2]/20 border border-[#1DA1F2]/30 flex items-center justify-center text-xl group-hover:bg-[#1DA1F2]/35 group-hover:scale-110 transition-all duration-200">🐦</div>
+                        <span className="text-white/40 text-[10px]">Twitter</span>
+                      </a>
+                      {/* Facebook */}
+                      <a href={`https://www.facebook.com/sharer/sharer.php?u=${fbUrl}`} target="_blank" rel="noopener noreferrer"
+                         className="flex flex-col items-center gap-1.5 group">
+                        <div className="w-12 h-12 rounded-full bg-[#1877F2]/20 border border-[#1877F2]/30 flex items-center justify-center text-xl group-hover:bg-[#1877F2]/35 group-hover:scale-110 transition-all duration-200">📘</div>
+                        <span className="text-white/40 text-[10px]">Facebook</span>
+                      </a>
+                      {/* Email */}
+                      <a href={`mailto:?subject=${mailSubject}&body=${mailBody}`} target="_blank" rel="noopener noreferrer"
+                         className="flex flex-col items-center gap-1.5 group">
+                        <div className="w-12 h-12 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-xl group-hover:bg-white/20 group-hover:scale-110 transition-all duration-200">✉️</div>
+                        <span className="text-white/40 text-[10px]">Email</span>
+                      </a>
+                      {/* Copy (repeat for mobile) */}
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(shareUrl).then(() => {
+                            setCopyLinkDone(true);
+                            setTimeout(() => setCopyLinkDone(false), 2500);
+                          }).catch(() => {});
+                        }}
+                        className="flex flex-col items-center gap-1.5 group"
+                      >
+                        <div className="w-12 h-12 rounded-full bg-amber-500/20 border border-amber-400/30 flex items-center justify-center text-xl group-hover:bg-amber-500/35 group-hover:scale-110 transition-all duration-200">📋</div>
+                        <span className="text-white/40 text-[10px]">{copyLinkDone ? "Copied!" : "Copy"}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Print */}
+                  <div>
+                    <p className="text-white/40 text-xs uppercase tracking-wider mb-2">Export</p>
+                    <button
+                      onClick={() => {
+                        const printWindow = window.open("", "_blank", "width=800,height=600");
+                        if (!printWindow) return;
+                        const pagesHtml = data.pages.map((p, i) => `
+                          <div class="story-page">
+                            ${p.illustration?.url ? `<img src="${p.illustration.url}" alt="${p.illustration.alt || `Page ${i + 1}`}" />` : ""}
+                            ${p.text?.content ? `<p class="page-text">${p.text.content}</p>` : ""}
+                            <div class="page-number">${i + 1} / ${data.pages.length}</div>
+                          </div>
+                        `).join("");
+                        printWindow.document.write(`<!DOCTYPE html><html><head>
+                          <title>${data.metadata.title}</title>
+                          <style>
+                            * { margin: 0; padding: 0; box-sizing: border-box; }
+                            body { font-family: Georgia, serif; background: white; color: #1a1a1a; }
+                            .story-title { text-align: center; padding: 40px 20px 20px; font-size: 2em; font-weight: bold; border-bottom: 2px solid #eee; }
+                            .story-author { text-align: center; color: #666; margin-bottom: 40px; padding-bottom: 20px; font-style: italic; }
+                            .story-page { page-break-after: always; padding: 40px; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 32px; }
+                            .story-page:last-child { page-break-after: avoid; }
+                            .story-page img { max-width: 80%; max-height: 50vh; object-fit: contain; border-radius: 8px; }
+                            .page-text { font-size: 1.3em; line-height: 1.8; text-align: center; max-width: 600px; }
+                            .page-number { color: #999; font-size: 0.85em; margin-top: auto; }
+                            @media print { body { print-color-adjust: exact; } }
+                          </style>
+                        </head><body>
+                          <div class="story-title">${data.metadata.title}</div>
+                          ${data.metadata.author ? `<div class="story-author">by ${data.metadata.author}</div>` : ""}
+                          ${pagesHtml}
+                        </body></html>`);
+                        printWindow.document.close();
+                        printWindow.focus();
+                        setTimeout(() => printWindow.print(), 500);
+                      }}
+                      className="w-full py-3 rounded-xl bg-white/5 border border-white/10 text-white/70 text-sm font-medium hover:bg-white/10 hover:text-white transition flex items-center justify-center gap-2"
+                    >
+                      🖨️ Print / Save as PDF
+                    </button>
+                    <button
+                      onClick={() => setShowVideoModal(true)}
+                      className="w-full mt-2 py-3 rounded-xl bg-violet-500/10 border border-violet-400/20 text-violet-300/80 text-sm font-medium hover:bg-violet-500/20 transition flex items-center justify-center gap-2"
+                    >
+                      🎬 Export Video
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ── EMBED TAB ── */}
+            {shareTab === "embed" && (() => {
+              const storyId = (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("story")) || "demo";
+              const embedSrc = `https://storysynchq.com/read?story=${storyId}`;
+              const embedCode = `<iframe\n  src="${embedSrc}"\n  width="100%"\n  height="600"\n  frameborder="0"\n  allow="autoplay"\n  style="border-radius:16px;border:none;"\n  title="${data.metadata.title}"\n></iframe>`;
+
+              return (
+                <div className="space-y-4 pt-2">
+                  {/* Code block */}
+                  <div>
+                    <p className="text-white/40 text-xs uppercase tracking-wider mb-2">Embed Code</p>
+                    <div className="relative rounded-xl bg-black/50 border border-white/10 overflow-hidden">
+                      <pre className="text-emerald-300/80 text-xs font-mono p-4 overflow-x-auto leading-relaxed whitespace-pre">{embedCode}</pre>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(embedCode).then(() => {
+                            setCopyEmbedDone(true);
+                            setTimeout(() => setCopyEmbedDone(false), 2500);
+                          }).catch(() => {});
+                        }}
+                        className="absolute top-2 right-2 px-2.5 py-1.5 rounded-lg bg-white/10 border border-white/20 text-white/60 text-xs hover:bg-white/20 hover:text-white transition"
+                      >
+                        {copyEmbedDone ? "✅ Copied!" : "Copy"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Preview */}
+                  <div>
+                    <p className="text-white/40 text-xs uppercase tracking-wider mb-2">Preview</p>
+                    <div className="rounded-2xl border-2 border-dashed border-white/20 bg-white/5 p-5 flex flex-col items-center justify-center gap-2 min-h-[120px]">
+                      <span className="text-3xl">📖</span>
+                      <p className="text-white/70 text-sm font-semibold text-center">{data.metadata.title}</p>
+                      {data.metadata.author && <p className="text-white/30 text-xs">by {data.metadata.author}</p>}
+                      <div className="mt-1 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-400/20 text-emerald-400/70 text-xs">
+                        Embedded Reader
+                      </div>
+                    </div>
+                    <p className="text-white/25 text-xs mt-2 text-center">The embed renders the full interactive reader inside any webpage</p>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(embedCode).then(() => {
+                        setCopyEmbedDone(true);
+                        setTimeout(() => setCopyEmbedDone(false), 2500);
+                      }).catch(() => {});
+                    }}
+                    className="w-full py-3 rounded-xl bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-sm font-bold hover:bg-emerald-500/30 transition"
+                  >
+                    {copyEmbedDone ? "✅ Embed Code Copied!" : "📋 Copy Embed Code"}
+                  </button>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      </div>
+
+      {/* ════════════════════════════
+          PHASE 6: VIDEO EXPORT MODAL
+          ════════════════════════════ */}
+      {showVideoModal && (
+        <div
+          className="absolute inset-0 z-[60] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm"
+          onClick={(e) => { e.stopPropagation(); setShowVideoModal(false); }}
+        >
+          <div
+            className="w-full max-w-sm rounded-3xl bg-[#0f1422]/98 border border-white/10 p-6 shadow-2xl text-center"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="text-5xl mb-4">🎬</div>
+            <h3 className="text-white font-bold text-lg mb-2">Video Export</h3>
+            <p className="text-gray-400 text-sm leading-relaxed mb-6">
+              Video export coming soon — we&apos;re building a feature to render your storybook as an MP4 video for YouTube and social media.
+            </p>
+            <div className="p-3 rounded-xl bg-violet-500/10 border border-violet-400/20 mb-5">
+              <p className="text-violet-300 text-xs font-semibold mb-1">Powered by Remotion + FFmpeg</p>
+              <p className="text-violet-300/60 text-xs">Each page becomes a timed video frame with narration audio baked in</p>
+            </div>
+            <button
+              onClick={() => setShowVideoModal(false)}
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-violet-600 to-violet-500 text-white font-bold text-sm hover:scale-[1.02] transition-all duration-200"
+            >
+              Got it — notify me when ready!
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ════════════════════════════
           REMIX BOTTOM SHEET
           ════════════════════════════ */}
       {/* Backdrop */}
@@ -1662,6 +1938,29 @@ function ImmersiveReader({ data, onExit, startInRemix }: { data: SSyncData; onEx
           <div className="w-full max-w-2xl px-6 text-center animate-fadeInUp">
             {renderText(page)}
           </div>
+
+          {/* ── Phase 6: QR Code on Final Page ── */}
+          {currentPage === totalPages - 1 && (() => {
+            const storyId = (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("story")) || "demo";
+            const qrUrl = `https://storysynchq.com/read?story=${storyId}`;
+            const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrUrl)}&bgcolor=0d1220&color=f8f8f8&margin=2`;
+            return (
+              <div className="mt-10 flex flex-col items-center gap-3 animate-fadeIn">
+                <p className="text-white/40 text-xs uppercase tracking-widest">Share this story</p>
+                <div className="p-4 rounded-2xl bg-[#0d1220]/80 border border-white/10 backdrop-blur-sm flex flex-col items-center gap-3">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={qrApiUrl}
+                    alt="QR code to share this story"
+                    width={160}
+                    height={160}
+                    className="rounded-xl opacity-90"
+                  />
+                  <p className="text-white/30 text-xs">Scan to read</p>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
 
