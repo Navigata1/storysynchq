@@ -363,6 +363,308 @@ function MyStoriesLibrary({
   );
 }
 
+
+/* ════════════════════════════════════════════
+   PHASE 7: PUBLIC LIBRARY DATA
+   ════════════════════════════════════════════ */
+interface PublicBookEntry {
+  id: string;
+  title: string;
+  author: string;
+  genre: string;
+  ageRange: string;
+  pageCount: number;
+  description: string;
+  coverFrom: string;
+  coverTo: string;
+  badgeClass: string;
+  isDemo: boolean;
+}
+
+const PUBLIC_LIBRARY: PublicBookEntry[] = [
+  {
+    id: "brave-little-star",
+    title: "The Brave Little Star",
+    author: "StorySyncHQ",
+    genre: "Children",
+    ageRange: "Ages 3–8",
+    pageCount: 7,
+    description: "A tiny star learns that courage isn't about being the biggest or brightest. It's about shining your own light, no matter how small.",
+    coverFrom: "#F59E0B",
+    coverTo: "#D97706",
+    badgeClass: "bg-amber-500/20 border-amber-400/30 text-amber-300",
+    isDemo: true,
+  },
+  {
+    id: "luna-lost-kitten",
+    title: "Luna and the Lost Kitten",
+    author: "StorySyncHQ",
+    genre: "Children",
+    ageRange: "Ages 3–8",
+    pageCount: 8,
+    description: "Luna discovers a tiny kitten alone in the rain and learns the true meaning of kindness. A gentle tale about compassion and finding family in unexpected places.",
+    coverFrom: "#8B5CF6",
+    coverTo: "#3B82F6",
+    badgeClass: "bg-violet-500/20 border-violet-400/30 text-violet-300",
+    isDemo: false,
+  },
+  {
+    id: "robot-dream",
+    title: "The Robot Who Learned to Dream",
+    author: "StorySyncHQ",
+    genre: "Children",
+    ageRange: "Ages 5–10",
+    pageCount: 10,
+    description: "A curious little robot named Bolt discovers the power of imagination when it stumbles upon a library of human stories. Together, can machines and humans dream the same dreams?",
+    coverFrom: "#10B981",
+    coverTo: "#0EA5E9",
+    badgeClass: "bg-emerald-500/20 border-emerald-400/30 text-emerald-300",
+    isDemo: false,
+  },
+  {
+    id: "walk-through-autumn",
+    title: "A Walk Through Autumn",
+    author: "StorySyncHQ",
+    genre: "Poetry",
+    ageRange: "All Ages",
+    pageCount: 6,
+    description: "A quiet collection of verse celebrating the golden melancholy of autumn leaves, morning fog, and the comfort of warm things. Poetry for every heart that loves a slow season.",
+    coverFrom: "#F97316",
+    coverTo: "#DC2626",
+    badgeClass: "bg-orange-500/20 border-orange-400/30 text-orange-300",
+    isDemo: false,
+  },
+  {
+    id: "courage-small-seed",
+    title: "The Courage of a Small Seed",
+    author: "StorySyncHQ",
+    genre: "Faith-Based",
+    ageRange: "Ages 3–8",
+    pageCount: 8,
+    description: "A tiny seed buried in dark soil wonders if it will ever grow. A faith-filled story about trusting the process, perseverance, and the miracle of new beginnings.",
+    coverFrom: "#34D399",
+    coverTo: "#065F46",
+    badgeClass: "bg-teal-500/20 border-teal-400/30 text-teal-300",
+    isDemo: false,
+  },
+];
+
+/* ════════════════════════════════════════════
+   PHASE 7: PUBLIC LIBRARY COMPONENT
+   ════════════════════════════════════════════ */
+function PublicLibrary({ onExit, onReadDemo }: { onExit: () => void; onReadDemo: () => void }) {
+  const [search, setSearch] = useState("");
+  const [activeGenre, setActiveGenre] = useState("All");
+  const [comingSoonToast, setComingSoonToast] = useState(false);
+
+  const GENRES = ["All", "Children", "Educational", "Fantasy", "Poetry", "Faith-Based", "Personal"];
+
+  const filtered = PUBLIC_LIBRARY.filter(book => {
+    const q = search.toLowerCase();
+    const matchesSearch =
+      !q ||
+      book.title.toLowerCase().includes(q) ||
+      book.author.toLowerCase().includes(q);
+    const matchesGenre = activeGenre === "All" || book.genre === activeGenre;
+    return matchesSearch && matchesGenre;
+  });
+
+  const featured = PUBLIC_LIBRARY.find(b => b.isDemo)!;
+
+  const handleCardTap = (book: PublicBookEntry) => {
+    if (book.isDemo) {
+      onReadDemo();
+    } else {
+      setComingSoonToast(true);
+      setTimeout(() => setComingSoonToast(false), 3000);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#0a0e1a] text-white overflow-x-hidden">
+      {/* Header */}
+      <div className="sticky top-0 z-50 bg-[#0a0e1a]/95 backdrop-blur-xl border-b border-white/5 px-4 py-3 flex items-center justify-between">
+        <button
+          onClick={onExit}
+          className="w-9 h-9 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/20 transition"
+        >
+          ←
+        </button>
+        <div className="text-center">
+          <p className="text-white font-semibold text-sm">📚 Public Library</p>
+          <p className="text-gray-500 text-xs">{PUBLIC_LIBRARY.length} stories</p>
+        </div>
+        <div className="w-9" />
+      </div>
+
+      <div className="max-w-4xl mx-auto px-4 py-6">
+
+        {/* Featured Section */}
+        <div className="mb-8">
+          <p className="text-amber-400 text-xs font-semibold uppercase tracking-widest mb-3">⭐ Featured</p>
+          <div
+            className="relative rounded-3xl overflow-hidden cursor-pointer group"
+            style={{ background: `linear-gradient(135deg, ${featured.coverFrom}, ${featured.coverTo})` }}
+            onClick={() => handleCardTap(featured)}
+          >
+            {/* Blurred background illustration */}
+            <div className="absolute inset-0 opacity-20">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/demo/images/page1.jpg"
+                alt="cover background"
+                className="w-full h-full object-cover blur-md scale-110"
+              />
+            </div>
+            <div className="relative z-10 flex flex-col md:flex-row gap-6 p-6 md:p-8">
+              {/* Cover art */}
+              <div className="w-full md:w-48 flex-shrink-0 rounded-2xl overflow-hidden shadow-2xl shadow-black/40">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/demo/images/page1.jpg"
+                  alt={featured.title}
+                  className="w-full h-48 md:h-full object-cover"
+                />
+              </div>
+              {/* Info */}
+              <div className="flex flex-col justify-center">
+                <span className={`inline-flex w-fit px-2.5 py-1 rounded-full border text-xs font-semibold mb-3 ${featured.badgeClass}`}>
+                  {featured.genre}
+                </span>
+                <h2 className="text-2xl md:text-3xl font-bold text-white mb-2 drop-shadow-sm">
+                  {featured.title}
+                </h2>
+                <p className="text-white/70 text-sm leading-relaxed mb-4 max-w-lg">
+                  {featured.description}
+                </p>
+                <div className="flex items-center gap-4 mb-5 text-white/50 text-xs flex-wrap">
+                  <span>✍️ {featured.author}</span>
+                  <span>📖 {featured.pageCount} pages</span>
+                  <span>👶 {featured.ageRange}</span>
+                </div>
+                <button
+                  className="w-fit px-6 py-3 rounded-2xl bg-white text-black font-bold text-sm shadow-lg hover:scale-105 transition-all duration-200"
+                  onClick={e => { e.stopPropagation(); onReadDemo(); }}
+                >
+                  Read Now →
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Search Bar */}
+        <div className="relative mb-4">
+          <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm focus-within:border-amber-400/40 transition">
+            <span className="text-white/30 text-lg select-none">🔍</span>
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search stories..."
+              className="flex-1 bg-transparent text-white placeholder-white/30 focus:outline-none text-sm"
+            />
+            {search && (
+              <button
+                onClick={() => setSearch("")}
+                className="text-white/30 hover:text-white/60 transition text-lg leading-none"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Genre Filter Pills */}
+        <div
+          className="flex gap-2 overflow-x-auto pb-2 mb-6"
+          style={{ scrollbarWidth: "none" } as React.CSSProperties}
+        >
+          {GENRES.map(genre => (
+            <button
+              key={genre}
+              onClick={() => setActiveGenre(genre)}
+              className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-semibold transition-all duration-200 ${
+                activeGenre === genre
+                  ? "bg-amber-500 text-black shadow-lg shadow-amber-500/30"
+                  : "bg-white/5 border border-white/10 text-white/60 hover:bg-white/10 hover:text-white/80"
+              }`}
+            >
+              {genre}
+            </button>
+          ))}
+        </div>
+
+        {/* Grid */}
+        {filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="text-5xl mb-3">🔭</div>
+            <p className="text-white/60 font-medium">No stories found</p>
+            <p className="text-white/30 text-sm mt-1">Try a different search or genre</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {filtered.map(book => (
+              <button
+                key={book.id}
+                onClick={() => handleCardTap(book)}
+                className="text-left rounded-2xl overflow-hidden border border-white/10 hover:border-white/25 hover:scale-[1.03] transition-all duration-300 focus:outline-none group"
+                style={{ boxShadow: "none" }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLElement).style.boxShadow = `0 0 28px 6px ${book.coverFrom}55`;
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLElement).style.boxShadow = "none";
+                }}
+              >
+                {/* Gradient cover */}
+                <div
+                  className="h-36 flex flex-col items-center justify-center relative overflow-hidden"
+                  style={{ background: `linear-gradient(135deg, ${book.coverFrom}, ${book.coverTo})` }}
+                >
+                  <span className="text-5xl drop-shadow-lg group-hover:scale-110 transition-transform duration-300">📖</span>
+                  {book.isDemo && (
+                    <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-black/30 border border-white/20 text-white text-[10px] font-bold">
+                      DEMO
+                    </div>
+                  )}
+                  {!book.isDemo && (
+                    <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded-full bg-black/30 border border-white/20 text-white/60 text-[10px]">
+                      Coming soon
+                    </div>
+                  )}
+                </div>
+                {/* Card info */}
+                <div className="p-3 bg-[#0f1422]">
+                  <h4 className="text-white text-sm font-semibold line-clamp-2 leading-snug mb-1">
+                    {book.title}
+                  </h4>
+                  <p className="text-gray-500 text-xs mb-2">{book.author}</p>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className={`px-2 py-0.5 rounded-full border text-[10px] font-medium ${book.badgeClass}`}>
+                      {book.genre}
+                    </span>
+                    <span className="text-gray-600 text-[10px]">{book.ageRange}</span>
+                  </div>
+                  <p className="text-gray-600 text-[10px] mt-1.5">{book.pageCount}p</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Coming soon toast */}
+      {comingSoonToast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[300] animate-fadeInUp">
+          <div className="px-5 py-3 rounded-2xl bg-[#1a1f2e] border border-white/10 text-white font-semibold text-sm shadow-2xl flex items-center gap-2 backdrop-blur-xl">
+            <span>🔒</span> This story is coming soon
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ════════════════════════════════════════════
    IMMERSIVE READER
    ════════════════════════════════════════════ */
@@ -2468,6 +2770,7 @@ export default function Home() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showMyStories, setShowMyStories] = useState(false);
+  const [showPublicLibrary, setShowPublicLibrary] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [editName, setEditName] = useState("");
@@ -2545,6 +2848,18 @@ export default function Home() {
           user={user}
           onExit={() => setShowMyStories(false)}
           onOpenStory={(data) => { setReaderData(data); setShowMyStories(false); }}
+        />
+        {toast && <Toast message={toast} onDone={() => setToast(null)} />}
+      </>
+    );
+  }
+
+  if (showPublicLibrary && !readerData) {
+    return (
+      <>
+        <PublicLibrary
+          onExit={() => setShowPublicLibrary(false)}
+          onReadDemo={() => { setShowPublicLibrary(false); openDemo(false); }}
         />
         {toast && <Toast message={toast} onDone={() => setToast(null)} />}
       </>
@@ -2686,6 +3001,14 @@ export default function Home() {
             🛠 Create Your Story
           </button>
         </div>
+
+        {/* Phase 7: Browse Library */}
+        <button
+          onClick={() => setShowPublicLibrary(true)}
+          className="mb-4 px-7 py-3.5 rounded-2xl bg-white/5 border border-white/10 text-white/80 font-medium text-base backdrop-blur-sm hover:bg-amber-500/10 hover:border-amber-400/30 hover:text-white hover:scale-105 transition-all duration-300 flex items-center gap-2"
+        >
+          <span>📚</span> Browse Library
+        </button>
 
         {/* Phase 5: My Stories CTA */}
         {user && (
