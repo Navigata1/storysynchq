@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { generateStory as generateStoryAI } from "@/lib/story-engine";
+import { generateIllustration } from "./page-improvements";
 
 /* ─── Types ─── */
 
@@ -2420,6 +2422,25 @@ function generateStoryPages(prompt: string): CreatorPage[] {
   return beats.map((text, i) => ({ id: i + 1, text }));
 }
 
+// Enhanced generator using the full story engine + illustration generator
+function generateStoryPagesEnhanced(prompt: string, genre?: string): { pages: CreatorPage[], images: Record<number, string>, title: string } {
+  try {
+    const result = generateStoryAI(prompt, { genre: genre as "children" | "adventure" | "fantasy" | "educational" | "faith-based" | "poetry" | undefined });
+    const pages = result.pages.map(p => ({ id: p.id, text: p.text }));
+    const images: Record<number, string> = {};
+    // Generate canvas illustrations for each page
+    for (const p of result.pages) {
+      try {
+        images[p.id] = generateIllustration(p.text, genre === "fantasy" ? "night" : genre === "poetry" ? "watercolor" : "storybook");
+      } catch { /* skip illustration on error */ }
+    }
+    return { pages, images, title: result.title };
+  } catch {
+    // Fallback to basic generator
+    return { pages: generateStoryPages(prompt), images: {}, title: "" };
+  }
+}
+
 function StoryCreator({
   onExit,
   onPreview,
@@ -2515,8 +2536,10 @@ function StoryCreator({
     setGenerating(true);
     // Simulate a brief "thinking" moment for magic feel
     setTimeout(() => {
-      const generated = generateStoryPages(aiPrompt);
-      setPages(generated);
+      const result = generateStoryPagesEnhanced(aiPrompt, genre);
+      setPages(result.pages);
+      if (Object.keys(result.images).length > 0) setImages(result.images);
+      if (result.title && !title) setTitle(result.title);
       setGenerating(false);
       setStep(2);
     }, 1200);
