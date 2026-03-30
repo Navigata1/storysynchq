@@ -771,6 +771,12 @@ function ImmersiveReader({ data, onExit, startInRemix }: { data: SSyncData; onEx
   const recordedCount = Object.keys(recordings).length;
   const transitioning = animPhase !== "idle";
 
+  /* ── Fullscreen API: request on mount, exit on unmount ── */
+  useEffect(() => {
+    try { document.documentElement.requestFullscreen?.(); } catch {}
+    return () => { try { document.exitFullscreen?.(); } catch {} };
+  }, []);
+
   /* ── Start in remix mode if requested ── */
   useEffect(() => {
     if (startInRemix) {
@@ -1221,7 +1227,7 @@ function ImmersiveReader({ data, onExit, startInRemix }: { data: SSyncData; onEx
         className={`absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/80 to-transparent transition-opacity duration-500 ${showControls ? "opacity-100" : "opacity-0"}`}
         style={{ paddingTop: "calc(12px + env(safe-area-inset-top, 0px))" }}
       >
-        <button onClick={(e) => { e.stopPropagation(); stopMusic(); onExit(); }}
+        <button onClick={(e) => { e.stopPropagation(); stopMusic(); try { document.exitFullscreen?.(); } catch {} onExit(); }}
                 className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-white/20 transition">
           <span className="text-white text-lg">✕</span>
         </button>
@@ -1835,6 +1841,27 @@ function ImmersiveReader({ data, onExit, startInRemix }: { data: SSyncData; onEx
                     >
                       🎬 Export Video
                     </button>
+                    <button
+                      onClick={() => {
+                        if (Object.keys(recordings).length === 0) {
+                          alert("Record your narration first to export audio");
+                          return;
+                        }
+                        Object.entries(recordings).forEach(([pageId, blobUrl]) => {
+                          fetch(blobUrl).then(r => r.blob()).then(blob => {
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement("a");
+                            a.href = url;
+                            a.download = `${(data.metadata.title || "story").toLowerCase().replace(/\s+/g, "-")}-page-${pageId}.webm`;
+                            a.click();
+                            URL.revokeObjectURL(url);
+                          });
+                        });
+                      }}
+                      className="w-full mt-2 py-3 rounded-xl bg-amber-500/10 border border-amber-400/20 text-amber-300/80 text-sm font-medium hover:bg-amber-500/20 transition flex items-center justify-center gap-2"
+                    >
+                      📥 Download Audio
+                    </button>
                   </div>
                 </div>
               );
@@ -2421,6 +2448,42 @@ function StoryCreator({
   const [pages, setPages] = useState<CreatorPage[]>([{ id: 1, text: "" }]);
   const [images, setImages] = useState<Record<number, string>>({});
   const fileInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
+  const [showRestorePrompt, setShowRestorePrompt] = useState(false);
+  const autosaveTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  /* ── Auto-save: restore draft on mount ── */
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("ssync-autosave-draft");
+      if (raw) setShowRestorePrompt(true);
+    } catch {}
+  }, []);
+
+  const restoreDraft = () => {
+    try {
+      const raw = localStorage.getItem("ssync-autosave-draft");
+      if (raw) {
+        const draft = JSON.parse(raw);
+        if (draft.title) setTitle(draft.title);
+        if (draft.author) setAuthor(draft.author);
+        if (draft.genre) setGenre(draft.genre);
+        if (draft.ageRange) setAgeRange(draft.ageRange);
+        if (draft.pages?.length) setPages(draft.pages);
+        if (draft.images) setImages(draft.images);
+      }
+    } catch {}
+    setShowRestorePrompt(false);
+  };
+
+  /* ── Auto-save: debounce save on changes ── */
+  useEffect(() => {
+    clearTimeout(autosaveTimerRef.current);
+    autosaveTimerRef.current = setTimeout(() => {
+      try {
+        localStorage.setItem("ssync-autosave-draft", JSON.stringify({ title, author, genre, ageRange, pages, images }));
+      } catch {}
+    }, 1500);
+  }, [title, author, genre, ageRange, pages, images]);
 
   const addPage = () => {
     if (pages.length >= 20) return;
@@ -2550,6 +2613,20 @@ function StoryCreator({
         </div>
       </div>
 
+      {/* ── Restore Draft Prompt ── */}
+      {showRestorePrompt && (
+        <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center px-4">
+          <div className="bg-[#131826] border border-white/10 rounded-2xl p-6 max-w-sm w-full space-y-4 shadow-2xl">
+            <h3 className="text-white font-bold text-lg">📝 Restore draft?</h3>
+            <p className="text-gray-400 text-sm">You have an unsaved draft from a previous session. Would you like to restore it?</p>
+            <div className="flex gap-3">
+              <button onClick={() => { setShowRestorePrompt(false); localStorage.removeItem("ssync-autosave-draft"); }} className="flex-1 py-2.5 rounded-xl bg-white/10 border border-white/10 text-gray-400 text-sm font-medium hover:bg-white/20 transition">Discard</button>
+              <button onClick={restoreDraft} className="flex-1 py-2.5 rounded-xl bg-amber-500/20 border border-amber-400/40 text-amber-300 text-sm font-bold hover:bg-amber-500/30 transition">Restore</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex-1 overflow-y-auto pb-32">
         {/* ══ STEP 1: Title & Details ══ */}
         {step === 1 && (
@@ -2650,11 +2727,35 @@ function StoryCreator({
                 <div className="flex items-center gap-3 px-4 py-3 border-b border-white/5">
                   <span className="text-gray-600 text-lg leading-none select-none">⠿</span>
                   <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Page {idx + 1}</span>
-                  {pages.length > 1 && (
-                    <button onClick={() => deletePage(page.id)} className="ml-auto text-gray-600 hover:text-red-400 transition p-1 rounded-lg hover:bg-red-400/10">
-                      🗑
-                    </button>
-                  )}
+                  <div className="ml-auto flex items-center gap-1">
+                    {idx > 0 && (
+                      <button onClick={() => {
+                        setPages(prev => {
+                          const arr = [...prev];
+                          [arr[idx - 1], arr[idx]] = [arr[idx], arr[idx - 1]];
+                          return arr;
+                        });
+                      }} className="text-gray-600 hover:text-amber-400 transition p-1 rounded-lg hover:bg-amber-400/10 text-sm" title="Move up">
+                        ↑
+                      </button>
+                    )}
+                    {idx < pages.length - 1 && (
+                      <button onClick={() => {
+                        setPages(prev => {
+                          const arr = [...prev];
+                          [arr[idx], arr[idx + 1]] = [arr[idx + 1], arr[idx]];
+                          return arr;
+                        });
+                      }} className="text-gray-600 hover:text-amber-400 transition p-1 rounded-lg hover:bg-amber-400/10 text-sm" title="Move down">
+                        ↓
+                      </button>
+                    )}
+                    {pages.length > 1 && (
+                      <button onClick={() => deletePage(page.id)} className="text-gray-600 hover:text-red-400 transition p-1 rounded-lg hover:bg-red-400/10">
+                        🗑
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Image upload area */}
