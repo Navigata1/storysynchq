@@ -293,6 +293,20 @@ function MyStoriesLibrary({
         </div>
       </div>
 
+      {/* Usage limits bar */}
+      <div className="px-4 py-3 bg-white/[0.02] border-b border-white/5">
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-gray-400 text-xs">{Math.min(library.length, 5)} / 5 stories (Free plan)</span>
+          {library.length >= 5 && (
+            <span className="text-amber-400 text-xs font-medium">Upgrade for unlimited →</span>
+          )}
+        </div>
+        <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+          <div className={`h-full rounded-full transition-all duration-500 ${library.length >= 5 ? "bg-amber-500" : "bg-gradient-to-r from-emerald-500 to-amber-500"}`}
+               style={{ width: `${Math.min((library.length / 5) * 100, 100)}%` }} />
+        </div>
+      </div>
+
       <div className="max-w-4xl mx-auto px-4 py-8">
         {library.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-center">
@@ -379,6 +393,7 @@ interface PublicBookEntry {
   coverTo: string;
   badgeClass: string;
   isDemo: boolean;
+  isPremium?: boolean;
 }
 
 const PUBLIC_LIBRARY: PublicBookEntry[] = [
@@ -407,6 +422,7 @@ const PUBLIC_LIBRARY: PublicBookEntry[] = [
     coverTo: "#3B82F6",
     badgeClass: "bg-violet-500/20 border-violet-400/30 text-violet-300",
     isDemo: false,
+    isPremium: true,
   },
   {
     id: "robot-dream",
@@ -420,6 +436,7 @@ const PUBLIC_LIBRARY: PublicBookEntry[] = [
     coverTo: "#0EA5E9",
     badgeClass: "bg-emerald-500/20 border-emerald-400/30 text-emerald-300",
     isDemo: false,
+    isPremium: true,
   },
   {
     id: "walk-through-autumn",
@@ -645,7 +662,12 @@ function PublicLibrary({ onExit, onReadDemo }: { onExit: () => void; onReadDemo:
                     </span>
                     <span className="text-gray-600 text-[10px]">{book.ageRange}</span>
                   </div>
-                  <p className="text-gray-600 text-[10px] mt-1.5">{book.pageCount}p</p>
+                  <div className="flex items-center justify-between mt-1.5">
+                    <p className="text-gray-600 text-[10px]">{book.pageCount}p</p>
+                    {book.isPremium && (
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">⭐ Premium</span>
+                    )}
+                  </div>
                 </div>
               </button>
             ))}
@@ -3235,6 +3257,96 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── For Educators ── */}
+      <section className="py-24 px-6 max-w-6xl mx-auto">
+        <div className="text-center mb-16">
+          <p className="text-emerald-400 text-sm font-semibold uppercase tracking-widest mb-3">Enterprise</p>
+          <h2 className="text-3xl md:text-5xl font-bold mb-4">📐 Built for Classrooms</h2>
+          <p className="text-gray-400 text-lg max-w-2xl mx-auto">
+            Bring immersive reading to your school. Track student progress, assign stories, and support multilingual learners — all from one platform.
+          </p>
+        </div>
+        <div className="grid md:grid-cols-3 gap-6 mb-12">
+          {[
+            { icon: "📊", title: "Track Progress", desc: "See which students finished reading, how long they spent, and comprehension indicators. Real-time classroom dashboard.", color: "from-emerald-500/20 to-emerald-500/5", border: "border-emerald-500/20" },
+            { icon: "📋", title: "Assign Stories", desc: "Create reading assignments with due dates. Students access via link or QR code. No app install required.", color: "from-teal-500/20 to-teal-500/5", border: "border-teal-500/20" },
+            { icon: "🌍", title: "Multilingual", desc: "Same story, different narration languages. Perfect for ESL, dual-language programs, and inclusive classrooms.", color: "from-cyan-500/20 to-cyan-500/5", border: "border-cyan-500/20" },
+          ].map((card) => (
+            <div key={card.title} className={`p-8 rounded-2xl bg-gradient-to-b ${card.color} border ${card.border} backdrop-blur-sm hover:scale-[1.02] transition-all duration-300`}>
+              <div className="text-4xl mb-4">{card.icon}</div>
+              <h3 className="text-xl font-bold text-white mb-2">{card.title}</h3>
+              <p className="text-gray-400 leading-relaxed">{card.desc}</p>
+            </div>
+          ))}
+        </div>
+        <div className="text-center">
+          <a href="mailto:hello@islanddevcrew.com?subject=StorySyncHQ%20for%20Schools"
+             className="inline-block px-8 py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold text-lg shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 hover:scale-105 transition-all duration-300 active:scale-95">
+            🏫 Get Started for Schools
+          </a>
+        </div>
+      </section>
+
+      {/* ── Pricing ── */}
+      <section className="py-24 px-6 max-w-5xl mx-auto">
+        <div className="text-center mb-16">
+          <p className="text-amber-400 text-sm font-semibold uppercase tracking-widest mb-3">Plans</p>
+          <h2 className="text-3xl md:text-5xl font-bold mb-4">💎 Choose Your Plan</h2>
+          <p className="text-gray-400 text-lg">Start free. Upgrade when you need more.</p>
+        </div>
+        <div className="grid md:grid-cols-3 gap-6 items-start">
+          {/* Free */}
+          <div className="p-8 rounded-2xl bg-white/[0.03] border border-white/10 hover:border-white/20 transition-all duration-300">
+            <h3 className="text-xl font-bold text-white mb-1">Free</h3>
+            <p className="text-3xl font-bold text-white mb-1">$0 <span className="text-sm font-normal text-gray-500">/ forever</span></p>
+            <p className="text-gray-500 text-sm mb-6">Perfect to get started</p>
+            <ul className="space-y-3 mb-8">
+              {["5 storybooks", "AI narration (TTS)", "Basic recording", "Community library", "Share via link"].map(f => (
+                <li key={f} className="flex items-center gap-2 text-gray-300 text-sm"><span className="text-emerald-400">✓</span> {f}</li>
+              ))}
+            </ul>
+            <button onClick={() => { const el = document.getElementById('hero'); el?.scrollIntoView({ behavior: 'smooth' }); }}
+                    className="w-full py-3 rounded-xl bg-white/10 border border-white/10 text-white font-medium hover:bg-white/15 transition active:scale-95">
+              Get Started Free
+            </button>
+          </div>
+
+          {/* Creator */}
+          <div className="p-8 rounded-2xl bg-white/[0.05] border-2 border-amber-500/40 shadow-lg shadow-amber-500/10 relative hover:shadow-amber-500/20 transition-all duration-300 md:scale-105">
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-amber-500 text-black text-xs font-bold">Most Popular</div>
+            <h3 className="text-xl font-bold text-white mb-1 mt-2">Creator</h3>
+            <p className="text-3xl font-bold text-amber-300 mb-1">$9.99 <span className="text-sm font-normal text-gray-500">/ month</span></p>
+            <p className="text-gray-500 text-sm mb-6">For storytellers & parents</p>
+            <ul className="space-y-3 mb-8">
+              {["Unlimited storybooks", "Premium AI voices", "Background music", "Video export", "Priority rendering", "Custom QR codes"].map(f => (
+                <li key={f} className="flex items-center gap-2 text-gray-200 text-sm"><span className="text-amber-400">✓</span> {f}</li>
+              ))}
+            </ul>
+            <button onClick={() => setToast("Coming soon — stay tuned!")}
+                    className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-black font-bold hover:shadow-amber-500/30 hover:shadow-lg transition active:scale-95">
+              Start Creating
+            </button>
+          </div>
+
+          {/* Studio */}
+          <div className="p-8 rounded-2xl bg-white/[0.03] border border-violet-500/30 hover:border-violet-500/50 transition-all duration-300">
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-violet-500 text-white text-xs font-bold hidden md:block">Professional</div>
+            <h3 className="text-xl font-bold text-white mb-1">Studio</h3>
+            <p className="text-3xl font-bold text-violet-300 mb-1">$29.99 <span className="text-sm font-normal text-gray-500">/ month</span></p>
+            <p className="text-gray-500 text-sm mb-6">For authors & educators</p>
+            <ul className="space-y-3 mb-8">
+              {["Everything in Creator", "Voice cloning", "Full remix engine", "API access", "White-label embedding", "Dedicated support", "Commercial license"].map(f => (
+                <li key={f} className="flex items-center gap-2 text-gray-300 text-sm"><span className="text-violet-400">✓</span> {f}</li>
+              ))}
+            </ul>
+            <button onClick={() => setToast("Coming soon — stay tuned!")}
+                    className="w-full py-3 rounded-xl bg-white/10 border border-violet-500/30 text-violet-300 font-medium hover:bg-violet-500/10 transition active:scale-95">
+              Go Studio
+            </button>
+          </div>
+        </div>
+      </section>
+
       {/* ── Protocol CTA ── */}
       <section className="py-24 px-6 text-center">
         <div className="max-w-2xl mx-auto p-10 rounded-3xl bg-gradient-to-b from-white/5 to-transparent border border-white/10 backdrop-blur-sm">
@@ -3252,18 +3364,35 @@ export default function Home() {
                className="px-6 py-3 rounded-xl bg-white/10 border border-white/10 text-white font-medium hover:bg-white/15 transition">
               🐙 GitHub
             </a>
+            <button disabled className="px-6 py-3 rounded-xl bg-white/5 border border-white/5 text-gray-500 font-medium cursor-not-allowed">
+              📖 API Docs (Coming Soon)
+            </button>
           </div>
         </div>
       </section>
 
       {/* ── Footer ── */}
-      <footer className="py-12 px-6 border-t border-white/5 text-center">
-        <p className="text-gray-500 text-sm">
-          StorySyncHQ · A product of <span className="text-gray-400">Island Development Crew</span>
-        </p>
-        <p className="text-gray-600 text-xs mt-2">
-          Part of the SyncHQ Suite · CareSyncHQ · StorySyncHQ · ListSyncHQ · BookSyncHQ
-        </p>
+      <footer className="py-12 px-6 border-t border-white/5">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex flex-wrap justify-center gap-6 mb-6">
+            {[
+              { label: "Terms", href: "#" },
+              { label: "Privacy", href: "#" },
+              { label: "Contact", href: "mailto:hello@islanddevcrew.com" },
+              { label: "API Docs", href: "#" },
+              { label: "GitHub", href: "https://github.com/Navigata1/storysynchq" },
+            ].map(link => (
+              <a key={link.label} href={link.href} target={link.href.startsWith("http") ? "_blank" : undefined}
+                 className="text-gray-500 text-sm hover:text-gray-300 transition">{link.label}</a>
+            ))}
+          </div>
+          <p className="text-gray-500 text-sm text-center">
+            StorySyncHQ · A product of <span className="text-gray-400">Island Development Crew LLC</span>
+          </p>
+          <p className="text-gray-600 text-xs mt-2 text-center">
+            © 2026 Island Development Crew LLC · Part of the SyncHQ Suite
+          </p>
+        </div>
       </footer>
 
       {/* ── CSS Animations ── */}
