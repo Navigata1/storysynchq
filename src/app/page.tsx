@@ -32,6 +32,8 @@ function parseDuration(s?: string): number {
 /* ════════════════════════════════════════════
    IMMERSIVE READER
    ════════════════════════════════════════════ */
+type VoiceMode = "ai" | "recorded";
+
 function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void }) {
   const [currentPage, setCurrentPage] = useState(0);
   const [transitioning, setTransitioning] = useState(false);
@@ -45,9 +47,92 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
   const controlsTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const autoTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
+  /* ── Voice Recording State ── */
+  const [voiceMode, setVoiceMode] = useState<VoiceMode>("ai");
+  const [recordings, setRecordings] = useState<Record<number, string>>({}); // pageId → blob URL
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [showRecordPanel, setShowRecordPanel] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const recordTimerRef = useRef<ReturnType<typeof setInterval>>(undefined);
+  const audioPlaybackRef = useRef<HTMLAudioElement | null>(null);
+
   const page = data.pages[currentPage];
   const totalPages = data.pages.length;
   const timingMult = data.settings?.accessibility?.timingMultiplier ?? 1;
+
+  const hasRecording = recordings[page?.id] !== undefined;
+  const recordedCount = Object.keys(recordings).length;
+
+  /* ── Voice Recording Functions ── */
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream, { mimeType: "audio/webm;codecs=opus" });
+      mediaRecorderRef.current = recorder;
+      chunksRef.current = [];
+
+      recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+      recorder.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+        const url = URL.createObjectURL(blob);
+        setRecordings(prev => ({ ...prev, [page.id]: url }));
+        stream.getTracks().forEach(t => t.stop());
+        setIsRecording(false);
+        setRecordingTime(0);
+        if (recordTimerRef.current) clearInterval(recordTimerRef.current);
+      };
+
+      recorder.start();
+      setIsRecording(true);
+      setRecordingTime(0);
+      recordTimerRef.current = setInterval(() => setRecordingTime(t => t + 1), 1000);
+
+      // Cancel TTS if playing
+      window.speechSynthesis?.cancel();
+    } catch {
+      console.error("Microphone access denied");
+    }
+  };
+
+  const stopRecording = () => {
+    mediaRecorderRef.current?.stop();
+  };
+
+  const deleteRecording = (pageId: number) => {
+    setRecordings(prev => {
+      const next = { ...prev };
+      if (next[pageId]) { URL.revokeObjectURL(next[pageId]); delete next[pageId]; }
+      return next;
+    });
+  };
+
+  const playRecording = (pageId: number) => {
+    const url = recordings[pageId];
+    if (!url) return;
+    window.speechSynthesis?.cancel();
+    if (audioPlaybackRef.current) { audioPlaybackRef.current.pause(); }
+    const audio = new Audio(url);
+    audioPlaybackRef.current = audio;
+    audio.onplay = () => setNarrating(true);
+    audio.onended = () => {
+      setNarrating(false);
+      if (!paused && data.settings?.autoPlay !== false) {
+        const pause = parseDuration(page.timing?.autoPause) * timingMult;
+        autoTimer.current = setTimeout(() => goTo("next"), pause);
+      }
+    };
+    audio.play();
+  };
+
+  /* Cleanup recordings on unmount */
+  useEffect(() => {
+    return () => {
+      Object.values(recordings).forEach(url => URL.revokeObjectURL(url));
+      if (audioPlaybackRef.current) audioPlaybackRef.current.pause();
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* Navigate */
   const goTo = useCallback((dir: "next" | "prev") => {
@@ -55,9 +140,12 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
     const next = dir === "next" ? currentPage + 1 : currentPage - 1;
     if (next < 0 || next >= totalPages) return;
     window.speechSynthesis?.cancel();
+    if (audioPlaybackRef.current) { audioPlaybackRef.current.pause(); audioPlaybackRef.current = null; }
+    if (isRecording) stopRecording();
     setDirection(dir);
     setTransitioning(true);
     setHighlightIdx(-1);
+    setNarrating(false);
     setTimeout(() => { setCurrentPage(next); setTransitioning(false); }, 500);
   }, [currentPage, totalPages, transitioning]);
 
@@ -82,9 +170,17 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
     return () => { if (controlsTimer.current) clearTimeout(controlsTimer.current); };
   }, [showControls, currentPage]);
 
-  /* TTS Narration */
+  /* Narration — TTS or recorded voice */
   useEffect(() => {
-    if (paused || !page?.text?.content) return;
+    if (paused || !page?.text?.content || isRecording) return;
+
+    // If we have a recording for this page and voiceMode is "recorded", play it
+    if (voiceMode === "recorded" && recordings[page.id]) {
+      const startDelay = setTimeout(() => playRecording(page.id), 800);
+      return () => { clearTimeout(startDelay); if (autoTimer.current) clearTimeout(autoTimer.current); };
+    }
+
+    // Otherwise use TTS
     if (typeof window === "undefined" || !window.speechSynthesis) return;
 
     window.speechSynthesis.cancel();
@@ -114,7 +210,7 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
       if (autoTimer.current) clearTimeout(autoTimer.current);
       window.speechSynthesis.cancel();
     };
-  }, [currentPage, paused]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentPage, paused, voiceMode, recordings]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* Tap zones */
   const handleTap = (e: React.MouseEvent) => {
@@ -166,12 +262,114 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
                   className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-white/20 transition text-white text-sm">
             {paused ? "▶" : "⏸"}
           </button>
+          {/* Voice mode toggle */}
+          <button onClick={(e) => {
+                    e.stopPropagation();
+                    setVoiceMode(m => m === "ai" ? "recorded" : "ai");
+                  }}
+                  className={`h-10 px-3 rounded-full backdrop-blur-sm flex items-center justify-center gap-1.5 transition text-xs font-medium ${
+                    voiceMode === "recorded"
+                      ? "bg-rose-500/30 border border-rose-400/40 text-rose-300"
+                      : "bg-white/10 text-white/70 hover:bg-white/20"
+                  }`}>
+            {voiceMode === "recorded" ? "🎙️ My Voice" : "🤖 AI Voice"}
+          </button>
+          {/* Record button */}
+          <button onClick={(e) => { e.stopPropagation(); setShowRecordPanel(p => !p); }}
+                  className={`w-10 h-10 rounded-full backdrop-blur-sm flex items-center justify-center transition ${
+                    hasRecording
+                      ? "bg-emerald-500/30 border border-emerald-400/40 text-emerald-300"
+                      : "bg-white/10 hover:bg-white/20 text-white"
+                  }`}>
+            🎤
+          </button>
           <button onClick={(e) => { e.stopPropagation(); setFontsizeMult(m => m >= 1.5 ? 0.8 : m + 0.1); }}
                   className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-white/20 transition text-white text-xs font-bold">
             Aa
           </button>
         </div>
       </div>
+
+      {/* ── Recording Panel ── */}
+      {showRecordPanel && (
+        <div className="absolute top-16 left-0 right-0 z-40 px-4 animate-fadeIn" onClick={e => e.stopPropagation()}>
+          <div className="max-w-md mx-auto bg-[#0f1525]/95 backdrop-blur-xl border border-white/10 rounded-2xl p-5 shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-white font-semibold text-sm">
+                🎤 Record Page {currentPage + 1}
+              </h3>
+              <button onClick={() => setShowRecordPanel(false)}
+                      className="text-white/40 hover:text-white text-lg">✕</button>
+            </div>
+
+            {/* Recording status */}
+            {isRecording ? (
+              <div className="text-center py-4">
+                <div className="flex justify-center gap-1 items-end h-8 mb-3">
+                  {[...Array(7)].map((_, i) => (
+                    <div key={i} className="w-1.5 bg-rose-400 rounded-full animate-pulse"
+                         style={{ height: `${12 + Math.sin(Date.now()/200 + i) * 16}px`, animationDelay: `${i * 0.1}s` }} />
+                  ))}
+                </div>
+                <p className="text-rose-300 text-lg font-mono mb-1">
+                  {Math.floor(recordingTime / 60)}:{(recordingTime % 60).toString().padStart(2, "0")}
+                </p>
+                <p className="text-white/40 text-xs mb-4">Recording your narration...</p>
+                <button onClick={stopRecording}
+                        className="px-6 py-3 rounded-xl bg-rose-500/20 border border-rose-400/40 text-rose-300 font-medium hover:bg-rose-500/30 transition">
+                  ⏹ Stop Recording
+                </button>
+              </div>
+            ) : (
+              <div>
+                {/* Show existing recording if any */}
+                {hasRecording && (
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 mb-4">
+                    <span className="text-emerald-400">✓</span>
+                    <span className="text-emerald-300 text-sm flex-1">Recording saved</span>
+                    <button onClick={() => playRecording(page.id)}
+                            className="px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 text-xs font-medium hover:bg-emerald-500/30 transition">
+                      ▶ Play
+                    </button>
+                    <button onClick={() => deleteRecording(page.id)}
+                            className="px-3 py-1.5 rounded-lg bg-rose-500/20 text-rose-300 text-xs font-medium hover:bg-rose-500/30 transition">
+                      🗑
+                    </button>
+                  </div>
+                )}
+
+                {/* Record button */}
+                <button onClick={startRecording}
+                        className="w-full py-3 rounded-xl bg-rose-500/20 border border-rose-400/30 text-rose-300 font-medium hover:bg-rose-500/30 transition flex items-center justify-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-rose-500 animate-pulse" />
+                  {hasRecording ? "Re-record This Page" : "Start Recording"}
+                </button>
+
+                {/* Text preview for reference while recording */}
+                {page?.text?.content && (
+                  <div className="mt-4 p-3 rounded-xl bg-white/5 border border-white/5">
+                    <p className="text-white/30 text-xs uppercase tracking-wider mb-1">Read this:</p>
+                    <p className="text-white/70 text-sm font-serif leading-relaxed italic">
+                      &ldquo;{page.text.content}&rdquo;
+                    </p>
+                  </div>
+                )}
+
+                {/* Progress across all pages */}
+                {recordedCount > 0 && (
+                  <div className="mt-4 flex items-center gap-2">
+                    <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                      <div className="h-full bg-gradient-to-r from-emerald-500 to-amber-500 transition-all duration-500 rounded-full"
+                           style={{ width: `${(recordedCount / totalPages) * 100}%` }} />
+                    </div>
+                    <span className="text-white/40 text-xs">{recordedCount}/{totalPages}</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Page content */}
       <div className={`flex-1 flex flex-col items-center justify-center px-6 md:px-16 py-20 transition-all duration-500 ${
@@ -196,17 +394,23 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
 
       {/* Bottom progress */}
       <div className={`absolute bottom-0 left-0 right-0 z-30 transition-opacity duration-500 ${showControls ? "opacity-100" : "opacity-0"}`}>
-        {/* Narration indicator */}
-        {narrating && (
-          <div className="flex justify-center mb-2">
+        {/* Narration / Recording indicator */}
+        {isRecording ? (
+          <div className="flex justify-center items-center gap-2 mb-2">
+            <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+            <span className="text-rose-400 text-xs font-medium">Recording...</span>
+          </div>
+        ) : narrating ? (
+          <div className="flex justify-center items-center gap-2 mb-2">
             <div className="flex gap-1 items-end h-4">
               {[...Array(5)].map((_, i) => (
-                <div key={i} className="w-1 bg-amber-400/70 rounded-full animate-pulse"
+                <div key={i} className={`w-1 rounded-full animate-pulse ${voiceMode === "recorded" ? "bg-rose-400/70" : "bg-amber-400/70"}`}
                      style={{ height: `${8 + Math.random() * 12}px`, animationDelay: `${i * 0.15}s` }} />
               ))}
             </div>
+            {voiceMode === "recorded" && <span className="text-rose-400/60 text-xs">Your voice</span>}
           </div>
-        )}
+        ) : null}
         {/* Progress bar */}
         <div className="h-1 bg-white/10">
           <div className="h-full bg-gradient-to-r from-amber-500 to-violet-500 transition-all duration-500"
