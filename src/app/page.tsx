@@ -3,6 +3,53 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 /* ─── Types ─── */
+
+/* ── Phase 5: Auth & Library Types ── */
+interface SyncUser {
+  id: string;
+  email: string;
+  name: string;
+}
+
+interface LibraryEntry {
+  id: string;
+  title: string;
+  author: string;
+  genre: string;
+  pageCount: number;
+  createdAt: string;
+  thumbnail: string | null;
+  data: SSyncData;
+}
+
+/* ── Phase 5: LocalStorage Helpers ── */
+function getUser(): SyncUser | null {
+  if (typeof window === "undefined") return null;
+  try { return JSON.parse(localStorage.getItem("ssync-user") || "null"); } catch { return null; }
+}
+function setUser(u: SyncUser | null) {
+  if (typeof window === "undefined") return;
+  if (u) localStorage.setItem("ssync-user", JSON.stringify(u));
+  else localStorage.removeItem("ssync-user");
+}
+function getLibrary(): LibraryEntry[] {
+  if (typeof window === "undefined") return [];
+  try { return JSON.parse(localStorage.getItem("ssync-library") || "[]"); } catch { return []; }
+}
+function saveToLibrary(entry: LibraryEntry) {
+  const lib = getLibrary();
+  const idx = lib.findIndex(e => e.id === entry.id);
+  if (idx >= 0) lib[idx] = entry; else lib.unshift(entry);
+  localStorage.setItem("ssync-library", JSON.stringify(lib));
+}
+function removeFromLibrary(id: string) {
+  const lib = getLibrary().filter(e => e.id !== id);
+  localStorage.setItem("ssync-library", JSON.stringify(lib));
+}
+function getStoryById(id: string): LibraryEntry | null {
+  return getLibrary().find(e => e.id === id) ?? null;
+}
+
 interface SSyncPage {
   id: number;
   layout?: string;
@@ -75,6 +122,245 @@ function playPageTurnSound() {
   } catch {
     // Silently ignore — audio not critical
   }
+}
+
+/* ════════════════════════════════════════════
+   PHASE 5: AUTH MODAL
+   ════════════════════════════════════════════ */
+function AuthModal({ onClose, onAuth }: { onClose: () => void; onAuth: (user: SyncUser) => void }) {
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [error, setError] = useState("");
+
+  const handleSubmit = () => {
+    setError("");
+    if (!email.trim() || !password.trim()) { setError("Please fill in all fields."); return; }
+    if (mode === "signup") {
+      if (!name.trim()) { setError("Please enter your name."); return; }
+      const existing = getUser();
+      if (existing && existing.email === email.toLowerCase().trim()) {
+        setError("An account with that email already exists.");
+        return;
+      }
+      const user: SyncUser = { id: crypto.randomUUID(), email: email.toLowerCase().trim(), name: name.trim() };
+      setUser(user);
+      onAuth(user);
+    } else {
+      const stored = getUser();
+      if (!stored || stored.email !== email.toLowerCase().trim()) {
+        setError("No account found. Please sign up first.");
+        return;
+      }
+      onAuth(stored);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div
+        className="w-full max-w-sm rounded-3xl bg-[#0f1422]/95 border border-white/10 backdrop-blur-xl p-6 shadow-2xl shadow-black/60"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-xl font-bold text-white">{mode === "signin" ? "Welcome back" : "Create account"}</h2>
+            <p className="text-gray-500 text-sm mt-0.5">{mode === "signin" ? "Sign in to access your stories" : "Start your story library"}</p>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/20 transition text-sm">✕</button>
+        </div>
+
+        <div className="space-y-3">
+          {mode === "signup" && (
+            <div>
+              <label className="text-xs text-gray-400 uppercase tracking-wider mb-1.5 block">Your Name</label>
+              <input
+                value={name}
+                onChange={e => setName(e.target.value)}
+                placeholder="Jane Doe"
+                className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:border-amber-400/50 focus:outline-none transition text-sm"
+              />
+            </div>
+          )}
+          <div>
+            <label className="text-xs text-gray-400 uppercase tracking-wider mb-1.5 block">Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:border-amber-400/50 focus:outline-none transition text-sm"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-gray-400 uppercase tracking-wider mb-1.5 block">Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              placeholder="••••••••"
+              onKeyDown={e => { if (e.key === "Enter") handleSubmit(); }}
+              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:border-amber-400/50 focus:outline-none transition text-sm"
+            />
+          </div>
+
+          {error && <p className="text-red-400 text-xs px-1">{error}</p>}
+
+          <button
+            onClick={handleSubmit}
+            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-black font-bold text-sm shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40 hover:scale-[1.02] transition-all duration-200 mt-2"
+          >
+            {mode === "signin" ? "Sign In" : "Create Account"}
+          </button>
+        </div>
+
+        <div className="mt-4 text-center">
+          <button onClick={() => { setMode(m => m === "signin" ? "signup" : "signin"); setError(""); }}
+                  className="text-amber-400/80 text-sm hover:text-amber-300 transition">
+            {mode === "signin" ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
+          </button>
+        </div>
+
+        <p className="text-white/20 text-xs text-center mt-4">Mock auth · localStorage only · Supabase coming soon</p>
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════
+   PHASE 5: TOAST NOTIFICATION
+   ════════════════════════════════════════════ */
+function Toast({ message, onDone }: { message: string; onDone: () => void }) {
+  useEffect(() => {
+    const t = setTimeout(onDone, 3000);
+    return () => clearTimeout(t);
+  }, [onDone]);
+  return (
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[300] animate-fadeInUp">
+      <div className="px-5 py-3 rounded-2xl bg-amber-500 text-black font-semibold text-sm shadow-2xl shadow-amber-500/40 flex items-center gap-2">
+        <span>✅</span> {message}
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════
+   PHASE 5: MY STORIES LIBRARY
+   ════════════════════════════════════════════ */
+function MyStoriesLibrary({
+  onExit,
+  onOpenStory,
+  user,
+}: {
+  onExit: () => void;
+  onOpenStory: (data: SSyncData) => void;
+  user: SyncUser;
+}) {
+  const [library, setLibrary] = useState<LibraryEntry[]>([]);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLibrary(getLibrary());
+  }, []);
+
+  const handleDelete = (id: string) => {
+    removeFromLibrary(id);
+    setLibrary(getLibrary());
+    setConfirmDelete(null);
+  };
+
+  const formatDate = (iso: string) => {
+    try {
+      return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(new Date(iso));
+    } catch { return iso; }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#0a0e1a] text-white overflow-x-hidden">
+      {/* Header */}
+      <div className="sticky top-0 z-50 bg-[#0a0e1a]/95 backdrop-blur-xl border-b border-white/5 px-4 py-3 flex items-center justify-between">
+        <button onClick={onExit} className="w-9 h-9 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/20 transition">
+          ←
+        </button>
+        <div className="text-center">
+          <p className="text-white font-semibold text-sm">My Stories</p>
+          <p className="text-gray-500 text-xs">{library.length} {library.length === 1 ? "story" : "stories"}</p>
+        </div>
+        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center font-bold text-black text-sm shadow-lg shadow-amber-500/30">
+          {user.name.charAt(0).toUpperCase()}
+        </div>
+      </div>
+
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        {library.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-24 text-center">
+            <div className="text-6xl mb-4">📚</div>
+            <h3 className="text-xl font-bold text-white mb-2">No stories yet</h3>
+            <p className="text-gray-500 mb-6">Create your first one!</p>
+            <button onClick={onExit} className="px-6 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 text-black font-bold text-sm shadow-lg shadow-amber-500/25 hover:scale-105 transition-all duration-200">
+              ✨ Create a Story
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {library.map(entry => (
+              <div
+                key={entry.id}
+                className="rounded-2xl bg-white/5 border border-white/10 overflow-hidden hover:border-amber-400/30 hover:bg-white/[0.08] transition-all duration-300 cursor-pointer group relative"
+                onClick={() => onOpenStory(entry.data)}
+              >
+                {/* Thumbnail */}
+                <div className="aspect-[3/4] bg-[#0f1422] flex items-center justify-center overflow-hidden">
+                  {entry.thumbnail ? (
+                    <img src={entry.thumbnail} alt={entry.title} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="flex flex-col items-center gap-2 text-white/20">
+                      <span className="text-4xl">📖</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Info */}
+                <div className="p-3">
+                  <h4 className="text-white text-sm font-semibold line-clamp-1">{entry.title}</h4>
+                  <p className="text-gray-500 text-xs mt-0.5">{entry.author || "Unknown author"}</p>
+                  <div className="flex items-center gap-2 mt-2 flex-wrap">
+                    <span className="px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-400/20 text-amber-300 text-xs">{entry.genre}</span>
+                    <span className="text-gray-600 text-xs">{entry.pageCount}p · {formatDate(entry.createdAt)}</span>
+                  </div>
+                </div>
+
+                {/* Delete button */}
+                <button
+                  onClick={e => { e.stopPropagation(); setConfirmDelete(entry.id); }}
+                  className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/50 border border-white/10 flex items-center justify-center text-white/40 hover:text-red-400 hover:border-red-400/30 hover:bg-black/70 transition opacity-0 group-hover:opacity-100"
+                  title="Delete story"
+                >
+                  🗑
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Confirm delete modal */}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setConfirmDelete(null)}>
+          <div className="w-full max-w-xs rounded-3xl bg-[#0f1422]/95 border border-white/10 p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <p className="text-white font-bold text-center mb-1">Delete this story?</p>
+            <p className="text-gray-400 text-sm text-center mb-5">This can&apos;t be undone.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmDelete(null)} className="flex-1 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 text-sm font-medium hover:bg-white/10 transition">Cancel</button>
+              <button onClick={() => handleDelete(confirmDelete)} className="flex-1 py-3 rounded-xl bg-red-500/20 border border-red-400/30 text-red-300 text-sm font-bold hover:bg-red-500/30 transition">Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 /* ════════════════════════════════════════════
@@ -1444,8 +1730,21 @@ function generateStoryPages(prompt: string): CreatorPage[] {
   return beats.map((text, i) => ({ id: i + 1, text }));
 }
 
-function StoryCreator({ onExit, onPreview }: { onExit: () => void; onPreview: (data: SSyncData) => void }) {
+function StoryCreator({
+  onExit,
+  onPreview,
+  onSaveToLibrary,
+  currentUser,
+}: {
+  onExit: () => void;
+  onPreview: (data: SSyncData) => void;
+  onSaveToLibrary?: (entry: LibraryEntry) => void;
+  currentUser?: SyncUser | null;
+}) {
   const [step, setStep] = useState(1);
+  const [saveToast, setSaveToast] = useState<string | null>(null);
+  const [savedId, setSavedId] = useState<string | null>(null);
+  const [copyLinkDone, setCopyLinkDone] = useState(false);
 
   // Step 1 state
   const [title, setTitle] = useState("");
@@ -1532,6 +1831,36 @@ function StoryCreator({ onExit, onPreview }: { onExit: () => void; onPreview: (d
 
   const handlePreview = () => {
     onPreview(buildSSyncData());
+  };
+
+  const handleSaveToLibrary = () => {
+    const data = buildSSyncData();
+    const id = savedId ?? crypto.randomUUID();
+    if (!savedId) setSavedId(id);
+    const thumbnail = images[pages[0]?.id] ?? null;
+    const entry: LibraryEntry = {
+      id,
+      title: title || "Untitled Story",
+      author: author || currentUser?.name || "",
+      genre,
+      pageCount: pages.length,
+      createdAt: new Date().toISOString(),
+      thumbnail,
+      data,
+    };
+    saveToLibrary(entry);
+    if (onSaveToLibrary) onSaveToLibrary(entry);
+    setSaveToast("Story saved! Find it in My Stories.");
+  };
+
+  const handleCopyLink = () => {
+    const id = savedId;
+    if (!id) return;
+    const url = `https://storysynchq.com/read?story=${id}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopyLinkDone(true);
+      setTimeout(() => setCopyLinkDone(false), 2500);
+    }).catch(() => {});
   };
 
   const canGoNext = step === 1 ? title.trim().length > 0 : step === 2 ? pages.some(p => p.text.trim()) : false;
@@ -1754,9 +2083,36 @@ function StoryCreator({ onExit, onPreview }: { onExit: () => void; onPreview: (d
 
             {/* Actions */}
             <div className="space-y-3 pt-2">
+              {/* Save to Library */}
+              <button
+                onClick={handleSaveToLibrary}
+                className="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 text-black font-bold text-base shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40 hover:scale-[1.02] transition-all duration-200 flex items-center justify-center gap-2"
+              >
+                💾 Save to Library
+              </button>
+
+              {/* Share link (shown after save) */}
+              {savedId && (
+                <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-2">
+                  <p className="text-xs text-gray-400 uppercase tracking-wider">Share Link</p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 text-amber-300 text-xs font-mono truncate bg-black/30 px-3 py-2 rounded-lg">
+                      storysynchq.com/read?story={savedId.slice(0, 8)}...
+                    </code>
+                    <button
+                      onClick={handleCopyLink}
+                      className="px-3 py-2 rounded-lg bg-amber-500/20 border border-amber-400/30 text-amber-300 text-xs font-semibold hover:bg-amber-500/30 transition whitespace-nowrap"
+                    >
+                      {copyLinkDone ? "✅ Copied!" : "Copy Link"}
+                    </button>
+                  </div>
+                  <p className="text-white/25 text-xs">Mock link · works on same device only for now</p>
+                </div>
+              )}
+
               <button
                 onClick={handlePreview}
-                className="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 text-black font-bold text-base shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40 hover:scale-[1.02] transition-all duration-200"
+                className="w-full py-4 rounded-2xl bg-white/5 border border-white/10 text-white font-semibold text-base hover:bg-white/10 transition-all duration-200"
               >
                 👁 Preview Story
               </button>
@@ -1766,13 +2122,10 @@ function StoryCreator({ onExit, onPreview }: { onExit: () => void; onPreview: (d
               >
                 📥 Download .ssync
               </button>
-              <button
-                disabled
-                className="w-full py-4 rounded-2xl bg-white/[0.02] border border-white/5 text-gray-600 font-semibold text-base cursor-not-allowed"
-              >
-                🔗 Share Link — Coming Soon
-              </button>
             </div>
+
+            {/* Save toast inside creator */}
+            {saveToast && <Toast message={saveToast} onDone={() => setSaveToast(null)} />}
           </div>
         )}
       </div>
@@ -1811,6 +2164,53 @@ export default function Home() {
   const [showCreator, setShowCreator] = useState(false);
   const [startInRemix, setStartInRemix] = useState(false);
 
+  /* ── Phase 5: Auth & Library State ── */
+  const [user, setUserState] = useState<SyncUser | null>(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [showMyStories, setShowMyStories] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const [showEditProfile, setShowEditProfile] = useState(false);
+  const [editName, setEditName] = useState("");
+
+  /* Load user from localStorage on mount */
+  useEffect(() => {
+    setUserState(getUser());
+    /* ── Phase 5: URL story param handling ── */
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const storyId = params.get("story");
+      if (storyId) {
+        const entry = getStoryById(storyId);
+        if (entry) {
+          setReaderData(entry.data);
+        }
+      }
+    }
+  }, []);
+
+  const handleAuth = (u: SyncUser) => {
+    setUser(u);
+    setUserState(u);
+    setShowAuthModal(false);
+    setToast(`Welcome, ${u.name}! 👋`);
+  };
+
+  const handleSignOut = () => {
+    setUser(null);
+    setUserState(null);
+    setShowUserDropdown(false);
+  };
+
+  const handleSaveEditProfile = () => {
+    if (!user || !editName.trim()) return;
+    const updated = { ...user, name: editName.trim() };
+    setUser(updated);
+    setUserState(updated);
+    setShowEditProfile(false);
+    setToast("Profile updated!");
+  };
+
   const openDemo = async (remix = false) => {
     if (remix) setLoadingRemix(true); else setLoading(true);
     try {
@@ -1824,10 +2224,31 @@ export default function Home() {
 
   if (showCreator && !readerData) {
     return (
-      <StoryCreator
-        onExit={() => setShowCreator(false)}
-        onPreview={(data) => { setReaderData(data); setShowCreator(false); }}
-      />
+      <>
+        <StoryCreator
+          onExit={() => setShowCreator(false)}
+          onPreview={(data) => { setReaderData(data); setShowCreator(false); }}
+          onSaveToLibrary={(entry) => {
+            saveToLibrary(entry);
+            setToast("Story saved! Find it in My Stories.");
+          }}
+          currentUser={user}
+        />
+        {toast && <Toast message={toast} onDone={() => setToast(null)} />}
+      </>
+    );
+  }
+
+  if (showMyStories && user) {
+    return (
+      <>
+        <MyStoriesLibrary
+          user={user}
+          onExit={() => setShowMyStories(false)}
+          onOpenStory={(data) => { setReaderData(data); setShowMyStories(false); }}
+        />
+        {toast && <Toast message={toast} onDone={() => setToast(null)} />}
+      </>
     );
   }
 
@@ -1835,8 +2256,91 @@ export default function Home() {
     return <ImmersiveReader data={readerData} onExit={() => { setReaderData(null); setStartInRemix(false); }} startInRemix={startInRemix} />;
   }
 
+  const libraryCount = user ? getLibrary().length : 0;
+
   return (
-    <div className="min-h-screen bg-[#0a0e1a] text-white overflow-x-hidden">
+    <div className="min-h-screen bg-[#0a0e1a] text-white overflow-x-hidden" onClick={() => setShowUserDropdown(false)}>
+
+      {/* ── Phase 5: Auth Modal ── */}
+      {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} onAuth={handleAuth} />}
+
+      {/* ── Phase 5: Toast ── */}
+      {toast && <Toast message={toast} onDone={() => setToast(null)} />}
+
+      {/* ── Phase 5: Edit Profile Modal ── */}
+      {showEditProfile && user && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setShowEditProfile(false)}>
+          <div className="w-full max-w-xs rounded-3xl bg-[#0f1422]/95 border border-white/10 p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <h3 className="text-white font-bold mb-4">Edit Profile</h3>
+            <label className="text-xs text-gray-400 uppercase tracking-wider mb-1.5 block">Name</label>
+            <input
+              value={editName}
+              onChange={e => setEditName(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") handleSaveEditProfile(); }}
+              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:border-amber-400/50 focus:outline-none transition text-sm mb-4"
+            />
+            <div className="flex gap-3">
+              <button onClick={() => setShowEditProfile(false)} className="flex-1 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-300 text-sm font-medium hover:bg-white/10 transition">Cancel</button>
+              <button onClick={handleSaveEditProfile} className="flex-1 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-black text-sm font-bold hover:scale-[1.02] transition-all duration-200">Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Phase 5: Auth Header Button (fixed top-right) ── */}
+      <div className="fixed top-4 right-4 z-[100]" onClick={e => e.stopPropagation()}>
+        {user ? (
+          <div className="relative">
+            <button
+              onClick={() => setShowUserDropdown(d => !d)}
+              className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center font-bold text-black text-base shadow-lg shadow-amber-500/30 hover:scale-110 transition-all duration-200"
+            >
+              {user.name.charAt(0).toUpperCase()}
+            </button>
+            {showUserDropdown && (
+              <div className="absolute top-12 right-0 w-64 rounded-2xl bg-[#0f1422]/98 border border-white/10 backdrop-blur-xl shadow-2xl shadow-black/60 overflow-hidden">
+                {/* User info */}
+                <div className="px-4 py-3 border-b border-white/5">
+                  <p className="text-white font-semibold text-sm">{user.name}</p>
+                  <p className="text-gray-500 text-xs truncate">{user.email}</p>
+                  <p className="text-amber-400/70 text-xs mt-1">{libraryCount} {libraryCount === 1 ? "story" : "stories"} saved</p>
+                </div>
+                {/* Actions */}
+                <div className="py-1">
+                  <button
+                    onClick={() => { setShowUserDropdown(false); setShowMyStories(true); }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition text-left"
+                  >
+                    <span>📚</span> My Stories
+                    {libraryCount > 0 && <span className="ml-auto px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-xs">{libraryCount}</span>}
+                  </button>
+                  <button
+                    onClick={() => { setShowUserDropdown(false); setEditName(user.name); setShowEditProfile(true); }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition text-left"
+                  >
+                    <span>✏️</span> Edit Profile
+                  </button>
+                </div>
+                <div className="border-t border-white/5 py-1">
+                  <button
+                    onClick={handleSignOut}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-red-400/5 transition text-left"
+                  >
+                    <span>🚪</span> Sign Out
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <button
+            onClick={() => setShowAuthModal(true)}
+            className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-gray-300 text-sm font-medium hover:bg-white/10 hover:text-white hover:border-amber-400/30 backdrop-blur-sm transition-all duration-200"
+          >
+            Sign In
+          </button>
+        )}
+      </div>
 
       {/* ── Hero ── */}
       <section className="relative min-h-screen flex flex-col items-center justify-center px-6 text-center">
@@ -1883,6 +2387,17 @@ export default function Home() {
             🛠 Create Your Story
           </button>
         </div>
+
+        {/* Phase 5: My Stories CTA */}
+        {user && (
+          <button
+            onClick={() => setShowMyStories(true)}
+            className="mb-4 px-7 py-3.5 rounded-2xl bg-white/5 border border-amber-400/20 text-amber-300/80 font-medium text-base backdrop-blur-sm hover:bg-amber-500/10 hover:border-amber-400/40 hover:text-amber-300 hover:scale-105 transition-all duration-300 flex items-center gap-2"
+          >
+            <span>📚</span> My Stories
+            {libraryCount > 0 && <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-xs font-bold">{libraryCount}</span>}
+          </button>
+        )}
 
         {/* Remix the Demo button */}
         <button
