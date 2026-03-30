@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { generateStory as generateStoryAI } from "@/lib/story-engine";
 import { generateIllustration } from "./page-improvements";
+import { supabase, isSupabaseConfigured, signUp as sbSignUp, signIn as sbSignIn, signOut as sbSignOut, onAuthStateChange, getProfile } from "@/lib/supabase";
 
 /* ─── Types ─── */
 
@@ -135,27 +136,81 @@ function AuthModal({ onClose, onAuth }: { onClose: () => void; onAuth: (user: Sy
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = () => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  const clearError = () => { if (error) setError(""); };
+
+  const handleSubmit = async () => {
     setError("");
+
+    // Validation
     if (!email.trim() || !password.trim()) { setError("Please fill in all fields."); return; }
+    if (!emailRegex.test(email.trim())) { setError("Please enter a valid email address."); return; }
     if (mode === "signup") {
       if (!name.trim()) { setError("Please enter your name."); return; }
-      const existing = getUser();
-      if (existing && existing.email === email.toLowerCase().trim()) {
-        setError("An account with that email already exists.");
-        return;
+      if (password.length < 6) { setError("Password must be at least 6 characters."); return; }
+    }
+
+    setIsLoading(true);
+
+    try {
+      if (mode === "signup") {
+        if (isSupabaseConfigured()) {
+          const data = await sbSignUp(email.trim(), password, name.trim());
+          // Supabase may require email confirmation — if session exists, auth immediately
+          if (data.session && data.user) {
+            const user: SyncUser = {
+              id: data.user.id,
+              email: data.user.email || email.toLowerCase().trim(),
+              name: name.trim(),
+            };
+            onAuth(user);
+          } else {
+            // Email confirmation required
+            setError("Check your email for a confirmation link, then sign in.");
+            setMode("signin");
+          }
+        } else {
+          // localStorage fallback
+          const existing = getUser();
+          if (existing && existing.email === email.toLowerCase().trim()) {
+            setError("An account with that email already exists.");
+            return;
+          }
+          const user: SyncUser = { id: crypto.randomUUID(), email: email.toLowerCase().trim(), name: name.trim() };
+          setUser(user);
+          onAuth(user);
+        }
+      } else {
+        // Sign in
+        if (isSupabaseConfigured()) {
+          const data = await sbSignIn(email.trim(), password);
+          if (data.user) {
+            const profile = await getProfile(data.user.id);
+            const user: SyncUser = {
+              id: data.user.id,
+              email: data.user.email || email.toLowerCase().trim(),
+              name: profile?.name || data.user.user_metadata?.name || email.split("@")[0],
+            };
+            onAuth(user);
+          }
+        } else {
+          // localStorage fallback
+          const stored = getUser();
+          if (!stored || stored.email !== email.toLowerCase().trim()) {
+            setError("No account found. Please sign up first.");
+            return;
+          }
+          onAuth(stored);
+        }
       }
-      const user: SyncUser = { id: crypto.randomUUID(), email: email.toLowerCase().trim(), name: name.trim() };
-      setUser(user);
-      onAuth(user);
-    } else {
-      const stored = getUser();
-      if (!stored || stored.email !== email.toLowerCase().trim()) {
-        setError("No account found. Please sign up first.");
-        return;
-      }
-      onAuth(stored);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Something went wrong. Please try again.";
+      setError(message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -180,9 +235,10 @@ function AuthModal({ onClose, onAuth }: { onClose: () => void; onAuth: (user: Sy
               <label className="text-xs text-gray-400 uppercase tracking-wider mb-1.5 block">Your Name</label>
               <input
                 value={name}
-                onChange={e => setName(e.target.value)}
+                onChange={e => { setName(e.target.value); clearError(); }}
                 placeholder="Jane Doe"
-                className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:border-amber-400/50 focus:outline-none transition text-sm"
+                disabled={isLoading}
+                className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:border-amber-400/50 focus:outline-none transition text-sm disabled:opacity-50"
               />
             </div>
           )}
@@ -191,9 +247,10 @@ function AuthModal({ onClose, onAuth }: { onClose: () => void; onAuth: (user: Sy
             <input
               type="email"
               value={email}
-              onChange={e => setEmail(e.target.value)}
+              onChange={e => { setEmail(e.target.value); clearError(); }}
               placeholder="you@example.com"
-              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:border-amber-400/50 focus:outline-none transition text-sm"
+              disabled={isLoading}
+              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:border-amber-400/50 focus:outline-none transition text-sm disabled:opacity-50"
             />
           </div>
           <div>
@@ -201,20 +258,32 @@ function AuthModal({ onClose, onAuth }: { onClose: () => void; onAuth: (user: Sy
             <input
               type="password"
               value={password}
-              onChange={e => setPassword(e.target.value)}
+              onChange={e => { setPassword(e.target.value); clearError(); }}
               placeholder="••••••••"
-              onKeyDown={e => { if (e.key === "Enter") handleSubmit(); }}
-              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:border-amber-400/50 focus:outline-none transition text-sm"
+              disabled={isLoading}
+              onKeyDown={e => { if (e.key === "Enter" && !isLoading) handleSubmit(); }}
+              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:border-amber-400/50 focus:outline-none transition text-sm disabled:opacity-50"
             />
+            {mode === "signup" && password.length > 0 && password.length < 6 && (
+              <p className="text-amber-400/70 text-xs mt-1 px-1">Minimum 6 characters</p>
+            )}
           </div>
 
           {error && <p className="text-red-400 text-xs px-1">{error}</p>}
 
           <button
             onClick={handleSubmit}
-            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-black font-bold text-sm shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40 hover:scale-[1.02] transition-all duration-200 mt-2"
+            disabled={isLoading}
+            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-black font-bold text-sm shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40 hover:scale-[1.02] transition-all duration-200 mt-2 disabled:opacity-60 disabled:hover:scale-100 disabled:cursor-not-allowed"
           >
-            {mode === "signin" ? "Sign In" : "Create Account"}
+            {isLoading ? (
+              <span className="flex items-center justify-center gap-2">
+                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+                {mode === "signin" ? "Signing in…" : "Creating account…"}
+              </span>
+            ) : (
+              mode === "signin" ? "Sign In" : "Create Account"
+            )}
           </button>
         </div>
 
@@ -225,7 +294,7 @@ function AuthModal({ onClose, onAuth }: { onClose: () => void; onAuth: (user: Sy
           </button>
         </div>
 
-        <p className="text-white/20 text-xs text-center mt-4">Mock auth · localStorage only · Supabase coming soon</p>
+        <p className="text-white/20 text-xs text-center mt-4">{isSupabaseConfigured() ? "Secured by Supabase" : "Local auth · localStorage"}</p>
       </div>
     </div>
   );
@@ -3012,9 +3081,42 @@ export default function Home() {
     }
   };
 
-  /* Load user from localStorage on mount */
+  /* Load user — Supabase auth listener or localStorage fallback */
   useEffect(() => {
-    setUserState(getUser());
+    if (isSupabaseConfigured() && supabase) {
+      // Check existing session on mount
+      supabase.auth.getSession().then(async ({ data: { session } }) => {
+        if (session?.user) {
+          const profile = await getProfile(session.user.id);
+          setUserState({
+            id: session.user.id,
+            email: session.user.email || "",
+            name: profile?.name || session.user.user_metadata?.name || session.user.email?.split("@")[0] || "",
+          });
+        }
+      });
+
+      // Listen for auth state changes
+      const { data: { subscription } } = onAuthStateChange(async (event: string, session: unknown) => {
+        const s = session as { user?: { id: string; email?: string; user_metadata?: { name?: string } } } | null;
+        if (event === "SIGNED_IN" && s?.user) {
+          const profile = await getProfile(s.user.id);
+          setUserState({
+            id: s.user.id,
+            email: s.user.email || "",
+            name: profile?.name || s.user.user_metadata?.name || s.user.email?.split("@")[0] || "",
+          });
+        } else if (event === "SIGNED_OUT") {
+          setUserState(null);
+        }
+      });
+
+      return () => subscription.unsubscribe();
+    } else {
+      // localStorage fallback
+      setUserState(getUser());
+    }
+
     /* ── Phase 5: URL story param handling ── */
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
@@ -3029,13 +3131,18 @@ export default function Home() {
   }, []);
 
   const handleAuth = (u: SyncUser) => {
-    setUser(u);
+    if (!isSupabaseConfigured()) {
+      setUser(u); // persist to localStorage only in fallback mode
+    }
     setUserState(u);
     setShowAuthModal(false);
     setToast(`Welcome, ${u.name}! 👋`);
   };
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
+    if (isSupabaseConfigured()) {
+      try { await sbSignOut(); } catch { /* ignore */ }
+    }
     setUser(null);
     setUserState(null);
     setShowUserDropdown(false);
