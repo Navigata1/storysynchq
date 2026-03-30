@@ -2343,16 +2343,51 @@ type Genre = "children" | "educational" | "fantasy" | "personal" | "faith-based"
 type AgeRange = "0-3" | "3-8" | "8-12" | "12+" | "all ages";
 
 function generateStoryPages(prompt: string): CreatorPage[] {
-  const words = prompt.toLowerCase().split(/\s+/).filter(w => w.length > 3);
-  const subject = words.find(w => !["with","that","this","from","into","about","have","they","when","will","your","their","there","would","could","should","been","were","then","than","some","also","just","only","over","more","very"].includes(w)) || "our hero";
-  const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+  // Smart parser: extract character name, activity, and setting from the prompt
+  const p = prompt.trim();
+  const lower = p.toLowerCase();
+
+  // Try to find a character name (capitalized word that's not a common word)
+  const commonWords = new Set(["a","an","the","is","are","was","were","has","have","had","in","on","at","to","for","of","and","but","or","so","if","my","her","his","its","our","about","with","from","into","this","that","then","than","some","also","just","only","over","more","very","who","what","when","where","how","why","one","two","day","fun","best","ever","goes","going","went","big","new","old","good","bad","nice","great","little","small","all"]);
+  const words = p.split(/\s+/);
+  const capitalWords = words.filter(w => /^[A-Z]/.test(w) && w.length > 1 && !commonWords.has(w.toLowerCase()));
+  const character = capitalWords.length > 0 ? capitalWords[0] : words.find(w => !commonWords.has(w.toLowerCase()) && w.length > 2) || "our friend";
+
+  // Extract activity/theme keywords
+  const activityKeywords = lower.match(/\b(camping|swimming|cooking|baking|drawing|painting|dancing|singing|playing|running|climbing|flying|exploring|fishing|hiking|reading|building|gardening|skating|surfing|traveling|biking|sailing|racing|jumping|sleeping|dreaming|learning|helping|sharing|finding|making|growing|adventure|party|birthday|school|beach|forest|mountain|farm|zoo|park|garden|castle|space|ocean|island|jungle|desert|city|village|library|bakery|kitchen|playground)\b/g) || [];
+
+  const activity = activityKeywords[0] || "adventure";
+  const setting = activityKeywords[1] || (activity === "camping" ? "forest" : activity === "swimming" ? "lake" : activity === "fishing" ? "river" : activity === "hiking" ? "mountain" : activity === "cooking" || activity === "baking" ? "kitchen" : "outdoors");
+
+  // Activity-specific story details
+  const activityDetails: Record<string, { items: string[]; discovery: string; challenge: string; lesson: string }> = {
+    camping: { items: ["a cozy tent", "a warm campfire", "marshmallows to roast"], discovery: "a hidden trail that led to a beautiful waterfall", challenge: "the campfire wouldn't light because the wood was wet", lesson: "that the best adventures are the ones you share with people you love" },
+    swimming: { items: ["a bright swimsuit", "goggles", "a floating ring"], discovery: "a friendly fish swimming alongside", challenge: "the water was deeper than expected, and it felt a little scary", lesson: "that being brave means trying, even when you're a little scared" },
+    cooking: { items: ["a big mixing bowl", "colorful ingredients", "a special recipe"], discovery: "a secret ingredient that made everything taste amazing", challenge: "the batter spilled everywhere and made a huge mess", lesson: "that mistakes can turn into the best surprises" },
+    baking: { items: ["flour and sugar", "cookie cutters", "colorful sprinkles"], discovery: "that adding a pinch of love made the cookies taste extra special", challenge: "the first batch burned, and the kitchen filled with smoke", lesson: "that trying again is always worth it" },
+    fishing: { items: ["a fishing rod", "a bucket", "some worms for bait"], discovery: "the biggest fish anyone had ever seen", challenge: "the fish was so strong it almost pulled the rod away", lesson: "that patience always pays off in the end" },
+    hiking: { items: ["sturdy boots", "a water bottle", "a trail map"], discovery: "a hidden meadow full of wildflowers", challenge: "the trail got steep and everyone was getting tired", lesson: "that one step at a time can take you to the most amazing places" },
+    birthday: { items: ["balloons", "a big cake", "presents wrapped in colorful paper"], discovery: "a surprise guest who made everything even more special", challenge: "the cake almost fell over", lesson: "that the best gift is being surrounded by people who care" },
+    party: { items: ["music", "games", "delicious snacks"], discovery: "a new friend who loved the same things", challenge: "the music stopped and everyone looked bored", lesson: "that the best parties are made of laughter, not things" },
+  };
+
+  const details = activityDetails[activity] || {
+    items: ["everything needed for the day", "a big smile", "lots of excitement"],
+    discovery: "something truly unexpected and wonderful",
+    challenge: "things didn't go exactly as planned",
+    lesson: "that every day can be the best day when you keep your heart open",
+  };
 
   const beats = [
-    `Once upon a time, ${capitalize(subject)} lived in a world full of wonder. Every morning brought new possibilities, and today felt especially magical.`,
-    `One day, ${capitalize(subject)} set off on a grand adventure. The path ahead was unknown, but curiosity and courage lit the way through every twist and turn.`,
-    `Suddenly, ${capitalize(subject)} faced a difficult challenge. It seemed impossible at first — but sometimes the hardest moments teach us the most important lessons.`,
-    `With determination and a little help from friends, ${capitalize(subject)} found a way through. Every problem has a solution when you look with an open heart.`,
-    `And so ${capitalize(subject)} returned home, changed forever by the journey. The real treasure was never the destination — it was everything learned along the way. The End.`,
+    `${character} woke up feeling excited — today was the day! It was time to go ${activity}! ${character} packed ${details.items[0]}, ${details.items[1]}, and ${details.items[2]}. "This is going to be the best day ever!" ${character} said with a big grin.`,
+
+    `When ${character} arrived at the ${setting}, everything looked amazing. The air smelled fresh, and there was so much to explore. ${character} couldn't wait to get started. First things first — time to set up and look around!`,
+
+    `Then ${character} discovered ${details.discovery}! "Wow, look at that!" ${character} whispered. It was even more magical than expected. This was turning into a truly special ${activity} day.`,
+
+    `But then — oh no! ${details.challenge}. ${character} felt worried for a moment. "What do I do now?" But ${character} took a deep breath, thought carefully, and figured it out. Sometimes the tricky parts make the story even better.`,
+
+    `As the sun began to set, ${character} smiled and looked back at everything that happened today. ${character} learned ${details.lesson}. "That really was the best day ever," ${character} whispered. And it truly was. The End.`,
   ];
 
   return beats.map((text, i) => ({ id: i + 1, text }));
