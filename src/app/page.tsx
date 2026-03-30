@@ -1055,11 +1055,397 @@ function ImmersiveReader({ data, onExit }: { data: SSyncData; onExit: () => void
 }
 
 /* ════════════════════════════════════════════
+   STORY CREATOR
+   ════════════════════════════════════════════ */
+
+interface CreatorPage {
+  id: number;
+  text: string;
+}
+
+type Genre = "children" | "educational" | "fantasy" | "personal" | "faith-based" | "poetry";
+type AgeRange = "0-3" | "3-8" | "8-12" | "12+" | "all ages";
+
+function generateStoryPages(prompt: string): CreatorPage[] {
+  const words = prompt.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+  const subject = words.find(w => !["with","that","this","from","into","about","have","they","when","will","your","their","there","would","could","should","been","were","then","than","some","also","just","only","over","more","very"].includes(w)) || "our hero";
+  const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+  const beats = [
+    `Once upon a time, ${capitalize(subject)} lived in a world full of wonder. Every morning brought new possibilities, and today felt especially magical.`,
+    `One day, ${capitalize(subject)} set off on a grand adventure. The path ahead was unknown, but curiosity and courage lit the way through every twist and turn.`,
+    `Suddenly, ${capitalize(subject)} faced a difficult challenge. It seemed impossible at first — but sometimes the hardest moments teach us the most important lessons.`,
+    `With determination and a little help from friends, ${capitalize(subject)} found a way through. Every problem has a solution when you look with an open heart.`,
+    `And so ${capitalize(subject)} returned home, changed forever by the journey. The real treasure was never the destination — it was everything learned along the way. The End.`,
+  ];
+
+  return beats.map((text, i) => ({ id: i + 1, text }));
+}
+
+function StoryCreator({ onExit, onPreview }: { onExit: () => void; onPreview: (data: SSyncData) => void }) {
+  const [step, setStep] = useState(1);
+
+  // Step 1 state
+  const [title, setTitle] = useState("");
+  const [author, setAuthor] = useState("");
+  const [genre, setGenre] = useState<Genre>("children");
+  const [ageRange, setAgeRange] = useState<AgeRange>("all ages");
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [generating, setGenerating] = useState(false);
+
+  // Step 2 state
+  const [pages, setPages] = useState<CreatorPage[]>([{ id: 1, text: "" }]);
+  const [images, setImages] = useState<Record<number, string>>({});
+  const fileInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
+
+  const addPage = () => {
+    if (pages.length >= 20) return;
+    const newId = Math.max(...pages.map(p => p.id)) + 1;
+    setPages(prev => [...prev, { id: newId, text: "" }]);
+  };
+
+  const deletePage = (id: number) => {
+    if (pages.length <= 1) return;
+    setPages(prev => prev.filter(p => p.id !== id));
+    setImages(prev => { const next = { ...prev }; delete next[id]; return next; });
+  };
+
+  const updatePageText = (id: number, text: string) => {
+    setPages(prev => prev.map(p => p.id === id ? { ...p, text } : p));
+  };
+
+  const handleImageUpload = (id: number, file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      setImages(prev => ({ ...prev, [id]: dataUrl }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleGenerateStory = () => {
+    if (!aiPrompt.trim()) return;
+    setGenerating(true);
+    // Simulate a brief "thinking" moment for magic feel
+    setTimeout(() => {
+      const generated = generateStoryPages(aiPrompt);
+      setPages(generated);
+      setGenerating(false);
+      setStep(2);
+    }, 1200);
+  };
+
+  const buildSSyncData = (): SSyncData => ({
+    version: "1.0",
+    metadata: {
+      title: title || "My Story",
+      author: author || undefined,
+      description: `A ${genre} story for ${ageRange}`,
+    },
+    settings: {
+      autoPlay: false,
+      pageTransition: "turn",
+      readAlongHighlight: true,
+      pageTurnSound: true,
+    },
+    pages: pages.map(p => ({
+      id: p.id,
+      layout: "full",
+      illustration: images[p.id] ? { url: images[p.id], alt: `Page ${p.id}` } : undefined,
+      text: { content: p.text, wordHighlight: true },
+    })),
+  });
+
+  const handleDownloadSSYNC = () => {
+    const data = buildSSyncData();
+    const json = JSON.stringify(data, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${(title || "my-story").toLowerCase().replace(/\s+/g, "-")}.ssync.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handlePreview = () => {
+    onPreview(buildSSyncData());
+  };
+
+  const canGoNext = step === 1 ? title.trim().length > 0 : step === 2 ? pages.some(p => p.text.trim()) : false;
+
+  const genres: Genre[] = ["children", "educational", "fantasy", "personal", "faith-based", "poetry"];
+  const ageRanges: AgeRange[] = ["0-3", "3-8", "8-12", "12+", "all ages"];
+
+  return (
+    <div className="min-h-screen bg-[#0a0e1a] text-white flex flex-col">
+      {/* ── Header ── */}
+      <div className="sticky top-0 z-50 bg-[#0a0e1a]/95 backdrop-blur-xl border-b border-white/5 px-4 py-3 flex items-center justify-between">
+        <button onClick={onExit} className="w-9 h-9 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/20 transition">
+          ✕
+        </button>
+        <div className="text-center">
+          <p className="text-white font-semibold text-sm">Create Your Story</p>
+          <p className="text-gray-500 text-xs">Step {step} of 3</p>
+        </div>
+        {/* Step dots */}
+        <div className="flex gap-1.5">
+          {[1, 2, 3].map(s => (
+            <div key={s} className={`w-2 h-2 rounded-full transition-all duration-300 ${s === step ? "bg-amber-400 scale-125" : s < step ? "bg-amber-400/50" : "bg-white/20"}`} />
+          ))}
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto pb-32">
+        {/* ══ STEP 1: Title & Details ══ */}
+        {step === 1 && (
+          <div className="max-w-lg mx-auto px-4 py-8 space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold mb-1">Title & Details</h2>
+              <p className="text-gray-500 text-sm">Give your story an identity</p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs text-gray-400 uppercase tracking-wider mb-1.5 block">Story Title *</label>
+                <input
+                  value={title}
+                  onChange={e => setTitle(e.target.value)}
+                  placeholder="The Brave Little Star"
+                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:border-amber-400/50 focus:outline-none focus:bg-white/8 transition text-base"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-gray-400 uppercase tracking-wider mb-1.5 block">Author Name</label>
+                <input
+                  value={author}
+                  onChange={e => setAuthor(e.target.value)}
+                  placeholder="Your name"
+                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:border-amber-400/50 focus:outline-none transition text-base"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-gray-400 uppercase tracking-wider mb-1.5 block">Genre</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {genres.map(g => (
+                    <button key={g} onClick={() => setGenre(g)}
+                            className={`py-2 px-3 rounded-xl text-sm font-medium border transition-all duration-200 ${genre === g ? "bg-amber-500/20 border-amber-400/50 text-amber-300" : "bg-white/5 border-white/10 text-gray-400 hover:border-white/20"}`}>
+                      {g}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs text-gray-400 uppercase tracking-wider mb-1.5 block">Age Range</label>
+                <div className="flex flex-wrap gap-2">
+                  {ageRanges.map(a => (
+                    <button key={a} onClick={() => setAgeRange(a)}
+                            className={`py-2 px-4 rounded-xl text-sm font-medium border transition-all duration-200 ${ageRange === a ? "bg-amber-500/20 border-amber-400/50 text-amber-300" : "bg-white/5 border-white/10 text-gray-400 hover:border-white/20"}`}>
+                      {a}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* ── AI Generation Section ── */}
+            <div className="mt-8 p-5 rounded-2xl bg-violet-500/5 border border-violet-400/20">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-lg">✨</span>
+                <h3 className="text-sm font-semibold text-violet-300">Generate with AI</h3>
+                <span className="text-xs text-violet-400/60 ml-auto">5 pages · instant</span>
+              </div>
+              <p className="text-gray-500 text-xs mb-3">Describe your story idea and we'll create a 5-page narrative for you</p>
+              <textarea
+                value={aiPrompt}
+                onChange={e => setAiPrompt(e.target.value)}
+                placeholder="A brave little fox who learns about sharing with her forest friends..."
+                rows={3}
+                className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:border-violet-400/50 focus:outline-none transition text-sm resize-none"
+              />
+              <button
+                onClick={handleGenerateStory}
+                disabled={!aiPrompt.trim() || generating}
+                className="mt-3 w-full py-3 rounded-xl bg-gradient-to-r from-violet-600 to-violet-500 text-white font-semibold text-sm shadow-lg shadow-violet-500/20 hover:shadow-violet-500/40 hover:scale-[1.02] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
+              >
+                {generating ? (
+                  <>
+                    <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Weaving your story...
+                  </>
+                ) : "✨ Generate Story"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ══ STEP 2: Add Pages ══ */}
+        {step === 2 && (
+          <div className="max-w-lg mx-auto px-4 py-8 space-y-4">
+            <div>
+              <h2 className="text-2xl font-bold mb-1">Add Pages</h2>
+              <p className="text-gray-500 text-sm">{pages.length} / 20 pages · tap image area to upload</p>
+            </div>
+
+            {pages.map((page, idx) => (
+              <div key={page.id} className="rounded-2xl bg-white/5 border border-white/10 overflow-hidden">
+                {/* Card header */}
+                <div className="flex items-center gap-3 px-4 py-3 border-b border-white/5">
+                  <span className="text-gray-600 text-lg leading-none select-none">⠿</span>
+                  <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Page {idx + 1}</span>
+                  {pages.length > 1 && (
+                    <button onClick={() => deletePage(page.id)} className="ml-auto text-gray-600 hover:text-red-400 transition p-1 rounded-lg hover:bg-red-400/10">
+                      🗑
+                    </button>
+                  )}
+                </div>
+
+                {/* Image upload area */}
+                <div
+                  className="mx-4 mt-4 mb-3 h-36 rounded-xl border-2 border-dashed border-white/10 flex items-center justify-center cursor-pointer hover:border-amber-400/40 hover:bg-white/[0.03] transition-all duration-200 overflow-hidden"
+                  onClick={() => fileInputRefs.current[page.id]?.click()}
+                >
+                  {images[page.id] ? (
+                    <img src={images[page.id]} alt={`Page ${idx + 1}`} className="w-full h-full object-cover rounded-xl" />
+                  ) : (
+                    <div className="text-center pointer-events-none">
+                      <p className="text-2xl mb-1">📸</p>
+                      <p className="text-gray-500 text-xs">Upload or generate</p>
+                    </div>
+                  )}
+                </div>
+                <input
+                  ref={el => { fileInputRefs.current[page.id] = el; }}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={e => { const f = e.target.files?.[0]; if (f) handleImageUpload(page.id, f); }}
+                />
+
+                {/* Text area */}
+                <div className="px-4 pb-4">
+                  <textarea
+                    value={page.text}
+                    onChange={e => updatePageText(page.id, e.target.value)}
+                    placeholder="Write the story text for this page..."
+                    rows={4}
+                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:border-amber-400/50 focus:outline-none transition text-sm resize-none"
+                  />
+                </div>
+              </div>
+            ))}
+
+            {pages.length < 20 && (
+              <button
+                onClick={addPage}
+                className="w-full py-3.5 rounded-2xl border-2 border-dashed border-white/10 text-gray-400 hover:border-amber-400/30 hover:text-amber-300 transition-all duration-200 text-sm font-medium"
+              >
+                + Add Page
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* ══ STEP 3: Preview & Publish ══ */}
+        {step === 3 && (
+          <div className="max-w-lg mx-auto px-4 py-8 space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold mb-1">Preview & Publish</h2>
+              <p className="text-gray-500 text-sm">Your story is ready</p>
+            </div>
+
+            {/* Summary card */}
+            <div className="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-3">
+              <h3 className="text-lg font-bold text-white">{title || "Untitled Story"}</h3>
+              {author && <p className="text-gray-400 text-sm">by {author}</p>}
+              <div className="flex flex-wrap gap-2">
+                <span className="px-3 py-1 rounded-full bg-amber-500/15 border border-amber-400/20 text-amber-300 text-xs">{genre}</span>
+                <span className="px-3 py-1 rounded-full bg-violet-500/15 border border-violet-400/20 text-violet-300 text-xs">{ageRange}</span>
+                <span className="px-3 py-1 rounded-full bg-white/10 border border-white/10 text-gray-300 text-xs">{pages.length} page{pages.length !== 1 ? "s" : ""}</span>
+              </div>
+            </div>
+
+            {/* Thumbnail grid */}
+            {pages.length > 0 && (
+              <div>
+                <p className="text-xs text-gray-400 uppercase tracking-wider mb-3">Pages</p>
+                <div className="grid grid-cols-4 gap-2">
+                  {pages.map((page, idx) => (
+                    <div key={page.id} className="aspect-[3/4] rounded-lg bg-white/5 border border-white/10 overflow-hidden flex items-center justify-center relative">
+                      {images[page.id] ? (
+                        <img src={images[page.id]} alt={`Page ${idx + 1}`} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-gray-600 text-xs">{idx + 1}</span>
+                      )}
+                      {page.text && (
+                        <div className="absolute bottom-0 left-0 right-0 h-1 bg-amber-400/40 rounded-b" />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="space-y-3 pt-2">
+              <button
+                onClick={handlePreview}
+                className="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 text-black font-bold text-base shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40 hover:scale-[1.02] transition-all duration-200"
+              >
+                👁 Preview Story
+              </button>
+              <button
+                onClick={handleDownloadSSYNC}
+                className="w-full py-4 rounded-2xl bg-white/5 border border-white/10 text-white font-semibold text-base hover:bg-white/10 transition-all duration-200"
+              >
+                📥 Download .ssync
+              </button>
+              <button
+                disabled
+                className="w-full py-4 rounded-2xl bg-white/[0.02] border border-white/5 text-gray-600 font-semibold text-base cursor-not-allowed"
+              >
+                🔗 Share Link — Coming Soon
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── Fixed bottom nav ── */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0a0e1a]/95 backdrop-blur-xl border-t border-white/5 px-4 py-4">
+        <div className="max-w-lg mx-auto flex gap-3">
+          {step > 1 && (
+            <button onClick={() => setStep(s => s - 1)}
+                    className="px-6 py-3.5 rounded-2xl bg-white/5 border border-white/10 text-gray-300 font-medium hover:bg-white/10 transition">
+              ← Back
+            </button>
+          )}
+          {step < 3 ? (
+            <button
+              onClick={() => setStep(s => s + 1)}
+              disabled={!canGoNext}
+              className="flex-1 py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 text-black font-bold text-base shadow-lg shadow-amber-500/20 hover:shadow-amber-500/40 hover:scale-[1.01] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
+            >
+              Next Step →
+            </button>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════
    LANDING PAGE
    ════════════════════════════════════════════ */
 export default function Home() {
   const [readerData, setReaderData] = useState<SSyncData | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showCreator, setShowCreator] = useState(false);
 
   const openDemo = async () => {
     setLoading(true);
@@ -1071,8 +1457,17 @@ export default function Home() {
     setLoading(false);
   };
 
+  if (showCreator && !readerData) {
+    return (
+      <StoryCreator
+        onExit={() => setShowCreator(false)}
+        onPreview={(data) => { setReaderData(data); setShowCreator(false); }}
+      />
+    );
+  }
+
   if (readerData) {
-    return <ImmersiveReader data={readerData} onExit={() => setReaderData(null)} />;
+    return <ImmersiveReader data={readerData} onExit={() => { setReaderData(null); }} />;
   }
 
   return (
@@ -1118,9 +1513,9 @@ export default function Home() {
                   className="px-8 py-4 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 text-black font-bold text-lg shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40 hover:scale-105 transition-all duration-300 disabled:opacity-50">
             {loading ? "Loading..." : "✨ Read Demo Storybook"}
           </button>
-          <button disabled
-                  className="px-8 py-4 rounded-2xl bg-white/5 border border-white/10 text-gray-300 font-medium text-lg backdrop-blur-sm hover:bg-white/10 transition-all duration-300 opacity-50 cursor-not-allowed">
-            🛠 Create Your Story (Coming Soon)
+          <button onClick={() => setShowCreator(true)}
+                  className="px-8 py-4 rounded-2xl bg-white/5 border border-white/10 text-white font-medium text-lg backdrop-blur-sm hover:bg-white/10 hover:border-amber-400/30 hover:scale-105 transition-all duration-300">
+            🛠 Create Your Story
           </button>
         </div>
 
