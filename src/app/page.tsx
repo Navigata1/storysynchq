@@ -4,6 +4,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { generateStory as generateStoryAI } from "@/lib/story-engine";
 import { generateIllustration } from "./page-improvements";
 import { supabase, isSupabaseConfigured, signUp as sbSignUp, signIn as sbSignIn, signOut as sbSignOut, onAuthStateChange, getProfile } from "@/lib/supabase";
+import { NarrationRecorder, blobToDataUrl, dataUrlToBlob, type MicPermissionError } from "@/lib/audio/recorder";
+import { normalizeNarration } from "@/lib/audio/transcode";
+import { DualBusAudioEngine } from "@/lib/audio/engine";
+import { processImageSafe } from "@/lib/images";
+import { buildStorysyncFromStory, loadStorysyncToStory } from "@/lib/storysync/container";
+import type { SsyncManifest } from "@/lib/storysync/manifest";
 
 /* ─── Types ─── */
 
@@ -57,7 +63,7 @@ interface SSyncPage {
   id: number;
   layout?: string;
   illustration?: { url?: string; alt?: string; animation?: string; animationDuration?: string };
-  text?: { content: string; voice?: string; wordHighlight?: boolean; animation?: string; fontSize?: string };
+  text?: { content: string; voice?: string; audioUrl?: string; audioCodec?: "aac" | "wav"; wordHighlight?: boolean; animation?: string; fontSize?: string };
   music?: string | { crossfade?: string; duration?: string };
   timing?: { autoPause?: string; readingSpeed?: string; minDuration?: string };
 }
@@ -125,6 +131,62 @@ function playPageTurnSound() {
   } catch {
     // Silently ignore — audio not critical
   }
+}
+
+/* ════════════════════════════════════════════
+   PARENTAL GATE (COPPA — see PRIVACY.md)
+   A neutral adult-verification challenge before anything leaves the device.
+   ════════════════════════════════════════════ */
+function ParentGate({ onPass, onCancel }: { onPass: () => void; onCancel: () => void }) {
+  const [challenge] = useState(() => {
+    const a = 3 + Math.floor(Math.random() * 6); // 3–8
+    const b = 4 + Math.floor(Math.random() * 6); // 4–9
+    return { a, b };
+  });
+  const [answer, setAnswer] = useState("");
+  const [wrong, setWrong] = useState(false);
+
+  const check = () => {
+    if (parseInt(answer, 10) === challenge.a * challenge.b) {
+      onPass();
+    } else {
+      setWrong(true);
+      setAnswer("");
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[300] bg-black/70 backdrop-blur-sm flex items-center justify-center px-4">
+      <div className="bg-[#131826] border border-white/10 rounded-2xl p-6 max-w-sm w-full space-y-4 shadow-2xl">
+        <h3 className="text-white font-bold text-lg">👨‍👩‍👧 Grown-ups only</h3>
+        <p className="text-gray-400 text-sm">
+          Saving or sharing sends this story (including any voice recordings) beyond this screen.
+          Please ask a parent or guardian to continue.
+        </p>
+        <div className="p-4 rounded-xl bg-white/5 border border-white/10 text-center">
+          <p className="text-gray-400 text-xs uppercase tracking-wider mb-2">To continue, solve</p>
+          <p className="text-white text-2xl font-bold mb-3">{challenge.a} × {challenge.b} = ?</p>
+          <input
+            type="number"
+            inputMode="numeric"
+            value={answer}
+            onChange={e => { setAnswer(e.target.value); setWrong(false); }}
+            onKeyDown={e => { if (e.key === "Enter") check(); }}
+            autoFocus
+            className="w-24 px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-center text-xl focus:border-amber-400/60 focus:outline-none"
+          />
+          {wrong && <p className="text-red-400 text-xs mt-2">That&apos;s not it — try again</p>}
+        </div>
+        <p className="text-white/25 text-xs">
+          Why this gate? A child&apos;s voice recording is personal information. Nothing is uploaded or shared without an adult. See PRIVACY.md.
+        </p>
+        <div className="flex gap-3">
+          <button onClick={onCancel} className="flex-1 py-2.5 rounded-xl bg-white/10 border border-white/10 text-gray-400 text-sm font-medium hover:bg-white/20 transition">Cancel</button>
+          <button onClick={check} className="flex-1 py-2.5 rounded-xl bg-amber-500/20 border border-amber-400/40 text-amber-300 text-sm font-bold hover:bg-amber-500/30 transition">Continue</button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 /* ════════════════════════════════════════════
@@ -807,8 +869,8 @@ function ImmersiveReader({ data, onExit, startInRemix }: { data: SSyncData; onEx
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [showRecordPanel, setShowRecordPanel] = useState(false);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
+  const [micError, setMicError] = useState<MicPermissionError | null>(null);
+  const narrationRecorderRef = useRef<NarrationRecorder | null>(null);
   const recordTimerRef = useRef<ReturnType<typeof setInterval>>(undefined);
   const audioPlaybackRef = useRef<HTMLAudioElement | null>(null);
 
@@ -822,11 +884,12 @@ function ImmersiveReader({ data, onExit, startInRemix }: { data: SSyncData; onEx
   const [musicVolume, setMusicVolume] = useState(30);
   const [previewingVoice, setPreviewingVoice] = useState<number | null>(null);
 
-  /* ── Phase 2: Audio Engine Refs ── */
-  const audioCtxRef = useRef<AudioContext | null>(null);
-  const musicGainRef = useRef<GainNode | null>(null);
-  const osc1Ref = useRef<OscillatorNode | null>(null);
-  const osc2Ref = useRef<OscillatorNode | null>(null);
+  /* ── Dual-bus audio engine (narration + ducked music bed) ── */
+  const engineRef = useRef<DualBusAudioEngine | null>(null);
+  const getEngine = useCallback((): DualBusAudioEngine => {
+    if (!engineRef.current) engineRef.current = new DualBusAudioEngine();
+    return engineRef.current;
+  }, []);
 
   const page = data.pages[currentPage];
   const totalPages = data.pages.length;
@@ -882,76 +945,27 @@ function ImmersiveReader({ data, onExit, startInRemix }: { data: SSyncData; onEx
     return () => window.speechSynthesis.removeEventListener("voiceschanged", loadVoices);
   }, []);
 
-  /* ── Background Music (Web Audio API ambient pad) ── */
+  /* ── Background music bed — runs on the engine's music bus so it ducks
+        automatically under narration ── */
   const startMusic = useCallback((vol: number) => {
     try {
-      const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
-      audioCtxRef.current = ctx;
-
-      const filter = ctx.createBiquadFilter();
-      filter.type = "lowpass";
-      filter.frequency.value = 400;
-
-      const gainNode = ctx.createGain();
-      const targetGain = 0.03 * (vol / 100);
-      gainNode.gain.setValueAtTime(0, ctx.currentTime);
-      gainNode.gain.linearRampToValueAtTime(targetGain, ctx.currentTime + 2);
-      musicGainRef.current = gainNode;
-
-      const osc1 = ctx.createOscillator();
-      osc1.type = "sine";
-      osc1.frequency.value = 220;
-
-      const osc2 = ctx.createOscillator();
-      osc2.type = "sine";
-      osc2.frequency.value = 220.5;
-
-      osc1.connect(filter);
-      osc2.connect(filter);
-      filter.connect(gainNode);
-      gainNode.connect(ctx.destination);
-
-      osc1.start();
-      osc2.start();
-      osc1Ref.current = osc1;
-      osc2Ref.current = osc2;
+      const engine = getEngine();
+      engine.setMusicVolume(vol / 100);
+      engine.startMusic(MOOD_CONFIGS[currentMood]);
     } catch {
       // Web Audio not supported
     }
-  }, []);
+  }, [getEngine, currentMood]);
 
   const stopMusic = useCallback(() => {
-    if (musicGainRef.current && audioCtxRef.current) {
-      try {
-        musicGainRef.current.gain.linearRampToValueAtTime(0, audioCtxRef.current.currentTime + 1);
-        setTimeout(() => {
-          try { osc1Ref.current?.stop(); } catch { /* ignore */ }
-          try { osc2Ref.current?.stop(); } catch { /* ignore */ }
-          audioCtxRef.current?.close();
-        }, 1200);
-      } catch { /* ignore */ }
-      audioCtxRef.current = null;
-      musicGainRef.current = null;
-      osc1Ref.current = null;
-      osc2Ref.current = null;
-    }
+    engineRef.current?.stopMusic();
   }, []);
 
   /* ── setMusicMood: smooth crossfade to new mood frequencies ── */
   const setMusicMood = useCallback((mood: MoodName) => {
     setCurrentMood(mood);
-    if (!audioCtxRef.current || !osc1Ref.current || !osc2Ref.current || !musicGainRef.current) return;
-    const cfg = MOOD_CONFIGS[mood];
-    const ctx = audioCtxRef.current;
-    const now = ctx.currentTime;
-    const transitionTime = 1.0;
-    try {
-      osc1Ref.current.frequency.linearRampToValueAtTime(cfg.freq1, now + transitionTime);
-      osc2Ref.current.frequency.linearRampToValueAtTime(cfg.freq2, now + transitionTime);
-      const targetGain = 0.03 * cfg.gainMult * (musicVolume / 100);
-      musicGainRef.current.gain.linearRampToValueAtTime(targetGain, now + transitionTime);
-    } catch { /* ignore */ }
-  }, [musicVolume]);
+    engineRef.current?.setMood(MOOD_CONFIGS[mood]);
+  }, []);
 
   /* ── Music toggle effect ── */
   useEffect(() => {
@@ -963,55 +977,53 @@ function ImmersiveReader({ data, onExit, startInRemix }: { data: SSyncData; onEx
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [musicEnabled]);
 
-  /* ── Music volume real-time update ── */
+  /* ── Volume real-time updates ── */
   useEffect(() => {
-    if (musicGainRef.current && audioCtxRef.current) {
-      try {
-        musicGainRef.current.gain.setTargetAtTime(
-          0.03 * (musicVolume / 100),
-          audioCtxRef.current.currentTime,
-          0.1
-        );
-      } catch { /* ignore */ }
-    }
+    engineRef.current?.setMusicVolume(musicVolume / 100);
   }, [musicVolume]);
+  useEffect(() => {
+    engineRef.current?.setNarrationVolume(narrationVolume / 100);
+  }, [narrationVolume]);
 
-  /* ── Voice Recording Functions ── */
+  /* ── Voice Recording — negotiated mime via NarrationRecorder; the old
+        hardcoded audio/webm;codecs=opus made the constructor throw on iOS
+        Safari, so recording simply didn't work there ── */
   const startRecording = async () => {
+    setMicError(null);
+    const recorder = new NarrationRecorder();
+    narrationRecorderRef.current = recorder;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream, { mimeType: "audio/webm;codecs=opus" });
-      mediaRecorderRef.current = recorder;
-      chunksRef.current = [];
-
-      recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
-      recorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
-        const url = URL.createObjectURL(blob);
-        setRecordings(prev => ({ ...prev, [page.id]: url }));
-        stream.getTracks().forEach(t => t.stop());
-        setIsRecording(false);
-        setRecordingTime(0);
-        if (recordTimerRef.current) clearInterval(recordTimerRef.current);
-      };
-
-      recorder.start();
-      setIsRecording(true);
-      setRecordingTime(0);
-      recordTimerRef.current = setInterval(() => setRecordingTime(t => t + 1), 1000);
-
-      window.speechSynthesis?.cancel();
-    } catch {
-      console.error("Microphone access denied");
+      await recorder.start();
+    } catch (err) {
+      setMicError(err as MicPermissionError);
+      return;
     }
+    setIsRecording(true);
+    setRecordingTime(0);
+    recordTimerRef.current = setInterval(() => setRecordingTime(t => t + 1), 1000);
+    window.speechSynthesis?.cancel();
   };
 
-  const stopRecording = () => { mediaRecorderRef.current?.stop(); };
+  const stopRecording = () => {
+    const recorder = narrationRecorderRef.current;
+    if (!recorder) return;
+    if (recordTimerRef.current) clearInterval(recordTimerRef.current);
+    recorder.stop().then(({ blob }) => {
+      const url = URL.createObjectURL(blob);
+      setRecordings(prev => ({ ...prev, [page.id]: url }));
+    }).catch(() => {}).finally(() => {
+      setIsRecording(false);
+      setRecordingTime(0);
+    });
+  };
 
   const deleteRecording = (pageId: number) => {
     setRecordings(prev => {
       const next = { ...prev };
-      if (next[pageId]) { URL.revokeObjectURL(next[pageId]); delete next[pageId]; }
+      if (next[pageId]) {
+        if (next[pageId].startsWith("blob:")) URL.revokeObjectURL(next[pageId]);
+        delete next[pageId];
+      }
       return next;
     });
   };
@@ -1024,16 +1036,35 @@ function ImmersiveReader({ data, onExit, startInRemix }: { data: SSyncData; onEx
     const audio = new Audio(url);
     audio.volume = narrationVolume / 100;
     audioPlaybackRef.current = audio;
-    audio.onplay = () => setNarrating(true);
+    audio.onplay = () => {
+      setNarrating(true);
+      engineRef.current?.setNarrating(true); // duck the music bed
+    };
     audio.onended = () => {
       setNarrating(false);
+      engineRef.current?.setNarrating(false);
       if (!paused && data.settings?.autoPlay !== false) {
         const pause = parseDuration(page?.timing?.autoPause) * timingMult;
         autoTimer.current = setTimeout(() => goTo("next"), pause);
       }
     };
-    audio.play();
+    audio.onpause = () => engineRef.current?.setNarrating(false);
+    audio.play().catch(() => setNarrating(false));
   }, [recordings, narrationVolume, paused, data.settings?.autoPlay, page?.timing?.autoPause, timingMult]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* ── Saved narration: stories published by the creator carry per-page audio
+        (text.audioUrl, AAC/WAV-normalized). Seed it so the recorded voice is
+        what plays — the cassette, not the robot ── */
+  useEffect(() => {
+    const seeded: Record<number, string> = {};
+    for (const p of data.pages) {
+      if (p.text?.audioUrl) seeded[p.id] = p.text.audioUrl;
+    }
+    if (Object.keys(seeded).length > 0) {
+      setRecordings(prev => ({ ...seeded, ...prev }));
+      setVoiceMode("recorded");
+    }
+  }, [data]);
 
   /* ── Voice Preview ── */
   const previewVoice = (voiceIndex: number) => {
@@ -1047,11 +1078,13 @@ function ImmersiveReader({ data, onExit, startInRemix }: { data: SSyncData; onEx
     window.speechSynthesis.speak(utterance);
   };
 
-  /* Splash screen */
-  useEffect(() => {
-    const timer = setTimeout(() => setShowSplash(false), 2200);
-    return () => clearTimeout(timer);
-  }, []);
+  /* Splash — "Tap to Begin". The tap is load-bearing: iOS Safari refuses to
+     play audio without a user gesture, so the gate doubles as the audio
+     unlock (audioContext.resume() inside the tap handler). */
+  const handleBeginTap = useCallback(() => {
+    void getEngine().unlock();
+    setShowSplash(false);
+  }, [getEngine]);
 
   /* Progress memory */
   useEffect(() => {
@@ -1075,10 +1108,11 @@ function ImmersiveReader({ data, onExit, startInRemix }: { data: SSyncData; onEx
   /* Cleanup on unmount */
   useEffect(() => {
     return () => {
-      Object.values(recordings).forEach(url => URL.revokeObjectURL(url));
+      Object.values(recordings).forEach(url => { if (url.startsWith("blob:")) URL.revokeObjectURL(url); });
       if (audioPlaybackRef.current) audioPlaybackRef.current.pause();
-      // Stop ambient music
-      stopMusic();
+      narrationRecorderRef.current?.cancel();
+      engineRef.current?.dispose();
+      engineRef.current = null;
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -1095,6 +1129,7 @@ function ImmersiveReader({ data, onExit, startInRemix }: { data: SSyncData; onEx
     setDirection(dir);
     setHighlightIdx(-1);
     setNarrating(false);
+    engineRef.current?.setNarrating(false);
 
     if (soundEnabled) playPageTurnSound();
 
@@ -1119,7 +1154,7 @@ function ImmersiveReader({ data, onExit, startInRemix }: { data: SSyncData; onEx
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [goTo, onExit, stopMusic]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [goTo, onExit, stopMusic]);
 
   /* Swipe gesture support */
   const touchStartX = useRef<number | null>(null);
@@ -1183,9 +1218,13 @@ function ImmersiveReader({ data, onExit, startInRemix }: { data: SSyncData; onEx
     utterance.onboundary = (e) => {
       if (e.name === "word") { setHighlightIdx(wordIdx); wordIdx++; }
     };
-    utterance.onstart = () => setNarrating(true);
+    utterance.onstart = () => {
+      setNarrating(true);
+      engineRef.current?.setNarrating(true); // duck the music bed
+    };
     utterance.onend = () => {
       setNarrating(false);
+      engineRef.current?.setNarrating(false);
       setHighlightIdx(-1);
       if (!paused && data.settings?.autoPlay !== false) {
         const pause = parseDuration(page.timing?.autoPause) * timingMult;
@@ -1265,7 +1304,12 @@ function ImmersiveReader({ data, onExit, startInRemix }: { data: SSyncData; onEx
   /* Splash screen */
   if (showSplash) {
     return (
-      <div className="fixed inset-0 z-50 bg-[#060a14] flex flex-col items-center justify-center">
+      <div
+        className="fixed inset-0 z-50 bg-[#060a14] flex flex-col items-center justify-center cursor-pointer"
+        onClick={handleBeginTap}
+        role="button"
+        aria-label="Tap to begin the story"
+      >
         <div className="animate-float mb-6">
           <div className="w-20 h-20 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/40">
             <span className="text-4xl">⭐</span>
@@ -1275,10 +1319,8 @@ function ImmersiveReader({ data, onExit, startInRemix }: { data: SSyncData; onEx
         {data.metadata.author && (
           <p className="text-white/40 text-sm animate-fadeIn" style={{ animationDelay: "0.3s" }}>by {data.metadata.author}</p>
         )}
-        <div className="mt-8 flex gap-1">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" style={{ animationDelay: `${i * 0.3}s` }} />
-          ))}
+        <div className="mt-10 px-6 py-3 rounded-full bg-white/5 border border-amber-400/30 animate-pulse">
+          <p className="text-amber-300 text-sm font-semibold tracking-wide">✨ Tap to Begin</p>
         </div>
       </div>
     );
@@ -1628,6 +1670,16 @@ function ImmersiveReader({ data, onExit, startInRemix }: { data: SSyncData; onEx
                   <span className="w-3 h-3 rounded-full bg-rose-500 animate-pulse" />
                   {hasRecording ? "Re-record This Page" : "Start Recording"}
                 </button>
+
+                {micError && (
+                  <p className="mt-2 text-rose-300/80 text-xs text-center">
+                    {micError === "denied"
+                      ? "Microphone access was blocked — allow it in your browser's site settings, then try again."
+                      : micError === "unavailable"
+                        ? "No microphone found — check that another app isn't using it."
+                        : "Couldn't start recording — try again."}
+                  </p>
+                )}
 
                 {page?.text?.content && (
                   <div className="mt-4 p-3 rounded-xl bg-white/5 border border-white/5">
@@ -2541,6 +2593,22 @@ function StoryCreator({
   const [showRestorePrompt, setShowRestorePrompt] = useState(false);
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
+  // Per-page narration (draft codec — normalized to AAC/WAV at publish)
+  const [narrations, setNarrations] = useState<Record<number, { dataUrl: string; mimeType: string; duration: number }>>({});
+  const [recordingPageId, setRecordingPageId] = useState<number | null>(null);
+  const [recSeconds, setRecSeconds] = useState(0);
+  const [micError, setMicError] = useState<MicPermissionError | null>(null);
+  const [playingPageId, setPlayingPageId] = useState<number | null>(null);
+  const recorderRef = useRef<NarrationRecorder | null>(null);
+  const recTimerRef = useRef<ReturnType<typeof setInterval>>(undefined);
+  const previewAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Publish flow (parental gate + codec normalization)
+  const [showParentGate, setShowParentGate] = useState(false);
+  const gatePendingRef = useRef<(() => void) | null>(null);
+  const [publishing, setPublishing] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
   /* ── Auto-save: restore draft on mount ── */
   useEffect(() => {
     try {
@@ -2560,6 +2628,7 @@ function StoryCreator({
         if (draft.ageRange) setAgeRange(draft.ageRange);
         if (draft.pages?.length) setPages(draft.pages);
         if (draft.images) setImages(draft.images);
+        if (draft.narrations) setNarrations(draft.narrations);
       }
     } catch {}
     setShowRestorePrompt(false);
@@ -2570,10 +2639,18 @@ function StoryCreator({
     clearTimeout(autosaveTimerRef.current);
     autosaveTimerRef.current = setTimeout(() => {
       try {
-        localStorage.setItem("ssync-autosave-draft", JSON.stringify({ title, author, genre, ageRange, pages, images }));
+        // A pristine story (e.g. right after full deletion) clears the draft
+        // instead of resurrecting an empty one.
+        const isEmpty = !title && !author && pages.length === 1 && !pages[0].text
+          && Object.keys(images).length === 0 && Object.keys(narrations).length === 0;
+        if (isEmpty) {
+          localStorage.removeItem("ssync-autosave-draft");
+        } else {
+          localStorage.setItem("ssync-autosave-draft", JSON.stringify({ title, author, genre, ageRange, pages, images, narrations }));
+        }
       } catch {}
     }, 1500);
-  }, [title, author, genre, ageRange, pages, images]);
+  }, [title, author, genre, ageRange, pages, images, narrations]);
 
   const addPage = () => {
     if (pages.length >= 20) return;
@@ -2585,20 +2662,77 @@ function StoryCreator({
     if (pages.length <= 1) return;
     setPages(prev => prev.filter(p => p.id !== id));
     setImages(prev => { const next = { ...prev }; delete next[id]; return next; });
+    setNarrations(prev => { const next = { ...prev }; delete next[id]; return next; });
   };
 
   const updatePageText = (id: number, text: string) => {
     setPages(prev => prev.map(p => p.id === id ? { ...p, text } : p));
   };
 
-  const handleImageUpload = (id: number, file: File) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const dataUrl = e.target?.result as string;
-      setImages(prev => ({ ...prev, [id]: dataUrl }));
-    };
-    reader.readAsDataURL(file);
+  const handleImageUpload = async (id: number, file: File) => {
+    // Camera photos arrive at 3–10 MB with EXIF rotation; downscale + compress
+    // at capture so drafts fit localStorage and stories fit the 15 MB budget.
+    const { dataUrl } = await processImageSafe(file);
+    setImages(prev => ({ ...prev, [id]: dataUrl }));
   };
+
+  /* ── Per-page narration recording ── */
+  const startPageRecording = async (pageId: number) => {
+    if (recordingPageId !== null) return;
+    setMicError(null);
+    const recorder = new NarrationRecorder();
+    recorderRef.current = recorder;
+    try {
+      await recorder.start();
+    } catch (err) {
+      setMicError(err as MicPermissionError);
+      return;
+    }
+    setRecordingPageId(pageId);
+    setRecSeconds(0);
+    recTimerRef.current = setInterval(() => setRecSeconds(s => s + 1), 1000);
+  };
+
+  const stopPageRecording = async () => {
+    const recorder = recorderRef.current;
+    if (!recorder || recordingPageId === null) return;
+    clearInterval(recTimerRef.current);
+    const pageId = recordingPageId;
+    try {
+      const result = await recorder.stop();
+      const dataUrl = await blobToDataUrl(result.blob);
+      setNarrations(prev => ({ ...prev, [pageId]: { dataUrl, mimeType: result.mimeType, duration: result.duration } }));
+    } catch {
+      /* nothing captured */
+    }
+    setRecordingPageId(null);
+    setRecSeconds(0);
+  };
+
+  const deleteNarration = (pageId: number) => {
+    setNarrations(prev => { const next = { ...prev }; delete next[pageId]; return next; });
+  };
+
+  const playNarration = (pageId: number) => {
+    const rec = narrations[pageId];
+    if (!rec) return;
+    previewAudioRef.current?.pause();
+    const audio = new Audio(rec.dataUrl);
+    previewAudioRef.current = audio;
+    setPlayingPageId(pageId);
+    audio.onended = () => setPlayingPageId(null);
+    audio.onerror = () => setPlayingPageId(null);
+    audio.play().catch(() => setPlayingPageId(null));
+  };
+
+  /* Cleanup: stop any live recording/preview on unmount */
+  useEffect(() => {
+    return () => {
+      recorderRef.current?.cancel();
+      clearInterval(recTimerRef.current);
+      previewAudioRef.current?.pause();
+    };
+  }, []);
 
   const handleGenerateStory = () => {
     if (!aiPrompt.trim()) return;
@@ -2614,7 +2748,7 @@ function StoryCreator({
     }, 1200);
   };
 
-  const buildSSyncData = (): SSyncData => ({
+  const buildSSyncData = (narrationOverride?: Record<number, { dataUrl: string; codec?: "aac" | "wav" }>): SSyncData => ({
     version: "1.0",
     metadata: {
       title: title || "My Story",
@@ -2627,13 +2761,31 @@ function StoryCreator({
       readAlongHighlight: true,
       pageTurnSound: true,
     },
-    pages: pages.map(p => ({
-      id: p.id,
-      layout: "full",
-      illustration: images[p.id] ? { url: images[p.id], alt: `Page ${p.id}` } : undefined,
-      text: { content: p.text, wordHighlight: true },
-    })),
+    pages: pages.map(p => {
+      const narration = narrationOverride ? narrationOverride[p.id] : (narrations[p.id] ? { dataUrl: narrations[p.id].dataUrl } : undefined);
+      return {
+        id: p.id,
+        layout: "full",
+        illustration: images[p.id] ? { url: images[p.id], alt: `Page ${p.id}` } : undefined,
+        text: { content: p.text, wordHighlight: true, audioUrl: narration?.dataUrl, audioCodec: narration?.codec },
+      };
+    }),
   });
+
+  /**
+   * Publish-time codec normalization (SSYNC v2 rule): every narration becomes
+   * AAC/M4A (or WAV fallback) so a story recorded on Android plays on the
+   * grandparent's iPhone. Draft codecs never leave the editor.
+   */
+  const normalizeAllNarrations = async (): Promise<Record<number, { dataUrl: string; codec: "aac" | "wav" }>> => {
+    const out: Record<number, { dataUrl: string; codec: "aac" | "wav" }> = {};
+    for (const [pageId, rec] of Object.entries(narrations)) {
+      const blob = await dataUrlToBlob(rec.dataUrl);
+      const normalized = await normalizeNarration(blob, rec.mimeType);
+      out[Number(pageId)] = { dataUrl: await blobToDataUrl(normalized.blob), codec: normalized.codec };
+    }
+    return out;
+  };
 
   const handleDownloadSSYNC = () => {
     const data = buildSSyncData();
@@ -2647,28 +2799,84 @@ function StoryCreator({
     URL.revokeObjectURL(url);
   };
 
+  const handleDownloadStorysync = async () => {
+    if (publishing) return;
+    setPublishing(true);
+    try {
+      const normalized = await normalizeAllNarrations();
+      const data = buildSSyncData(normalized) as SsyncManifest;
+      data.metadata.created = new Date().toISOString();
+      const bytes = buildStorysyncFromStory(data);
+      const blob = new Blob([bytes as BlobPart], { type: "application/zip" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${(title || "my-story").toLowerCase().replace(/\s+/g, "-")}.storysync`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setSaveToast("Couldn't package the story — try again.");
+    } finally {
+      setPublishing(false);
+    }
+  };
+
   const handlePreview = () => {
     onPreview(buildSSyncData());
   };
 
+  /* Actual save — only reachable through the parental gate. */
+  const doSaveToLibrary = async () => {
+    if (publishing) return;
+    setPublishing(true);
+    try {
+      const normalized = await normalizeAllNarrations();
+      const data = buildSSyncData(normalized);
+      const id = savedId ?? crypto.randomUUID();
+      if (!savedId) setSavedId(id);
+      const thumbnail = images[pages[0]?.id] ?? null;
+      const entry: LibraryEntry = {
+        id,
+        title: title || "Untitled Story",
+        author: author || currentUser?.name || "",
+        genre,
+        pageCount: pages.length,
+        createdAt: new Date().toISOString(),
+        thumbnail,
+        data,
+      };
+      saveToLibrary(entry);
+      if (onSaveToLibrary) onSaveToLibrary(entry);
+      setSaveToast("Story saved! Find it in My Stories.");
+    } catch {
+      setSaveToast("Saving failed — try again.");
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  /* COPPA: saving/sharing sends the story beyond this screen → parental gate. */
   const handleSaveToLibrary = () => {
-    const data = buildSSyncData();
-    const id = savedId ?? crypto.randomUUID();
-    if (!savedId) setSavedId(id);
-    const thumbnail = images[pages[0]?.id] ?? null;
-    const entry: LibraryEntry = {
-      id,
-      title: title || "Untitled Story",
-      author: author || currentUser?.name || "",
-      genre,
-      pageCount: pages.length,
-      createdAt: new Date().toISOString(),
-      thumbnail,
-      data,
-    };
-    saveToLibrary(entry);
-    if (onSaveToLibrary) onSaveToLibrary(entry);
-    setSaveToast("Story saved! Find it in My Stories.");
+    gatePendingRef.current = () => { void doSaveToLibrary(); };
+    setShowParentGate(true);
+  };
+
+  /* One-tap full deletion: story, images, narrations, draft, saved copy. */
+  const handleDeleteStory = () => {
+    previewAudioRef.current?.pause();
+    recorderRef.current?.cancel();
+    if (savedId) removeFromLibrary(savedId);
+    try { localStorage.removeItem("ssync-autosave-draft"); } catch {}
+    setPages([{ id: 1, text: "" }]);
+    setImages({});
+    setNarrations({});
+    setTitle("");
+    setAuthor("");
+    setAiPrompt("");
+    setSavedId(null);
+    setShowDeleteConfirm(false);
+    setStep(1);
+    setSaveToast("Story and all recordings deleted.");
   };
 
   const handleCopyLink = () => {
@@ -2874,7 +3082,7 @@ function StoryCreator({
                 />
 
                 {/* Text area */}
-                <div className="px-4 pb-4">
+                <div className="px-4 pb-3">
                   <textarea
                     value={page.text}
                     onChange={e => updatePageText(page.id, e.target.value)}
@@ -2882,6 +3090,61 @@ function StoryCreator({
                     rows={4}
                     className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:border-amber-400/50 focus:outline-none transition text-sm resize-none"
                   />
+                </div>
+
+                {/* Narration — big-red-button record/review/re-record loop */}
+                <div className="px-4 pb-4">
+                  {recordingPageId === page.id ? (
+                    <button
+                      onClick={stopPageRecording}
+                      className="w-full py-3 rounded-xl bg-red-500/20 border border-red-400/50 text-red-300 font-semibold text-sm flex items-center justify-center gap-2 animate-pulse"
+                    >
+                      <span className="w-3 h-3 rounded-sm bg-red-400" />
+                      Stop recording · {Math.floor(recSeconds / 60)}:{String(recSeconds % 60).padStart(2, "0")}
+                    </button>
+                  ) : narrations[page.id] ? (
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => playNarration(page.id)}
+                        className="flex-1 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-400/30 text-emerald-300 text-sm font-medium hover:bg-emerald-500/20 transition flex items-center justify-center gap-2"
+                      >
+                        {playingPageId === page.id ? "🔊 Playing…" : `▶ Your voice · ${Math.max(1, Math.round(narrations[page.id].duration))}s`}
+                      </button>
+                      <button
+                        onClick={() => startPageRecording(page.id)}
+                        disabled={recordingPageId !== null}
+                        className="px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-400 text-sm hover:text-white hover:bg-white/10 transition"
+                        title="Re-record"
+                      >
+                        ↻
+                      </button>
+                      <button
+                        onClick={() => deleteNarration(page.id)}
+                        className="px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-400 text-sm hover:text-red-300 hover:bg-red-400/10 transition"
+                        title="Delete recording"
+                      >
+                        🗑
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => startPageRecording(page.id)}
+                      disabled={recordingPageId !== null}
+                      className="w-full py-2.5 rounded-xl bg-white/5 border border-dashed border-white/15 text-gray-400 text-sm font-medium hover:border-red-400/40 hover:text-red-300 transition flex items-center justify-center gap-2 disabled:opacity-40"
+                    >
+                      <span className="w-2.5 h-2.5 rounded-full bg-red-400/80" />
+                      Record narration for this page
+                    </button>
+                  )}
+                  {micError && recordingPageId === null && (
+                    <p className="text-red-400/80 text-xs mt-2">
+                      {micError === "denied"
+                        ? "Microphone access was blocked — allow it in your browser's site settings, then try again."
+                        : micError === "unavailable"
+                          ? "No microphone found — plug one in or check that another app isn't using it."
+                          : "Couldn't start recording — try again."}
+                    </p>
+                  )}
                 </div>
               </div>
             ))}
@@ -2913,7 +3176,17 @@ function StoryCreator({
                 <span className="px-3 py-1 rounded-full bg-amber-500/15 border border-amber-400/20 text-amber-300 text-xs">{genre}</span>
                 <span className="px-3 py-1 rounded-full bg-violet-500/15 border border-violet-400/20 text-violet-300 text-xs">{ageRange}</span>
                 <span className="px-3 py-1 rounded-full bg-white/10 border border-white/10 text-gray-300 text-xs">{pages.length} page{pages.length !== 1 ? "s" : ""}</span>
+                {Object.keys(narrations).length > 0 && (
+                  <span className="px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-400/20 text-emerald-300 text-xs">
+                    🎙 {Object.keys(narrations).length}/{pages.length} narrated
+                  </span>
+                )}
               </div>
+              {Object.keys(narrations).length > 0 && (
+                <p className="text-white/25 text-xs">
+                  On save or download, recordings are normalized to AAC so they play on every device — iPhone, Android, desktop.
+                </p>
+              )}
             </div>
 
             {/* Thumbnail grid */}
@@ -2939,12 +3212,18 @@ function StoryCreator({
 
             {/* Actions */}
             <div className="space-y-3 pt-2">
-              {/* Save to Library */}
+              {/* Save to Library — behind the parental gate (PRIVACY.md) */}
               <button
                 onClick={handleSaveToLibrary}
-                className="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 text-black font-bold text-base shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40 hover:scale-[1.02] transition-all duration-200 flex items-center justify-center gap-2"
+                disabled={publishing}
+                className="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 text-black font-bold text-base shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40 hover:scale-[1.02] transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-60"
               >
-                💾 Save to Library
+                {publishing ? (
+                  <>
+                    <span className="inline-block w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                    Finishing your story…
+                  </>
+                ) : "💾 Save to Library"}
               </button>
 
               {/* Share link (shown after save) */}
@@ -2973,18 +3252,66 @@ function StoryCreator({
                 👁 Preview Story
               </button>
               <button
-                onClick={handleDownloadSSYNC}
-                className="w-full py-4 rounded-2xl bg-white/5 border border-white/10 text-white font-semibold text-base hover:bg-white/10 transition-all duration-200"
+                onClick={handleDownloadStorysync}
+                disabled={publishing}
+                className="w-full py-4 rounded-2xl bg-white/5 border border-white/10 text-white font-semibold text-base hover:bg-white/10 transition-all duration-200 disabled:opacity-60"
               >
-                📥 Download .ssync
+                {publishing ? "📦 Packaging…" : "📦 Download .storysync"}
+              </button>
+              <button
+                onClick={handleDownloadSSYNC}
+                className="w-full py-3 rounded-2xl bg-white/5 border border-white/10 text-gray-400 font-medium text-sm hover:bg-white/10 transition-all duration-200"
+              >
+                📥 Download .ssync.json (v1, no bundled audio)
+              </button>
+
+              {/* One-tap full deletion (PRIVACY.md) */}
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="w-full py-3 rounded-2xl border border-red-400/20 text-red-400/80 font-medium text-sm hover:bg-red-400/10 hover:text-red-300 transition-all duration-200"
+              >
+                🗑 Delete this story &amp; all recordings
               </button>
             </div>
 
-            {/* Save toast inside creator */}
-            {saveToast && <Toast message={saveToast} onDone={() => setSaveToast(null)} />}
           </div>
         )}
       </div>
+
+      {/* Save/delete toast — outside the step blocks so it survives step resets */}
+      {saveToast && <Toast message={saveToast} onDone={() => setSaveToast(null)} />}
+
+      {/* ── Parental gate (COPPA) ── */}
+      {showParentGate && (
+        <ParentGate
+          onPass={() => {
+            setShowParentGate(false);
+            const pending = gatePendingRef.current;
+            gatePendingRef.current = null;
+            pending?.();
+          }}
+          onCancel={() => {
+            setShowParentGate(false);
+            gatePendingRef.current = null;
+          }}
+        />
+      )}
+
+      {/* ── Delete confirmation ── */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-[300] bg-black/70 backdrop-blur-sm flex items-center justify-center px-4">
+          <div className="bg-[#131826] border border-red-400/20 rounded-2xl p-6 max-w-sm w-full space-y-4 shadow-2xl">
+            <h3 className="text-white font-bold text-lg">Delete everything?</h3>
+            <p className="text-gray-400 text-sm">
+              This removes the whole story: every page, image, and voice recording — including the saved copy and the autosaved draft. There is no undo.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-2.5 rounded-xl bg-white/10 border border-white/10 text-gray-300 text-sm font-medium hover:bg-white/20 transition">Keep story</button>
+              <button onClick={handleDeleteStory} className="flex-1 py-2.5 rounded-xl bg-red-500/20 border border-red-400/40 text-red-300 text-sm font-bold hover:bg-red-500/30 transition">Delete all</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Fixed bottom nav ── */}
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0a0e1a]/95 backdrop-blur-xl border-t border-white/5 px-4 py-4">
@@ -3019,6 +3346,21 @@ export default function Home() {
   const [loadingRemix, setLoadingRemix] = useState(false);
   const [showCreator, setShowCreator] = useState(false);
   const [startInRemix, setStartInRemix] = useState(false);
+  const storysyncFileRef = useRef<HTMLInputElement | null>(null);
+
+  /* Open a packed .storysync container — the format loop, end to end */
+  const handleOpenStorysyncFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    try {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const story = loadStorysyncToStory(bytes);
+      setReaderData(story as SSyncData);
+    } catch (err) {
+      setToast(err instanceof Error ? err.message : "That file isn't a valid .storysync");
+    }
+  };
 
   /* ── Phase 5: Auth & Library State ── */
   const [user, setUserState] = useState<SyncUser | null>(null);
@@ -3403,6 +3745,21 @@ export default function Home() {
         >
           <span>📚</span> Browse Library
         </button>
+
+        {/* Open a .storysync file (SSYNC v2 container) */}
+        <button
+          onClick={() => storysyncFileRef.current?.click()}
+          className="mb-4 px-7 py-3.5 rounded-2xl bg-white/5 border border-white/10 text-white/60 font-medium text-base backdrop-blur-sm hover:bg-amber-500/10 hover:border-amber-400/30 hover:text-white hover:scale-105 active:scale-95 transition-all duration-300 flex items-center gap-2"
+        >
+          <span>📂</span> Open .storysync file
+        </button>
+        <input
+          ref={storysyncFileRef}
+          type="file"
+          accept=".storysync,.zip,application/zip"
+          className="hidden"
+          onChange={handleOpenStorysyncFile}
+        />
 
         {/* Phase 5: My Stories CTA */}
         {user && (

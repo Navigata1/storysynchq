@@ -81,7 +81,7 @@ export function unpackStorysync(bytes: Uint8Array): StorysyncArchive {
 /* ── data URL ↔ bytes (node-safe: atob/btoa are global in Node ≥16) ── */
 
 export function dataUrlToBytes(dataUrl: string): { bytes: Uint8Array; mime: string } {
-  const match = /^data:([^;,]+)?(;base64)?,(.*)$/s.exec(dataUrl);
+  const match = /^data:([^;,]+)?(;base64)?,([\s\S]*)$/.exec(dataUrl);
   if (!match) throw new StorysyncError("Not a data URL");
   const mime = match[1] || "application/octet-stream";
   if (match[2]) {
