@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://storysynchq.com/protocol/v2.schema.json",
+  "title": "SSYNC Protocol v2.0 — .storysync container manifest",
+  "description": "StorySync Protocol v2 — Universal Immersive Storybook Format. A .storysync file is a ZIP archive containing this manifest as manifest.json plus an assets/ directory holding every bundled illustration and narration file. Published narration audio MUST be AAC in an MP4/M4A container (WAV is the only permitted fallback when the authoring environment cannot encode AAC). Opus/WebM narration is valid only in unpublished editor drafts and MUST NOT appear in a published .storysync. See /docs/format-spec.md for the prose specification.",
+  "type": "object",
+  "required": ["version", "metadata", "pages"],
+  "properties": {
+    "version": { "type": "string", "const": "2.0" },
+    "metadata": {
+      "type": "object",
+      "required": ["title"],
+      "properties": {
+        "title": { "type": "string", "minLength": 1 },
+        "author": { "type": "string" },
+        "narrator": { "type": "string" },
+        "genre": { "type": "string" },
+        "ageRange": { "type": "string" },
+        "language": { "type": "string", "default": "en" },
+        "created": { "type": "string", "format": "date-time" },
+        "description": { "type": "string" },
+        "coverImage": {
+          "type": "string",
+          "description": "Container-relative path (assets/...) or external URL"
+        }
+      }
+    },
+    "settings": {
+      "type": "object",
+      "properties": {
+        "autoPlay": { "type": "boolean", "default": true },
+        "pageTransition": { "enum": ["turn", "fade", "slide", "none"], "default": "turn" },
+        "pageTurnSound": { "type": "boolean", "default": true },
+        "readAlongHighlight": { "type": "boolean", "default": true },
+        "orientation": { "enum": ["auto", "portrait", "landscape"], "default": "auto" },
+        "accessibility": {
+          "type": "object",
+          "properties": {
+            "timingMultiplier": { "type": "number", "default": 1.0, "minimum": 0.25, "maximum": 4.0 },
+            "highContrast": { "type": "boolean", "default": false },
+            "dyslexiaFont": { "type": "boolean", "default": false },
+            "pauseBetweenPages": { "type": "string", "default": "3s" }
+          }
+        }
+      }
+    },
+    "pages": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id"],
+        "properties": {
+          "id": { "type": "integer" },
+          "layout": { "enum": ["illustration-top", "illustration-full", "full", "text-only"], "default": "full" },
+          "illustration": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "description": "Container-relative path (assets/page-N.jpg) or external URL"
+              },
+              "alt": { "type": "string" },
+              "animation": { "enum": ["none", "fade-in", "slide-up", "zoom-in"], "default": "fade-in" },
+              "animationDuration": { "type": "string", "default": "1s" }
+            }
+          },
+          "text": {
+            "type": "object",
+            "properties": {
+              "content": { "type": "string" },
+              "voice": { "type": "string" },
+              "audioUrl": {
+                "type": "string",
+                "description": "Narration audio. In a published container: assets/narration-N.m4a (AAC) or assets/narration-N.wav (fallback). MUST NOT be Opus/WebM.",
+                "pattern": "^(?!.*\\.(webm|ogg|opus)$).*$"
+              },
+              "audioCodec": {
+                "enum": ["aac", "wav"],
+                "description": "Codec of published narration. aac is the normalization target; wav is the only permitted fallback."
+              },
+              "wordHighlight": { "type": "boolean", "default": true },
+              "animation": { "enum": ["none", "fade-in", "typewriter", "words-fade-in", "slide-up"], "default": "fade-in" },
+              "fontSize": { "enum": ["small", "medium", "large", "xl"], "default": "medium" }
+            }
+          },
+          "music": {
+            "oneOf": [
+              { "type": "string", "description": "Mood name or track ID" },
+              {
+                "type": "object",
+                "properties": {
+                  "crossfade": { "type": "string" },
+                  "duration": { "type": "string" }
+                }
+              }
+            ]
+          },
+          "timing": {
+            "type": "object",
+            "properties": {
+              "minDuration": { "type": "string" },
+              "autoPause": { "type": "string", "default": "3s" },
+              "readingSpeed": { "enum": ["slow", "medium", "fast"], "default": "medium" }
+            }
+          }
+        }
+      }
+    }
+  }
+}
