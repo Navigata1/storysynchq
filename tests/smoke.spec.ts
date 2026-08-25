@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Phase 1: Reader Polish', () => {
   test('landing page loads with hero and CTA', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/classic');
     await expect(page.getByRole('heading', { name: 'StorySyncHQ' })).toBeVisible();
     await expect(page.getByRole('button', { name: /Read Demo Storybook/i })).toBeVisible();
     await expect(page.getByText('The Immersive Storybook Protocol')).toBeVisible();
@@ -10,7 +10,7 @@ test.describe('Phase 1: Reader Polish', () => {
   });
 
   test('landing page sections render', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/classic');
     // Scroll to protocol section
     await page.evaluate(() => window.scrollTo(0, 800));
     await page.waitForTimeout(500);
@@ -20,7 +20,7 @@ test.describe('Phase 1: Reader Polish', () => {
   });
 
   test('demo storybook opens and renders first page', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/classic');
     await page.getByRole('button', { name: /Read Demo Storybook/i }).click();
     await page.waitForTimeout(3500);
     // Show controls
@@ -33,7 +33,7 @@ test.describe('Phase 1: Reader Polish', () => {
   });
 
   test('reader navigation works', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/classic');
     await page.getByRole('button', { name: /Read Demo Storybook/i }).click();
     await page.waitForTimeout(3000);
     // Navigate to page 2
@@ -47,7 +47,7 @@ test.describe('Phase 1: Reader Polish', () => {
   });
 
   test('voice mode toggle and record button visible', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/classic');
     await page.getByRole('button', { name: /Read Demo Storybook/i }).click();
     await page.waitForTimeout(3000);
     // Click to show controls
@@ -61,7 +61,7 @@ test.describe('Phase 1: Reader Polish', () => {
   });
 
   test('recording panel opens', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/classic');
     await page.getByRole('button', { name: /Read Demo Storybook/i }).click();
     await page.waitForTimeout(3000);
     await page.click('body');
@@ -75,7 +75,7 @@ test.describe('Phase 1: Reader Polish', () => {
   });
 
   test('exit reader returns to landing', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/classic');
     await page.getByRole('button', { name: /Read Demo Storybook/i }).click();
     await page.waitForTimeout(3000);
     await page.keyboard.press('Escape');
@@ -84,7 +84,7 @@ test.describe('Phase 1: Reader Polish', () => {
   });
 
   test('progress bar advances with pages', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/classic');
     await page.getByRole('button', { name: /Read Demo Storybook/i }).click();
     await page.waitForTimeout(3000);
     // Navigate through several pages

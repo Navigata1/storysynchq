@@ -1,0 +1,727 @@
+/* ============================================================================
+   The Receiving Room — player.css
+   Complex animation only (docs/design-direction.md §8). Everything else is a
+   Tailwind utility on the element.
+
+   Register A (studio chrome) is the room around the story; Register B (tape
+   stock) is the cassette itself — the cover gate, the end card, the chooser.
+
+   Layered into @layer components so any Tailwind utility passed by a consumer
+   (or by these components) still wins the cascade.
+   ========================================================================== */
+
+@keyframes pl-rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pl-cover-in {
+  from {
+    opacity: 0;
+    transform: translateY(22px) scale(0.975);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Page turn — a sheet of paper lifting away and the next one settling.
+   Rotation is tiny on purpose: a book page, not a slide deck. */
+@keyframes pl-turn-out-next {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-3.5%) rotateY(5deg) scale(0.985);
+  }
+}
+
+@keyframes pl-turn-out-prev {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateX(3.5%) rotateY(-5deg) scale(0.985);
+  }
+}
+
+@keyframes pl-turn-in-next {
+  from {
+    opacity: 0;
+    transform: translateX(4.5%) rotateY(-7deg) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pl-turn-in-prev {
+  from {
+    opacity: 0;
+    transform: translateX(-4.5%) rotateY(7deg) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pl-sheet-up {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pl-glow {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+@layer components {
+  /* ---------------------------------------------------------------- root -- */
+  .pl-root {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    background-color: #0a0e1a;
+    color: #e9f0fa;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* A quiet room: a little warmth top-left, a little violet bottom-right. */
+  .pl-room-light {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(1100px 700px at 14% 6%, rgba(245, 158, 11, 0.1), transparent 52%),
+      radial-gradient(900px 620px at 88% 96%, rgba(124, 107, 255, 0.1), transparent 48%);
+  }
+
+  .pl-root.is-idle-ui {
+    cursor: none;
+  }
+
+  /* --------------------------------------------------------------- cover -- */
+  .pl-cover {
+    position: absolute;
+    inset: 0;
+    z-index: 40;
+    display: grid;
+    place-items: center;
+    overflow-y: auto;
+    padding: clamp(20px, 5vw, 48px);
+    padding-bottom: max(clamp(20px, 5vw, 48px), env(safe-area-inset-bottom, 0px));
+  }
+
+  .pl-cover-inner {
+    display: flex;
+    width: min(460px, 100%);
+    flex-direction: column;
+    align-items: stretch;
+    gap: 22px;
+    animation: pl-cover-in 620ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+  }
+
+  /* The cassette shell sitting on top of its own label. */
+  .pl-shell {
+    --sk-ink: #efe4d2;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 18px 22px;
+    border: 3px solid #1e1a16;
+    border-bottom: none;
+    border-radius: 14px 14px 0 0;
+    background-image: linear-gradient(180deg, #4a4540 0%, #3b3733 62%, #2f2b28 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  }
+
+  .pl-shell-window {
+    flex: 1 1 auto;
+    height: 26px;
+    border: 2px solid rgba(0, 0, 0, 0.45);
+    border-radius: 6px;
+    background-image: linear-gradient(180deg, rgba(20, 18, 16, 0.85), rgba(60, 55, 50, 0.55));
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.65);
+  }
+
+  .pl-cover-note {
+    margin: 0;
+    font-size: 10px;
+    line-height: 1.6;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(226, 232, 240, 0.4);
+    text-align: center;
+  }
+
+  /* --------------------------------------------------------------- stage -- */
+  .pl-stage {
+    position: absolute;
+    inset: 0;
+    perspective: 1600px;
+  }
+
+  .pl-page {
+    position: relative;
+    display: flex;
+    height: 100%;
+    width: 100%;
+    flex-direction: column;
+    transform-origin: 50% 50%;
+    will-change: transform, opacity;
+  }
+
+  .pl-page.is-out.is-next {
+    animation: pl-turn-out-next 240ms cubic-bezier(0.4, 0, 0.9, 0.5) both;
+  }
+  .pl-page.is-out.is-prev {
+    animation: pl-turn-out-prev 240ms cubic-bezier(0.4, 0, 0.9, 0.5) both;
+  }
+  .pl-page.is-in.is-next {
+    animation: pl-turn-in-next 460ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+  }
+  .pl-page.is-in.is-prev {
+    animation: pl-turn-in-prev 460ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+  }
+
+  .pl-picture {
+    position: relative;
+    display: flex;
+    min-height: 0;
+    flex: 1 1 58%;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .pl-picture img {
+    max-height: 100%;
+    max-width: 100%;
+    object-fit: contain;
+  }
+
+  /* full-bleed layout: the picture is the page, text rides a scrim */
+  .pl-page.is-full .pl-picture {
+    flex: 1 1 100%;
+  }
+  .pl-page.is-full .pl-picture img {
+    height: 100%;
+    width: 100%;
+    object-fit: cover;
+  }
+  .pl-page.is-full .pl-text {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    background-image: linear-gradient(180deg, rgba(6, 9, 16, 0) 0%, rgba(6, 9, 16, 0.82) 42%, rgba(6, 9, 16, 0.96) 100%);
+  }
+
+  .pl-text {
+    display: flex;
+    min-height: 0;
+    flex: 0 1 auto;
+    flex-direction: column;
+    justify-content: center;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: clamp(18px, 3.4vw, 40px) clamp(72px, 12vw, 160px);
+    padding-bottom: max(clamp(96px, 14vh, 148px), env(safe-area-inset-bottom, 0px));
+    background-image: linear-gradient(180deg, #0b0e17 0%, #080b12 100%);
+  }
+
+  .pl-prose {
+    margin: 0 auto;
+    max-width: 46ch;
+    font-family: Georgia, "Iowan Old Style", "Times New Roman", serif;
+    line-height: 1.62;
+    color: rgba(233, 240, 250, 0.92);
+    text-wrap: pretty;
+  }
+
+  /* Word-level read-along. Colour and weight only — transforms do not apply to
+     inline boxes, and the wrapping stays natural. */
+  .pl-word {
+    transition:
+      color 220ms ease-out,
+      opacity 220ms ease-out,
+      text-shadow 220ms ease-out;
+  }
+  .pl-word.is-past {
+    color: rgba(255, 255, 255, 0.95);
+  }
+  .pl-word.is-future {
+    color: rgba(233, 240, 250, 0.42);
+  }
+  .pl-word.is-now {
+    color: #fcd34d;
+    text-shadow: 0 0 22px rgba(245, 158, 11, 0.45);
+  }
+
+  /* Title page — Register B type, centred, no picture competition. */
+  .pl-title-page {
+    display: flex;
+    height: 100%;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 26px;
+    padding: clamp(24px, 6vw, 64px);
+  }
+  .pl-title {
+    margin: 0;
+    max-width: 20ch;
+    font-family: var(--font-fraunces), Georgia, serif;
+    font-weight: 900;
+    font-size: clamp(2rem, 7vw, 4rem);
+    line-height: 1.04;
+    letter-spacing: -0.02em;
+    text-align: center;
+    text-wrap: balance;
+    color: #fffdf6;
+  }
+
+  /* accessibility skins ---------------------------------------------------- */
+  .pl-root.is-dys .pl-prose,
+  .pl-root.is-dys .pl-title {
+    font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+    font-weight: 500;
+    letter-spacing: 0.045em;
+    word-spacing: 0.18em;
+    line-height: 1.95;
+  }
+
+  .pl-root.is-hc {
+    background-color: #000000;
+  }
+  .pl-root.is-hc .pl-room-light {
+    display: none;
+  }
+  .pl-root.is-hc .pl-text {
+    background-image: none;
+    background-color: #000000;
+  }
+  .pl-root.is-hc .pl-prose {
+    color: #ffffff;
+  }
+  .pl-root.is-hc .pl-word.is-future {
+    color: rgba(255, 255, 255, 0.72);
+  }
+  .pl-root.is-hc .pl-word.is-now {
+    color: #ffe36a;
+    text-shadow: none;
+  }
+  .pl-root.is-hc .pl-picture {
+    background-color: #000000;
+  }
+
+  /* ---------------------------------------------------------- tap zones --- */
+  .pl-zone {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    z-index: 5;
+    width: min(18%, 104px);
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .pl-zone--prev {
+    left: 0;
+  }
+  .pl-zone--next {
+    right: 0;
+  }
+  .pl-zone:focus-visible {
+    outline: 3px solid #f59e0b;
+    outline-offset: -6px;
+    border-radius: 18px;
+  }
+
+  /* ----------------------------------------------------------- the deck --- */
+  /* Reels turn quietly in the corner while the tape rolls. Never auto-hidden:
+     they are the one honest indicator that sound is moving. */
+  .pl-deck {
+    position: absolute;
+    top: max(14px, env(safe-area-inset-top, 0px));
+    left: 16px;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 999px;
+    background-color: rgba(8, 11, 19, 0.5);
+    backdrop-filter: blur(10px);
+    opacity: 0.55;
+    pointer-events: none;
+    transition: opacity 320ms ease-out;
+  }
+  .pl-deck.is-live {
+    opacity: 0.92;
+  }
+  .pl-deck-read {
+    font-family: var(--font-plex-mono), ui-monospace, monospace;
+    font-size: 10px;
+    line-height: 1;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(226, 232, 240, 0.62);
+    white-space: nowrap;
+  }
+
+  /* ------------------------------------------------------------- chrome --- */
+  .pl-chrome {
+    position: absolute;
+    z-index: 30;
+    transition:
+      opacity 320ms ease-out,
+      transform 320ms ease-out;
+  }
+  .pl-chrome.is-hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+  .pl-chrome--top {
+    top: max(12px, env(safe-area-inset-top, 0px));
+    right: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .pl-chrome--top.is-hidden {
+    transform: translateY(-12px);
+  }
+  .pl-chrome--bottom {
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 0 14px max(16px, env(safe-area-inset-bottom, 0px));
+  }
+  .pl-chrome--bottom.is-hidden {
+    transform: translateY(16px);
+  }
+
+  .pl-chip {
+    display: inline-flex;
+    min-height: 44px;
+    min-width: 44px;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 12px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+    background-color: rgba(10, 14, 26, 0.62);
+    backdrop-filter: blur(12px);
+    color: rgba(233, 240, 250, 0.88);
+    font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition:
+      background-color 220ms ease-out,
+      border-color 220ms ease-out,
+      color 220ms ease-out;
+  }
+  .pl-chip:hover {
+    border-color: rgba(255, 255, 255, 0.26);
+    background-color: rgba(18, 24, 40, 0.78);
+    color: #ffffff;
+  }
+  .pl-chip.is-on {
+    border-color: rgba(245, 158, 11, 0.6);
+    color: #fcd34d;
+  }
+  .pl-chip-glyph {
+    font-size: 15px;
+    line-height: 1;
+  }
+
+  /* progress: a strip of tape filling up */
+  .pl-progress {
+    position: relative;
+    height: 3px;
+    width: min(560px, 100%);
+    overflow: hidden;
+    border-radius: 999px;
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+  .pl-progress-fill {
+    height: 100%;
+    width: 100%;
+    transform-origin: 0 50%;
+    border-radius: 999px;
+    background-image: linear-gradient(90deg, #f59e0b, #fcd34d);
+    transition: transform 480ms cubic-bezier(0.2, 0.7, 0.3, 1);
+  }
+
+  .pl-transport {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 999px;
+  }
+
+  /* -------------------------------------------------------------- sheet --- */
+  .pl-sheet {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 50;
+    max-height: 82vh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-radius: 22px 22px 0 0;
+    padding: 20px clamp(16px, 5vw, 32px) max(22px, env(safe-area-inset-bottom, 0px));
+    animation: pl-sheet-up 320ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+  }
+  .pl-sheet-scrim {
+    position: absolute;
+    inset: 0;
+    z-index: 45;
+    background-color: rgba(4, 6, 12, 0.5);
+  }
+  .pl-sheet-label {
+    font-family: var(--font-plex-mono), ui-monospace, monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(226, 232, 240, 0.5);
+  }
+
+  .pl-seg {
+    display: flex;
+    gap: 6px;
+    padding: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 14px;
+    background-color: rgba(4, 8, 16, 0.6);
+  }
+  .pl-seg-btn {
+    flex: 1 1 0;
+    min-height: 44px;
+    padding: 0 10px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    background-color: transparent;
+    color: rgba(226, 232, 240, 0.68);
+    font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+      background-color 200ms ease-out,
+      color 200ms ease-out,
+      border-color 200ms ease-out;
+  }
+  .pl-seg-btn:hover {
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.06);
+  }
+  .pl-seg-btn[aria-checked="true"] {
+    border-color: rgba(245, 158, 11, 0.55);
+    background-color: rgba(245, 158, 11, 0.16);
+    color: #fcd34d;
+  }
+
+  .pl-switch {
+    display: flex;
+    width: 100%;
+    min-height: 52px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 8px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 14px;
+    background-color: rgba(255, 255, 255, 0.03);
+    color: rgba(233, 240, 250, 0.9);
+    font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+    font-size: 14px;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 200ms ease-out, background-color 200ms ease-out;
+  }
+  .pl-switch:hover {
+    border-color: rgba(255, 255, 255, 0.22);
+  }
+  .pl-switch-track {
+    position: relative;
+    flex: none;
+    width: 52px;
+    height: 30px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 999px;
+    background-color: rgba(6, 10, 18, 0.8);
+    transition: border-color 240ms ease-out, background-color 240ms ease-out;
+  }
+  .pl-switch[aria-checked="true"] .pl-switch-track {
+    border-color: rgba(245, 158, 11, 0.6);
+    background-color: rgba(245, 158, 11, 0.22);
+  }
+  .pl-switch-knob {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    background-image: linear-gradient(180deg, #e7edf6 0%, #aebacb 100%);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+    transition: transform 280ms cubic-bezier(0.2, 0.7, 0.3, 1), background-image 280ms ease-out;
+  }
+  .pl-switch[aria-checked="true"] .pl-switch-knob {
+    transform: translateX(22px);
+    background-image: linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%);
+  }
+
+  /* ------------------------------------------------------------ end card -- */
+  .pl-end {
+    position: absolute;
+    inset: 0;
+    z-index: 42;
+    display: grid;
+    place-items: center;
+    overflow-y: auto;
+    padding: clamp(20px, 5vw, 48px);
+    background-color: rgba(5, 8, 15, 0.9);
+    backdrop-filter: blur(14px);
+  }
+  .pl-end-inner {
+    display: flex;
+    width: min(430px, 100%);
+    flex-direction: column;
+    gap: 18px;
+    animation: pl-rise 520ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+  }
+
+  /* ------------------------------------------------- the chooser (room) --- */
+  .pl-room {
+    position: relative;
+    min-height: 100dvh;
+    background-color: #0a0e1a;
+    color: #e9f0fa;
+  }
+  .pl-room-inner {
+    position: relative;
+    margin: 0 auto;
+    display: flex;
+    width: min(720px, 100%);
+    flex-direction: column;
+    gap: clamp(20px, 4vw, 34px);
+    padding: clamp(28px, 7vw, 72px) clamp(18px, 5vw, 32px) clamp(40px, 8vw, 80px);
+  }
+  .pl-choice {
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    border-radius: 14px;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+    transition: transform 240ms cubic-bezier(0.2, 0.7, 0.3, 1), filter 240ms ease-out;
+    animation: pl-rise 520ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+  }
+  .pl-choice:hover {
+    transform: translateY(-3px);
+    filter: brightness(1.03);
+  }
+  .pl-choice:active {
+    transform: translateY(0);
+  }
+  .pl-choice:focus-visible {
+    outline: 3px solid #f59e0b;
+    outline-offset: 4px;
+  }
+  .pl-choice:disabled {
+    cursor: wait;
+    opacity: 0.6;
+  }
+  .pl-choice-1 {
+    animation-delay: 60ms;
+  }
+  .pl-choice-2 {
+    animation-delay: 140ms;
+  }
+  .pl-choice-3 {
+    animation-delay: 220ms;
+  }
+
+  .pl-loading-reels {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    animation: pl-glow 2.4s ease-in-out infinite;
+  }
+
+  /* --------------------------------------------- reduced motion: no travel */
+  @media (prefers-reduced-motion: reduce) {
+    .pl-cover-inner,
+    .pl-end-inner,
+    .pl-choice,
+    .pl-sheet,
+    .pl-loading-reels {
+      animation: none !important;
+    }
+    .pl-page,
+    .pl-page.is-out.is-next,
+    .pl-page.is-out.is-prev,
+    .pl-page.is-in.is-next,
+    .pl-page.is-in.is-prev {
+      animation: none !important;
+    }
+    .pl-chrome,
+    .pl-chrome.is-hidden {
+      transform: none;
+    }
+    .pl-word {
+      transition-duration: 1ms;
+    }
+    .pl-progress-fill {
+      transition-duration: 1ms;
+    }
+    .pl-choice:hover {
+      transform: none;
+    }
+    .pl-switch-knob,
+    .pl-switch-track {
+      transition-duration: 1ms;
+    }
+  }
+}
