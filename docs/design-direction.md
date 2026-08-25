@@ -145,7 +145,57 @@ that is a bug in the protocol contract, not a styling choice.
   API routes for core flows.
 - `npm run build` green, `npm run lint` no new errors, Playwright suite green.
 
-## 9. The feeling test (from CLAUDE.md §9)
+## 9. Vision addendum (from the recovered Protocol Vision review, Aug 25 2026)
+
+The recovered vision document sharpens four things — these override any conflicting
+instinct elsewhere in this file:
+
+1. **The wedge**: "Make any storybook read itself in the voice and mood you
+   choose." The moat is NOT one-shot AI story generation (commoditized) — it is
+   post-creation ownership: parent voice, page timing, remixable moods,
+   accessibility presets, a portable package that survives outside the app.
+   The demo moment to build toward: *"Google cannot read this in your voice."*
+2. **Do not lead with Studio Mode.** "PowerPoint-level control is a later moat.
+   The near-term magic is a beautiful read/record/share loop." Simple mode is
+   the product; Advanced mode is depth for later, present but never the pitch.
+   The Family Voice Storybook journey is priority one; schools second;
+   remix marketplace later.
+3. **Naming**: "SSYNC Protocol" for the format; "StorySync Reader" and
+   "StorySync Creator" for the product surfaces.
+4. **The seven-layer packet model** (protocol anatomy, use this language when
+   the UI explains the format): Metadata / Visual / Text / Voice / Sound /
+   Behavior / Signature. The Signature layer (share URL, QR, ownership, remix
+   ancestry, consent records, offline bundle) is v2.1 protocol work — consent
+   and rights metadata are sacred, especially for voice.
+5. **The ten-minute test (kill criteria)**: a user must create and share a
+   satisfying 5-page narrated story in under 10 minutes, or nothing else matters.
+
+## 10. Composition doctrine (Adaptive Design Intelligence)
+
+Applied from the IDC design-intelligence method — these are hard rules for every
+surface:
+
+- **Exactly one signature moment** across the whole experience: the landing's
+  cassette press-play. Nothing else may compete with it in spectacle.
+- **One scroll owner per viewport**: at any scroll position, exactly one element
+  owns motion. No two sections animating simultaneously in view.
+- **Shared grammars**: one easing family everywhere (ease-out, tape-transport
+  physics — motion decays like a reel spinning down, never bounces); one grid;
+  one material language per register (glass for chrome, print for tape); one
+  light direction.
+- **Recovery stillness**: after any animated moment, the next viewport is calm.
+  Never chain two spectacle sections.
+- **Chapter seams**: sections transition with a deliberate seam (the tape-stripe
+  divider), not by drifting into each other.
+- **Temporal completeness**: every animation defines trigger, duration, easing,
+  reversibility, and its reduced-motion state. "None" is a valid state; unknown
+  is not.
+- **Mechanisms transfer, trade dress does not**: borrow interaction mechanics
+  from the best immersive sites, never their branded compositions or assets.
+- **Budgets**: landing ≤ 200KB JS beyond the framework, no video assets in v1,
+  CSS/SVG animation over canvas where possible, 60fps or the effect is cut.
+
+## 11. The feeling test (from CLAUDE.md §9)
 
 Before shipping any screen, ask: *does this get us closer to the kid at the
 library table with the cassette deck — undivided, focused, magical attention on

@@ -118,9 +118,21 @@ At AAC 96 kbps, 5 minutes of narration is ≈ 3.6 MB.
   code. No soft-delete of children's voice data.
 - Players ship **zero third-party trackers**. See [`/PRIVACY.md`](../PRIVACY.md).
 
-## 7. Versioning
+## 7. The Signature layer (v2.1 draft)
+
+The seven-layer packet model from the protocol vision (Metadata / Visual / Text /
+Voice / Sound / Behavior / **Signature**) reserves a top-level `signature` block
+for what must travel WITH a story to make it ownable and remixable outside any
+one app: `shareUrl`, `ownership`, `remixOf` (remix ancestry), `voiceConsent[]`
+(who consented to which recorded voice — sacred for children's and family
+voices), and `rights`. All fields optional and additive; v2.0 readers ignore
+them. A published story containing a recorded human voice SHOULD carry a
+`voiceConsent` record.
+
+## 8. Versioning
 
 - `1.0` — bare JSON document (`.ssync.json`), external/data-URL media only.
   Readers keep accepting v1 documents.
 - `2.0` — this spec: ZIP container, bundled assets, codec rule, `audioCodec`.
+- `2.1` (draft) — the Signature layer (§7): ownership, remix ancestry, consent.
 - Future versions bump `version` and migrate in `src/lib/storysync/`.

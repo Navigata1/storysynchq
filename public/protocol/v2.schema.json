@@ -25,6 +25,28 @@
         }
       }
     },
+    "signature": {
+      "type": "object",
+      "description": "SSYNC v2.1 draft signature layer — ownership, remix ancestry, and consent travel with the story. Optional; v2.0 readers ignore it. A published story containing a recorded human voice SHOULD carry a voiceConsent record.",
+      "properties": {
+        "shareUrl": { "type": "string" },
+        "ownership": { "type": "string" },
+        "remixOf": { "type": "string", "description": "Share URL or id of the story this one was remixed from" },
+        "voiceConsent": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["voice", "grantedBy"],
+            "properties": {
+              "voice": { "type": "string" },
+              "grantedBy": { "type": "string" },
+              "date": { "type": "string", "format": "date" }
+            }
+          }
+        },
+        "rights": { "type": "string" }
+      }
+    },
     "settings": {
       "type": "object",
       "properties": {
