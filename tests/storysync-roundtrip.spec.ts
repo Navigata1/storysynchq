@@ -110,4 +110,17 @@ test.describe("storysync container", () => {
     expect(mime).toBe("audio/wav");
     expect(bytesToDataUrl(bytes, mime)).toBe(`data:audio/wav;base64,${TINY_WAV_B64}`);
   });
+  test("data URL parser accepts parameterized mimes (Safari: audio/mp4;codecs=mp4a.40.2)", () => {
+    const { bytes, mime } = dataUrlToBytes(`data:audio/mp4;codecs=mp4a.40.2;base64,${TINY_WAV_B64}`);
+    expect(mime).toBe("audio/mp4");
+    expect(bytes.length).toBeGreaterThan(0);
+    // Round-trips through a container as an .m4a asset.
+    const story: SsyncManifest = {
+      version: "2.0",
+      metadata: { title: "Safari Take" },
+      pages: [{ id: 1, text: { content: "hi", audioUrl: `data:audio/mp4;codecs=mp4a.40.2;base64,${TINY_WAV_B64}`, audioCodec: "aac" } }],
+    };
+    const restored = loadStorysyncToStory(buildStorysyncFromStory(story));
+    expect(restored.pages[0].text?.audioUrl?.startsWith("data:audio/mp4;base64,")).toBe(true);
+  });
 });
