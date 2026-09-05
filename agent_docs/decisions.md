@@ -69,3 +69,12 @@ is deferred — it needs a migration applied to production, decided with Jon.
 
 **2026-09-05 · Push after every commit** — A container recycle stranded four unpushed commits
 (recovered from a bundle Jon had downloaded). Rule: commit → push immediately, always.
+
+**2026-09-05 · Gauntlet pass 1 — verdicts and what the critics left open** — Four Opus work
+packages against `docs/10x-plan.md`: Melody band 5 (r1), Studio band 5 (r1), Landing band 5 (r2,
+after a /protocol horizontal-overflow fail), Player pass at band 4 (r2, after a falsified item:
+"Tap to Begin" threw without Web Audio). Permanent gates live in `tests/wp-*.spec.ts` and
+`tests/critic-*.spec.ts`. Known, accepted: two studio tabs on one device share the single
+`ssync-studio-draft` key and overwrite each other's autosave — per-tab draft ids are a follow-up.
+The `/protocol` packet diagram uses a fixed 760px viewBox and scrolls sideways on phones by
+design (keyboard-reachable, legend repeats every key); a stacked narrow variant is a follow-up.

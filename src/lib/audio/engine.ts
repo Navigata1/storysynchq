@@ -25,9 +25,12 @@ const RAMP_S = 0.6;
  * Music-bus level per unit of `gainMult` at full musicVolume.
  *
  * The old source was two full-scale oscillators (peak ≈ 2.0) into 0.03; the
- * MusicBed's own peak is ≈ 0.4, so this constant is scaled to keep the bed at
- * the same perceived level — and therefore the same distance under narration.
- * The duck factor and ramp times below are untouched.
+ * MusicBed's own peak is ≈ 0.4, so this constant is scaled up from the old
+ * drone's 0.03. Measured (tests/critic-melody.spec.ts): the bed still sits
+ * 10–17 dB quieter in RMS than the drone did at identical settings — a
+ * deliberate choice; an arpeggio puts energy where the ear is most sensitive,
+ * and the melody must stay under a child's voice. Worst-case bus peak is
+ * ≈ 0.045 (~27 dB headroom). The duck factor and ramp times are untouched.
  */
 const BUS_UNIT = 0.09;
 

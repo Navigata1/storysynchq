@@ -105,6 +105,28 @@ function madeIn(startedAt: string): string {
   return formatClock(Math.max(0, (Date.now() - start) / 1000));
 }
 
+
+/** Sign-in failures are read by a parent at bedtime, not a developer. */
+function humanizeAuthError(err: unknown): string {
+  const raw = err instanceof Error ? err.message : String(err ?? "");
+  const m = raw.toLowerCase();
+  if (!m) return "That did not work. Check the email and password and try again.";
+  if (m.includes("failed to fetch") || m.includes("network") || m.includes("load failed"))
+    return "We couldn't reach the sign-in service. Check the connection and try again.";
+  if (m.includes("invalid login") || m.includes("invalid credentials") || m.includes("invalid_grant"))
+    return "That email and password don't match. Try again, or make an account.";
+  if (m.includes("already registered") || m.includes("already exists") || m.includes("already been registered"))
+    return "That email already has an account — sign in instead.";
+  if (m.includes("rate limit") || m.includes("too many"))
+    return "Too many tries in a row — wait a minute and try again.";
+  if (m.includes("password") && (m.includes("6") || m.includes("short") || m.includes("weak")))
+    return "Passwords need at least 6 characters.";
+  if (m.includes("email") && (m.includes("invalid") || m.includes("valid")))
+    return "That doesn't look like an email address — check it and try again.";
+  if (m.includes("confirm")) return "Confirm the email we sent you first, then sign in.";
+  return "That did not work. Check the email and password and try again.";
+}
+
 export default function Studio() {
   const [state, setState] = React.useState<StudioState>(() => blankState());
   const [activeIndex, setActiveIndexState] = React.useState(0);
@@ -518,9 +540,7 @@ export default function Studio() {
           // Honest fallback: keep the tape here and say so. Never "storage full".
           usedCloud = false;
           setAuthOffer(true);
-          setPublishNote(
-            "Saved on this device. There is no link yet because nobody is signed in — download the tape, or sign in below.",
-          );
+          setPublishNote(null); // the card explains the no-link state; one voice, not two
           try {
             savedId = saveLocalBook(bookInput(manifest), existingId).id;
           } catch (localErr) {
@@ -739,11 +759,7 @@ export default function Studio() {
         }
         setAuthReady(true);
       } catch (err) {
-        setAuthError(
-          err instanceof Error && err.message
-            ? err.message
-            : "That did not work. Check the email and password and try again.",
-        );
+        setAuthError(humanizeAuthError(err));
       } finally {
         setAuthBusy(false);
       }

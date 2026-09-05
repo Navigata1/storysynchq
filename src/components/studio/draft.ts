@@ -13,7 +13,7 @@
  */
 
 import type { StudioState } from "./types";
-import { blankState } from "./types";
+import { blankState, pageHasContent } from "./types";
 
 export const DRAFT_KEY = "ssync-studio-draft";
 const DRAFT_VERSION = 1;
@@ -53,8 +53,25 @@ export function loadDraft(): { state: StudioState; savedAt: string } | null {
   }
 }
 
+/** True when nothing a child made is in the state — no pictures, words, voice. */
+export function isBlankState(state: StudioState): boolean {
+  const defaultTitle = blankState().manifest.metadata.title;
+  const title = (state.manifest.metadata.title ?? "").trim();
+  return (
+    Object.keys(state.recordings ?? {}).length === 0 &&
+    !state.manifest.pages.some(pageHasContent) &&
+    (title === "" || title === defaultTitle)
+  );
+}
+
 export function saveDraft(state: StudioState): SaveOutcome {
   if (typeof window === "undefined") return "unavailable";
+  // A blank story (e.g. right after "delete everything") clears the key rather
+  // than resurrecting an empty envelope — the key is truly absent after a delete.
+  if (isBlankState(state)) {
+    clearDraft();
+    return "ok";
+  }
   const envelope: DraftEnvelope = { v: DRAFT_VERSION, savedAt: new Date().toISOString(), state };
   try {
     window.localStorage.setItem(DRAFT_KEY, JSON.stringify(envelope));

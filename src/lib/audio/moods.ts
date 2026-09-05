@@ -430,6 +430,9 @@ export function isMoodName(value: unknown): value is MoodName {
  *   a known synonym            → its mood
  *   a phrase containing one    → that mood ("a bit scary" → Suspense)
  *   anything else non-empty    → Wonder (the house default; never silence)
+ *
+ * "Empty" is judged after normalisation: a value with no letters or digits
+ * at all ("!!", "🎵") is treated as empty and resolves to silence, not Wonder.
  */
 export function resolveMood(value: string | null | undefined): MoodName | null {
   if (typeof value !== "string") return null;

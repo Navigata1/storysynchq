@@ -306,6 +306,10 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
   const attachedRef = React.useRef(false);
   const audioOkRef = React.useRef(true);
   const goToRef = React.useRef<(dir: "next" | "prev") => void>(() => {});
+  /* The page a turn is heading for. Rapid presses inside the turn animation
+     advance from HERE, not from the stale rendered index — a child mashing
+     "next" (or anyone holding →) must never see the page freeze. */
+  const targetRef = React.useRef(0);
   const timingRef = React.useRef(1);
   const reducedRef = React.useRef(false);
 
@@ -527,7 +531,8 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
     (dir: "next" | "prev") => {
       // The last page turns into the end card — never into nothing. This is the
       // one path that must not depend on narration ever firing an event.
-      if (dir === "next" && index >= total - 1) {
+      const cur = targetRef.current;
+      if (dir === "next" && cur >= total - 1) {
         stopNarration();
         fireCue();
         setEnded(true);
@@ -535,8 +540,9 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
         return;
       }
 
-      const next = Math.min(total - 1, Math.max(0, index + (dir === "next" ? 1 : -1)));
-      if (next === index) return;
+      const next = Math.min(total - 1, Math.max(0, cur + (dir === "next" ? 1 : -1)));
+      if (next === cur) return;
+      targetRef.current = next;
 
       stopNarration();
       unlockAudio(); // a gesture is a good moment to re-arm iOS
@@ -564,12 +570,15 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
         ),
       );
     },
-    [index, total, fireCue, stopNarration, unlockAudio],
+    [total, fireCue, stopNarration, unlockAudio],
   );
 
   React.useEffect(() => {
     goToRef.current = goTo;
   }, [goTo]);
+  React.useEffect(() => {
+    targetRef.current = index;
+  }, [index]);
 
   const replay = React.useCallback(() => {
     stopNarration();
@@ -855,7 +864,17 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
       ) as HTMLElement | null;
       const ownNav = !!control?.closest?.("[data-pl-nav]");
       const isArrow = event.key.startsWith("Arrow");
-      if (control && (event.key === " " || (isArrow && !ownNav))) return;
+      /* Space always belongs to the focused control. Arrows belong to it only
+         when it genuinely consumes them (text fields, selects, sliders, radio
+         groups); a focused chip like "Music on" must not deaden the keyboard. */
+      const eatsArrows =
+        !!control &&
+        !ownNav &&
+        !!control.matches?.(
+          "input, textarea, select, [role='slider'], [role='radio'], [contenteditable='true']",
+        );
+      if (control && event.key === " ") return;
+      if (isArrow && eatsArrows) return;
 
       if (event.key === "ArrowRight" || event.key === " ") {
         event.preventDefault();
