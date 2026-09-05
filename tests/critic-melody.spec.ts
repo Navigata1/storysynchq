@@ -480,17 +480,29 @@ test.describe("critic · the melody reaches the product", () => {
     expect(later - early, "oscillators created while the story plays").toBeGreaterThanOrEqual(6);
 
     // Music off must stop the stream — proof the growth is the bed and not
-    // some other oscillator in the page.
+    // some other oscillator in the page. The only other oscillator source is
+    // the page-turn cue (src/components/player/sound.ts: one "thock" sine per
+    // cue), and auto-advance may legitimately turn a page while we wait, so
+    // subtract cues fired (the player root exposes data-cues-fired).
     // The chip is icon-only below the `sm` breakpoint (its label is
     // `hidden sm:inline`), so target the pressed-state attribute, not the name.
     const size = page.viewportSize() ?? { width: 1280, height: 720 };
     await page.mouse.move(size.width / 2, size.height / 2);
     const toggle = page.locator('button[aria-pressed="true"]').first();
     await toggle.click({ timeout: 10000 });
+    const cues = () =>
+      page
+        .locator("[data-cues-fired]")
+        .first()
+        .getAttribute("data-cues-fired")
+        .then((v) => Number(v ?? 0));
     await page.waitForTimeout(1200);
     const afterOff = await read();
+    const cuesAfterOff = await cues();
     await page.waitForTimeout(2000);
     const stillOff = await read();
-    expect(stillOff - afterOff, "no oscillators once music is off").toBe(0);
+    const cuesStillOff = await cues();
+    const cueOscillators = cuesStillOff - cuesAfterOff; // one per cue
+    expect(stillOff - afterOff - cueOscillators, "no bed oscillators once music is off").toBe(0);
   });
 });

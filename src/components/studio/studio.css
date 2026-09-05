@@ -73,7 +73,12 @@
   .studio-area-rail { grid-area: rail; }
   .studio-area-stage { grid-area: stage; position: relative; min-height: 0; min-width: 0; }
   .studio-area-film { grid-area: film; }
-  .studio-area-transport { grid-area: transport; }
+  .studio-area-transport {
+    grid-area: transport;
+    position: relative;
+    z-index: 48; /* above both bottom sheets: ● REC / ▶ are always one tap away */
+  }
+  .studio { --studio-transport-h: calc(88px + env(safe-area-inset-bottom, 0px)); }
 
   /* ------------------------------------------------------------ tool rail */
   .studio-rail-list {
@@ -89,8 +94,8 @@
     position: fixed;
     left: 0;
     right: 0;
-    bottom: 0;
-    z-index: 45;
+    bottom: var(--studio-transport-h, 0px); /* rest above the transport, never over it */
+    z-index: 47; /* the active tool (record/photo) stacks ABOVE the inspector sheet */
     max-height: 74dvh;
     overflow-y: auto;
     overscroll-behavior: contain;
@@ -104,7 +109,7 @@
     position: fixed;
     left: 0;
     right: 0;
-    bottom: 0;
+    bottom: var(--studio-transport-h, 0px); /* rest above the transport, never over it */
     z-index: 46;
     max-height: 78dvh;
     overflow-y: auto;
