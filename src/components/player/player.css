@@ -99,6 +99,37 @@
   }
 }
 
+/* The ambient backdrop crossfade: the room keeps the light of the picture
+   that is leaving while the next one comes up. */
+@keyframes pl-bg-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: var(--pl-bg-opacity);
+  }
+}
+
+@keyframes pl-bg-out {
+  from {
+    opacity: var(--pl-bg-opacity);
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* Ken-Burns: the light behind the story breathes. Very slow, very small —
+   you should never catch it moving, only notice the room is alive. */
+@keyframes pl-kenburns {
+  from {
+    transform: scale(1.14) translate3d(-1.1%, -0.7%, 0);
+  }
+  to {
+    transform: scale(1.24) translate3d(1.1%, 0.7%, 0);
+  }
+}
+
 @layer components {
   /* ---------------------------------------------------------------- root -- */
   .pl-root {
@@ -114,10 +145,74 @@
   .pl-room-light {
     position: absolute;
     inset: 0;
+    z-index: 3;
     pointer-events: none;
     background:
-      radial-gradient(1100px 700px at 14% 6%, rgba(245, 158, 11, 0.1), transparent 52%),
-      radial-gradient(900px 620px at 88% 96%, rgba(124, 107, 255, 0.1), transparent 48%);
+      radial-gradient(1100px 700px at 14% 6%, rgba(245, 158, 11, 0.11), transparent 54%),
+      radial-gradient(900px 620px at 88% 96%, rgba(124, 107, 255, 0.11), transparent 52%),
+      /* The lamp in the room. Sits ABOVE the blurred picture, so even a page of
+         near-black art still has light in it — never a dead rectangle. */
+      radial-gradient(
+        150% 130% at 50% 46%,
+        rgba(124, 107, 255, 0.075),
+        rgba(245, 158, 11, 0.055) 62%,
+        rgba(245, 158, 11, 0.02) 100%
+      );
+  }
+
+  /* ------------------------------------------------------------ the room -- */
+  /* Under everything: the floor of the room. Even a page with no picture at
+     all (a text-only ending) sits in warm light, never on dead black. */
+  .pl-ambient {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image:
+      radial-gradient(130% 90% at 50% 4%, rgba(245, 158, 11, 0.2), transparent 58%),
+      radial-gradient(120% 100% at 8% 96%, rgba(124, 107, 255, 0.24), transparent 60%),
+      linear-gradient(180deg, #141a2c 0%, #0d1322 52%, #0a0e1a 100%);
+  }
+
+  /* The page illustration, blurred and oversized: the picture becomes the
+     light in the room, so a 4:3 drawing on a wide monitor never leaves dead
+     black at the edges (10x-plan G3). Two layers crossfade on a page turn. */
+  .pl-backdrop {
+    --pl-bg-opacity: 0.62;
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    overflow: hidden;
+    pointer-events: none;
+    opacity: var(--pl-bg-opacity);
+  }
+  .pl-backdrop.is-in {
+    animation: pl-bg-in 900ms ease-out both;
+  }
+  .pl-backdrop.is-out {
+    animation: pl-bg-out 900ms ease-out both;
+  }
+  .pl-backdrop img {
+    height: 100%;
+    width: 100%;
+    object-fit: cover;
+    transform: scale(1.18);
+    transform-origin: 50% 50%;
+    filter: blur(44px) saturate(1.35) brightness(0.9);
+    will-change: transform;
+    animation: pl-kenburns 52s ease-in-out infinite alternate;
+  }
+
+  /* The vignette that turns a blurred picture into a room: light in the
+     middle, the corners falling away. Sized so the edges stay coloured. */
+  .pl-vignette {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    background-image:
+      radial-gradient(118% 88% at 50% 46%, rgba(4, 6, 12, 0) 40%, rgba(4, 6, 12, 0.42) 78%, rgba(4, 6, 12, 0.72) 100%),
+      linear-gradient(180deg, rgba(4, 6, 12, 0.34) 0%, rgba(4, 6, 12, 0) 22%, rgba(4, 6, 12, 0) 68%, rgba(4, 6, 12, 0.42) 100%);
   }
 
   .pl-root.is-idle-ui {
@@ -125,6 +220,8 @@
   }
 
   /* --------------------------------------------------------------- cover -- */
+  /* The gate sits on the story's own light: the blurred first picture is
+     already behind it, dimmed just enough for the label to read. */
   .pl-cover {
     position: absolute;
     inset: 0;
@@ -132,6 +229,8 @@
     display: grid;
     place-items: center;
     overflow-y: auto;
+    background-color: rgba(6, 9, 16, 0.68);
+    backdrop-filter: blur(3px);
     padding: clamp(20px, 5vw, 48px);
     padding-bottom: max(clamp(20px, 5vw, 48px), env(safe-area-inset-bottom, 0px));
   }
@@ -183,6 +282,7 @@
   .pl-stage {
     position: absolute;
     inset: 0;
+    z-index: 4;
     perspective: 1600px;
   }
 
@@ -217,29 +317,54 @@
     align-items: center;
     justify-content: center;
     overflow: hidden;
+    /* Breathing room: the drawing is an object sitting in the light, never a
+       texture bleeding off the edge of the screen. */
+    padding: clamp(10px, 2.2vh, 30px) clamp(12px, 3vw, 56px) 0;
   }
 
   .pl-picture img {
     max-height: 100%;
     max-width: 100%;
     object-fit: contain;
+    border-radius: 16px;
+    box-shadow:
+      0 28px 80px rgba(0, 0, 0, 0.55),
+      0 0 0 1px rgba(255, 255, 255, 0.06);
   }
 
   /* full-bleed layout: the picture is the page, text rides a scrim */
   .pl-page.is-full .pl-picture {
     flex: 1 1 100%;
+    padding: 0;
   }
   .pl-page.is-full .pl-picture img {
     height: 100%;
     width: 100%;
     object-fit: cover;
+    border-radius: 0;
+    box-shadow: none;
   }
+  /* Words over art need a scrim that is actually sized to the text block —
+     transparent where the picture should breathe, opaque where the sentence
+     lives. Measured, not eyeballed: tests/wp-player.spec.ts samples the pixels
+     behind the prose and requires >= 4.5:1 against the text colour. */
   .pl-page.is-full .pl-text {
     position: absolute;
     right: 0;
     bottom: 0;
     left: 0;
-    background-image: linear-gradient(180deg, rgba(6, 9, 16, 0) 0%, rgba(6, 9, 16, 0.82) 42%, rgba(6, 9, 16, 0.96) 100%);
+    padding-top: clamp(56px, 13vh, 150px);
+    background-image: linear-gradient(
+      180deg,
+      rgba(4, 6, 12, 0) 0%,
+      rgba(4, 6, 12, 0.56) 12%,
+      rgba(4, 6, 12, 0.84) 34%,
+      rgba(4, 6, 12, 0.92) 100%
+    );
+    backdrop-filter: blur(14px) saturate(0.92);
+  }
+  .pl-page.is-full .pl-prose {
+    text-shadow: 0 2px 18px rgba(0, 0, 0, 0.7);
   }
 
   .pl-text {
@@ -250,17 +375,44 @@
     justify-content: center;
     overflow-y: auto;
     overscroll-behavior: contain;
-    padding: clamp(18px, 3.4vw, 40px) clamp(72px, 12vw, 160px);
+    padding: clamp(18px, 3.4vw, 44px) clamp(24px, 6vw, 96px);
     padding-bottom: max(clamp(96px, 14vh, 148px), env(safe-area-inset-bottom, 0px));
-    background-image: linear-gradient(180deg, #0b0e17 0%, #080b12 100%);
+    background-image: linear-gradient(
+      180deg,
+      rgba(7, 10, 18, 0) 0%,
+      rgba(7, 10, 18, 0.64) 12%,
+      rgba(7, 10, 18, 0.82) 44%,
+      rgba(7, 10, 18, 0.88) 100%
+    );
+    /* No backdrop-filter here on purpose: the ambient picture behind this
+       panel is drifting (Ken-Burns), and re-blurring it every frame is the one
+       effect in this file that could cost 60fps on a cheap phone. The gradient
+       alone measures >= 4.5:1 (tests/wp-player.spec.ts). The full-bleed variant
+       below does blur — the image under it is static, so it is paid for once. */
   }
 
+  /* A page with no picture at all: the room's light carries it, so the panel
+     stays sheer instead of painting a black rectangle. */
+  .pl-page.is-textonly .pl-text {
+    background-image: linear-gradient(
+      180deg,
+      rgba(7, 10, 18, 0.52) 0%,
+      rgba(7, 10, 18, 0.68) 55%,
+      rgba(7, 10, 18, 0.76) 100%
+    );
+  }
+
+  /* The story voice. Fraunces is the tape-stock serif (design-direction §2);
+     the size is a clamp so one stylesheet reads on a phone and on a monitor,
+     and the measure caps at ~62ch so nobody loses their line. */
   .pl-prose {
     margin: 0 auto;
-    max-width: 46ch;
-    font-family: Georgia, "Iowan Old Style", "Times New Roman", serif;
-    line-height: 1.62;
-    color: rgba(233, 240, 250, 0.92);
+    max-width: 62ch;
+    font-family: var(--font-fraunces), "Literata", Georgia, "Iowan Old Style", serif;
+    font-weight: 500;
+    line-height: 1.58;
+    letter-spacing: 0.002em;
+    color: rgba(240, 245, 252, 0.94);
     text-wrap: pretty;
   }
 
@@ -273,7 +425,8 @@
       text-shadow 220ms ease-out;
   }
   .pl-word.is-past {
-    color: rgba(255, 255, 255, 0.95);
+    /* warm, not white: the words already spoken keep the lamp's colour */
+    color: rgba(255, 247, 234, 0.96);
   }
   .pl-word.is-future {
     color: rgba(233, 240, 250, 0.42);
@@ -319,12 +472,16 @@
   .pl-root.is-hc {
     background-color: #000000;
   }
-  .pl-root.is-hc .pl-room-light {
+  .pl-root.is-hc .pl-room-light,
+  .pl-root.is-hc .pl-ambient,
+  .pl-root.is-hc .pl-backdrop,
+  .pl-root.is-hc .pl-vignette {
     display: none;
   }
   .pl-root.is-hc .pl-text {
     background-image: none;
     background-color: #000000;
+    backdrop-filter: none;
   }
   .pl-root.is-hc .pl-prose {
     color: #ffffff;
@@ -368,6 +525,7 @@
   /* Reels turn quietly in the corner while the tape rolls. Never auto-hidden:
      they are the one honest indicator that sound is moving. */
   .pl-deck {
+    --sk-ink: rgba(233, 240, 250, 0.72);
     position: absolute;
     top: max(14px, env(safe-area-inset-top, 0px));
     left: 16px;
@@ -630,6 +788,44 @@
     animation: pl-rise 520ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
   }
 
+  /* The QR that carries the tape to a phone. Register B: paper, ink, mono. */
+  .pl-qr {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px;
+    border: 3px solid #1e1a16;
+    border-radius: 12px;
+    background-color: #fffdf6;
+    color: #1e1a16;
+  }
+  .pl-qr img {
+    display: block;
+    width: 108px;
+    height: 108px;
+    flex: none;
+    border-radius: 4px;
+  }
+  .pl-qr-copy {
+    min-width: 0;
+  }
+  .pl-qr-title {
+    margin: 0 0 4px;
+    font-family: var(--font-fraunces), Georgia, serif;
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  .pl-qr-url {
+    margin: 0;
+    overflow-wrap: anywhere;
+    font-family: var(--font-plex-mono), ui-monospace, monospace;
+    font-size: 10px;
+    line-height: 1.5;
+    letter-spacing: 0.04em;
+    color: rgba(30, 26, 22, 0.66);
+  }
+
   /* ------------------------------------------------- the chooser (room) --- */
   .pl-room {
     position: relative;
@@ -709,6 +905,16 @@
     .pl-chrome,
     .pl-chrome.is-hidden {
       transform: none;
+    }
+    /* The backdrop still crossfades (opacity only, no travel) but the
+       Ken-Burns drift stops dead — nothing in the room moves on its own. */
+    .pl-backdrop img {
+      animation: none !important;
+      transform: scale(1.18);
+    }
+    .pl-backdrop.is-in,
+    .pl-backdrop.is-out {
+      animation-duration: 1ms !important;
     }
     .pl-word {
       transition-duration: 1ms;

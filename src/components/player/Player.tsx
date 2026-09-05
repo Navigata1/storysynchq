@@ -5,20 +5,32 @@
  *
  * A story arrives as an SsyncManifest and is played back full-bleed: cover gate
  * → page after page of picture + serif text, narrated by the recorded voice on
- * the manifest (or browser TTS with a word-level read-along), over a music bed
- * that ducks -12 dB underneath — all on the proven DualBusAudioEngine.
+ * the manifest (or browser TTS with a word-level read-along), over a generative
+ * music bed that ducks -12 dB underneath — all on the proven
+ * DualBusAudioEngine.
  *
- * Three rules this file exists to honour:
+ * The room, not a rectangle (10x-plan G3): the page illustration is blurred and
+ * scaled behind the composition with a vignette over it, so a 4:3 drawing on a
+ * 21:9 monitor sits in warm light instead of dead black, and the light drifts
+ * (Ken-Burns) unless the reader asked for reduced motion.
+ *
+ * Rules this file exists to honour:
  *   1. The tap on "Tap to Begin" is the iOS audio unlock. Nothing plays before.
  *   2. The manifest is the source of truth. v1 documents play; unknown fields
  *      are ignored; missing pieces degrade instead of throwing.
- *   3. Nothing leaves the device. No network, no analytics, no trackers.
+ *   3. `page.music` decides the melody through @/lib/audio/moods — and when a
+ *      page names no music, the room is SILENT. Never a default bed.
+ *   4. Nothing leaves the device. No network, no analytics, no trackers.
  */
 
 import * as React from "react";
+import QRCode from "qrcode";
 import type { SsyncManifest, SsyncPage } from "@/lib/storysync/manifest";
-import { DualBusAudioEngine, type MoodConfig } from "@/lib/audio/engine";
+import { DualBusAudioEngine } from "@/lib/audio/engine";
+import { resolveMood, type MoodName } from "@/lib/audio/moods";
 import { BigButton, GlassPanel, Reel, TapeLabel, TransportButton } from "@/components/studio-kit/kit";
+import { estimateSeconds, formatClock, parseDuration, splitWords, wordIndexAtTime } from "./timing";
+import { openCueContext, playPageTurnCue } from "./sound";
 import "./player.css";
 
 /* ────────────────────────────────────────────────────────────── constants */
@@ -32,60 +44,6 @@ const TURN_IN_MS = 460;
 const UI_IDLE_MS = 4200;
 const MUSIC_VOLUME = 0.35;
 const PREFS_KEY = "ssync-reader-prefs";
-
-/** Music beds, as proven in the classic reader. Frequencies feed the engine's
- *  music bus; the engine handles ducking and the -12 dB ramps. */
-const MOODS = {
-  Wonder: { freq1: 220, freq2: 220.5, gainMult: 1.0 },
-  Adventure: { freq1: 330, freq2: 331, gainMult: 1.7 },
-  Calm: { freq1: 110, freq2: 110.3, gainMult: 0.5 },
-  Suspense: { freq1: 155, freq2: 156, gainMult: 1.0 },
-  Joy: { freq1: 440, freq2: 441, gainMult: 1.3 },
-  Melancholy: { freq1: 185, freq2: 185.5, gainMult: 0.8 },
-} satisfies Record<string, MoodConfig>;
-
-type MoodName = keyof typeof MOODS;
-
-/** Manifests name their music freely ("wonder", "courage", "lullaby"). Map the
- *  vocabulary onto a bed rather than refusing to play a bed at all. */
-const MOOD_WORDS: Record<string, MoodName> = {
-  wonder: "Wonder",
-  magic: "Wonder",
-  magical: "Wonder",
-  dream: "Wonder",
-  dreamy: "Wonder",
-  star: "Wonder",
-  adventure: "Adventure",
-  courage: "Adventure",
-  brave: "Adventure",
-  hero: "Adventure",
-  epic: "Adventure",
-  action: "Adventure",
-  calm: "Calm",
-  peace: "Calm",
-  peaceful: "Calm",
-  lullaby: "Calm",
-  gentle: "Calm",
-  sleep: "Calm",
-  night: "Calm",
-  quiet: "Calm",
-  suspense: "Suspense",
-  mystery: "Suspense",
-  mysterious: "Suspense",
-  tense: "Suspense",
-  dark: "Suspense",
-  joy: "Joy",
-  joyful: "Joy",
-  happy: "Joy",
-  bright: "Joy",
-  cheerful: "Joy",
-  sunny: "Joy",
-  melancholy: "Melancholy",
-  sad: "Melancholy",
-  wistful: "Melancholy",
-  rain: "Melancholy",
-  reflective: "Melancholy",
-};
 
 type Speed = "slow" | "normal" | "fast";
 
@@ -116,80 +74,54 @@ function cx(...parts: Array<string | false | null | undefined>): string {
   return parts.filter(Boolean).join(" ");
 }
 
-/** "3s" / "450ms" / undefined → milliseconds. */
-function parseDuration(value: string | undefined, fallbackMs: number): number {
-  if (!value) return fallbackMs;
-  const n = parseFloat(value);
-  if (!Number.isFinite(n)) return fallbackMs;
-  return value.includes("ms") ? n : n * 1000;
-}
-
-interface Word {
-  text: string;
-  start: number;
-}
-
-/** Words with their character offsets, so TTS boundary events map exactly
- *  instead of drifting on double spaces and line breaks. */
-function splitWords(text: string): Word[] {
-  const out: Word[] = [];
-  const re = /\S+/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(text)) !== null) out.push({ text: m[0], start: m.index });
-  return out;
-}
-
 interface LooseTrack {
   id?: string;
   mood?: string;
   prompt?: string;
 }
 
-/** SSYNC v1 carries a top-level music track list; v2 pages name a track id. */
+/**
+ * Every string this page offers as a name for its music, most specific first.
+ *
+ * SSYNC v2 pages carry `music: "Wonder"`; v1 pages carry a *track id* into a
+ * top-level `music.tracks` table (`music: "peaceful"` → that track's mood or
+ * prompt); a page may also carry `music: { crossfade: "adventure" }`.
+ * An empty list means the page asked for no music at all.
+ */
 function moodTokens(manifest: SsyncManifest, page: SsyncPage | undefined): string[] {
-  const id = typeof page?.music === "string" ? page.music : undefined;
+  const raw = page?.music;
   const tokens: string[] = [];
-  if (id) tokens.push(id);
-  const tracks = (manifest as { music?: { tracks?: LooseTrack[] } }).music?.tracks;
-  if (id && Array.isArray(tracks)) {
-    const track = tracks.find((t) => t?.id === id);
-    if (track?.mood) tokens.push(track.mood);
-    if (track?.prompt) tokens.push(track.prompt);
+  if (typeof raw === "string") {
+    if (raw.trim()) tokens.push(raw);
+  } else if (raw && typeof raw === "object") {
+    const crossfade = (raw as { crossfade?: unknown }).crossfade;
+    if (typeof crossfade === "string" && crossfade.trim()) tokens.push(crossfade);
   }
-  const genre = manifest.metadata?.genre;
-  if (genre) tokens.push(genre);
+  if (tokens.length === 0) return [];
+
+  const tracks = (manifest as { music?: { tracks?: LooseTrack[] } }).music?.tracks;
+  if (Array.isArray(tracks)) {
+    for (const id of [...tokens]) {
+      const track = tracks.find((t) => t?.id === id);
+      if (track?.mood) tokens.push(track.mood);
+      if (track?.prompt) tokens.push(track.prompt);
+    }
+  }
   return tokens;
 }
 
-function resolveMood(manifest: SsyncManifest, page: SsyncPage | undefined): MoodName {
-  const tokens = moodTokens(manifest, page);
-  for (const token of tokens) {
-    const direct = MOOD_WORDS[token.trim().toLowerCase()];
-    if (direct) return direct;
+/**
+ * The page's mood, or null for silence.
+ *
+ * One vocabulary for the whole product (@/lib/audio/moods): the Studio writes
+ * it, the Player plays it, and neither invents a bed the other does not know.
+ */
+function pageMood(manifest: SsyncManifest, page: SsyncPage | undefined): MoodName | null {
+  for (const token of moodTokens(manifest, page)) {
+    const mood = resolveMood(token);
+    if (mood) return mood;
   }
-  for (const token of tokens) {
-    const lower = token.toLowerCase();
-    for (const word of Object.keys(MOOD_WORDS)) {
-      if (lower.includes(word)) return MOOD_WORDS[word];
-    }
-  }
-  return "Wonder";
-}
-
-function formatClock(totalSeconds: number): string {
-  const s = Math.max(0, Math.round(totalSeconds));
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
-}
-
-/** Rough runtime for the cover label: read at ~2.5 words/second plus pauses. */
-function estimateSeconds(manifest: SsyncManifest): number {
-  let total = 0;
-  for (const page of manifest.pages) {
-    const content = page.text?.content?.trim();
-    const words = content ? content.split(/\s+/).length : 0;
-    total += words / 2.5 + parseDuration(page.timing?.autoPause, 3000) / 1000;
-  }
-  return Math.max(20, total);
+  return null;
 }
 
 function sanitizePrefs(raw: unknown): Partial<Prefs> {
@@ -208,46 +140,19 @@ function sanitizePrefs(raw: unknown): Partial<Prefs> {
   return out;
 }
 
-/** The page-turn cue: a 50 ms band-passed noise burst — paper, not a chime.
- *  Runs on a context opened inside the "Tap to Begin" gesture. */
-function playTurnCue(ctx: AudioContext | null): void {
-  if (!ctx || ctx.state === "closed") return;
-  try {
-    const size = Math.floor(ctx.sampleRate * 0.05);
-    const buffer = ctx.createBuffer(1, size, ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < size; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / size);
-
-    const source = ctx.createBufferSource();
-    source.buffer = buffer;
-    const filter = ctx.createBiquadFilter();
-    filter.type = "bandpass";
-    filter.frequency.value = 820;
-    filter.Q.value = 1.4;
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.075, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.06);
-
-    source.connect(filter);
-    filter.connect(gain);
-    gain.connect(ctx.destination);
-    source.start();
-    source.stop(ctx.currentTime + 0.06);
-  } catch {
-    /* the cue is decoration — never let it break a page turn */
-  }
+/**
+ * Read-only view of the live engine for tests and console diagnostics — the
+ * same trick `src/lib/audio/music.ts` already uses. Getters only: no story
+ * data, no writes, nothing that leaves the device (PRIVACY.md §3).
+ */
+interface PlayerHook {
+  musicPlaying: () => boolean;
+  moodName: () => MoodName | null;
+  narrationDuration: () => number | null;
+  narrationTime: () => number | null;
 }
 
-function openAudioContext(): AudioContext | null {
-  try {
-    const Ctor =
-      window.AudioContext ||
-      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    return Ctor ? new Ctor() : null;
-  } catch {
-    return null;
-  }
-}
+type HookWindow = Window & { __ssyncPlayer?: PlayerHook };
 
 /* ─────────────────────────────────────────────────────────── small pieces */
 
@@ -264,11 +169,13 @@ function StoryText({
   return (
     <p
       className="pl-prose"
-      style={{ fontSize: `calc(clamp(1.05rem, 2.5vw, 1.6rem) * ${scale})` }}
+      data-pl="prose"
+      style={{ fontSize: `calc(clamp(1.1rem, 0.92rem + 1.05vw, 1.9rem) * ${scale})` }}
     >
       {words.map((word, i) => (
         <span
           key={`${i}-${word.start}`}
+          data-pl="word"
           className={cx(
             "pl-word",
             highlight >= 0 && i < highlight && "is-past",
@@ -353,9 +260,15 @@ export interface PlayerProps {
   onExit?: () => void;
   /** The loop that justifies the protocol: receive → create. */
   onMakeYourOwn?: () => void;
+  /**
+   * The link this story lives at, when it has one (`/read?story=…`). Drawn as
+   * a QR on the end card so the tape can jump from a laptop to a grandparent's
+   * phone without anyone typing a code.
+   */
+  shareUrl?: string;
 }
 
-export function Player({ manifest, onExit, onMakeYourOwn }: PlayerProps) {
+export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProps) {
   const pages = manifest.pages;
   const total = pages.length;
 
@@ -372,8 +285,16 @@ export function Player({ manifest, onExit, onMakeYourOwn }: PlayerProps) {
   const [showUi, setShowUi] = React.useState(true);
   const [sheetOpen, setSheetOpen] = React.useState(false);
   const [musicOn, setMusicOn] = React.useState(true);
+  /** What the ENGINE is actually doing — not what the UI intends. */
+  const [musicLive, setMusicLive] = React.useState(false);
+  /** False once this browser has proved it has no working Web Audio. */
+  const [audioOk, setAudioOk] = React.useState(true);
   const [prefs, setPrefs] = React.useState<Prefs>(DEFAULT_PREFS);
   const [reduced, setReduced] = React.useState(false);
+  const [cuesFired, setCuesFired] = React.useState(0);
+  const [qr, setQr] = React.useState<string | null>(null);
+  /** Backdrop crossfade: the picture coming in, and the one fading out. */
+  const [bg, setBg] = React.useState<{ cur?: string; prev?: string; n: number }>({ n: 0 });
 
   const engineRef = React.useRef<DualBusAudioEngine | null>(null);
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
@@ -383,13 +304,13 @@ export function Player({ manifest, onExit, onMakeYourOwn }: PlayerProps) {
   const turnTimersRef = React.useRef<Array<ReturnType<typeof setTimeout>>>([]);
   const loadedKeyRef = React.useRef<string>("");
   const attachedRef = React.useRef(false);
+  const audioOkRef = React.useRef(true);
   const goToRef = React.useRef<(dir: "next" | "prev") => void>(() => {});
   const timingRef = React.useRef(1);
-  const moodRef = React.useRef<MoodName>("Wonder");
   const reducedRef = React.useRef(false);
 
   const page: SsyncPage | undefined = pages[index];
-  const mood = resolveMood(manifest, page);
+  const mood = React.useMemo(() => pageMood(manifest, page), [manifest, page]);
   const highlightOn = manifest.settings?.readAlongHighlight !== false;
   const autoPlay = manifest.settings?.autoPlay !== false;
   const cueOn = manifest.settings?.pageTurnSound !== false;
@@ -397,16 +318,16 @@ export function Player({ manifest, onExit, onMakeYourOwn }: PlayerProps) {
   const defaultPauseMs = parseDuration(manifest.settings?.accessibility?.pauseBetweenPages, 3000);
   const timingMult = baseTiming * prefs.timing * SPEED_PAUSE[prefs.speed];
   const ttsRate = SPEED_RATE[prefs.speed];
-  const runtime = React.useMemo(() => formatClock(estimateSeconds(manifest)), [manifest]);
+  const runtime = React.useMemo(
+    () => formatClock(estimateSeconds(manifest.pages, defaultPauseMs)),
+    [manifest, defaultPauseMs],
+  );
 
   /* keep the refs the timers read in sync (declared first — effects run in
      source order, so everything below sees fresh values) */
   React.useEffect(() => {
     timingRef.current = timingMult;
   }, [timingMult]);
-  React.useEffect(() => {
-    moodRef.current = mood;
-  }, [mood]);
   React.useEffect(() => {
     reducedRef.current = reduced;
   }, [reduced]);
@@ -415,6 +336,58 @@ export function Player({ manifest, onExit, onMakeYourOwn }: PlayerProps) {
     if (!engineRef.current) engineRef.current = new DualBusAudioEngine();
     return engineRef.current;
   }, []);
+
+  /**
+   * Sound is the magic of this product; it is never the gate to the story.
+   *
+   * Some browsers have no working Web Audio at all — Firefox with
+   * `dom.webaudio.enabled=false`, hardened WebViews, or any document that has
+   * hit Chrome's per-document hardware-context cap. `new AudioContext()` then
+   * throws, and every engine call that lazily builds the context throws with
+   * it (`DualBusAudioEngine.ensureContext`). If that reached a click handler or
+   * a React effect the reader would be stranded on the cover gate forever —
+   * which is exactly the failure rule 2 of this file forbids. So every engine
+   * call goes through here: it is attempted once, and the first failure latches
+   * the room into "silent tape" mode. The pages still turn, the words still
+   * light, the story still ends on its end card.
+   */
+  const markAudioDown = React.useCallback(() => {
+    if (!audioOkRef.current) return;
+    audioOkRef.current = false;
+    setAudioOk(false);
+  }, []);
+
+  /** Runs `fn` against the engine. Returns false when audio is unavailable. */
+  const withEngine = React.useCallback(
+    (fn: (engine: DualBusAudioEngine) => void): boolean => {
+      if (!audioOkRef.current) return false;
+      try {
+        fn(getEngine());
+        return true;
+      } catch {
+        markAudioDown();
+        return false;
+      }
+    },
+    [getEngine, markAudioDown],
+  );
+
+  /**
+   * The iOS unlock, re-armed on every gesture. `unlock()` is async, so a
+   * missing AudioContext surfaces as a rejected promise rather than a throw —
+   * both are caught here, because an unhandled rejection is still a broken
+   * page as far as a listener (and a critic) is concerned.
+   */
+  const unlockAudio = React.useCallback(() => {
+    if (!audioOkRef.current) return;
+    try {
+      getEngine()
+        .unlock()
+        .catch(() => markAudioDown());
+    } catch {
+      markAudioDown();
+    }
+  }, [getEngine, markAudioDown]);
 
   /* ── reduced motion ─────────────────────────────────────────────────── */
   React.useEffect(() => {
@@ -442,6 +415,23 @@ export function Player({ manifest, onExit, onMakeYourOwn }: PlayerProps) {
     }
   }, [prefs]);
 
+  /* ── read-only engine view for tests and the console ────────────────── */
+  React.useEffect(() => {
+    const w = window as HookWindow;
+    w.__ssyncPlayer = {
+      musicPlaying: () => engineRef.current?.musicPlaying ?? false,
+      moodName: () => engineRef.current?.moodName ?? null,
+      narrationDuration: () => {
+        const d = audioRef.current?.duration;
+        return typeof d === "number" && Number.isFinite(d) ? d : null;
+      },
+      narrationTime: () => audioRef.current?.currentTime ?? null,
+    };
+    return () => {
+      delete w.__ssyncPlayer;
+    };
+  }, []);
+
   /* ── teardown ───────────────────────────────────────────────────────── */
   React.useEffect(() => {
     const el = audioRef.current; // captured at mount: the element never swaps
@@ -467,37 +457,48 @@ export function Player({ manifest, onExit, onMakeYourOwn }: PlayerProps) {
     };
   }, []);
 
+  /* ── the ambient backdrop follows the picture, and outlives it ───────── */
+  const image = page?.illustration?.url;
+  React.useEffect(() => {
+    // A text-only page keeps the last picture's light rather than falling into
+    // dead black — the room does not empty just because a page has no art.
+    if (!image) return;
+    setBg((b) => (b.cur === image ? b : { cur: image, prev: b.cur, n: b.n + 1 }));
+  }, [image]);
+
   /* ── the tap that unlocks everything (iOS rule, non-negotiable) ──────── */
   const begin = React.useCallback(() => {
-    const engine = getEngine();
-    void engine.unlock();
+    // Every audio step below is optional. The two setState calls at the end are
+    // not: this tap opens the story, with sound or without it.
+    unlockAudio();
     const el = audioRef.current;
     if (el && !attachedRef.current) {
-      engine.attachNarrationElement(el);
-      attachedRef.current = true;
+      if (withEngine((engine) => engine.attachNarrationElement(el))) attachedRef.current = true;
     }
-    if (!cueCtxRef.current) cueCtxRef.current = openAudioContext();
+    if (!cueCtxRef.current) cueCtxRef.current = openCueContext();
     setStarted(true);
     setShowUi(true);
-  }, [getEngine]);
+  }, [unlockAudio, withEngine]);
 
-  /* ── music bed: starts with the story, follows the page's mood ───────── */
+  /* ── music bed: page.music decides, and "no music" means silence ─────── */
   React.useEffect(() => {
-    if (!started) return;
-    const engine = engineRef.current;
-    if (!engine) return;
-    if (musicOn) {
-      engine.setMusicVolume(MUSIC_VOLUME);
-      engine.startMusic(MOODS[moodRef.current]);
-    } else {
-      engine.stopMusic();
+    if (!started) {
+      setMusicLive(false);
+      return;
     }
-  }, [started, musicOn]);
-
-  React.useEffect(() => {
-    if (!started || !musicOn) return;
-    engineRef.current?.setMood(MOODS[mood]);
-  }, [mood, started, musicOn]);
+    withEngine((engine) => {
+      if (musicOn && mood) {
+        engine.setMusicVolume(MUSIC_VOLUME);
+        // startMusic() crossfades when a bed is already running (engine.ts).
+        engine.startMusic(mood);
+      } else if (engine.musicPlaying) {
+        engine.stopMusic();
+      }
+    });
+    // `data-music` is read back off the engine's own getter, never from the
+    // UI's intent — so the attribute cannot claim a bed the room isn't playing.
+    setMusicLive(engineRef.current?.musicPlaying === true);
+  }, [started, musicOn, mood, withEngine]);
 
   /* ── navigation ─────────────────────────────────────────────────────── */
   const stopNarration = React.useCallback(() => {
@@ -517,14 +518,29 @@ export function Player({ manifest, onExit, onMakeYourOwn }: PlayerProps) {
     engineRef.current?.setNarrating(false);
   }, []);
 
+  const fireCue = React.useCallback(() => {
+    if (!cueOn) return;
+    if (playPageTurnCue(cueCtxRef.current)) setCuesFired((n) => n + 1);
+  }, [cueOn]);
+
   const goTo = React.useCallback(
     (dir: "next" | "prev") => {
+      // The last page turns into the end card — never into nothing. This is the
+      // one path that must not depend on narration ever firing an event.
+      if (dir === "next" && index >= total - 1) {
+        stopNarration();
+        fireCue();
+        setEnded(true);
+        setShowUi(true);
+        return;
+      }
+
       const next = Math.min(total - 1, Math.max(0, index + (dir === "next" ? 1 : -1)));
       if (next === index) return;
 
       stopNarration();
-      void engineRef.current?.unlock(); // a gesture is a good moment to re-arm iOS
-      if (cueOn) playTurnCue(cueCtxRef.current);
+      unlockAudio(); // a gesture is a good moment to re-arm iOS
+      fireCue();
       setEnded(false);
       setShowUi(true);
 
@@ -548,7 +564,7 @@ export function Player({ manifest, onExit, onMakeYourOwn }: PlayerProps) {
         ),
       );
     },
-    [index, total, cueOn, stopNarration],
+    [index, total, fireCue, stopNarration, unlockAudio],
   );
 
   React.useEffect(() => {
@@ -565,11 +581,11 @@ export function Player({ manifest, onExit, onMakeYourOwn }: PlayerProps) {
   }, [stopNarration]);
 
   const togglePlay = React.useCallback(() => {
-    void engineRef.current?.unlock();
+    unlockAudio();
     setEnded(false);
     setShowUi(true);
     setPaused((p) => !p);
-  }, []);
+  }, [unlockAudio]);
 
   /* ── narration: recorded voice first, TTS second, silence last ───────── */
   React.useEffect(() => {
@@ -714,6 +730,96 @@ export function Player({ manifest, onExit, onMakeYourOwn }: PlayerProps) {
     highlightOn,
   ]);
 
+  /* ── read-along for a RECORDED voice ─────────────────────────────────
+     A recorded clip carries no word boundaries, so words light on a linear
+     sweep across `audio.duration` (see ./timing). Reading the element on rAF
+     keeps the highlight smooth and — unlike a timer — it stays honest when the
+     listener seeks, pauses, or the clip stalls. */
+  React.useEffect(() => {
+    if (!started || ended || !highlightOn) return;
+    const el = audioRef.current;
+    const current = pages[index];
+    const audioUrl = current?.text?.audioUrl;
+    const content = current?.text?.content?.trim();
+    if (!el || !audioUrl || !content) return;
+    const count = splitWords(content).length;
+    if (count === 0) return;
+
+    /* The loop follows the CLIP, not React's idea of it: frames are only
+       scheduled while the element is genuinely rolling, so a paused, stalled
+       or finished voice costs nothing on a device a child is holding. Seeks
+       and timeupdates still re-sample, so the lit word is right the instant a
+       listener scrubs. */
+    let raf = 0;
+    const sample = () => {
+      const at = wordIndexAtTime(el.currentTime, el.duration, count);
+      setHighlight((prev) => (prev === at ? prev : at));
+    };
+    const stop = () => {
+      if (raf) cancelAnimationFrame(raf);
+      raf = 0;
+    };
+    const tick = () => {
+      sample();
+      raf = requestAnimationFrame(tick);
+    };
+    const run = () => {
+      if (raf || el.paused || el.ended) return;
+      raf = requestAnimationFrame(tick);
+    };
+    const rest = () => {
+      stop();
+      sample(); // the last word heard stays lit
+    };
+
+    el.addEventListener("play", run);
+    el.addEventListener("playing", run);
+    el.addEventListener("seeked", sample);
+    el.addEventListener("timeupdate", sample);
+    el.addEventListener("pause", rest);
+    el.addEventListener("ended", rest);
+    el.addEventListener("waiting", stop);
+    el.addEventListener("stalled", stop);
+    sample();
+    run();
+
+    return () => {
+      stop();
+      el.removeEventListener("play", run);
+      el.removeEventListener("playing", run);
+      el.removeEventListener("seeked", sample);
+      el.removeEventListener("timeupdate", sample);
+      el.removeEventListener("pause", rest);
+      el.removeEventListener("ended", rest);
+      el.removeEventListener("waiting", stop);
+      el.removeEventListener("stalled", stop);
+    };
+  }, [started, ended, index, pages, highlightOn]);
+
+  /* ── the QR that carries the tape to a phone ────────────────────────── */
+  React.useEffect(() => {
+    if (!ended || !shareUrl) {
+      setQr(null);
+      return;
+    }
+    let cancelled = false;
+    QRCode.toDataURL(shareUrl, {
+      margin: 1,
+      width: 320,
+      errorCorrectionLevel: "M",
+      color: { dark: "#1E1A16", light: "#FFFDF6" },
+    })
+      .then((url) => {
+        if (!cancelled) setQr(url);
+      })
+      .catch(() => {
+        if (!cancelled) setQr(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [ended, shareUrl]);
+
   /* ── auto-hiding chrome ─────────────────────────────────────────────── */
   const wake = React.useCallback(() => setShowUi(true), []);
 
@@ -735,11 +841,21 @@ export function Player({ manifest, onExit, onMakeYourOwn }: PlayerProps) {
         else onExit?.();
         return;
       }
-      if (!started) return;
+      if (!started || ended) return;
 
+      /* Space and the arrows belong to whatever control has focus — except
+         when that control is one of the player's OWN page-turn affordances
+         (tap zones, transport). A listener who taps ⏭ once and then reaches
+         for the arrow keys must not find the keyboard dead. Space still
+         belongs to the button under it, always: a focused button's Space is
+         "press me", never "turn the page". */
       const target = event.target as HTMLElement | null;
-      const inControl = !!target?.closest?.("button, a, input, select, textarea, [role='switch']");
-      if (inControl && (event.key === " " || event.key.startsWith("Arrow"))) return;
+      const control = target?.closest?.(
+        "button, a, input, select, textarea, [role='switch'], [role='radio']",
+      ) as HTMLElement | null;
+      const ownNav = !!control?.closest?.("[data-pl-nav]");
+      const isArrow = event.key.startsWith("Arrow");
+      if (control && (event.key === " " || (isArrow && !ownNav))) return;
 
       if (event.key === "ArrowRight" || event.key === " ") {
         event.preventDefault();
@@ -756,7 +872,7 @@ export function Player({ manifest, onExit, onMakeYourOwn }: PlayerProps) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [started, sheetOpen, goTo, togglePlay, onExit]);
+  }, [started, ended, sheetOpen, goTo, togglePlay, onExit]);
 
   /* ── swipe ──────────────────────────────────────────────────────────── */
   const touchX = React.useRef<number | null>(null);
@@ -781,7 +897,6 @@ export function Player({ manifest, onExit, onMakeYourOwn }: PlayerProps) {
   const layout = (page?.layout ?? "").toLowerCase();
   const isTitlePage = layout.includes("title") || layout.includes("cover");
   const isFullBleed = layout.includes("full");
-  const image = page?.illustration?.url;
   const content = page?.text?.content?.trim() ?? "";
   const sizeMult =
     page?.text?.fontSize === "xl" ? 1.32 : page?.text?.fontSize === "large" ? 1.14 : 1;
@@ -799,10 +914,35 @@ export function Player({ manifest, onExit, onMakeYourOwn }: PlayerProps) {
         prefs.contrast && "is-hc",
         chromeHidden && !sheetOpen && "is-idle-ui",
       )}
+      /* Honest, read-only state — the same things the tests assert and the
+         same things a listener can hear. No identifiers, nothing stored. */
+      data-music={musicLive ? "on" : "off"}
+      data-audio={audioOk ? "ok" : "unavailable"}
+      data-mood={mood ?? "none"}
+      data-page-cue={cueOn ? "on" : "off"}
+      data-cues-fired={cuesFired}
+      data-page={index + 1}
+      data-pages={total}
+      data-view={!started ? "cover" : ended ? "end" : "page"}
       onMouseMove={wake}
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
+      {/* ─────────────────────────────────────────────── the room's light */}
+      <div className="pl-ambient" aria-hidden="true" />
+      {bg.prev ? (
+        <div key={`bg-out-${bg.n}`} className="pl-backdrop is-out" aria-hidden="true">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={bg.prev} alt="" data-pl="backdrop-prev" />
+        </div>
+      ) : null}
+      {bg.cur ? (
+        <div key={`bg-in-${bg.n}`} className="pl-backdrop is-in" aria-hidden="true">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={bg.cur} alt="" data-pl="backdrop" />
+        </div>
+      ) : null}
+      <div className="pl-vignette" aria-hidden="true" />
       <div className="pl-room-light" aria-hidden="true" />
 
       {/* the narration bus lives on this one element for the whole session —
@@ -820,6 +960,7 @@ export function Player({ manifest, onExit, onMakeYourOwn }: PlayerProps) {
           className={cx(
             "pl-page",
             isFullBleed && image && "is-full",
+            !image && "is-textonly",
             turn.phase !== "idle" && `is-${turn.phase}`,
             `is-${turn.dir}`,
           )}
@@ -854,7 +995,7 @@ export function Player({ manifest, onExit, onMakeYourOwn }: PlayerProps) {
                 </div>
               ) : null}
               {content ? (
-                <div className={cx("pl-text", !image && "flex-1")}>
+                <div className={cx("pl-text", !image && "flex-1")} data-pl="text">
                   <StoryText
                     content={content}
                     highlight={highlightOn ? highlight : -1}
@@ -866,9 +1007,11 @@ export function Player({ manifest, onExit, onMakeYourOwn }: PlayerProps) {
           )}
         </div>
 
-        {/* tap zones — labelled buttons, not mystery hotspots */}
+        {/* tap zones — labelled buttons, not mystery hotspots. `data-pl-nav`
+            keeps the arrow keys alive after one is tapped (see the key handler). */}
         <button
           type="button"
+          data-pl-nav=""
           className="pl-zone pl-zone--prev"
           aria-label="Previous page"
           onClick={() => goTo("prev")}
@@ -876,10 +1019,10 @@ export function Player({ manifest, onExit, onMakeYourOwn }: PlayerProps) {
         />
         <button
           type="button"
+          data-pl-nav=""
           className="pl-zone pl-zone--next"
-          aria-label="Next page"
+          aria-label={index >= total - 1 ? "Finish the story" : "Next page"}
           onClick={() => goTo("next")}
-          disabled={index >= total - 1}
         />
       </div>
 
@@ -897,9 +1040,12 @@ export function Player({ manifest, onExit, onMakeYourOwn }: PlayerProps) {
         <button
           type="button"
           className={cx("pl-chip sk-focus", musicOn && "is-on")}
+          /* The label is hidden below `sm`, so the button needs a name of its
+             own — a chip with only a ♪ glyph has none. */
+          aria-label={musicOn ? "Music on" : "Music off"}
           aria-pressed={musicOn}
           onClick={() => {
-            void engineRef.current?.unlock();
+            unlockAudio();
             setMusicOn((m) => !m);
             setShowUi(true);
           }}
@@ -912,6 +1058,7 @@ export function Player({ manifest, onExit, onMakeYourOwn }: PlayerProps) {
         <button
           type="button"
           className={cx("pl-chip sk-focus", sheetOpen && "is-on")}
+          aria-label="Reading options"
           aria-expanded={sheetOpen}
           onClick={() => {
             setSheetOpen((s) => !s);
@@ -949,18 +1096,14 @@ export function Player({ manifest, onExit, onMakeYourOwn }: PlayerProps) {
             style={{ transform: `scaleX(${total > 0 ? (index + 1) / total : 0})` }}
           />
         </div>
-        <GlassPanel className="pl-transport rounded-full">
+        <GlassPanel className="pl-transport rounded-full" data-pl-nav="">
           <TransportButton kind="prev" onClick={() => goTo("prev")} disabled={index === 0} />
           <TransportButton
             kind={paused ? "play" : "pause"}
             active={!paused && narrating}
             onClick={togglePlay}
           />
-          <TransportButton
-            kind="next"
-            onClick={() => goTo("next")}
-            disabled={index >= total - 1}
-          />
+          <TransportButton kind="next" onClick={() => goTo("next")} />
         </GlassPanel>
       </div>
 
@@ -1048,7 +1191,7 @@ export function Player({ manifest, onExit, onMakeYourOwn }: PlayerProps) {
 
       {/* ──────────────────────────────────────────────────── cover gate */}
       {!started ? (
-        <div className="pl-cover" style={{ backgroundColor: "#0a0e1a" }}>
+        <div className="pl-cover" data-pl="cover">
           <div className="pl-cover-inner">
             <div>
               <div className="pl-shell">
@@ -1083,17 +1226,33 @@ export function Player({ manifest, onExit, onMakeYourOwn }: PlayerProps) {
 
       {/* ────────────────────────────────────────────────────── end card */}
       {ended ? (
-        <div className="pl-end">
+        <div className="pl-end" data-pl="end" role="dialog" aria-label="The end">
           <div className="pl-end-inner">
             <TapeLabel
-              title="The End"
+              title={title}
+              author={author}
               meta={
                 <>
-                  {title}
-                  {author ? ` · BY ${author.toUpperCase()}` : ""} · SIDE A COMPLETE
+                  SIDE A COMPLETE · {total} {total === 1 ? "PAGE" : "PAGES"} · ~{runtime}
                 </>
               }
             />
+            {qr && shareUrl ? (
+              <div className="pl-qr" data-pl="qr-card">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={qr}
+                  data-pl="qr"
+                  alt={`QR code linking to this story at ${shareUrl}`}
+                  width={132}
+                  height={132}
+                />
+                <div className="pl-qr-copy">
+                  <p className="pl-qr-title">Point a phone at this</p>
+                  <p className="pl-qr-url">{shareUrl}</p>
+                </div>
+              </div>
+            ) : null}
             <BigButton
               icon="⟲"
               label="Read it again"

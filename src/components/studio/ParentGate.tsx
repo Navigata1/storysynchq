@@ -12,7 +12,14 @@ import { BigButton, GlassPanel } from "@/components/studio-kit/kit";
 
 export interface ParentGateProps {
   defaultAuthor: string;
-  onPass: (author: string) => void;
+  /**
+   * True when the story carries a recorded human voice. Voice consent is
+   * sacred (design-direction §9.4): the grown-up says so here, in one sentence,
+   * and it is written into `manifest.signature.voiceConsent[]` so it travels
+   * with the tape instead of living in our database.
+   */
+  requireConsent: boolean;
+  onPass: (author: string, consented: boolean) => void;
   onCancel: () => void;
 }
 
@@ -27,10 +34,16 @@ function makeChallenge(): Challenge {
   return { a, b };
 }
 
-export function ParentGate({ defaultAuthor, onPass, onCancel }: ParentGateProps) {
+export function ParentGate({
+  defaultAuthor,
+  requireConsent,
+  onPass,
+  onCancel,
+}: ParentGateProps) {
   const [challenge, setChallenge] = React.useState<Challenge | null>(null);
   const [answer, setAnswer] = React.useState("");
   const [author, setAuthor] = React.useState(defaultAuthor);
+  const [consented, setConsented] = React.useState(false);
   const [wrong, setWrong] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement | null>(null);
 
@@ -50,8 +63,9 @@ export function ParentGate({ defaultAuthor, onPass, onCancel }: ParentGateProps)
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!challenge) return;
+    if (requireConsent && !consented) return;
     if (Number(answer.trim()) === challenge.a * challenge.b) {
-      onPass(author.trim());
+      onPass(author.trim(), requireConsent ? consented : false);
       return;
     }
     setWrong(true);
@@ -123,6 +137,31 @@ export function ParentGate({ defaultAuthor, onPass, onCancel }: ParentGateProps)
             className="sk-focus mt-1 h-12 w-full rounded-xl border border-white/12 bg-black/40 px-3 text-sm text-white placeholder:text-white/25"
           />
 
+          {requireConsent ? (
+            <div className="mt-4 rounded-2xl border border-amber-400/30 bg-amber-500/[0.07] p-2">
+              {/* The whole row is the target — a checkbox alone is too small. */}
+              <label
+                htmlFor="studio-gate-consent"
+                className="flex min-h-[44px] cursor-pointer items-center gap-3 rounded-xl p-2"
+              >
+                <input
+                  id="studio-gate-consent"
+                  type="checkbox"
+                  checked={consented}
+                  onChange={(e) => setConsented(e.target.checked)}
+                  className="sk-focus h-7 w-7 flex-none accent-amber-500"
+                />
+                <span className="text-sm leading-relaxed text-white/80">
+                  I am this child&apos;s parent or guardian and I consent to sharing this recording.
+                </span>
+              </label>
+              <p className="px-2 pb-1 text-xs leading-relaxed text-white/40">
+                This consent is written into the tape itself, so it travels with the story
+                wherever the file goes.
+              </p>
+            </div>
+          ) : null}
+
           <div className="mt-5 grid grid-cols-2 gap-2">
             <BigButton
               icon="↩"
@@ -137,7 +176,7 @@ export function ParentGate({ defaultAuthor, onPass, onCancel }: ParentGateProps)
               label="Continue"
               variant="gold"
               type="submit"
-              disabled={!challenge || !answer.trim()}
+              disabled={!challenge || !answer.trim() || (requireConsent && !consented)}
               className="w-full justify-center"
             />
           </div>

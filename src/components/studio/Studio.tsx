@@ -17,12 +17,25 @@ import { BigButton, GlassPanel, ModeToggle, Reel } from "@/components/studio-kit
 import { blobToDataUrl, dataUrlToBlob } from "@/lib/audio/recorder";
 import { normalizeNarration } from "@/lib/audio/transcode";
 import { processImageSafe } from "@/lib/images";
-import { validateManifest, type SsyncManifest, type SsyncPage } from "@/lib/storysync/manifest";
+import {
+  validateManifest,
+  type SsyncManifest,
+  type SsyncPage,
+  type SsyncSignature,
+} from "@/lib/storysync/manifest";
 import { buildStorysyncFromStory } from "@/lib/storysync/container";
 import { generateStory } from "@/lib/story-engine";
 import { generateIllustration } from "@/app/page-improvements";
-import { deleteBook, isCloudEnabled, saveBook, shareBook } from "@/lib/cloud-storage";
-import { getUser } from "@/lib/supabase";
+import {
+  cloudErrorKind,
+  deleteBooks,
+  isCloudEnabled,
+  saveBook,
+  saveLocalBook,
+  shareBook,
+  type BookInput,
+} from "@/lib/cloud-storage";
+import { getUser, signIn, signUp } from "@/lib/supabase";
 
 import Stage from "./Stage";
 import ToolRail, { type StudioTool } from "./ToolRail";
@@ -30,9 +43,10 @@ import Filmstrip from "./Filmstrip";
 import Transport from "./Transport";
 import Inspector from "./Inspector";
 import ParentGate from "./ParentGate";
-import PublishCard, { type PublishStep } from "./PublishCard";
+import PublishCard, { type AuthMode, type PublishStep } from "./PublishCard";
 import { MagicPanel, MusicPanel, VoicePanel, type MagicLook } from "./ToolPanels";
 import { useStudioAudio } from "./useStudioAudio";
+import type { StudioCues } from "./cues";
 import { clearDraft, loadDraft, saveDraft } from "./draft";
 import {
   DEFAULT_AUTO_PAUSE_S,
@@ -42,7 +56,9 @@ import {
   estimateStorySeconds,
   formatClock,
   nextPageId,
+  pickCoverImage,
   storyHasContent,
+  storyHasNarration,
   updatePage,
   type MoodName,
   type RecordingMeta,
@@ -82,6 +98,13 @@ const STEP_TEMPLATE: PublishStep[] = [
   { id: "save", label: "Saving your tape", state: "pending" },
 ];
 
+/** Wall-clock minutes:seconds from the first edit to now. */
+function madeIn(startedAt: string): string {
+  const start = Date.parse(startedAt);
+  if (!Number.isFinite(start)) return "0:00";
+  return formatClock(Math.max(0, (Date.now() - start) / 1000));
+}
+
 export default function Studio() {
   const [state, setState] = React.useState<StudioState>(() => blankState());
   const [activeIndex, setActiveIndexState] = React.useState(0);
@@ -97,7 +120,14 @@ export default function Studio() {
   const [publishError, setPublishError] = React.useState<string | null>(null);
   const [publishNote, setPublishNote] = React.useState<string | null>(null);
   const [shareUrl, setShareUrl] = React.useState<string | null>(null);
+  const [madeInLabel, setMadeInLabel] = React.useState("0:00");
   const [announcement, setAnnouncement] = React.useState("");
+
+  /* The honest unauthenticated path: cloud configured, nobody signed in. */
+  const [authOffer, setAuthOffer] = React.useState(false);
+  const [authBusy, setAuthBusy] = React.useState(false);
+  const [authError, setAuthError] = React.useState<string | null>(null);
+  const [authReady, setAuthReady] = React.useState(false);
 
   const stateRef = React.useRef(state);
   stateRef.current = state;
@@ -106,15 +136,13 @@ export default function Studio() {
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const publishedRef = React.useRef<SsyncManifest | null>(null);
   const authorRef = React.useRef("");
+  const consentRef = React.useRef(false);
+  const cuesRef = React.useRef<StudioCues | null>(null);
+  const recordingRef = React.useRef(false);
 
   const pages = state.manifest.pages;
   const page: SsyncPage | undefined = pages[activeIndex];
   const pageCount = pages.length;
-
-  const setActive = React.useCallback((index: number) => {
-    activeIndexRef.current = index;
-    setActiveIndexState(index);
-  }, []);
 
   /* ------------------------------------------------------------- recording */
 
@@ -131,15 +159,36 @@ export default function Studio() {
               ...(p.text ?? { content: "" }),
               content: p.text?.content ?? "",
               audioUrl: dataUrl,
+              // A fresh take is a draft codec again, whatever the last publish left.
               audioCodec: undefined,
             },
           })),
         };
       });
-      setAnnouncement(`Voice recorded, ${Math.round(duration)} seconds.`);
+      const index = stateRef.current.manifest.pages.findIndex((p) => p.id === pageId);
+      setAnnouncement(
+        `Voice recorded on page ${index >= 0 ? index + 1 : "?"}, ${Math.round(duration)} seconds.`,
+      );
     },
     [],
   );
+
+  /**
+   * Page changes go through here so every one of them makes the same sound and
+   * obeys the same lock. Turning the page mid-take would file the recording
+   * against the wrong page, so while the mic is live the tape does not move.
+   */
+  const setActive = React.useCallback((index: number, options?: { silent?: boolean }) => {
+    if (recordingRef.current) {
+      setAnnouncement("Finish the recording before turning the page.");
+      return;
+    }
+    const clamped = Math.max(0, Math.min(index, stateRef.current.manifest.pages.length - 1));
+    const changed = clamped !== activeIndexRef.current;
+    activeIndexRef.current = clamped;
+    setActiveIndexState(clamped);
+    if (changed && !options?.silent) cuesRef.current?.pageTurn();
+  }, []);
 
   const audio = useStudioAudio({
     stateRef,
@@ -147,7 +196,17 @@ export default function Studio() {
     onSelectPage: setActive,
     onRecorded: handleRecorded,
   });
-  const { setMusicActive, syncMix, stop: stopAudio, play, toggleRecord, clearMicError } = audio;
+  const {
+    setMusicActive,
+    syncMix,
+    stop: stopAudio,
+    play,
+    toggleRecord,
+    clearMicError,
+    recording,
+  } = audio;
+  cuesRef.current = audio.cues;
+  recordingRef.current = recording;
 
   /* --------------------------------------------------------- draft restore */
 
@@ -188,12 +247,9 @@ export default function Studio() {
 
   /* --------------------------------------------------------------- editing */
 
-  const patchPage = React.useCallback(
-    (id: number, fn: (p: SsyncPage) => SsyncPage) => {
-      setState((prev) => ({ ...prev, manifest: updatePage(prev.manifest, id, fn) }));
-    },
-    [],
-  );
+  const patchPage = React.useCallback((id: number, fn: (p: SsyncPage) => SsyncPage) => {
+    setState((prev) => ({ ...prev, manifest: updatePage(prev.manifest, id, fn) }));
+  }, []);
 
   const setTitle = (title: string) =>
     setState((prev) => ({
@@ -247,29 +303,36 @@ export default function Studio() {
     }));
 
   const addPage = () => {
+    if (recording) {
+      setAnnouncement("Finish the recording before adding a page.");
+      return;
+    }
     setState((prev) => {
       const id = nextPageId(prev.manifest);
       return { ...prev, manifest: { ...prev.manifest, pages: [...prev.manifest.pages, blankPage(id)] } };
     });
-    setActive(pages.length);
+    activeIndexRef.current = pages.length;
+    setActiveIndexState(pages.length);
+    cuesRef.current?.pageTurn();
     setAnnouncement(`Page ${pages.length + 1} added.`);
   };
 
   const movePage = (index: number, direction: -1 | 1) => {
     const target = index + direction;
-    if (target < 0 || target >= pages.length) return;
+    if (recording || target < 0 || target >= pages.length) return;
     setState((prev) => {
       const next = [...prev.manifest.pages];
       const [moved] = next.splice(index, 1);
       next.splice(target, 0, moved);
       return { ...prev, manifest: { ...prev.manifest, pages: next } };
     });
-    setActive(target);
+    activeIndexRef.current = target;
+    setActiveIndexState(target);
     setAnnouncement(`Page moved to position ${target + 1}.`);
   };
 
   const deletePage = (index: number) => {
-    if (pages.length <= 1) return;
+    if (recording || pages.length <= 1) return;
     stopAudio();
     const victim = pages[index];
     setState((prev) => {
@@ -281,7 +344,9 @@ export default function Studio() {
         manifest: { ...prev.manifest, pages: prev.manifest.pages.filter((_, i) => i !== index) },
       };
     });
-    setActive(Math.max(0, Math.min(index, pages.length - 2)));
+    const next = Math.max(0, Math.min(index, pages.length - 2));
+    activeIndexRef.current = next;
+    setActiveIndexState(next);
     setAnnouncement("Page deleted.");
   };
 
@@ -296,7 +361,12 @@ export default function Studio() {
         recordings,
         manifest: updatePage(prev.manifest, page.id, (p) => ({
           ...p,
-          text: { ...(p.text ?? { content: "" }), content: p.text?.content ?? "", audioUrl: undefined, audioCodec: undefined },
+          text: {
+            ...(p.text ?? { content: "" }),
+            content: p.text?.content ?? "",
+            audioUrl: undefined,
+            audioCodec: undefined,
+          },
         })),
       };
     });
@@ -373,7 +443,8 @@ export default function Studio() {
           pages: built,
         },
       }));
-      setActive(0);
+      activeIndexRef.current = 0;
+      setActiveIndexState(0);
       setTool(null);
       setAnnouncement(`Made a ${built.length} page story called ${story.title}.`);
     } finally {
@@ -383,85 +454,45 @@ export default function Studio() {
 
   /* --------------------------------------------------------------- publish */
 
-  const markStep = (id: string, next: Partial<PublishStep>) =>
-    setSteps((prev) => prev.map((s) => (s.id === id ? { ...s, ...next } : s)));
+  const markStep = React.useCallback(
+    (id: string, next: Partial<PublishStep>) =>
+      setSteps((prev) => prev.map((s) => (s.id === id ? { ...s, ...next } : s))),
+    [],
+  );
 
-  const runPublish = React.useCallback(async (author: string) => {
-    stopAudio();
-    authorRef.current = author;
-    setPhase("publishing");
-    setPublishError(null);
-    setPublishNote(null);
-    setSteps(STEP_TEMPLATE.map((s) => ({ ...s })));
+  const bookInput = React.useCallback(
+    (manifest: SsyncManifest): BookInput => ({
+      title: manifest.metadata.title,
+      author: manifest.metadata.author ?? "",
+      genre: manifest.metadata.genre ?? "children",
+      ageRange: manifest.metadata.ageRange ?? "4-8",
+      pageCount: manifest.pages.length,
+      description: manifest.metadata.description ?? "",
+      thumbnail: null,
+      // Unlisted-by-URL. `is_public` is what the read policy checks, so a story
+      // that is not public can never be opened by the person holding the link —
+      // which is the entire point of publishing (see PRIVACY.md, "public").
+      isPublic: true,
+      ssyncData: manifest as unknown as object,
+    }),
+    [],
+  );
 
-    const base = stateRef.current;
-    const source = author
-      ? { ...base.manifest, metadata: { ...base.manifest.metadata, author } }
-      : base.manifest;
-
-    try {
-      /* 1 — narration codec normalization (the load-bearing publish rule) */
-      markStep("voices", { state: "active" });
-      const total = source.pages.filter((p) => p.text?.audioUrl?.startsWith("data:")).length;
-      let done = 0;
-      const nextRecordings: Record<string, RecordingMeta> = {};
-      const publishedPages: SsyncPage[] = [];
-
-      for (const [index, original] of source.pages.entries()) {
-        const next: SsyncPage = JSON.parse(JSON.stringify(original));
-        const newId = index + 1;
-        const meta = base.recordings[String(original.id)];
-        next.id = newId;
-        if (meta) nextRecordings[String(newId)] = meta;
-
-        // Carry the music choice in the protocol itself: `page.music` present
-        // = play this mood's bed, absent = silence. Without this the bed would
-        // not survive the trip to the Player.
-        if (base.musicOn) next.music = base.mood;
-        else delete next.music;
-
-        const url = next.text?.audioUrl;
-        if (next.text && url && url.startsWith("data:")) {
-          const blob = await dataUrlToBlob(url);
-          const normalized = await normalizeNarration(blob, meta?.mimeType || blob.type);
-          // Force the clean container mime: a recorder blob carries
-          // "audio/mp4;codecs=…", and the container's data-URL parser (and the
-          // asset extension map) only understand the bare type.
-          const clean =
-            normalized.blob.type === normalized.mimeType
-              ? normalized.blob
-              : new Blob([normalized.blob], { type: normalized.mimeType });
-          next.text.audioUrl = await blobToDataUrl(clean);
-          next.text.audioCodec = normalized.codec;
-          done += 1;
-          markStep("voices", { detail: `${done}/${total}` });
-        }
-        publishedPages.push(next);
-      }
-      markStep("voices", { state: "done", detail: total ? `${done}/${total}` : "no recordings" });
-
-      /* 2 — assemble the manifest */
-      markStep("assemble", { state: "active" });
-      const cover = publishedPages.find((p) => p.illustration?.url)?.illustration?.url;
-      const manifest: SsyncManifest = {
-        ...source,
-        version: "2.0",
-        metadata: {
-          ...source.metadata,
-          title: source.metadata.title.trim() || DEFAULT_TITLE,
-          created: source.metadata.created || new Date().toISOString(),
-          coverImage: cover,
-        },
-        pages: publishedPages,
-      };
-      const validation = validateManifest(manifest);
-      if (!validation.ok) throw new Error(validation.errors.join("; "));
-      publishedRef.current = manifest;
-      markStep("assemble", { state: "done", detail: `${publishedPages.length} pages` });
-
-      /* 3 — save (localStorage or the cloud library), then the share link */
-      markStep("save", { state: "active" });
+  /**
+   * Save + link. Re-publishing UPDATES the story it wrote last time (one row,
+   * one link, one thing to delete), and every failure is reported as what it
+   * actually was.
+   */
+  const persist = React.useCallback(
+    async (manifest: SsyncManifest) => {
       const cloud = isCloudEnabled();
+      // Re-publish updates the copy it made last time — but only in the same
+      // place. A tape kept on the device because nobody was signed in has no
+      // row to update once they do sign in; that becomes a first save, and the
+      // device copy stays in `publishedIds` so delete-all still reaches it.
+      const previous = stateRef.current.published;
+      const existingId = previous && previous.cloud === cloud ? previous.id : null;
+
       let userId = "local";
       if (cloud) {
         try {
@@ -476,49 +507,266 @@ export default function Studio() {
 
       let savedId: string | null = null;
       let code: string | null = null;
+      let usedCloud = cloud;
+
       try {
-        const saved = await saveBook(userId, {
-          title: manifest.metadata.title,
-          author: manifest.metadata.author ?? "",
-          genre: manifest.metadata.genre ?? "children",
-          ageRange: manifest.metadata.ageRange ?? "4-8",
-          pageCount: manifest.pages.length,
-          description: manifest.metadata.description ?? "",
-          thumbnail: null,
-          isPublic: false,
-          ssyncData: manifest as unknown as object,
-        });
+        const saved = await saveBook(userId, bookInput(manifest), existingId);
         savedId = saved.id;
-        if (cloud) {
+      } catch (err) {
+        const kind = cloudErrorKind(err);
+        if (cloud && (kind === "auth" || kind === "permission")) {
+          // Honest fallback: keep the tape here and say so. Never "storage full".
+          usedCloud = false;
+          setAuthOffer(true);
+          setPublishNote(
+            "Saved on this device. There is no link yet because nobody is signed in — download the tape, or sign in below.",
+          );
           try {
-            code = await shareBook(saved.id);
-          } catch {
-            code = null;
+            savedId = saveLocalBook(bookInput(manifest), existingId).id;
+          } catch (localErr) {
+            setPublishNote(
+              cloudErrorKind(localErr) === "quota"
+                ? "This device is out of room, so no copy was kept. Download the .storysync file to keep your tape."
+                : "No copy could be kept here. Download the .storysync file to keep your tape.",
+            );
           }
+        } else if (kind === "quota") {
+          setPublishNote(
+            "This device is out of room, so no copy was kept. Download the .storysync file to keep your tape.",
+          );
+        } else if (kind === "network") {
+          setPublishNote(
+            "The cloud library could not be reached, so no link was made. Download the .storysync file, or try again later.",
+          );
+        } else {
+          setPublishNote(
+            err instanceof Error && err.message
+              ? `Your tape could not be saved: ${err.message}`
+              : "Your tape could not be saved. Download the .storysync file to keep it.",
+          );
         }
-      } catch {
-        setPublishNote(
-          "Could not keep a copy on this device — storage is full. Download the .storysync file to keep your tape.",
-        );
       }
 
-      setShareUrl(code ? `${window.location.origin}/read?story=${encodeURIComponent(code)}` : null);
-      markStep("save", { state: "done", detail: cloud ? "cloud library" : "this device" });
+      if (savedId && usedCloud === cloud) {
+        try {
+          code = await shareBook(savedId);
+        } catch {
+          code = null;
+        }
+      }
+
+      const url = code ? `${window.location.origin}/read?story=${encodeURIComponent(code)}` : null;
+
+      // The signature layer carries the link with the tape, so a downloaded
+      // .storysync knows where it came from.
+      let finalManifest = manifest;
+      if (url) {
+        finalManifest = { ...manifest, signature: { ...(manifest.signature ?? {}), shareUrl: url } };
+        publishedRef.current = finalManifest;
+        if (savedId) {
+          try {
+            await (usedCloud
+              ? saveBook(userId, bookInput(finalManifest), savedId)
+              : Promise.resolve(saveLocalBook(bookInput(finalManifest), savedId)));
+          } catch {
+            /* the copy without the URL is already saved; not worth failing over */
+          }
+        }
+        setAuthOffer(false);
+      }
+
+      setShareUrl(url);
+      markStep("save", {
+        state: savedId ? "done" : "error",
+        detail: savedId ? (usedCloud ? "cloud library" : "this device") : "not saved",
+      });
 
       setState((prev) => ({
         ...prev,
-        manifest,
-        recordings: nextRecordings,
+        manifest: finalManifest,
         published: savedId
-          ? { id: savedId, shareCode: code, cloud, at: new Date().toISOString() }
+          ? { id: savedId, shareCode: code, cloud: usedCloud, at: new Date().toISOString() }
           : prev.published,
+        publishedIds: savedId
+          ? Array.from(new Set([...prev.publishedIds, savedId]))
+          : prev.publishedIds,
       }));
-      setPhase("published");
-    } catch (err) {
-      setSteps((prev) => prev.map((s) => (s.state === "active" ? { ...s, state: "error" } : s)));
-      setPublishError(err instanceof Error ? err.message : "Something went wrong while finishing.");
+
+      return { savedId, url };
+    },
+    [bookInput, markStep],
+  );
+
+  const runPublish = React.useCallback(
+    async (author: string, consented: boolean) => {
+      stopAudio();
+      authorRef.current = author;
+      consentRef.current = consented;
+      setPhase("publishing");
+      setPublishError(null);
+      setPublishNote(null);
+      setAuthOffer(false);
+      setAuthError(null);
+      setAuthReady(false);
+      setSteps(STEP_TEMPLATE.map((s) => ({ ...s })));
+      setMadeInLabel(madeIn(stateRef.current.startedAt));
+
+      const base = stateRef.current;
+      const source = author
+        ? { ...base.manifest, metadata: { ...base.manifest.metadata, author } }
+        : base.manifest;
+
+      try {
+        /* 1 — narration codec normalization (the load-bearing publish rule) */
+        markStep("voices", { state: "active" });
+        const total = source.pages.filter((p) => p.text?.audioUrl?.startsWith("data:")).length;
+        let done = 0;
+        const nextRecordings: Record<string, RecordingMeta> = {};
+        const publishedPages: SsyncPage[] = [];
+
+        for (const [index, original] of source.pages.entries()) {
+          const next: SsyncPage = JSON.parse(JSON.stringify(original));
+          const newId = index + 1;
+          const meta = base.recordings[String(original.id)];
+          next.id = newId;
+          if (meta) nextRecordings[String(newId)] = meta;
+
+          // Carry the music choice in the protocol itself: `page.music` present
+          // = play this mood's bed, absent = SILENCE. The Player reads exactly
+          // this, so music-off in the studio is music-off on the tape.
+          if (base.musicOn) next.music = base.mood;
+          else delete next.music;
+
+          const url = next.text?.audioUrl;
+          if (next.text && url && url.startsWith("data:")) {
+            if (original.text?.audioCodec) {
+              // Already normalized by an earlier publish — decoding and
+              // re-encoding it would only lose quality and time.
+              done += 1;
+              markStep("voices", { detail: `${done}/${total}` });
+            } else {
+              const blob = await dataUrlToBlob(url);
+              const normalized = await normalizeNarration(blob, meta?.mimeType || blob.type);
+              // Force the clean container mime: a recorder blob carries
+              // "audio/mp4;codecs=…", and the container's data-URL parser (and the
+              // asset extension map) only understand the bare type.
+              const clean =
+                normalized.blob.type === normalized.mimeType
+                  ? normalized.blob
+                  : new Blob([normalized.blob], { type: normalized.mimeType });
+              next.text.audioUrl = await blobToDataUrl(clean);
+              next.text.audioCodec = normalized.codec;
+              // Keep the draft meta in step with what is now on the page, so a
+              // second publish sees AAC/WAV and passes it straight through.
+              nextRecordings[String(newId)] = {
+                mimeType: normalized.mimeType,
+                duration: meta?.duration ?? 0,
+              };
+              done += 1;
+              markStep("voices", { detail: `${done}/${total}` });
+            }
+          }
+          publishedPages.push(next);
+        }
+        markStep("voices", { state: "done", detail: total ? `${done}/${total}` : "no recordings" });
+
+        /* 2 — assemble the manifest, signature layer included */
+        markStep("assemble", { state: "active" });
+        const hasVoiceInStory = publishedPages.some((p) => p.text?.audioUrl);
+        const now = new Date();
+        const signature: SsyncSignature = {
+          ...(source.signature ?? {}),
+          ownership: author ? `© ${now.getFullYear()} ${author}` : `© ${now.getFullYear()}`,
+          rights: "personal use",
+        };
+        if (hasVoiceInStory && consented) {
+          signature.voiceConsent = [
+            {
+              voice: author || "narrator",
+              grantedBy: "parent/guardian",
+              date: now.toISOString(),
+            },
+          ];
+        }
+
+        const manifest: SsyncManifest = {
+          ...source,
+          version: "2.0",
+          metadata: {
+            ...source.metadata,
+            title: source.metadata.title.trim() || DEFAULT_TITLE,
+            created: source.metadata.created || now.toISOString(),
+            // Only when it is not simply page 1 again — a cover that duplicates
+            // the first illustration doubles the size of every copy.
+            coverImage: pickCoverImage(publishedPages),
+          },
+          signature,
+          pages: publishedPages,
+        };
+        const validation = validateManifest(manifest);
+        if (!validation.ok) throw new Error(validation.errors.join("; "));
+        publishedRef.current = manifest;
+        markStep("assemble", { state: "done", detail: `${publishedPages.length} pages` });
+
+        /* 3 — save (cloud library or this device), then the share link */
+        markStep("save", { state: "active" });
+        setState((prev) => ({ ...prev, recordings: nextRecordings }));
+        await persist(manifest);
+        setPhase("published");
+      } catch (err) {
+        setSteps((prev) => prev.map((s) => (s.state === "active" ? { ...s, state: "error" } : s)));
+        setPublishError(err instanceof Error ? err.message : "Something went wrong while finishing.");
+      }
+    },
+    [markStep, persist, stopAudio],
+  );
+
+  /* ------------------------------------------------------- auth (honest path) */
+
+  const handleAuth = React.useCallback(
+    async (mode: AuthMode, email: string, password: string, name: string) => {
+      setAuthBusy(true);
+      setAuthError(null);
+      try {
+        if (mode === "in") await signIn(email, password);
+        else await signUp(email, password, name || "");
+        const user = await getUser().catch(() => null);
+        if (!user) {
+          setAuthError(
+            "Account made. Confirm the email we sent, then come back and sign in to get a link.",
+          );
+          return;
+        }
+        setAuthReady(true);
+      } catch (err) {
+        setAuthError(
+          err instanceof Error && err.message
+            ? err.message
+            : "That did not work. Check the email and password and try again.",
+        );
+      } finally {
+        setAuthBusy(false);
+      }
+    },
+    [],
+  );
+
+  const makeLink = React.useCallback(async () => {
+    const manifest = publishedRef.current;
+    if (!manifest) return;
+    setAuthBusy(true);
+    setPublishNote(null);
+    try {
+      const result = await persist(manifest);
+      if (!result.url) {
+        setPublishNote("Still no link — the cloud library would not take this tape.");
+      } else {
+        setAuthReady(false);
+      }
+    } finally {
+      setAuthBusy(false);
     }
-  }, [stopAudio]);
+  }, [persist]);
 
   const downloadTape = () => {
     const manifest = publishedRef.current ?? stateRef.current.manifest;
@@ -546,20 +794,18 @@ export default function Studio() {
 
   const deleteEverything = async () => {
     stopAudio();
-    const published = stateRef.current.published;
-    if (published) {
-      try {
-        await deleteBook(published.id);
-      } catch {
-        /* already gone */
-      }
-    }
+    const { published, publishedIds } = stateRef.current;
+    const ids = Array.from(new Set([...(published ? [published.id] : []), ...publishedIds]));
+    await deleteBooks(ids);
     clearDraft();
     publishedRef.current = null;
     setShareUrl(null);
     setPublishNote(null);
+    setAuthOffer(false);
+    setAuthReady(false);
     setState(blankState());
-    setActive(0);
+    activeIndexRef.current = 0;
+    setActiveIndexState(0);
     setTool(null);
     setPhase("edit");
     setAnnouncement("Everything deleted.");
@@ -571,8 +817,12 @@ export default function Studio() {
     const onKey = (event: KeyboardEvent) => {
       if (phase !== "edit") return;
       const target = event.target as HTMLElement | null;
-      const tag = target?.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || target?.isContentEditable) return;
+      if (target?.isContentEditable) return;
+      // A focused control owns its own keys. Space on "Finish my story" must
+      // press the button, not start playback behind the dialog it opens.
+      if (target?.closest?.("button, a, input, select, textarea, [role=switch], [role=radio]")) {
+        return;
+      }
 
       if (event.key === "ArrowLeft" && activeIndexRef.current > 0) {
         event.preventDefault();
@@ -616,7 +866,7 @@ export default function Studio() {
   /* -------------------------------------------------------------- render */
 
   return (
-    <div className="studio">
+    <div className="studio" data-recording={recording ? "true" : "false"}>
       {/* ------------------------------------------------------------ top bar */}
       <header
         className="studio-area-top flex flex-wrap items-center gap-2 border-b border-white/8 bg-black/35 px-3 py-2 backdrop-blur-xl"
@@ -643,22 +893,13 @@ export default function Studio() {
           style={{ fontFamily: "var(--font-fraunces), Georgia, serif" }}
         />
 
-        {draftNote ? (
-          <span
-            className="hidden text-[10px] tracking-[0.14em] text-amber-300/70 uppercase lg:inline"
-            style={{ fontFamily: "var(--font-plex-mono), monospace" }}
-          >
-            {draftNote}
-          </span>
-        ) : null}
-
         <div className="flex items-center gap-2">
           <ModeToggle advanced={advanced} onChange={setAdvanced} />
           <BigButton
             icon={<span className="text-[#E3452F]">●</span>}
             label="Finish my story"
             variant="gold"
-            disabled={!canFinish}
+            disabled={!canFinish || recording}
             onClick={() => {
               stopAudio();
               setTool(null);
@@ -667,6 +908,19 @@ export default function Studio() {
             className="rounded-xl px-4 text-[15px]"
           />
         </div>
+
+        {/* An autosave that is failing is news at every width — a parent on a
+            phone is exactly who needs to hear it (G5). */}
+        {draftNote ? (
+          <p
+            role="status"
+            data-studio="draft-note"
+            className="order-last w-full text-[11px] leading-snug tracking-[0.12em] text-amber-300/80 uppercase"
+            style={{ fontFamily: "var(--font-plex-mono), monospace" }}
+          >
+            {draftNote}
+          </p>
+        ) : null}
       </header>
 
       {/* ------------------------------------------------------------ rail */}
@@ -695,7 +949,7 @@ export default function Studio() {
           pageCount={pageCount}
           playing={audio.playing}
           narrating={audio.narrating}
-          recording={audio.recording}
+          recording={recording}
           recordSeconds={audio.recordSeconds}
           position={audio.position}
           clipDuration={audio.clipDuration}
@@ -706,7 +960,7 @@ export default function Studio() {
 
         {tool === "voice" ? (
           <VoicePanel
-            recording={audio.recording}
+            recording={recording}
             hasVoice={hasVoice}
             voiceSeconds={currentMeta?.duration ?? audio.clipDuration}
             recordSeconds={audio.recordSeconds}
@@ -756,7 +1010,7 @@ export default function Studio() {
           musicOn={state.musicOn}
           musicVolume={state.musicVolume}
           narrationVolume={state.narrationVolume}
-          level={audio.level}
+          subscribeLevel={audio.subscribeLevel}
           onAutoPause={setAutoPause}
           onApplyPauseToAll={applyPauseToAll}
           onTimingMultiplier={setTimingMultiplier}
@@ -775,6 +1029,7 @@ export default function Studio() {
         <Filmstrip
           pages={pages}
           activeIndex={activeIndex}
+          locked={recording}
           onSelect={(index) => {
             stopAudio();
             setActive(index);
@@ -789,7 +1044,7 @@ export default function Studio() {
       <div className="studio-area-transport">
         <Transport
           playing={audio.playing}
-          recording={audio.recording}
+          recording={recording}
           voiceArmed={tool === "voice"}
           pageNumber={activeIndex + 1}
           pageCount={pageCount}
@@ -798,11 +1053,11 @@ export default function Studio() {
           recordSeconds={audio.recordSeconds}
           onPrev={() => {
             stopAudio();
-            setActive(Math.max(0, activeIndex - 1));
+            setActive(activeIndex - 1);
           }}
           onNext={() => {
             stopAudio();
-            setActive(Math.min(pageCount - 1, activeIndex + 1));
+            setActive(activeIndex + 1);
           }}
           onPlayPause={() => (audio.playing ? stopAudio() : void play(activeIndex))}
           onRecord={() => {
@@ -857,7 +1112,8 @@ export default function Studio() {
                 className="w-full justify-center"
                 onClick={() => {
                   setState(restore.state);
-                  setActive(0);
+                  activeIndexRef.current = 0;
+                  setActiveIndexState(0);
                   setRestore(null);
                   setBoot("ready");
                 }}
@@ -881,10 +1137,11 @@ export default function Studio() {
       {phase === "gate" ? (
         <ParentGate
           defaultAuthor={state.manifest.metadata.author ?? ""}
+          requireConsent={storyHasNarration(state.manifest)}
           onCancel={() => setPhase("edit")}
-          onPass={(author) => {
+          onPass={(author, consented) => {
             setAuthor(author);
-            void runPublish(author);
+            void runPublish(author, consented);
           }}
         />
       ) : null}
@@ -897,15 +1154,22 @@ export default function Studio() {
           author={(publishedRef.current ?? state.manifest).metadata.author ?? ""}
           pageCount={(publishedRef.current ?? state.manifest).pages.length}
           durationLabel={formatClock(estimateStorySeconds(state))}
+          madeInLabel={madeInLabel}
           codecLabel={codecLabel}
           shareUrl={shareUrl}
-          cloud={Boolean(state.published?.cloud)}
+          cloud={isCloudEnabled()}
           note={publishNote}
           error={publishError}
+          authOffer={authOffer}
+          authBusy={authBusy}
+          authError={authError}
+          authReady={authReady}
+          onAuth={(mode, email, password, name) => void handleAuth(mode, email, password, name)}
+          onMakeLink={() => void makeLink()}
           onDownload={downloadTape}
           onDeleteEverything={() => void deleteEverything()}
           onBack={() => setPhase("edit")}
-          onRetry={() => void runPublish(authorRef.current)}
+          onRetry={() => void runPublish(authorRef.current, consentRef.current)}
         />
       ) : null}
     </div>

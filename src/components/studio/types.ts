@@ -9,76 +9,20 @@
  * lives beside it in StudioState and never leaks into a published manifest.
  */
 
-import type { MoodConfig } from "@/lib/audio/engine";
+import type { MoodName } from "@/lib/audio/moods";
 import type { SsyncManifest, SsyncPage } from "@/lib/storysync/manifest";
 
 /* ------------------------------------------------------------------ moods */
 
-export interface StudioMood extends MoodConfig {
-  emoji: string;
-  blurb: string;
-  /** Tailwind classes for the mood pill (chrome register). */
-  pill: string;
-}
-
 /**
- * Story music beds. Frequencies are the proven pad pairs from the classic
- * creator — two near-unison sines through a 400 Hz lowpass, so the beat
- * frequency does the breathing. Copy is ours.
+ * The mood vocabulary is NOT the Studio's to invent. `@/lib/audio/moods` owns
+ * it — the same eight names the Player resolves and the same specs the
+ * generative bed plays — so a mood chosen here is the mood a listener hears
+ * (docs/10x-plan.md gap G4). The Studio only adds presentation (emoji, pill
+ * colours) in ./moods-ui.
  */
-export const STUDIO_MOODS = {
-  Wonder: {
-    emoji: "🌟",
-    blurb: "Twinkly, a little magic in the air",
-    freq1: 220,
-    freq2: 220.5,
-    gainMult: 1.0,
-    pill: "border-amber-400/45 bg-amber-500/15 text-amber-200",
-  },
-  Adventure: {
-    emoji: "🧭",
-    blurb: "Bold, off we go",
-    freq1: 330,
-    freq2: 331,
-    gainMult: 1.7,
-    pill: "border-orange-400/45 bg-orange-500/15 text-orange-200",
-  },
-  Calm: {
-    emoji: "🌙",
-    blurb: "Soft and sleepy, for bedtime",
-    freq1: 110,
-    freq2: 110.3,
-    gainMult: 0.5,
-    pill: "border-sky-400/45 bg-sky-500/15 text-sky-200",
-  },
-  Joy: {
-    emoji: "☀️",
-    blurb: "Bright and skipping",
-    freq1: 440,
-    freq2: 441,
-    gainMult: 1.3,
-    pill: "border-yellow-400/45 bg-yellow-500/15 text-yellow-200",
-  },
-  Hush: {
-    emoji: "🌫️",
-    blurb: "Quiet and curious",
-    freq1: 155,
-    freq2: 156,
-    gainMult: 1.0,
-    pill: "border-violet-400/45 bg-violet-500/15 text-violet-200",
-  },
-  Rain: {
-    emoji: "🌧️",
-    blurb: "Wistful, grey-sky feelings",
-    freq1: 185,
-    freq2: 185.5,
-    gainMult: 0.8,
-    pill: "border-slate-400/45 bg-slate-500/15 text-slate-200",
-  },
-} as const satisfies Record<string, StudioMood>;
-
-export type MoodName = keyof typeof STUDIO_MOODS;
-export const MOOD_NAMES = Object.keys(STUDIO_MOODS) as MoodName[];
+export { MOOD_NAMES } from "@/lib/audio/moods";
+export type { MoodName } from "@/lib/audio/moods";
 
 /* ------------------------------------------------------------------ state */
 
@@ -107,6 +51,14 @@ export interface StudioState {
   musicVolume: number;
   narrationVolume: number;
   published: PublishRecord | null;
+  /**
+   * Every story id this tape has ever been saved under, so "delete everything"
+   * can reach copies an older build orphaned. Current builds upsert, so this
+   * normally holds exactly one id.
+   */
+  publishedIds: string[];
+  /** When this tape was started, on this device. Feeds "Made in m:ss". */
+  startedAt: string;
 }
 
 export const DEFAULT_TITLE = "My Story";
@@ -153,6 +105,8 @@ export function blankState(): StudioState {
     musicVolume: 0.3,
     narrationVolume: 0.85,
     published: null,
+    publishedIds: [],
+    startedAt: new Date().toISOString(),
   };
 }
 
@@ -174,6 +128,26 @@ export function pageHasContent(page: SsyncPage): boolean {
   return Boolean(page.illustration?.url || page.text?.content?.trim() || page.text?.audioUrl);
 }
 
+/** Does any page carry a recorded human voice? Consent hangs off this. */
+export function storyHasNarration(manifest: SsyncManifest): boolean {
+  return manifest.pages.some((p) => Boolean(p.text?.audioUrl));
+}
+
+/**
+ * The cover for a published manifest — or nothing.
+ *
+ * `metadata.coverImage` used to be set to the first illustration found, which
+ * on the common story is page 1's photo: a second multi-megabyte copy of the
+ * same data URL in every save, every draft and every .storysync file. A cover
+ * is only worth carrying when it is not already page 1.
+ */
+export function pickCoverImage(pages: SsyncPage[]): string | undefined {
+  const first = pages[0]?.illustration?.url;
+  const found = pages.find((p) => p.illustration?.url)?.illustration?.url;
+  if (!found || found === first) return undefined;
+  return found;
+}
+
 export function storyHasContent(state: StudioState): boolean {
   const { manifest } = state;
   if (manifest.metadata.title.trim() && manifest.metadata.title !== DEFAULT_TITLE) return true;
@@ -181,11 +155,23 @@ export function storyHasContent(state: StudioState): boolean {
   return manifest.pages.some(pageHasContent);
 }
 
-/** "2.5s" → 2.5. Tolerates plain numbers and junk. */
+/**
+ * Duration strings from the protocol → seconds.
+ *
+ *   "2.5s" → 2.5 · "450ms" → 0.45 · "2" → 2 · junk → fallback
+ *
+ * The `ms` case is the one that matters: a manifest that asks for a 450 **ms**
+ * pause used to hold the page for seven and a half minutes.
+ */
 export function parseSeconds(value: string | undefined, fallback: number): number {
-  if (!value) return fallback;
-  const n = Number.parseFloat(String(value).replace(/[^0-9.]/g, ""));
-  return Number.isFinite(n) ? n : fallback;
+  if (value === undefined || value === null) return fallback;
+  const raw = String(value).trim().toLowerCase();
+  if (!raw) return fallback;
+  const n = Number.parseFloat(raw.replace(/[^0-9.]/g, ""));
+  if (!Number.isFinite(n)) return fallback;
+  if (/\d\s*ms\b/.test(raw) || raw.endsWith("ms")) return n / 1000;
+  if (/\d\s*min\b/.test(raw) || raw.endsWith("m")) return n * 60;
+  return n;
 }
 
 export function autoPauseOf(page: SsyncPage): number {
@@ -263,8 +249,23 @@ export function readableManifestJson(manifest: SsyncManifest): string {
   return JSON.stringify(clone, null, 2);
 }
 
+/**
+ * Serialized size of the manifest, memoized per manifest object.
+ *
+ * A story with photos and voice is several megabytes of data URLs; the
+ * inspector used to `JSON.stringify` the whole thing on every render, which at
+ * 15 meter frames a second is tens of MB of garbage per second. Manifests are
+ * replaced immutably, so a WeakMap keyed on the object is exact: a new object
+ * means a new measurement, an unchanged one is free.
+ */
+const BYTE_CACHE = new WeakMap<SsyncManifest, number>();
+
 export function approxBytes(manifest: SsyncManifest): number {
-  return JSON.stringify(manifest).length;
+  const cached = BYTE_CACHE.get(manifest);
+  if (cached !== undefined) return cached;
+  const size = JSON.stringify(manifest).length;
+  BYTE_CACHE.set(manifest, size);
+  return size;
 }
 
 export function formatBytes(bytes: number): string {

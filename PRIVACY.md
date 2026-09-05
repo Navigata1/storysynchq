@@ -25,6 +25,17 @@ That fact shapes the product, not just this document.
    story is reachable only by someone holding the link. Share links can be revoked by
    deleting the story.
 
+   **What "public" means on a published story.** A story you finish is stored with
+   `is_public: true`, and that flag is easy to misread. It does not mean listed,
+   browsable, indexed, or offered to anyone. It is the single condition the storage
+   read policy checks, so it is what allows the person holding your link — a
+   grandparent on a phone, with no account and no app — to open the tape at all;
+   without it the link resolves to nothing and the whole point of publishing is lost.
+   The story is not shown in any public gallery, is not linked from anywhere, is not
+   given to search engines, and its 128-bit share code is not guessable. Unlisted by
+   URL, in other words: reachable by the people you hand the link to, invisible to
+   everyone else, and revoked the moment you delete the story.
+
 5. **Drafts are local.** Autosaved drafts (including any recorded narration) live in the
    browser's localStorage only, and the draft is wiped by the story-deletion action.
 

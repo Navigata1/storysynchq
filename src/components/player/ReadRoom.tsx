@@ -3,8 +3,10 @@
 /**
  * ReadRoom — the /read entry surface (docs/design-direction.md §4).
  *
- * Three ways a story reaches a listener, in resolution order:
- *   ?story=<shareCode>  → the cloud copy (Supabase, or nothing at all offline)
+ * Four ways a story reaches a listener, in resolution order:
+ *   ?story=<shareCode>  → the cloud copy, then this device's own library
+ *   ?demo=1             → straight onto the demo tape's cover gate (the
+ *                         landing's "Press play" lands here)
  *   a .storysync file   → unpacked on this device, never uploaded
  *   the demo tape       → /demo/brave-little-star.ssync.json
  *
@@ -26,6 +28,8 @@ import { Player } from "./Player";
 import "./player.css";
 
 const DEMO_URL = "/demo/brave-little-star.ssync.json";
+/** The localStorage library `@/lib/cloud-storage` writes when there is no cloud. */
+const DEVICE_LIBRARY_KEY = "ssync-library";
 /** A blank tape — the one you record yourself. */
 const BLANK_LABEL = "#FFFDF6";
 /** Kraft/manila — the tape someone handed you on a file. */
@@ -111,32 +115,66 @@ function Choice({
   );
 }
 
+/**
+ * A story saved on this device (the localStorage library used whenever Supabase
+ * is not configured) opened by its own link, on the same device. Nothing is
+ * fetched and nothing is uploaded — this is the offline half of `?story=`.
+ */
+function deviceCopy(code: string): SsyncManifest | null {
+  try {
+    const raw = window.localStorage.getItem(DEVICE_LIBRARY_KEY);
+    if (!raw) return null;
+    const rows: unknown = JSON.parse(raw);
+    if (!Array.isArray(rows)) return null;
+    const hit = rows.find((row) => {
+      if (!row || typeof row !== "object") return false;
+      const r = row as { id?: unknown; shareCode?: unknown };
+      return r.id === code || r.shareCode === code;
+    }) as { ssyncData?: unknown } | undefined;
+    return hit ? normalizeManifest(hit.ssyncData) : null;
+  } catch {
+    return null;
+  }
+}
+
 export function ReadRoom() {
   const router = useRouter();
   const params = useSearchParams();
   const code = params.get("story");
+  const demoParam = params.get("demo");
+  const wantsDemo = demoParam === "1" || demoParam === "true";
 
   const [state, setState] = React.useState<RoomState>({ kind: "chooser" });
+  const [shareUrl, setShareUrl] = React.useState<string | undefined>(undefined);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+
+  /* ── the link this tape lives at (SSR-safe: read after mount) ─────────── */
+  React.useEffect(() => {
+    if (!code) {
+      setShareUrl(undefined);
+      return;
+    }
+    try {
+      setShareUrl(window.location.href);
+    } catch {
+      setShareUrl(undefined);
+    }
+  }, [code]);
 
   /* ── ?story=<shareCode> ───────────────────────────────────────────────── */
   React.useEffect(() => {
     if (!code) return;
     let cancelled = false;
     setState({ kind: "loading", what: "Finding that tape" });
+    const land = (manifest: SsyncManifest | null) => {
+      if (cancelled) return;
+      const found = manifest ?? deviceCopy(code);
+      if (!found) setState({ kind: "missing", code });
+      else setState({ kind: "ready", manifest: found, origin: "share" });
+    };
     getSharedBook(code)
-      .then((book) => {
-        if (cancelled) return;
-        const manifest = book ? normalizeManifest(book.ssyncData) : null;
-        if (!manifest) {
-          setState({ kind: "missing", code });
-          return;
-        }
-        setState({ kind: "ready", manifest, origin: "share" });
-      })
-      .catch(() => {
-        if (!cancelled) setState({ kind: "missing", code });
-      });
+      .then((book) => land(book ? normalizeManifest(book.ssyncData) : null))
+      .catch(() => land(null));
     return () => {
       cancelled = true;
     };
@@ -176,10 +214,24 @@ export function ReadRoom() {
     }
   }, []);
 
+  /* ── ?demo=1 — the landing's "Press play" lands on the cover gate ─────── */
+  const openedDemoFor = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (code || !wantsDemo) return;
+    if (openedDemoFor.current === demoParam) return;
+    openedDemoFor.current = demoParam;
+    void openDemo();
+  }, [code, wantsDemo, demoParam, openDemo]);
+
   const exitPlayer = React.useCallback(() => {
-    if (code) router.push("/");
-    else setState({ kind: "chooser" });
-  }, [code, router]);
+    if (code) {
+      router.push("/");
+      return;
+    }
+    // Leaving the demo has to clear ?demo=1, or the room re-threads the tape.
+    if (wantsDemo) router.replace("/read");
+    setState({ kind: "chooser" });
+  }, [code, wantsDemo, router]);
 
   const makeYourOwn = React.useCallback(() => router.push("/studio"), [router]);
 
@@ -190,6 +242,7 @@ export function ReadRoom() {
         manifest={state.manifest}
         onExit={exitPlayer}
         onMakeYourOwn={makeYourOwn}
+        shareUrl={state.origin === "share" ? shareUrl : undefined}
       />
     );
   }

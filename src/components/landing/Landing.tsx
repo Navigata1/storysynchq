@@ -17,6 +17,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { BigButton, GlassPanel, Reel, TapeLabel } from "@/components/studio-kit/kit";
 import "./landing.css";
 
@@ -25,7 +26,23 @@ import "./landing.css";
 const GITHUB_URL = "https://github.com/Navigata1/storysynchq";
 const PRIVACY_URL = "https://github.com/Navigata1/storysynchq/blob/main/PRIVACY.md";
 const SCHEMA_URL = "/protocol/v2.schema.json";
+const PROTOCOL_HREF = "/protocol";
 const DOORS_ID = "ls-doors";
+
+/**
+ * "Press play" plays the demo tape: the Read Room opens `?demo=1` straight on
+ * the demo cover gate ("Tap to Begin"), which is where the iOS audio unlock —
+ * and the whole cassette feeling — begins.
+ */
+const DEMO_HREF = "/read?demo=1";
+
+/**
+ * Cassette-into-deck travel before the route change, in ms.
+ * The bar (docs/10x-plan.md §3 WP-L) is ≤ 900 ms; under
+ * prefers-reduced-motion the tape does not travel at all and the push is
+ * immediate. Keep this value and the CSS animation duration in step.
+ */
+const INSERT_MS = 760;
 
 /* ------------------------------------------------------------------- utils */
 
@@ -211,38 +228,89 @@ function Glyph({ kind, className }: { kind: GlyphKind; className?: string }) {
 
 /* -------------------------------------------------------------------- hero */
 
-function HeroCassette() {
+/**
+ * The hero tape and the deck it drops into. `inserting` is the whole
+ * animation state: CSS moves the cassette down behind the deck face and lights
+ * the transport lamp, and every one of those rules lives behind
+ * `prefers-reduced-motion: no-preference` in landing.css.
+ */
+function HeroDeck({ inserting }: { inserting: boolean }) {
   return (
-    <div className="ls-tape-stage" aria-hidden="true">
-      <div className="ls-cassette">
-        <span className="ls-screw ls-screw--tl" />
-        <span className="ls-screw ls-screw--tr" />
-        <span className="ls-screw ls-screw--bl" />
-        <span className="ls-screw ls-screw--br" />
+    <div
+      className="ls-tape-stage"
+      data-ls="tape-stage"
+      data-inserting={inserting ? "true" : "false"}
+    >
+      {/* the well clips at the deck mouth, so the tape is genuinely swallowed */}
+      <div className="ls-tape-well" aria-hidden="true">
+        <div className="ls-tape-slide" data-ls="tape-slide">
+          <div className="ls-cassette">
+            <span className="ls-screw ls-screw--tl" />
+            <span className="ls-screw ls-screw--tr" />
+            <span className="ls-screw ls-screw--bl" />
+            <span className="ls-screw ls-screw--br" />
 
-        <TapeLabel
-          className="ls-cassette-label"
-          title="StorySyncHQ"
-          meta="SIDE A · PRESS PLAY"
-        />
+            <TapeLabel
+              className="ls-cassette-label"
+              title="StorySyncHQ"
+              meta="SIDE A · PRESS PLAY"
+            />
 
-        <div className="ls-cassette-window">
-          <span className="ls-cassette-ribbon" />
-          <Reel spinning size={62} />
-          <Reel spinning size={62} />
+            <div className="ls-cassette-window">
+              <span className="ls-cassette-ribbon" />
+              <Reel spinning size={62} />
+              <Reel spinning size={62} />
+            </div>
+
+            <div className="ls-cassette-foot">
+              <span className="ls-cassette-slot" />
+              <span className="ls-cassette-slot ls-cassette-slot--wide" />
+              <span className="ls-cassette-slot" />
+            </div>
+          </div>
         </div>
+      </div>
 
-        <div className="ls-cassette-foot">
-          <span className="ls-cassette-slot" />
-          <span className="ls-cassette-slot ls-cassette-slot--wide" />
-          <span className="ls-cassette-slot" />
-        </div>
+      <div className="ls-deck" data-ls="deck" aria-hidden="true">
+        <span className="ls-deck-mouth" />
+        <span className="ls-deck-face">
+          <span className="ls-deck-lamp" />
+          <span className="ls-deck-readout sk-font-meta">
+            {inserting ? "▶ PLAY · SIDE A" : "DECK · READY"}
+          </span>
+          <span className="ls-deck-vents">
+            <span />
+            <span />
+            <span />
+            <span />
+          </span>
+        </span>
       </div>
     </div>
   );
 }
 
 function Hero() {
+  const router = useRouter();
+  const [inserting, setInserting] = React.useState(false);
+  const timer = React.useRef<number | undefined>(undefined);
+
+  // Warm the Read Room so the tape starts the moment the deck swallows it.
+  React.useEffect(() => {
+    try {
+      router.prefetch(DEMO_HREF);
+    } catch {
+      /* prefetch is best-effort; the push below works regardless */
+    }
+  }, [router]);
+
+  React.useEffect(
+    () => () => {
+      if (timer.current !== undefined) window.clearTimeout(timer.current);
+    },
+    [],
+  );
+
   const goToDoors = React.useCallback(() => {
     const el = document.getElementById(DOORS_ID);
     if (!el) return;
@@ -251,6 +319,20 @@ function Hero() {
       block: "start",
     });
   }, []);
+
+  /** Insert the tape, then hand over to the Read Room's demo cover gate. */
+  const pressPlay = React.useCallback(() => {
+    if (timer.current !== undefined) return; // already threading
+    if (prefersReducedMotion()) {
+      router.push(DEMO_HREF);
+      return;
+    }
+    setInserting(true);
+    timer.current = window.setTimeout(() => {
+      timer.current = undefined;
+      router.push(DEMO_HREF);
+    }, INSERT_MS);
+  }, [router]);
 
   return (
     <section className="ls-hero" aria-labelledby="ls-hero-title">
@@ -264,7 +346,7 @@ function Hero() {
           StorySyncHQ
         </h1>
 
-        <HeroCassette />
+        <HeroDeck inserting={inserting} />
 
         <p className="ls-hero-line sk-font-tape">
           Press play on the stories you make together.
@@ -277,14 +359,24 @@ function Hero() {
 
         <div className="ls-hero-cta" style={styleVars({ "--sk-big-h": "76px" })}>
           <BigButton
+            data-ls="press-play"
             icon={<Glyph kind="play" />}
             label="Press play"
             variant="gold"
-            onClick={goToDoors}
+            aria-busy={inserting}
+            onClick={pressPlay}
           />
-          <span className="ls-hero-hint sk-font-meta" aria-hidden="true">
-            or scroll
-          </span>
+          <p className="sr-only" role="status">
+            {inserting ? "Threading the demo tape" : ""}
+          </p>
+          <button
+            type="button"
+            data-ls="or-scroll"
+            className="ls-hero-hint sk-font-meta sk-focus"
+            onClick={goToDoors}
+          >
+            or scroll to the two doors
+          </button>
         </div>
 
         <span className="ls-scroll-cue" aria-hidden="true">
@@ -630,6 +722,10 @@ export default function Landing() {
               nobody needs our servers to hear a story.
             </p>
             <div className="ls-protocol-links">
+              <Link className="ls-link ls-link--lead sk-font-meta sk-focus" href={PROTOCOL_HREF}>
+                Read the protocol
+                <Glyph kind="arrow" />
+              </Link>
               <a
                 className="ls-link sk-font-meta sk-focus"
                 href={SCHEMA_URL}
@@ -674,6 +770,9 @@ export default function Landing() {
             </p>
           </div>
           <nav className="ls-footer-links sk-font-meta" aria-label="Footer">
+            <Link className="ls-footer-link sk-focus" href={PROTOCOL_HREF}>
+              Protocol
+            </Link>
             <a className="ls-footer-link sk-focus" href={PRIVACY_URL} target="_blank" rel="noreferrer">
               Privacy
             </a>

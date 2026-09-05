@@ -11,9 +11,8 @@
 import * as React from "react";
 import { VUMeter } from "@/components/studio-kit/kit";
 import type { SsyncManifest, SsyncPage } from "@/lib/storysync/manifest";
+import { MOOD_NAMES, moodReadout } from "./moods-ui";
 import {
-  MOOD_NAMES,
-  STUDIO_MOODS,
   approxBytes,
   autoPauseOf,
   codecBadge,
@@ -32,7 +31,12 @@ export interface InspectorProps {
   musicOn: boolean;
   musicVolume: number;
   narrationVolume: number;
-  level: number;
+  /**
+   * The meter subscribes itself instead of taking a `level` prop: a value
+   * arriving 15 times a second through the tree would re-render the whole
+   * studio (and re-measure a multi-megabyte manifest) at the same rate.
+   */
+  subscribeLevel: (listener: (level: number) => void) => () => void;
   onAutoPause: (seconds: number) => void;
   onApplyPauseToAll: () => void;
   onTimingMultiplier: (value: number) => void;
@@ -101,6 +105,36 @@ function Slider({
   );
 }
 
+/**
+ * The only thing in the studio that re-renders at frame rate. It owns its own
+ * state and subscribes to the engine's activity envelope, so nothing above it
+ * in the tree is touched while a child is talking.
+ */
+function ActivityMeter({
+  subscribeLevel,
+}: {
+  subscribeLevel: (listener: (level: number) => void) => () => void;
+}) {
+  const [level, setLevel] = React.useState(0);
+  React.useEffect(() => subscribeLevel(setLevel), [subscribeLevel]);
+  return (
+    <div className="mt-4">
+      <div
+        className="mb-1 flex items-center justify-between text-[11px] tracking-[0.16em] text-white/45 uppercase"
+        style={META_FONT}
+      >
+        <span>activity</span>
+        <span>{Math.round(level * 100)}%</span>
+      </div>
+      <VUMeter level={level} label="Narration and recording activity" />
+      <p className="mt-1.5 text-xs leading-relaxed text-white/35">
+        Activity envelope, not a calibrated meter: the engine exposes no analyser tap and the
+        studio will not open a second microphone stream to fake one.
+      </p>
+    </div>
+  );
+}
+
 const BADGE_TONE: Record<string, string> = {
   published: "border-emerald-400/40 bg-emerald-500/10 text-emerald-200",
   draft: "border-amber-400/40 bg-amber-500/10 text-amber-200",
@@ -117,7 +151,7 @@ export function Inspector(props: InspectorProps) {
     musicOn,
     musicVolume,
     narrationVolume,
-    level,
+    subscribeLevel,
     onAutoPause,
     onApplyPauseToAll,
     onTimingMultiplier,
@@ -233,23 +267,12 @@ export function Inspector(props: InspectorProps) {
         >
           {MOOD_NAMES.map((name) => (
             <option key={name} value={name} className="bg-[#0b1020]">
-              {name} · {STUDIO_MOODS[name].freq1}/{STUDIO_MOODS[name].freq2} Hz ×
-              {STUDIO_MOODS[name].gainMult}
+              {name} · {moodReadout(name)}
             </option>
           ))}
         </select>
 
-        <div className="mt-4">
-          <div className="mb-1 flex items-center justify-between text-[11px] tracking-[0.16em] text-white/45 uppercase" style={META_FONT}>
-            <span>activity</span>
-            <span>{Math.round(level * 100)}%</span>
-          </div>
-          <VUMeter level={level} label="Narration and recording activity" />
-          <p className="mt-1.5 text-xs leading-relaxed text-white/35">
-            Activity envelope, not a calibrated meter: the engine exposes no analyser tap and the
-            studio will not open a second microphone stream to fake one.
-          </p>
-        </div>
+        <ActivityMeter subscribeLevel={subscribeLevel} />
       </Section>
 
       {/* ------------------------------------------------------------- page */}

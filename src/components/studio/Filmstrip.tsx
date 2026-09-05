@@ -12,6 +12,11 @@ import type { SsyncPage } from "@/lib/storysync/manifest";
 export interface FilmstripProps {
   pages: SsyncPage[];
   activeIndex: number;
+  /**
+   * The tape does not move while the mic is live: a page change mid-take
+   * would file the recording against the wrong page.
+   */
+  locked?: boolean;
   onSelect: (index: number) => void;
   onMove: (index: number, direction: -1 | 1) => void;
   onDelete: (index: number) => void;
@@ -43,7 +48,15 @@ function StripButton({
   );
 }
 
-export function Filmstrip({ pages, activeIndex, onSelect, onMove, onDelete, onAdd }: FilmstripProps) {
+export function Filmstrip({
+  pages,
+  activeIndex,
+  locked = false,
+  onSelect,
+  onMove,
+  onDelete,
+  onAdd,
+}: FilmstripProps) {
   const stripRef = React.useRef<HTMLDivElement | null>(null);
 
   // Keep the selected frame in view when the transport turns the page.
@@ -71,6 +84,8 @@ export function Filmstrip({ pages, activeIndex, onSelect, onMove, onDelete, onAd
               aria-current={current ? "true" : undefined}
               aria-label={`Page ${index + 1}${narrated ? ", has voice" : ""}${current ? ", selected" : ""}`}
               onClick={() => onSelect(index)}
+              disabled={locked && !current}
+              title={locked && !current ? "Finish the recording first" : undefined}
               className={`studio-thumb sk-focus ${current ? "is-current" : ""}`}
             >
               {image ? (
@@ -103,8 +118,9 @@ export function Filmstrip({ pages, activeIndex, onSelect, onMove, onDelete, onAd
         <button
           type="button"
           onClick={onAdd}
+          disabled={locked}
           aria-label="Add a new page"
-          title="Add a new page"
+          title={locked ? "Finish the recording first" : "Add a new page"}
           className="studio-thumb sk-focus flex items-center justify-center border-dashed text-2xl text-amber-300/80 hover:border-amber-400/60 hover:text-amber-200"
         >
           <span aria-hidden="true">+</span>
@@ -116,19 +132,19 @@ export function Filmstrip({ pages, activeIndex, onSelect, onMove, onDelete, onAd
           label="Move this page earlier"
           glyph="◀"
           onClick={() => onMove(activeIndex, -1)}
-          disabled={activeIndex <= 0}
+          disabled={locked || activeIndex <= 0}
         />
         <StripButton
           label="Move this page later"
           glyph="▶"
           onClick={() => onMove(activeIndex, 1)}
-          disabled={activeIndex >= pages.length - 1}
+          disabled={locked || activeIndex >= pages.length - 1}
         />
         <StripButton
           label="Delete this page"
           glyph="🗑"
           onClick={() => onDelete(activeIndex)}
-          disabled={pages.length <= 1}
+          disabled={locked || pages.length <= 1}
         />
       </div>
     </section>

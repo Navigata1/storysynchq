@@ -9,7 +9,8 @@
 import * as React from "react";
 import { BigButton, GlassPanel } from "@/components/studio-kit/kit";
 import type { MicPermissionError } from "@/lib/audio/recorder";
-import { MOOD_NAMES, STUDIO_MOODS, formatClock, type MoodName } from "./types";
+import { MOOD_CHROME, MOOD_NAMES, moodBlurb, type MoodName } from "./moods-ui";
+import { formatClock } from "./types";
 
 /* ---------------------------------------------------------------- shell */
 
@@ -186,7 +187,7 @@ export function MusicPanel({
     <PanelShell title="Music" subtitle="The feeling under your story" onClose={onClose}>
       <div role="radiogroup" aria-label="Music mood" className="grid grid-cols-2 gap-2">
         {MOOD_NAMES.map((name) => {
-          const config = STUDIO_MOODS[name];
+          const chrome = MOOD_CHROME[name];
           const selected = name === mood;
           return (
             <button
@@ -202,10 +203,12 @@ export function MusicPanel({
               }`}
             >
               <span className="flex items-center gap-2 text-[15px] font-semibold text-white">
-                <span aria-hidden="true">{config.emoji}</span>
+                <span aria-hidden="true">{chrome.emoji}</span>
                 {name}
               </span>
-              <span className="mt-0.5 block text-xs leading-snug text-white/50">{config.blurb}</span>
+              <span className="mt-0.5 block text-xs leading-snug text-white/50">
+                {moodBlurb(name)}
+              </span>
             </button>
           );
         })}

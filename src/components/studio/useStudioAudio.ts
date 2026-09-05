@@ -10,10 +10,11 @@
  * like the receiving room (design-direction §7).
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DualBusAudioEngine } from "@/lib/audio/engine";
 import { NarrationRecorder, blobToDataUrl, type MicPermissionError } from "@/lib/audio/recorder";
-import { STUDIO_MOODS, autoPauseOf, type StudioState } from "./types";
+import { StudioCues } from "./cues";
+import { autoPauseOf, type StudioState } from "./types";
 
 export interface UseStudioAudioArgs {
   stateRef: { current: StudioState };
@@ -32,8 +33,15 @@ export interface StudioAudio {
   /** Duration of the current narration clip (0 when the browser voice is reading). */
   clipDuration: number;
   recordSeconds: number;
-  /** 0..1 activity level for the VU meter (see note in the inspector). */
-  level: number;
+  /**
+   * 0..1 activity level for the VU meter, delivered by subscription rather than
+   * as state: at 15 fps a `level` prop would re-render the whole studio (and
+   * re-serialize a multi-megabyte manifest) fifteen times a second. Only the
+   * meter itself listens. Returns an unsubscribe function.
+   */
+  subscribeLevel: (listener: (level: number) => void) => () => void;
+  /** The page id a take is being recorded onto, captured at record START. */
+  recordingPageId: number | null;
   micError: MicPermissionError | null;
   clearMicError: () => void;
   unlock: () => Promise<void>;
@@ -44,6 +52,8 @@ export interface StudioAudio {
   /** Music bed follows playback, and the Music tool panel while it is open. */
   setMusicActive: (active: boolean) => void;
   syncMix: () => void;
+  /** Short synthesized confirmations (page turn, record start/stop). */
+  cues: StudioCues;
 }
 
 const LEVEL_FPS_MS = 66;
@@ -64,15 +74,31 @@ export function useStudioAudio({
   const recStartRef = useRef(0);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const lastSrcRef = useRef<string | null>(null);
+  /** The page a take belongs to — read at START, never at stop. */
+  const recordPageIdRef = useRef<number | null>(null);
+  const levelListeners = useRef(new Set<(level: number) => void>());
 
   const [playing, setPlaying] = useState(false);
   const [narrating, setNarrating] = useState(false);
   const [recording, setRecording] = useState(false);
+  const [recordingPageId, setRecordingPageId] = useState<number | null>(null);
   const [position, setPosition] = useState(0);
   const [clipDuration, setClipDuration] = useState(0);
   const [recordSeconds, setRecordSeconds] = useState(0);
-  const [level, setLevel] = useState(0);
   const [micError, setMicError] = useState<MicPermissionError | null>(null);
+
+  const cues = useMemo(() => new StudioCues(), []);
+
+  const emitLevel = useCallback((value: number) => {
+    for (const listener of levelListeners.current) listener(value);
+  }, []);
+
+  const subscribeLevel = useCallback((listener: (level: number) => void) => {
+    levelListeners.current.add(listener);
+    return () => {
+      levelListeners.current.delete(listener);
+    };
+  }, []);
 
   /* ------------------------------------------------------------- engine */
 
@@ -97,7 +123,9 @@ export function useStudioAudio({
     engine.setNarrationVolume(state.narrationVolume);
     engine.setMusicVolume(state.musicVolume);
     const wanted = state.musicOn && musicActiveRef.current;
-    if (wanted) engine.startMusic(STUDIO_MOODS[state.mood]);
+    // The shared mood vocabulary, by name — the same value that gets written to
+    // `page.music` and the same one the Player resolves.
+    if (wanted) engine.startMusic(state.mood);
     else if (engine.musicPlaying) engine.stopMusic();
   }, [stateRef]);
 
@@ -185,6 +213,11 @@ export function useStudioAudio({
 
   const speakPage = useCallback(
     (index: number, text: string) => {
+      // A failed <audio>.play() fires BOTH a rejected promise and an `error`
+      // event, and the error handler has already scheduled the auto-advance.
+      // Left alone, that stale timer turns the page out from under the browser
+      // voice we are about to start. Kill it first, every time.
+      clearAdvance();
       const synth = typeof window !== "undefined" ? window.speechSynthesis : undefined;
       if (!synth || typeof SpeechSynthesisUtterance === "undefined" || !text.trim()) {
         finishPage(index);
@@ -213,7 +246,7 @@ export function useStudioAudio({
         finishPage(index);
       }
     },
-    [finishPage, setDucking],
+    [clearAdvance, finishPage, setDucking],
   );
 
   const playIndex = useCallback(
@@ -307,15 +340,24 @@ export function useStudioAudio({
   const toggleRecord = useCallback(async () => {
     const recorder = recorderRef.current ?? (recorderRef.current = new NarrationRecorder());
     if (recorder.isRecording) {
+      // The take belongs to the page that was on the Stage when the child
+      // started talking. Reading the active page at STOP attributed a take to
+      // whatever page happened to be selected by then.
+      const pageId = recordPageIdRef.current;
       try {
         const result = await recorder.stop();
+        cues.recordStop();
         const dataUrl = await blobToDataUrl(result.blob);
-        const page = stateRef.current.manifest.pages[activeIndexRef.current];
-        if (page) onRecorded(page.id, dataUrl, result.mimeType, result.duration);
+        const exists = stateRef.current.manifest.pages.some((p) => p.id === pageId);
+        if (pageId !== null && exists) {
+          onRecorded(pageId, dataUrl, result.mimeType, result.duration);
+        }
       } catch {
         setMicError("unknown");
       } finally {
+        recordPageIdRef.current = null;
         setRecording(false);
+        setRecordingPageId(null);
         setRecordSeconds(0);
       }
       return;
@@ -323,25 +365,34 @@ export function useStudioAudio({
 
     stop();
     await unlock();
+    const page = stateRef.current.manifest.pages[activeIndexRef.current];
     try {
       await recorder.start();
+      recordPageIdRef.current = page?.id ?? null;
       recStartRef.current = performance.now();
       setRecordSeconds(0);
       setMicError(null);
       setRecording(true);
+      setRecordingPageId(page?.id ?? null);
+      void cues.unlock();
+      cues.recordStart();
     } catch (err) {
       const code: MicPermissionError =
         err === "denied" || err === "unavailable" || err === "unknown"
           ? (err as MicPermissionError)
           : "unknown";
+      recordPageIdRef.current = null;
       setMicError(code);
       setRecording(false);
+      setRecordingPageId(null);
     }
-  }, [activeIndexRef, onRecorded, stateRef, stop, unlock]);
+  }, [activeIndexRef, cues, onRecorded, stateRef, stop, unlock]);
 
   const cancelRecording = useCallback(() => {
     recorderRef.current?.cancel();
+    recordPageIdRef.current = null;
     setRecording(false);
+    setRecordingPageId(null);
     setRecordSeconds(0);
   }, []);
 
@@ -358,7 +409,7 @@ export function useStudioAudio({
   useEffect(() => {
     const active = recording || narrating;
     if (!active) {
-      setLevel(0);
+      emitLevel(0);
       return;
     }
     const reduced =
@@ -366,7 +417,7 @@ export function useStudioAudio({
       typeof window.matchMedia === "function" &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduced) {
-      setLevel(recording ? 0.62 : 0.5);
+      emitLevel(recording ? 0.62 : 0.5);
       return;
     }
     let raf = 0;
@@ -380,11 +431,11 @@ export function useStudioAudio({
       // analyser tap and we will not open a second mic stream to fake one.
       const wobble =
         0.5 + 0.32 * Math.sin(t / 190) + 0.18 * Math.sin(t / 71) + 0.1 * Math.sin(t / 37);
-      setLevel(Math.max(0, Math.min(1, base * wobble + base * 0.35)));
+      emitLevel(Math.max(0, Math.min(1, base * wobble + base * 0.35)));
     };
     raf = window.requestAnimationFrame(tick);
     return () => window.cancelAnimationFrame(raf);
-  }, [narrating, recording]);
+  }, [emitLevel, narrating, recording]);
 
   /* ------------------------------------------------------------- cleanup */
 
@@ -399,18 +450,20 @@ export function useStudioAudio({
       recorderRef.current?.cancel();
       engineRef.current?.dispose();
       engineRef.current = null;
+      cues.dispose();
     };
-  }, []);
+  }, [cues]);
 
   return {
     audioRef,
     playing,
     narrating,
     recording,
+    recordingPageId,
     position,
     clipDuration,
     recordSeconds,
-    level,
+    subscribeLevel,
     micError,
     clearMicError: () => setMicError(null),
     unlock,
@@ -420,5 +473,6 @@ export function useStudioAudio({
     cancelRecording,
     setMusicActive,
     syncMix,
+    cues,
   };
 }

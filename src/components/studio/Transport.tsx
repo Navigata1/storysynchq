@@ -4,6 +4,8 @@
  * TRANSPORT — ⏮ ● REC ▶ ⏭, reels spinning while the tape moves.
  * Record is tap-to-start / tap-to-stop: a 4-year-old cannot hold a button
  * steady while performing, and hold-to-record loses the take on a slip.
+ * ⏮ and ⏭ are dead while the mic is live — the take belongs to the page it was
+ * started on, so that page stays on the Stage until the take is finished.
  */
 
 import * as React from "react";
@@ -60,7 +62,7 @@ export function Transport({
       </div>
 
       <div className="flex flex-1 items-center justify-center gap-3 sm:gap-5">
-        <TransportButton kind="prev" onClick={onPrev} disabled={pageNumber <= 1} />
+        <TransportButton kind="prev" onClick={onPrev} disabled={recording || pageNumber <= 1} />
         <TransportButton
           kind="rec"
           active={recording}
@@ -75,7 +77,11 @@ export function Transport({
           aria-label={playing ? "Stop playing" : "Play the story"}
           className="scale-[1.15]"
         />
-        <TransportButton kind="next" onClick={onNext} disabled={pageNumber >= pageCount} />
+        <TransportButton
+          kind="next"
+          onClick={onNext}
+          disabled={recording || pageNumber >= pageCount}
+        />
       </div>
 
       <div

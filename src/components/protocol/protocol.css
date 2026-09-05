@@ -1,0 +1,678 @@
+/* ============================================================================
+   /protocol — the SSYNC format's page.
+   Register A chrome (the room) holding Register B artifacts (the printed
+   sheets and the tape). See docs/design-direction.md §2.
+
+   UNLAYERED on purpose, like landing.css: these rules must win over
+   studio-kit's @layer components defaults. Every motion rule sits inside
+   prefers-reduced-motion: no-preference.
+   ========================================================================== */
+
+.pr-root {
+  --pr-paper: #fffdf6;
+  --pr-ink: #1e1a16;
+  --pr-gold: #f59e0b;
+  --pr-violet: #7c6bff;
+  --pr-red: #e3452f;
+
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  min-height: 100svh;
+  color: #e6ebf2;
+  background-color: #0a0e1a;
+  background-image:
+    radial-gradient(1000px 620px at 82% -8%, rgba(124, 107, 255, 0.13), transparent 62%),
+    radial-gradient(900px 560px at 6% 26%, rgba(245, 158, 11, 0.09), transparent 60%);
+}
+
+:where(.pr-root) :where(h1, h2, h3, p, ul, ol, li, figure, pre, table) {
+  margin: 0;
+  padding: 0;
+}
+
+:where(.pr-root) :where(ul, ol) {
+  list-style: none;
+}
+
+:where(.pr-root) :where(a) {
+  color: inherit;
+  text-decoration: none;
+}
+
+.pr-wrap {
+  width: 100%;
+  max-width: 68rem;
+  margin-inline: auto;
+  padding-inline: clamp(1.15rem, 5vw, 2.5rem);
+}
+
+.pr-arrow {
+  display: block;
+  width: 1.05em;
+  height: 1.05em;
+  flex: none;
+}
+
+/* -------------------------------------------------------------------- bar */
+
+.pr-bar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background-color: rgba(10, 14, 26, 0.82);
+  backdrop-filter: blur(14px);
+}
+
+.pr-bar-inner {
+  display: flex;
+  /* Below ~340px the three destinations cannot share a line; wrapping keeps
+     every one of them (and every 44px target) instead of pushing the document
+     sideways. */
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0 1rem;
+  min-height: 60px;
+}
+
+.pr-back,
+.pr-bar-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding-inline: 0.35rem;
+  border-radius: 8px;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: rgba(203, 213, 225, 0.85);
+}
+
+/* one line on a phone, without dropping any destination */
+@media (max-width: 520px) {
+  .pr-back,
+  .pr-bar-link {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    padding-inline: 0.15rem;
+  }
+
+  .pr-bar-nav {
+    flex-wrap: wrap;
+    gap: 0 0.9rem;
+  }
+}
+
+.pr-back:hover,
+.pr-bar-link:hover {
+  color: var(--pr-gold);
+}
+
+.pr-bar-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem 1.35rem;
+}
+
+/* ------------------------------------------------------------------- type */
+
+.pr-eyebrow {
+  font-size: 11px;
+  line-height: 1.5;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: rgba(245, 158, 11, 0.82);
+}
+
+.pr-h1 {
+  margin-top: 0.9rem;
+  max-width: 20ch;
+  font-weight: 900;
+  font-size: clamp(2.1rem, 7vw, 3.6rem);
+  line-height: 1.03;
+  letter-spacing: -0.03em;
+  color: var(--pr-paper);
+  text-wrap: balance;
+}
+
+.pr-h2 {
+  margin-top: 0.7rem;
+  font-weight: 700;
+  font-size: clamp(1.6rem, 4.6vw, 2.35rem);
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+  text-wrap: balance;
+}
+
+.pr-h3 {
+  font-weight: 700;
+  font-size: 1.18rem;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+  color: var(--pr-paper);
+}
+
+.pr-lede {
+  margin-top: 1.05rem;
+  max-width: 62ch;
+  font-size: clamp(0.98rem, 2.4vw, 1.08rem);
+  line-height: 1.66;
+  color: rgba(209, 213, 219, 0.94);
+}
+
+.pr-lede--quiet {
+  color: rgba(148, 163, 184, 0.88);
+}
+
+.pr-copy {
+  margin-top: 0.6rem;
+  max-width: 60ch;
+  font-size: 0.94rem;
+  line-height: 1.62;
+  color: rgba(203, 213, 225, 0.86);
+}
+
+.pr-note {
+  margin-top: 1.6rem;
+  font-size: 10.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(148, 163, 184, 0.72);
+}
+
+.pr-root code {
+  padding: 0.08em 0.32em;
+  border-radius: 4px;
+  background-color: rgba(245, 158, 11, 0.12);
+  color: rgba(252, 211, 77, 0.95);
+  font-size: 0.9em;
+}
+
+.pr-inline-link {
+  border-bottom: 1px solid rgba(245, 158, 11, 0.45);
+  color: var(--pr-gold);
+}
+
+/* --------------------------------------------------------------- sections */
+
+.pr-hero {
+  padding-block: clamp(2.75rem, 8vw, 5rem) clamp(2rem, 5vw, 3rem);
+}
+
+.pr-section {
+  padding-block: clamp(2.5rem, 7vw, 4.5rem);
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.pr-section--take {
+  background-color: rgba(4, 7, 14, 0.4);
+}
+
+/* ------------------------------------------------------------------ facts */
+
+.pr-facts {
+  display: grid;
+  gap: 0.7rem;
+  margin-top: 2rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .pr-facts {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (min-width: 1024px) {
+  .pr-facts {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.pr-fact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+.pr-fact-k {
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: rgba(245, 158, 11, 0.85);
+}
+
+.pr-fact-v {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: rgba(226, 232, 240, 0.92);
+}
+
+/* ------------------------------------------------------------------ links */
+
+.pr-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.6rem;
+  margin-top: 1.5rem;
+}
+
+.pr-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 44px;
+  padding-inline: 0.15rem;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--pr-gold);
+  border-bottom: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.pr-link:hover {
+  color: #fcd34d;
+  border-bottom-color: rgba(252, 211, 77, 0.85);
+}
+
+/* ----------------------------------------------------- the packet diagram */
+
+/* Register B: printed on tape paper, pinned slightly askew. */
+.pr-packet {
+  margin-top: 2rem;
+  padding: clamp(0.85rem, 2.4vw, 1.4rem);
+  border: 3px solid var(--pr-ink);
+  border-radius: 16px;
+  background-color: var(--pr-paper);
+  box-shadow: 0 34px 70px rgba(0, 0, 0, 0.5);
+}
+
+.pr-packet-scroll {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+
+.pr-packet-svg {
+  display: block;
+  width: 100%;
+  min-width: 34rem;
+  height: auto;
+}
+
+.pr-packet-cap {
+  margin-top: 0.9rem;
+  font-size: 10.5px;
+  line-height: 1.5;
+  letter-spacing: 0.06em;
+  color: rgba(30, 26, 22, 0.62);
+}
+
+/* ----------------------------------------------------------------- legend */
+
+.pr-legend {
+  display: grid;
+  gap: 0.85rem;
+  margin-top: 1.6rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 720px) {
+  .pr-legend {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (min-width: 1100px) {
+  .pr-legend {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.pr-legend-item {
+  display: flex;
+}
+
+.pr-legend-card {
+  width: 100%;
+  padding: 1.1rem 1.15rem 1.25rem;
+}
+
+.pr-legend-index {
+  font-size: 10px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: rgba(245, 158, 11, 0.85);
+}
+
+.pr-legend-card .pr-h3 {
+  margin-top: 0.5rem;
+}
+
+.pr-legend-key {
+  margin-top: 0.3rem;
+  font-size: 11.5px;
+  color: rgba(124, 107, 255, 0.95);
+  word-break: break-word;
+}
+
+/* -------------------------------------------------------- container sheet */
+
+.pr-two {
+  display: grid;
+  gap: clamp(1.1rem, 3vw, 2rem);
+  margin-top: 1.9rem;
+  grid-template-columns: 1fr;
+  align-items: start;
+}
+
+/* A grid item's automatic minimum size is min-content, so an un-wrappable
+   <pre> line (or any long token) widens its track and drags the WHOLE
+   document sideways — the page scrolls horizontally, not the code block.
+   Every track on this page is allowed to shrink; the scroll lives inside the
+   labelled, focusable regions that own it. See CLAUDE.md §6 (375px clean) and
+   docs/design-direction.md §8. */
+.pr-two > *,
+.pr-take > *,
+.pr-facts > *,
+.pr-legend > * {
+  min-width: 0;
+}
+
+@media (min-width: 900px) {
+  .pr-two {
+    grid-template-columns: 1.05fr 0.95fr;
+  }
+}
+
+.pr-sheet {
+  max-width: 100%;
+  padding: 1.1rem 1.15rem 0.95rem;
+  border: 3px solid var(--pr-ink);
+  border-radius: 14px;
+  background-color: var(--pr-paper);
+  box-shadow: 0 28px 60px rgba(0, 0, 0, 0.48);
+}
+
+.pr-tree {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  max-width: 100%;
+  font-size: 11.5px;
+  line-height: 1.75;
+  color: var(--pr-ink);
+  white-space: pre;
+}
+
+.pr-sheet-cap {
+  margin-top: 0.8rem;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  color: rgba(30, 26, 22, 0.6);
+}
+
+.pr-rules {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.pr-rules > li {
+  position: relative;
+  padding-left: 1.35rem;
+  max-width: 56ch;
+  font-size: 0.94rem;
+  line-height: 1.6;
+  color: rgba(203, 213, 225, 0.88);
+}
+
+.pr-rules > li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.62em;
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  background-color: rgba(245, 158, 11, 0.85);
+}
+
+.pr-code {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  max-width: 100%;
+  margin-top: 0.75rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  background-color: rgba(4, 7, 14, 0.72);
+  font-size: 11.5px;
+  line-height: 1.7;
+  color: rgba(226, 232, 240, 0.92);
+  white-space: pre;
+}
+
+/* -------------------------------------------------------------- rule box */
+
+.pr-rule {
+  margin-top: 1.8rem;
+  padding: 1.25rem 1.35rem;
+  border: 1px solid rgba(227, 69, 47, 0.45);
+  border-left: 4px solid var(--pr-red);
+  border-radius: 12px;
+  background-color: rgba(227, 69, 47, 0.07);
+}
+
+.pr-rule-h {
+  font-size: 10.5px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: rgba(252, 165, 148, 0.95);
+}
+
+.pr-rule-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  margin-top: 0.9rem;
+  counter-reset: pr-rule;
+}
+
+.pr-rule-list > li {
+  position: relative;
+  padding-left: 1.9rem;
+  max-width: 62ch;
+  font-size: 0.94rem;
+  line-height: 1.6;
+  color: rgba(226, 232, 240, 0.9);
+  counter-increment: pr-rule;
+}
+
+.pr-rule-list > li::before {
+  content: counter(pr-rule);
+  position: absolute;
+  left: 0;
+  top: 0.05em;
+  display: grid;
+  place-items: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 5px;
+  background-color: rgba(227, 69, 47, 0.22);
+  color: rgba(252, 205, 195, 0.95);
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  font-size: 11px;
+}
+
+/* ------------------------------------------------------------------ table */
+
+.pr-table-scroll {
+  overflow-x: auto;
+  margin-top: 0.9rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+}
+
+.pr-table {
+  width: 100%;
+  min-width: 34rem;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.pr-table th,
+.pr-table td {
+  padding: 0.85rem 1rem;
+  vertical-align: top;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.pr-table thead th {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: rgba(245, 158, 11, 0.85);
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+.pr-table tbody th {
+  font-weight: 600;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: rgba(226, 232, 240, 0.95);
+}
+
+.pr-table tbody td {
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: rgba(203, 213, 225, 0.82);
+}
+
+.pr-table tbody tr:last-child th,
+.pr-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+/* ------------------------------------------------------------- take a tape */
+
+.pr-take {
+  display: grid;
+  gap: clamp(1.2rem, 3vw, 2.2rem);
+  margin-top: 1.9rem;
+  grid-template-columns: 1fr;
+  align-items: center;
+}
+
+@media (min-width: 860px) {
+  .pr-take {
+    grid-template-columns: 20rem 1fr;
+  }
+}
+
+.pr-take-tape {
+  position: relative;
+}
+
+.pr-take-tape .sk-tape {
+  transform: rotate(-1.2deg);
+}
+
+.pr-take-reels {
+  --sk-ink: #efe4d1;
+  display: flex;
+  justify-content: center;
+  gap: 3.5rem;
+  margin-top: 0.9rem;
+  padding: 0.6rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  background-image: linear-gradient(180deg, rgba(10, 8, 7, 0.92), rgba(38, 32, 27, 0.85));
+}
+
+.pr-take-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.85rem;
+}
+
+.pr-take-body .sk-big {
+  margin-top: 0.35rem;
+}
+
+.pr-take-status {
+  min-height: 1.4em;
+  font-size: 11.5px;
+  line-height: 1.5;
+  letter-spacing: 0.06em;
+  color: rgba(148, 163, 184, 0.85);
+}
+
+/* ----------------------------------------------------------------- footer */
+
+.pr-footer {
+  padding-block: clamp(2rem, 5vw, 3rem);
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  background-color: rgba(4, 7, 14, 0.5);
+}
+
+.pr-footer-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+@media (min-width: 768px) {
+  .pr-footer-inner {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+.pr-footer-note {
+  max-width: 52ch;
+  font-size: 0.85rem;
+  line-height: 1.55;
+  color: rgba(148, 163, 184, 0.72);
+}
+
+.pr-footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 1.4rem;
+}
+
+/* ============================================================================
+   Motion — opt-in only. This is a reading page: nothing moves on its own.
+   ========================================================================== */
+
+@media (prefers-reduced-motion: no-preference) {
+  .pr-back,
+  .pr-bar-link,
+  .pr-link,
+  .pr-inline-link {
+    transition:
+      color 200ms ease-out,
+      border-color 200ms ease-out;
+  }
+
+  .pr-legend-card {
+    transition: border-color 240ms ease-out, background-color 240ms ease-out;
+  }
+
+  .pr-legend-card:hover {
+    border-color: rgba(245, 158, 11, 0.32);
+    background-color: rgba(255, 255, 255, 0.07);
+  }
+}
