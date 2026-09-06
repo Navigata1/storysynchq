@@ -3,7 +3,7 @@
  * Phase 8 — Offline Support & PWA
  */
 
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v2'; // bumped for the Digital Studio redesign — purges v1 caches on activate
 const SHELL_CACHE = `ssync-shell-${CACHE_VERSION}`;
 const IMAGE_CACHE = `ssync-images-${CACHE_VERSION}`;
 

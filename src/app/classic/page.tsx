@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { generateStory as generateStoryAI } from "@/lib/story-engine";
 import { generateIllustration } from "../page-improvements";
 import { supabase, isSupabaseConfigured, signUp as sbSignUp, signIn as sbSignIn, signOut as sbSignOut, onAuthStateChange, getProfile } from "@/lib/supabase";
@@ -12,6 +12,35 @@ import { buildStorysyncFromStory, loadStorysyncToStory } from "@/lib/storysync/c
 import type { SsyncManifest } from "@/lib/storysync/manifest";
 
 /* ─── Types ─── */
+
+/* ── Hero starfield ──
+   Positions are a fixed pseudo-random sequence (not Math.random in render) so the
+   prerendered HTML and the client's first paint agree — no hydration mismatch. */
+const HERO_STARS = Array.from({ length: 40 }, (_, i) => {
+  const r = (n: number) => {
+    const x = Math.sin(i * 12.9898 + n * 78.233) * 43758.5453;
+    return x - Math.floor(x);
+  };
+  return {
+    left: +(r(1) * 100).toFixed(2),
+    top: +(r(2) * 100).toFixed(2),
+    delay: +(r(3) * 5).toFixed(2),
+    duration: +(2 + r(4) * 4).toFixed(2),
+    opacity: +(0.2 + r(5) * 0.6).toFixed(2),
+  };
+});
+
+/* ── Online/offline as an external store (navigator.onLine) ── */
+function subscribeOnline(onChange: () => void) {
+  window.addEventListener("online", onChange);
+  window.addEventListener("offline", onChange);
+  return () => {
+    window.removeEventListener("online", onChange);
+    window.removeEventListener("offline", onChange);
+  };
+}
+const getOfflineSnapshot = () => !navigator.onLine;
+const getOfflineServerSnapshot = () => false;
 
 /* ── Phase 5: Auth & Library Types ── */
 interface SyncUser {
@@ -391,12 +420,10 @@ function MyStoriesLibrary({
   onOpenStory: (data: SSyncData) => void;
   user: SyncUser;
 }) {
-  const [library, setLibrary] = useState<LibraryEntry[]>([]);
+  // Mounted only after a client-side action (showMyStories), so reading
+  // localStorage in the initializer cannot cause a hydration mismatch.
+  const [library, setLibrary] = useState<LibraryEntry[]>(() => getLibrary());
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
-
-  useEffect(() => {
-    setLibrary(getLibrary());
-  }, []);
 
   const handleDelete = (id: string) => {
     removeFromLibrary(id);
@@ -2366,7 +2393,7 @@ function ImmersiveReader({ data, onExit, startInRemix }: { data: SSyncData; onEx
                 </div>
                 <div className="mt-4 p-4 rounded-2xl bg-violet-500/10 border border-violet-400/20 text-center">
                   <p className="text-violet-300 text-sm font-semibold mb-1">🚀 Coming Soon</p>
-                  <p className="text-violet-300/60 text-xs">AI illustration regeneration — select a style and we'll redraw every page in seconds</p>
+                  <p className="text-violet-300/60 text-xs">AI illustration regeneration — select a style and we&apos;ll redraw every page in seconds</p>
                 </div>
               </div>
             )}
@@ -2989,7 +3016,7 @@ function StoryCreator({
                 <h3 className="text-sm font-semibold text-violet-300">Generate with AI</h3>
                 <span className="text-xs text-violet-400/60 ml-auto">5 pages · instant</span>
               </div>
-              <p className="text-gray-500 text-xs mb-3">Describe your story idea and we'll create a 5-page narrative for you</p>
+              <p className="text-gray-500 text-xs mb-3">Describe your story idea and we&apos;ll create a 5-page narrative for you</p>
               <textarea
                 value={aiPrompt}
                 onChange={e => setAiPrompt(e.target.value)}
@@ -3374,7 +3401,7 @@ export default function Home() {
 
   /* ── Phase 8: PWA & Mobile State ── */
   const [showInstallBanner, setShowInstallBanner] = useState(false);
-  const [isOffline, setIsOffline] = useState(false);
+  const isOffline = useSyncExternalStore(subscribeOnline, getOfflineSnapshot, getOfflineServerSnapshot);
   const [deferredInstallPrompt, setDeferredInstallPrompt] = useState<Event | null>(null);
 
   /* ── Phase 8: PWA install prompt & offline detection ── */
@@ -3395,21 +3422,6 @@ export default function Home() {
       window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
       return () => window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
     }
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    // Online/offline detection
-    const handleOnline = () => setIsOffline(false);
-    const handleOffline = () => setIsOffline(true);
-    setIsOffline(!navigator.onLine);
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
-    return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
-    };
   }, []);
 
   const handleInstallApp = async () => {
@@ -3455,7 +3467,10 @@ export default function Home() {
 
       return () => subscription.unsubscribe();
     } else {
-      // localStorage fallback
+      // localStorage fallback: hydrate the signed-in user after mount. A lazy
+      // initializer would read localStorage during render and disagree with the
+      // prerendered (signed-out) HTML, so this one post-mount set is deliberate.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setUserState(getUser());
     }
 
@@ -3695,12 +3710,12 @@ export default function Home() {
       {/* ── Hero ── */}
       <section className="relative min-h-screen flex flex-col items-center justify-center px-6 text-center">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {[...Array(40)].map((_, i) => (
+          {HERO_STARS.map((star, i) => (
             <div key={i} className="absolute w-1 h-1 bg-white rounded-full animate-twinkle"
                  style={{
-                   left: `${Math.random() * 100}%`, top: `${Math.random() * 100}%`,
-                   animationDelay: `${Math.random() * 5}s`, animationDuration: `${2 + Math.random() * 4}s`,
-                   opacity: 0.2 + Math.random() * 0.6,
+                   left: `${star.left}%`, top: `${star.top}%`,
+                   animationDelay: `${star.delay}s`, animationDuration: `${star.duration}s`,
+                   opacity: star.opacity,
                  }} />
           ))}
         </div>

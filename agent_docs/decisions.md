@@ -78,3 +78,24 @@ after a /protocol horizontal-overflow fail), Player pass at band 4 (r2, after a 
 `ssync-studio-draft` key and overwrite each other's autosave — per-tab draft ids are a follow-up.
 The `/protocol` packet diagram uses a fixed 760px viewBox and scrolls sideways on phones by
 design (keyboard-reachable, legend repeats every key); a stacked narrow variant is a follow-up.
+
+**2026-09-06 · Pre-merge once-over, lint-clean at v1** — Final pass over the whole surface before
+merging PR #1. Gates on the merge head: `tsc` clean, `next build` green (6 routes), **eslint 0 errors**
+(the 9 remaining errors were all in the preserved `/classic` app: two unescaped apostrophes, a
+`Math.random()` starfield rendered during SSR — a real hydration mismatch, now a fixed pseudo-random
+sequence — an effect-driven `setState` for the library list (now a lazy initializer; the component
+only mounts after a client action), online/offline detection (now `useSyncExternalStore`), and the
+unused `AIIllustrationGenerator` (now derives its image/prompt with `useMemo`). One documented
+`eslint-disable` remains: hydrating the localStorage-fallback user after mount, where a lazy
+initializer would disagree with the prerendered signed-out HTML. CLAUDE.md's project structure and
+the single-file convention were stale since the redesign and now describe the real tree. Vercel:
+the `storysynchq` project lives in the Island Dev Crew team (Standard Protection — production URL
+public, previews behind Vercel auth); its last deploy predates the v2 engine, so the Git link is the
+remaining step to get the redesign live.
+Also in this pass: the seven demo illustrations were ~1 MB each (1024² JPEG at near-lossless
+quality) against the project's own ≤ ~350 KB/page budget — re-encoded through the same
+canvas → JPEG q0.82 path the app applies to every upload (6.9 MB → 1.8 MB, identical pixel
+dimensions, no visible change); the PWA manifest referenced `/icons/icon-*.png` that did not exist
+(generated a cassette glyph set in the tape-stock palette, all eight sizes); `public/sw.js` cache
+version bumped `v1 → v2` so returning visitors' cache-first assets from the March build are purged
+on activate; README replaced (it was still the create-next-app boilerplate).
