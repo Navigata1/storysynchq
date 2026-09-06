@@ -1,0 +1,517 @@
+/* ============================================================================
+   studio-kit — shared primitives for "The Digital Studio"
+   Register A = studio chrome (cool, glassy, recedes)
+   Register B = tape stock (warm, printed, ink borders)
+
+   Everything below lives in @layer components so consumer Tailwind utilities
+   (utilities layer, declared by globals.css) always win an override.
+   @keyframes stay unlayered — layers do not affect at-rule name lookup, but
+   keeping them out keeps the cascade obvious.
+
+   Inherited custom properties used across the kit:
+     --sk-ink            ink colour reels/rules pick up (light on chrome, ink on tape)
+     --sk-big-h          BigButton min-height (default 64px; child mode: bump it)
+     --sk-transport-size TransportButton diameter (default 56px)
+   ========================================================================== */
+
+@keyframes sk-reel-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes sk-ring-pulse {
+  0%   { transform: scale(1);    opacity: 0.6; }
+  70%  { transform: scale(1.26); opacity: 0; }
+  100% { transform: scale(1.26); opacity: 0; }
+}
+
+@layer components {
+  /* ---------- type registers ------------------------------------------- */
+  .sk-font-tape {
+    font-family: var(--font-fraunces), Georgia, "Iowan Old Style", "Times New Roman", serif;
+    font-optical-sizing: auto;
+  }
+  .sk-font-meta {
+    font-family: var(--font-plex-mono), ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-variant-ligatures: none;
+  }
+  .sk-font-ui {
+    font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  }
+
+  /* ---------- focus (one ring, everywhere) ------------------------------ */
+  .sk-focus:focus-visible {
+    outline: 3px solid #f59e0b;
+    outline-offset: 3px;
+  }
+
+  /* ---------- Reel ------------------------------------------------------ */
+  .sk-reel {
+    display: inline-block;
+    flex: none;
+    line-height: 0;
+    color: var(--sk-ink, #1e1a16);
+  }
+  .sk-reel-svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    transform-origin: 50% 50%;
+    animation: sk-reel-spin 1.9s linear infinite;
+    animation-play-state: paused; /* keeps its angle instead of snapping home */
+    will-change: transform;
+  }
+  .sk-reel--spinning .sk-reel-svg {
+    animation-play-state: running;
+  }
+  .sk-reel-face {
+    fill: currentColor;
+    opacity: 0.07;
+  }
+  .sk-reel-rim {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 3;
+    vector-effect: non-scaling-stroke;
+  }
+  .sk-reel-dash {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-dasharray: 5 6;
+    opacity: 0.72;
+    vector-effect: non-scaling-stroke;
+  }
+  .sk-reel-spoke {
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    opacity: 0.85;
+    vector-effect: non-scaling-stroke;
+  }
+  .sk-reel-hub {
+    fill: currentColor;
+  }
+
+  /* ---------- GlassPanel (Register A) ----------------------------------- */
+  .sk-glass {
+    --sk-ink: rgba(255, 255, 255, 0.78);
+    position: relative;
+    box-shadow:
+      0 24px 60px rgba(0, 0, 0, 0.42),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+
+  /* ---------- TapeLabel (Register B) ------------------------------------ */
+  .sk-tape {
+    --sk-ink: #1e1a16;
+    position: relative;
+    overflow: hidden;
+    border: 3px solid #1e1a16;
+    border-radius: 12px;
+    background-color: #fffdf6;
+    color: #1e1a16;
+    box-shadow:
+      0 18px 44px rgba(0, 0, 0, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  }
+  .sk-tape-stripe {
+    height: 10px;
+    background-color: #e3452f;
+    border-bottom: 3px solid #1e1a16;
+  }
+  .sk-tape-band {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 30px;
+    padding: 6px 12px;
+    border-bottom: 3px solid #1e1a16;
+  }
+  .sk-tape-holes {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .sk-tape-hole {
+    width: 13px;
+    height: 13px;
+    border: 2px solid #1e1a16;
+    border-radius: 999px;
+    opacity: 0.85;
+  }
+  .sk-tape-mark {
+    font-size: 9px;
+    line-height: 1;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    opacity: 0.72;
+    white-space: nowrap;
+  }
+  .sk-tape-field {
+    padding: 16px 18px 18px;
+    /* faint ruled paper */
+    background-image: repeating-linear-gradient(
+      180deg,
+      transparent 0 23px,
+      rgba(30, 26, 22, 0.07) 23px 24px
+    );
+    background-position: 0 10px;
+  }
+  .sk-tape-title {
+    margin: 0;
+    font-weight: 900;
+    font-size: clamp(1.3rem, 4.4vw, 2rem);
+    line-height: 1.05;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+    overflow-wrap: anywhere;
+  }
+  .sk-tape-author {
+    margin-top: 6px;
+    font-weight: 500;
+    font-size: 0.95rem;
+    line-height: 1.2;
+    opacity: 0.76;
+    overflow-wrap: anywhere;
+  }
+  .sk-tape-meta {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 2px solid rgba(30, 26, 22, 0.14);
+    font-size: 10px;
+    line-height: 1.5;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    opacity: 0.7;
+  }
+
+  /* ---------- BigButton ------------------------------------------------- */
+  .sk-big {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    min-height: var(--sk-big-h, 64px);
+    padding: 12px 22px;
+    border: 1px solid transparent;
+    border-radius: 16px;
+    font-size: 1.0625rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    text-align: left;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition:
+      transform 160ms cubic-bezier(0.2, 0.7, 0.3, 1),
+      box-shadow 240ms ease-out,
+      background-color 240ms ease-out,
+      border-color 240ms ease-out,
+      opacity 200ms ease-out;
+  }
+  .sk-big:not(:disabled):hover { transform: translateY(-1px); }
+  .sk-big:not(:disabled):active { transform: translateY(1px); }
+  .sk-big:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  .sk-big-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.7rem;
+    line-height: 1;
+  }
+  .sk-big-icon > svg { width: 1.6rem; height: 1.6rem; }
+  .sk-big-label { line-height: 1.15; }
+
+  .sk-big--gold {
+    background-image: linear-gradient(180deg, #fbbf24 0%, #f59e0b 100%);
+    color: #1e1a16;
+    border-color: rgba(30, 26, 22, 0.3);
+    box-shadow:
+      0 10px 26px rgba(245, 158, 11, 0.28),
+      inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  }
+  .sk-big--gold:focus-visible { outline-color: #fffdf6; }
+
+  .sk-big--violet {
+    background-image: linear-gradient(180deg, #8b7bff 0%, #6d5bef 100%);
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.18);
+    box-shadow:
+      0 10px 26px rgba(124, 107, 255, 0.32),
+      inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  }
+
+  .sk-big--red {
+    background-image: linear-gradient(180deg, #f0553f 0%, #e3452f 100%);
+    color: #fff7f5;
+    border-color: rgba(0, 0, 0, 0.28);
+    box-shadow:
+      0 10px 26px rgba(227, 69, 47, 0.34),
+      inset 0 1px 0 rgba(255, 255, 255, 0.24);
+  }
+  .sk-big--red:focus-visible { outline-color: #fffdf6; }
+
+  .sk-big--ghost {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: #eaf0f8;
+    border-color: rgba(255, 255, 255, 0.14);
+    backdrop-filter: blur(12px);
+  }
+  .sk-big--ghost:not(:disabled):hover {
+    background-color: rgba(255, 255, 255, 0.09);
+    border-color: rgba(255, 255, 255, 0.24);
+  }
+
+  .sk-big-ring {
+    position: absolute;
+    inset: -3px;
+    border-radius: 19px;
+    border: 2px solid #e3452f;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .sk-big--red:not(:disabled) .sk-big-ring {
+    animation: sk-ring-pulse 1.8s ease-out infinite;
+  }
+
+  /* ---------- TransportButton ------------------------------------------- */
+  .sk-transport {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: var(--sk-transport-size, 56px);
+    height: var(--sk-transport-size, 56px);
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 999px;
+    color: rgba(233, 240, 250, 0.92);
+    background-color: rgba(255, 255, 255, 0.04);
+    background-image: radial-gradient(
+      120% 120% at 50% 0%,
+      rgba(255, 255, 255, 0.12),
+      rgba(255, 255, 255, 0) 62%
+    );
+    box-shadow:
+      0 6px 18px rgba(0, 0, 0, 0.38),
+      inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition:
+      transform 140ms cubic-bezier(0.2, 0.7, 0.3, 1),
+      color 220ms ease-out,
+      border-color 220ms ease-out,
+      box-shadow 260ms ease-out;
+  }
+  .sk-transport:not(:disabled):hover {
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.3);
+  }
+  .sk-transport:not(:disabled):active { transform: translateY(1px); }
+  .sk-transport:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  .sk-transport-glyph {
+    display: block;
+    width: 46%;
+    height: 46%;
+    fill: currentColor;
+    pointer-events: none;
+  }
+
+  .sk-transport.is-active {
+    color: #fde68a;
+    border-color: rgba(245, 158, 11, 0.75);
+    background-image: radial-gradient(
+      120% 120% at 50% 0%,
+      rgba(245, 158, 11, 0.32),
+      rgba(245, 158, 11, 0.06) 68%
+    );
+    box-shadow:
+      0 0 0 1px rgba(245, 158, 11, 0.28),
+      0 8px 26px rgba(245, 158, 11, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  }
+
+  .sk-transport--rec { color: #e3452f; }
+  .sk-transport--rec:not(:disabled):hover { color: #ff6a52; }
+  .sk-transport--rec.is-active {
+    color: #ff6a52;
+    border-color: rgba(227, 69, 47, 0.85);
+    background-image: radial-gradient(
+      120% 120% at 50% 0%,
+      rgba(227, 69, 47, 0.35),
+      rgba(227, 69, 47, 0.08) 68%
+    );
+    box-shadow:
+      0 0 0 1px rgba(227, 69, 47, 0.35),
+      0 8px 26px rgba(227, 69, 47, 0.34),
+      inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  }
+
+  .sk-transport-ring {
+    position: absolute;
+    inset: -4px;
+    border: 2px solid #e3452f;
+    border-radius: 999px;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .sk-transport--rec.is-active:not(:disabled) .sk-transport-ring {
+    animation: sk-ring-pulse 1.5s ease-out infinite;
+  }
+
+  /* ---------- ModeToggle ------------------------------------------------- */
+  .sk-mode {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .sk-mode-word {
+    font-size: 11px;
+    line-height: 1;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(226, 232, 240, 0.42);
+    transition: color 240ms ease-out;
+    white-space: nowrap;
+  }
+  .sk-mode-word.is-on { color: #f59e0b; }
+
+  .sk-mode-track {
+    position: relative;
+    flex: none;
+    width: 62px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 999px;
+    background-color: rgba(6, 10, 18, 0.75);
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.5);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: border-color 240ms ease-out, background-color 240ms ease-out;
+  }
+  .sk-mode-track::before {
+    content: "";
+    position: absolute;
+    left: 13px;
+    right: 13px;
+    top: 50%;
+    height: 2px;
+    margin-top: -1px;
+    border-radius: 2px;
+    background-color: rgba(255, 255, 255, 0.14);
+  }
+  .sk-mode-track:disabled { opacity: 0.45; cursor: not-allowed; }
+  .sk-mode-track[aria-checked="true"] {
+    border-color: rgba(245, 158, 11, 0.55);
+  }
+
+  .sk-mode-knob {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    background-image: linear-gradient(180deg, #e7edf6 0%, #aebacb 100%);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+    transition:
+      transform 320ms cubic-bezier(0.2, 0.7, 0.3, 1),
+      background-image 320ms ease-out;
+  }
+  .sk-mode-knob::after {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background-color: rgba(30, 26, 22, 0.5);
+  }
+  .sk-mode-track[aria-checked="true"] .sk-mode-knob {
+    transform: translateX(32px);
+    background-image: linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%);
+  }
+
+  /* ---------- VUMeter ---------------------------------------------------- */
+  .sk-vu {
+    display: block;
+    width: 100%;
+    min-width: 60px;
+  }
+  .sk-vu-track {
+    position: relative;
+    overflow: hidden;
+    height: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 3px;
+    background-color: rgba(4, 8, 14, 0.85);
+    background-image: repeating-linear-gradient(
+      90deg,
+      transparent 0 7px,
+      rgba(255, 255, 255, 0.07) 7px 10px
+    );
+  }
+  .sk-vu-fill {
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(
+      90deg,
+      #f59e0b 0%,
+      #fbbf24 58%,
+      #ff8a3d 76%,
+      #e3452f 88%
+    );
+    -webkit-mask-image: repeating-linear-gradient(90deg, #000 0 7px, transparent 7px 10px);
+    mask-image: repeating-linear-gradient(90deg, #000 0 7px, transparent 7px 10px);
+    transition-property: clip-path, -webkit-clip-path;
+    transition-timing-function: linear;
+    transition-duration: 90ms; /* JS swaps this per-frame: fast attack, slow decay */
+    will-change: clip-path;
+  }
+  .sk-vu-redline {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 78%;
+    width: 1px;
+    background-color: rgba(227, 69, 47, 0.6);
+    pointer-events: none;
+  }
+
+  /* ---------- reduced motion: no spin, no pulse, no travel --------------- */
+  @media (prefers-reduced-motion: reduce) {
+    .sk-reel-svg {
+      animation: none;
+    }
+    .sk-big-ring,
+    .sk-transport-ring {
+      animation: none !important;
+    }
+    /* record state must still read as "armed" without motion */
+    .sk-big--red:not(:disabled) .sk-big-ring,
+    .sk-transport--rec.is-active:not(:disabled) .sk-transport-ring {
+      opacity: 0.55;
+    }
+    .sk-big,
+    .sk-transport,
+    .sk-mode-knob,
+    .sk-mode-track {
+      transition-duration: 1ms;
+    }
+    .sk-big:not(:disabled):hover,
+    .sk-big:not(:disabled):active,
+    .sk-transport:not(:disabled):active {
+      transform: none;
+    }
+    .sk-vu-fill {
+      transition-property: none;
+    }
+  }
+}

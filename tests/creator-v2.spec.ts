@@ -4,7 +4,7 @@
 import { test, expect, Page } from "@playwright/test";
 
 async function startStory(page: Page, title: string) {
-  await page.goto("/");
+  await page.goto("/classic");
   await page.getByRole("button", { name: /Create Your Story/i }).click();
   await page.getByPlaceholder("The Brave Little Star").fill(title);
   await page.getByRole("button", { name: /Next Step/i }).click();
@@ -58,12 +58,12 @@ test.describe("Creator v2", () => {
   });
 
   test("landing offers opening a .storysync file", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/classic");
     await expect(page.getByRole("button", { name: /Open \.storysync file/i })).toBeVisible();
   });
 
   test("reader splash gates playback behind Tap to Begin", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/classic");
     await page.getByRole("button", { name: /Read Demo Storybook/i }).click();
     const begin = page.getByText("Tap to Begin");
     await expect(begin).toBeVisible();

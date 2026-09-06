@@ -30,6 +30,32 @@ export interface SsyncPage {
   timing?: { autoPause?: string; readingSpeed?: string; minDuration?: string };
 }
 
+/**
+ * Signature layer (SSYNC v2.1 draft — additive, optional).
+ * Ownership, remix ancestry, and consent travel WITH the story so they survive
+ * outside the app. Voice consent is sacred: a published story that contains a
+ * recorded human voice SHOULD carry a consent record.
+ */
+export interface SsyncSignature {
+  /** Canonical share URL for this published story, if any. */
+  shareUrl?: string;
+  /** Ownership statement, e.g. "© 2026 The Isaac Family". */
+  ownership?: string;
+  /** Share URL or id of the story this one was remixed from. */
+  remixOf?: string;
+  /** Consent records for recorded/cloned voices in this story. */
+  voiceConsent?: Array<{
+    /** Whose voice, e.g. "narrator", "Mom". */
+    voice: string;
+    /** Who consented, e.g. "parent/guardian". */
+    grantedBy: string;
+    /** ISO date of consent. */
+    date?: string;
+  }>;
+  /** Rights/license note for bundled media, e.g. "personal use". */
+  rights?: string;
+}
+
 export interface SsyncManifest {
   version: string;
   metadata: {
@@ -43,6 +69,8 @@ export interface SsyncManifest {
     description?: string;
     coverImage?: string;
   };
+  /** SSYNC v2.1 signature layer (optional, ignored by v2.0 readers). */
+  signature?: SsyncSignature;
   settings?: {
     autoPlay?: boolean;
     pageTransition?: string;

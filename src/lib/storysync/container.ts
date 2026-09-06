@@ -81,16 +81,21 @@ export function unpackStorysync(bytes: Uint8Array): StorysyncArchive {
 /* ── data URL ↔ bytes (node-safe: atob/btoa are global in Node ≥16) ── */
 
 export function dataUrlToBytes(dataUrl: string): { bytes: Uint8Array; mime: string } {
-  const match = /^data:([^;,]+)?(;base64)?,([\s\S]*)$/.exec(dataUrl);
-  if (!match) throw new StorysyncError("Not a data URL");
-  const mime = match[1] || "application/octet-stream";
-  if (match[2]) {
-    const bin = atob(match[3]);
+  // Header may carry parameters (e.g. data:audio/mp4;codecs=mp4a.40.2;base64,)
+  // — Safari's recordings do. Parse the whole header, not just mime;base64.
+  const comma = dataUrl.indexOf(",");
+  if (!dataUrl.startsWith("data:") || comma === -1) throw new StorysyncError("Not a data URL");
+  const header = dataUrl.slice(5, comma);
+  const body = dataUrl.slice(comma + 1);
+  const parts = header.split(";");
+  const mime = parts[0] || "application/octet-stream";
+  if (parts.includes("base64")) {
+    const bin = atob(body);
     const bytes = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
     return { bytes, mime };
   }
-  return { bytes: strToU8(decodeURIComponent(match[3])), mime };
+  return { bytes: strToU8(decodeURIComponent(body)), mime };
 }
 
 export function bytesToDataUrl(bytes: Uint8Array, mime: string): string {

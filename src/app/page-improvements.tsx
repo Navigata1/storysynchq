@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 
 /* ═══════════════════════════════════════════════════════════════
    Ralph Wiggum Pass #2 — AI Illustration Generator
@@ -855,32 +855,32 @@ export function AIIllustrationGenerator({
   className = "",
   onGenerated,
 }: AIIllustrationGeneratorProps) {
-  const [imageUrl, setImageUrl] = useState<string>("");
-  const [prompt, setPrompt] = useState<string>("");
   const [selectedTheme, setSelectedTheme] = useState<string>(theme);
-  const prevTextRef = useRef<string>("");
-  const prevThemeRef = useRef<string>("");
+  // Regenerate bumps this so the (randomized) generator runs again for the
+  // same text and theme.
+  const [take, setTake] = useState(0);
 
-  const generate = useCallback(() => {
-    if (!text.trim()) return;
-
+  // Derived, not stored: the illustration and its prompt are a function of
+  // (text, theme, take), so no effect-driven setState is needed. The canvas
+  // generator is browser-only; on the server this stays in the placeholder.
+  const { imageUrl, prompt } = useMemo(() => {
+    void take;
+    if (!text.trim() || typeof document === "undefined") return { imageUrl: "", prompt: "" };
     const themeObj = THEMES[selectedTheme] || THEMES.storybook;
     const elements = extractSceneElements(text);
-    const generatedPrompt = generatePrompt(elements, themeObj);
-    const dataUrl = generateIllustration(text, selectedTheme);
+    return {
+      imageUrl: generateIllustration(text, selectedTheme),
+      prompt: generatePrompt(elements, themeObj),
+    };
+  }, [text, selectedTheme, take]);
 
-    setImageUrl(dataUrl);
-    setPrompt(generatedPrompt);
-    onGenerated?.(dataUrl, generatedPrompt);
-  }, [text, selectedTheme, onGenerated]);
-
+  // Hand the result to the parent — synchronizing with an outside consumer is
+  // exactly what an effect is for.
   useEffect(() => {
-    if (text !== prevTextRef.current || selectedTheme !== prevThemeRef.current) {
-      prevTextRef.current = text;
-      prevThemeRef.current = selectedTheme;
-      generate();
-    }
-  }, [text, selectedTheme, generate]);
+    if (imageUrl) onGenerated?.(imageUrl, prompt);
+  }, [imageUrl, prompt, onGenerated]);
+
+  const generate = useCallback(() => setTake((n) => n + 1), []);
 
   if (!text.trim()) {
     return (

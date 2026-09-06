@@ -1,0 +1,326 @@
+/* ============================================================================
+   The Digital Studio — layout contract (docs/design-direction.md §5) and the
+   few animations that are too stateful for utility classes.
+
+   Everything lives in @layer components so Tailwind utilities passed via
+   className always win. Keyframes stay unlayered, matching studio-kit.
+
+   Layout ladder:
+     < 768px   stage-first column; the tool rail becomes a bottom toolbar and
+               the inspector becomes a sheet
+     ≥ 768px   rail returns to the left edge
+     ≥ 1180px  the inspector takes its own column (Advanced only)
+   ========================================================================== */
+
+@keyframes studio-rise {
+  from { transform: translateY(20px); opacity: 0; }
+  to   { transform: none;             opacity: 1; }
+}
+
+@keyframes studio-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* the tape coming out of the printer, top edge first */
+@keyframes studio-print {
+  0%   { clip-path: inset(0 0 100% 0); transform: translateY(-10px) rotate(-0.8deg); opacity: 0; }
+  60%  { opacity: 1; }
+  100% { clip-path: inset(0 0 0 0);    transform: none;                              opacity: 1; }
+}
+
+@keyframes studio-shake {
+  0%, 100% { transform: translateX(0); }
+  20%      { transform: translateX(-7px); }
+  40%      { transform: translateX(6px); }
+  60%      { transform: translateX(-4px); }
+  80%      { transform: translateX(3px); }
+}
+
+@keyframes studio-page-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.995); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes studio-sheen {
+  from { background-position: -60% 0; }
+  to   { background-position: 160% 0; }
+}
+
+@layer components {
+  /* ---------------------------------------------------------- shell grid */
+  .studio {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto auto auto;
+    grid-template-areas:
+      "top"
+      "stage"
+      "film"
+      "rail"
+      "transport";
+    /* reels and kit rules outside a GlassPanel need the chrome-register ink */
+    --sk-ink: rgba(255, 255, 255, 0.78);
+    min-height: 100dvh;
+    background-color: #0a0e1a;
+    background-image:
+      radial-gradient(1100px 700px at 12% -6%, rgba(124, 107, 255, 0.16), transparent 60%),
+      radial-gradient(900px 620px at 92% 108%, rgba(245, 158, 11, 0.12), transparent 58%);
+    color: #e9f0fa;
+  }
+
+  .studio-area-top { grid-area: top; }
+  .studio-area-rail { grid-area: rail; }
+  .studio-area-stage { grid-area: stage; position: relative; min-height: 0; min-width: 0; }
+  .studio-area-film { grid-area: film; }
+  .studio-area-transport {
+    grid-area: transport;
+    position: relative;
+    z-index: 48; /* above both bottom sheets: ● REC / ▶ are always one tap away */
+  }
+  .studio { --studio-transport-h: calc(88px + env(safe-area-inset-bottom, 0px)); }
+
+  /* ------------------------------------------------------------ tool rail */
+  .studio-rail-list {
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+    padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
+  }
+  .studio-rail-list > * { flex: 1 1 0; min-width: 0; }
+
+  /* --------------------------------------------------------- tool panel */
+  .studio-toolpanel {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: var(--studio-transport-h, 0px); /* rest above the transport, never over it */
+    z-index: 47; /* the active tool (record/photo) stacks ABOVE the inspector sheet */
+    max-height: 74dvh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-radius: 22px 22px 0 0;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    animation: studio-rise 300ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+  }
+
+  /* ---------------------------------------------------------- inspector */
+  .studio-inspector {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: var(--studio-transport-h, 0px); /* rest above the transport, never over it */
+    z-index: 46;
+    max-height: 78dvh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-radius: 22px 22px 0 0;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    animation: studio-rise 300ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+  }
+
+  /* ------------------------------------------------------------- ≥ 768px */
+  @media (min-width: 768px) {
+    .studio {
+      grid-template-columns: auto minmax(0, 1fr);
+      grid-template-rows: auto minmax(0, 1fr) auto auto;
+      grid-template-areas:
+        "top  top"
+        "rail stage"
+        "film film"
+        "transport transport";
+    }
+    .studio-rail-list {
+      flex-direction: column;
+      width: 118px;
+      height: 100%;
+      gap: 10px;
+      padding: 4px 10px 10px;
+    }
+    .studio-rail-list > * { flex: 0 0 auto; }
+
+    .studio-toolpanel {
+      position: absolute;
+      left: 18px;
+      right: auto;
+      bottom: 18px;
+      width: min(384px, calc(100% - 36px));
+      max-height: calc(100% - 36px);
+      border-radius: 18px;
+      padding-bottom: 0;
+    }
+  }
+
+  /* ------------------------------------------------------------ ≥ 1180px */
+  @media (min-width: 1180px) {
+    .studio {
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      grid-template-areas:
+        "top  top   top"
+        "rail stage inspector"
+        "film film  film"
+        "transport transport transport";
+    }
+    .studio-inspector {
+      position: static;
+      grid-area: inspector;
+      width: 366px;
+      max-height: none;
+      height: 100%;
+      border-radius: 0;
+      border-left: 1px solid rgba(255, 255, 255, 0.09);
+      padding-bottom: 0;
+      animation: studio-fade 260ms ease-out both;
+    }
+    .studio-inspector-close { display: none; }
+  }
+
+  /* ------------------------------------------------------------- the stage */
+  .studio-monitor {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background-color: #05070d;
+    box-shadow:
+      0 40px 90px rgba(0, 0, 0, 0.55),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.03),
+      inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  }
+  .studio-monitor-page {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    flex: 1 1 auto;
+    animation: studio-page-in 420ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+  }
+  .studio-story-text {
+    font-family: var(--font-fraunces), Georgia, "Iowan Old Style", serif;
+    font-size: clamp(1.05rem, 1.15vw + 0.85rem, 1.6rem);
+    line-height: 1.55;
+    letter-spacing: 0.002em;
+    color: #f4f1e8;
+    text-wrap: pretty;
+    white-space: pre-wrap;
+  }
+  .studio-story-input {
+    width: 100%;
+    resize: none;
+    background: transparent;
+    border: none;
+    outline: none;
+    field-sizing: content;
+  }
+  .studio-story-input::placeholder { color: rgba(244, 241, 232, 0.32); }
+
+  /* ---------------------------------------------------------- filmstrip */
+  .studio-strip {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    padding: 4px 2px 8px;
+    scrollbar-width: thin;
+  }
+  .studio-strip > * { scroll-snap-align: center; }
+  .studio-strip::-webkit-scrollbar { height: 8px; }
+  .studio-strip::-webkit-scrollbar-thumb {
+    background-color: rgba(245, 158, 11, 0.35);
+    border-radius: 999px;
+  }
+  .studio-strip::-webkit-scrollbar-track { background-color: rgba(255, 255, 255, 0.04); }
+
+  .studio-thumb {
+    position: relative;
+    flex: none;
+    width: 84px;
+    height: 62px;
+    overflow: hidden;
+    border-radius: 10px;
+    border: 2px solid rgba(255, 255, 255, 0.14);
+    background-color: rgba(255, 255, 255, 0.05);
+    cursor: pointer;
+    transition:
+      border-color 200ms ease-out,
+      box-shadow 240ms ease-out,
+      transform 180ms cubic-bezier(0.2, 0.7, 0.3, 1);
+  }
+  .studio-thumb:hover { transform: translateY(-2px); }
+  .studio-thumb.is-current {
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.4), 0 10px 24px rgba(245, 158, 11, 0.22);
+  }
+  .studio-thumb-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  /* ------------------------------------------------------- misc surfaces */
+  .studio-scroll { scrollbar-width: thin; }
+  .studio-scroll::-webkit-scrollbar { width: 9px; }
+  .studio-scroll::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.16);
+    border-radius: 999px;
+  }
+  .studio-scroll::-webkit-scrollbar-track { background-color: transparent; }
+
+  .studio-title-input {
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    outline: none;
+    transition: border-color 200ms ease-out, background-color 200ms ease-out;
+  }
+  .studio-title-input:hover { border-color: rgba(255, 255, 255, 0.14); }
+  .studio-title-input:focus { border-color: rgba(245, 158, 11, 0.6); background-color: rgba(255, 255, 255, 0.05); }
+
+  .studio-shake { animation: studio-shake 420ms ease-out both; }
+  .studio-printing { animation: studio-print 900ms cubic-bezier(0.2, 0.7, 0.3, 1) both; }
+  .studio-rise { animation: studio-rise 320ms cubic-bezier(0.2, 0.7, 0.3, 1) both; }
+  .studio-fade { animation: studio-fade 240ms ease-out both; }
+
+  .studio-progress-bar {
+    background-image: linear-gradient(90deg, #f59e0b, #fbbf24);
+    transition: width 220ms linear;
+  }
+
+  .studio-busy {
+    background-image: linear-gradient(
+      90deg,
+      rgba(245, 158, 11, 0) 0%,
+      rgba(245, 158, 11, 0.55) 45%,
+      rgba(245, 158, 11, 0) 90%
+    );
+    background-size: 60% 100%;
+    background-repeat: no-repeat;
+    animation: studio-sheen 1.25s linear infinite;
+  }
+
+  .studio-range {
+    width: 100%;
+    height: 28px;
+    background: transparent;
+    accent-color: #f59e0b;
+    cursor: pointer;
+  }
+
+  /* ------------------------------------------------- reduced motion: off */
+  @media (prefers-reduced-motion: reduce) {
+    .studio-toolpanel,
+    .studio-inspector,
+    .studio-monitor-page,
+    .studio-shake,
+    .studio-printing,
+    .studio-rise,
+    .studio-fade,
+    .studio-busy {
+      animation: none !important;
+    }
+    .studio-printing { clip-path: none; opacity: 1; }
+    .studio-busy { background-image: linear-gradient(90deg, rgba(245, 158, 11, 0.45), rgba(245, 158, 11, 0.45)); }
+    .studio-thumb,
+    .studio-title-input,
+    .studio-progress-bar { transition-duration: 1ms; }
+    .studio-thumb:hover { transform: none; }
+  }
+}

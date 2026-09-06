@@ -2,28 +2,46 @@
 //
 // Two buses into one AudioContext:
 //   narration bus — recorded voice (HTMLAudioElement via MediaElementSource)
-//   music bus     — background bed (oscillator pad now, file tracks later)
+//   music bus     — the generative music bed (src/lib/audio/music.ts)
 // While narration plays, the music bed ducks ~-12 dB with smooth gain ramps,
 // exactly like the library cassette tapes did.
 //
 // iOS Safari suspends AudioContexts created outside a user gesture; call
 // unlock() from a tap handler ("Tap to Begin") before expecting sound.
+//
+// The music bus used to carry two detuned sine oscillators — a drone. It now
+// carries a `MusicBed`: pad + music-box arpeggio + optional tape hiss, driven
+// by the mood vocabulary in ./moods. The public API is unchanged
+// (startMusic/setMood/stopMusic still take the old `MoodConfig`), and so are
+// ducking, the ramps and the unlock rule.
+
+import { MusicBed, type MoodInput } from "./music";
+import { specForConfig, type MoodName } from "./moods";
 
 const DUCK_FACTOR = 0.25; // ≈ -12 dB
 const RAMP_S = 0.6;
 
-export interface MoodConfig {
-  freq1: number;
-  freq2: number;
-  gainMult: number;
-}
+/**
+ * Music-bus level per unit of `gainMult` at full musicVolume.
+ *
+ * The old source was two full-scale oscillators (peak ≈ 2.0) into 0.03; the
+ * MusicBed's own peak is ≈ 0.4, so this constant is scaled up from the old
+ * drone's 0.03. Measured (tests/critic-melody.spec.ts): the bed still sits
+ * 10–17 dB quieter in RMS than the drone did at identical settings — a
+ * deliberate choice; an arpeggio puts energy where the ear is most sensitive,
+ * and the melody must stay under a child's voice. Worst-case bus peak is
+ * ≈ 0.045 (~27 dB headroom). The duck factor and ramp times are untouched.
+ */
+const BUS_UNIT = 0.09;
+
+export type { MoodConfig, MoodName } from "./moods";
+export type { MoodInput } from "./music";
 
 export class DualBusAudioEngine {
   private ctx: AudioContext | null = null;
   private musicGain: GainNode | null = null;
   private narrationGain: GainNode | null = null;
-  private osc1: OscillatorNode | null = null;
-  private osc2: OscillatorNode | null = null;
+  private bed: MusicBed | null = null;
   private mediaSources = new WeakMap<HTMLMediaElement, MediaElementAudioSourceNode>();
   private musicVolume = 0.3; // 0..1, pre-duck
   private narrationVolume = 0.8;
@@ -97,77 +115,53 @@ export class DualBusAudioEngine {
     return this.musicOn;
   }
 
-  /** Starts the ambient pad on the music bus. */
-  startMusic(mood: MoodConfig): void {
+  /** The mood the bed is currently playing, or null when it is silent. */
+  get moodName(): MoodName | null {
+    return this.musicOn ? this.bed?.moodName ?? null : null;
+  }
+
+  /**
+   * Starts the music bed on the music bus.
+   *
+   * Accepts a canonical mood name, any manifest mood string, or the legacy
+   * `{freq1, freq2, gainMult}` config (which is matched back to a mood — see
+   * `specForConfig`, and keeps its own level multiplier).
+   */
+  startMusic(mood: MoodInput): void {
     const ctx = this.ensureContext();
     if (this.musicOn) {
       this.setMood(mood);
       return;
     }
-    const filter = ctx.createBiquadFilter();
-    filter.type = "lowpass";
-    filter.frequency.value = 400;
-
-    this.osc1 = ctx.createOscillator();
-    this.osc1.type = "sine";
-    this.osc1.frequency.value = mood.freq1;
-    this.osc2 = ctx.createOscillator();
-    this.osc2.type = "sine";
-    this.osc2.frequency.value = mood.freq2;
-
-    this.osc1.connect(filter);
-    this.osc2.connect(filter);
-    filter.connect(this.musicGain!);
-    this.osc1.start();
-    this.osc2.start();
+    const spec = specForConfig(mood);
+    if (!this.bed) this.bed = new MusicBed(ctx, this.musicGain!);
+    this.bed.start(spec.name);
     this.musicOn = true;
-    this.currentMoodMult = mood.gainMult;
+    this.currentMoodMult = spec.gainMult;
     this.applyMusicGain();
   }
 
   private currentMoodMult = 1;
 
-  setMood(mood: MoodConfig): void {
-    if (!this.ctx || !this.osc1 || !this.osc2) return;
-    const now = this.ctx.currentTime;
-    try {
-      this.osc1.frequency.linearRampToValueAtTime(mood.freq1, now + 1);
-      this.osc2.frequency.linearRampToValueAtTime(mood.freq2, now + 1);
-    } catch {
-      /* ignore */
-    }
-    this.currentMoodMult = mood.gainMult;
+  /** Crossfade the bed to another mood (page turns). */
+  setMood(mood: MoodInput): void {
+    const spec = specForConfig(mood);
+    this.currentMoodMult = spec.gainMult;
+    if (this.musicOn) this.bed?.setMood(spec.name);
     this.applyMusicGain();
   }
 
   stopMusic(): void {
     if (!this.musicOn || !this.ctx || !this.musicGain) return;
-    const osc1 = this.osc1;
-    const osc2 = this.osc2;
     this.musicGain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.3);
-    setTimeout(() => {
-      try {
-        osc1?.stop();
-      } catch {}
-      try {
-        osc2?.stop();
-      } catch {}
-    }, 1200);
-    this.osc1 = null;
-    this.osc2 = null;
+    this.bed?.stop(1.0);
     this.musicOn = false;
   }
 
   /** Full teardown — safe to call on unmount. */
   dispose(): void {
-    try {
-      this.osc1?.stop();
-    } catch {}
-    try {
-      this.osc2?.stop();
-    } catch {}
-    this.osc1 = null;
-    this.osc2 = null;
+    this.bed?.dispose();
+    this.bed = null;
     this.musicOn = false;
     this.ctx?.close().catch(() => {});
     this.ctx = null;
@@ -178,7 +172,7 @@ export class DualBusAudioEngine {
 
   private applyMusicGain(): void {
     if (!this.ctx || !this.musicGain) return;
-    const base = 0.03 * this.currentMoodMult * this.musicVolume;
+    const base = BUS_UNIT * this.currentMoodMult * this.musicVolume;
     const target = this.musicOn ? base * (this.ducked ? DUCK_FACTOR : 1) : 0;
     this.musicGain.gain.cancelScheduledValues(this.ctx.currentTime);
     this.musicGain.gain.setTargetAtTime(target, this.ctx.currentTime, RAMP_S / 3);

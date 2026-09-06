@@ -30,13 +30,26 @@ ARCHITECTURE_REVIEW.md  — July 2026 stack audit — read before questioning an
 PLAN_OF_ATTACK.md       — POC plan, tape-by-tape, with mapping onto this repo
 PRIVACY.md              — COPPA posture (children's voice data)
 agent_docs/decisions.md — append-only decision log
-docs/format-spec.md     — full .storysync v2 specification
-src/app/
-  page.tsx          — Landing + reader + creator + libraries (main entry)
-  layout.tsx        — Root layout (fonts, metadata)
-  globals.css       — Global styles
+docs/format-spec.md     — full .storysync v2 specification (+ v2.1 Signature layer draft)
+docs/design-direction.md— two-register design language (studio chrome / tape stock)
+docs/10x-plan.md        — Fable 5.1 reassessment: gaps, falsifiable bars, gauntlet protocol
+src/app/                — thin routes; each page renders one component tree
+  page.tsx          — `/`         Landing (cassette-into-deck hero, the two doors)
+  read/page.tsx     — `/read`     ReadRoom + Player (share code · .storysync file · demo tape)
+  studio/page.tsx   — `/studio`   The Digital Studio (create → record → publish)
+  protocol/page.tsx — `/protocol` The SSYNC protocol page (packet diagram, codec rule, schemas)
+  classic/page.tsx  — `/classic`  The previous single-file app, preserved as-is
+  layout.tsx        — Root layout (Geist + Fraunces + IBM Plex Mono, metadata)
+  globals.css       — Global styles + design tokens
+src/components/
+  studio-kit/       — shared studio-chrome primitives (Reel, TapeLabel, GlassPanel, Transport…)
+  landing/          — Landing + deck insert animation
+  player/           — Player (dual-bus, read-along, page-turn cue), ReadRoom, timing presets
+  studio/           — Stage, ToolRail, Filmstrip, Transport, Inspector, ParentGate, PublishCard, draft autosave
+  protocol/         — ProtocolPage, PacketDiagram, DownloadDemo
 src/lib/
-  audio/            — recorder (Safari-safe mime), transcode (AAC at publish), engine (dual-bus)
+  audio/            — recorder (Safari-safe mime), transcode (AAC at publish), engine (dual-bus),
+                      moods (canonical 8-mood vocabulary), music (generative bed)
   storysync/        — manifest types/validation, fflate pack/unpack
   images.ts         — EXIF-safe downscale/compress pipeline
   story-engine.ts   — story generation
@@ -44,8 +57,10 @@ src/lib/
 public/
   protocol/
     v1.schema.json  — SSYNC v1 JSON schema (bare document)
-    v2.schema.json  — SSYNC v2 schema (.storysync container manifest + codec rule)
+    v2.schema.json  — SSYNC v2 schema (.storysync container manifest + codec rule + signature)
   demo/             — demo storybook data + images
+tests/              — Playwright: legacy suites (/classic), builder gates (wp-*), blind-critic
+                      gates (critic-*), fable-pass, storysync-roundtrip (Node-side)
 ```
 
 ## 2. Locked architecture decisions (v2 — see ARCHITECTURE_REVIEW.md for rationale)
@@ -87,13 +102,14 @@ public/
 ## 6. Testing Approach
 - **Build verification:** `npm run build` must pass without errors
 - **Round-trip:** pack → `.storysync` → unpack → identical manifest + assets (`tests/storysync-roundtrip.spec.ts`)
+- **E2E gates:** `npx playwright test` (desktop 1280×720 + mobile 375×812) — legacy, `wp-*` builder, `critic-*` blind-critic and `fable-pass` suites must all pass before merge
 - **Visual verification:** `npm run dev`, check rendering; mobile at 375px and 768px
 - **Reader test:** Load demo storybook, verify page turns, TTS narration, navigation
 - **Cross-device audio:** stories recorded on Chrome/Android must play on iOS Safari and vice versa
 - **Accessibility:** Keyboard navigation (arrows, space, escape)
 
 ## 7. Key Conventions
-- Single-file approach for the app shell (page.tsx); extract shared logic into `src/lib/` modules
+- Routes are thin (`src/app/*/page.tsx` renders one component tree from `src/components/`); shared logic lives in `src/lib/`. `/classic` keeps the old single-file shell untouched
 - Use Tailwind utility classes, not custom CSS (except complex animations)
 - All demo content in /public — no hardcoded story data in components
 - SSYNC protocol is the source of truth — the renderer reads the format, period

@@ -41,3 +41,61 @@ baked in. Target ≤ ~350 KB/page per the 15 MB story budget.
 **2026-08-02 · Supabase stays; R2 deferred** — The review recommends Cloudflare R2, but
 Supabase auth + storage is already wired and working. Swapping storage backends is not on
 the POC critical path. R2/presigned-Worker URLs go to the Phase 3 backlog with Tauri.
+
+**2026-08-25 · Apply the v2 audit as a new body on the proven engine, not a monorepo** —
+The redesign keeps Next.js 16 + the `src/lib` engine (dual-bus audio, recorder, transcode,
+container) and rebuilds the *experience* on top: `/` immersive landing, `/studio` (create),
+`/read` (receive), `/classic` (the previous single-file app, preserved). The single-file shell
+convention in CLAUDE.md §7 is superseded for the new surfaces: components live in
+`src/components/{studio-kit,landing,studio,player}`; `src/lib` stays the shared engine.
+
+**2026-08-25 · Two-register design language** — Register A "studio chrome" (deep navy, glass,
+Geist) for the room; Register B "tape stock" (paper/ink/label-yellow/tape-red, Fraunces + Plex
+Mono) for anything that *is* a story. The rule: chrome recedes, tape glows. Source of Register B:
+the prompt pack's own cassette-label aesthetic. Full brief: `docs/design-direction.md`.
+
+**2026-08-25 · Simple mode is the product; Advanced is a toggle** — Per the recovered Protocol
+Vision review ("do not start with Studio Mode"), the child/family read-record-share loop is the
+default and the pitch; the inspector, mix buses, and manifest readout live behind Advanced.
+
+**2026-08-25 · SSYNC v2.1 Signature layer (draft)** — Optional `signature` block: `shareUrl`,
+`ownership`, `remixOf`, `voiceConsent[]`, `rights`. Additive; v2.0 readers ignore it. Voice
+consent is written by the parental gate at publish. Spec §7, schema, and `manifest.ts` updated.
+
+**2026-09-05 · "Public" means reachable-by-link, not indexed** — Published stories are saved
+`isPublic: true` so the existing Supabase read policy lets a share-code holder load them; there is
+no public index (the library page is curated). A share-by-code RLS policy that avoids `is_public`
+is deferred — it needs a migration applied to production, decided with Jon.
+
+**2026-09-05 · Push after every commit** — A container recycle stranded four unpushed commits
+(recovered from a bundle Jon had downloaded). Rule: commit → push immediately, always.
+
+**2026-09-05 · Gauntlet pass 1 — verdicts and what the critics left open** — Four Opus work
+packages against `docs/10x-plan.md`: Melody band 5 (r1), Studio band 5 (r1), Landing band 5 (r2,
+after a /protocol horizontal-overflow fail), Player pass at band 4 (r2, after a falsified item:
+"Tap to Begin" threw without Web Audio). Permanent gates live in `tests/wp-*.spec.ts` and
+`tests/critic-*.spec.ts`. Known, accepted: two studio tabs on one device share the single
+`ssync-studio-draft` key and overwrite each other's autosave — per-tab draft ids are a follow-up.
+The `/protocol` packet diagram uses a fixed 760px viewBox and scrolls sideways on phones by
+design (keyboard-reachable, legend repeats every key); a stacked narrow variant is a follow-up.
+
+**2026-09-06 · Pre-merge once-over, lint-clean at v1** — Final pass over the whole surface before
+merging PR #1. Gates on the merge head: `tsc` clean, `next build` green (6 routes), **eslint 0 errors**
+(the 9 remaining errors were all in the preserved `/classic` app: two unescaped apostrophes, a
+`Math.random()` starfield rendered during SSR — a real hydration mismatch, now a fixed pseudo-random
+sequence — an effect-driven `setState` for the library list (now a lazy initializer; the component
+only mounts after a client action), online/offline detection (now `useSyncExternalStore`), and the
+unused `AIIllustrationGenerator` (now derives its image/prompt with `useMemo`). One documented
+`eslint-disable` remains: hydrating the localStorage-fallback user after mount, where a lazy
+initializer would disagree with the prerendered signed-out HTML. CLAUDE.md's project structure and
+the single-file convention were stale since the redesign and now describe the real tree. Vercel:
+the `storysynchq` project lives in the Island Dev Crew team (Standard Protection — production URL
+public, previews behind Vercel auth); its last deploy predates the v2 engine, so the Git link is the
+remaining step to get the redesign live.
+Also in this pass: the seven demo illustrations were ~1 MB each (1024² JPEG at near-lossless
+quality) against the project's own ≤ ~350 KB/page budget — re-encoded through the same
+canvas → JPEG q0.82 path the app applies to every upload (6.9 MB → 1.8 MB, identical pixel
+dimensions, no visible change); the PWA manifest referenced `/icons/icon-*.png` that did not exist
+(generated a cassette glyph set in the tape-stock palette, all eight sizes); `public/sw.js` cache
+version bumped `v1 → v2` so returning visitors' cache-first assets from the March build are purged
+on activate; README replaced (it was still the create-next-app boilerplate).
