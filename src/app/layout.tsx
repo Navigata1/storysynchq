@@ -43,6 +43,10 @@ export const metadata: Metadata = {
   },
   other: {
     "mobile-web-app-capable": "yes",
+    // Build identity: the commit Vercel built this deployment from, so anyone can
+    // confirm which SHA production serves (view source → ssync-build). "local"
+    // for builds outside Vercel's Git integration.
+    "ssync-build": process.env.VERCEL_GIT_COMMIT_SHA || "local",
   },
   icons: {
     icon: [
