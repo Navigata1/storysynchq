@@ -1,0 +1,57 @@
+# The merge gate from CLAUDE.md §6, run on every PR and every push to main:
+# typecheck, lint, production build, then the full Playwright suite (desktop +
+# mobile) against the production server — the same build Vercel serves.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24 # matches the Vercel project's runtime
+          cache: npm
+
+      - run: npm ci
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Lint
+        run: npm run lint
+      - name: Build
+        run: npm run build
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Start production server
+        run: |
+          npx next start -p 3000 > next-start.log 2>&1 &
+          npx --yes wait-on --timeout 60000 http://localhost:3000/
+      - name: Playwright
+        run: npx playwright test
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+            next-start.log
+          retention-days: 7
