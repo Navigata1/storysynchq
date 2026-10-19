@@ -99,3 +99,13 @@ dimensions, no visible change); the PWA manifest referenced `/icons/icon-*.png` 
 (generated a cassette glyph set in the tape-stock palette, all eight sizes); `public/sw.js` cache
 version bumped `v1 → v2` so returning visitors' cache-first assets from the March build are purged
 on activate; README replaced (it was still the create-next-app boilerplate).
+
+**2026-10-19 · CI is the merge gate; production is SHA-stamped; Vercel deploys from Git again** —
+The gates in CLAUDE.md §6 used to run only when someone remembered. `.github/workflows/ci.yml` now
+runs them on every PR and every push to `main` (npm ci → tsc → eslint → next build → full Playwright
+suite, desktop + mobile, against `next start`). Under CI, `test.only` fails the run and one retry is
+allowed so a timing-sensitive audio test that needs it is reported as flaky, not hidden. Every Vercel
+build stamps `<meta name="ssync-build">` with `VERCEL_GIT_COMMIT_SHA` ("local" elsewhere), so "is
+production serving commit X" is answered from page source, not inferred. The Vercel project had lost
+its Git link after March (the Sep 6 redesign deploy was pushed by hand); Jon reconnected it on
+2026-10-19, so pushes to `main` deploy to production and PR branches get preview deployments again.
