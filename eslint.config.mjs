@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Vision Reel reference material (static mockups + render tooling), not app code.
+    "docs/vision/**",
   ]),
 ]);
 

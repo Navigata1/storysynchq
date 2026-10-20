@@ -33,6 +33,7 @@ agent_docs/decisions.md — append-only decision log
 docs/format-spec.md     — full .storysync v2 specification (+ v2.1 Signature layer draft)
 docs/design-direction.md— two-register design language (studio chrome / tape stock)
 docs/10x-plan.md        — Fable 5.1 reassessment: gaps, falsifiable bars, gauntlet protocol
+docs/vision/             — Vision Reel: 10 reference screens, brief, and HANDOFF.md (build-to-vision spec)
 src/app/                — thin routes; each page renders one component tree
   page.tsx          — `/`         Landing (cassette-into-deck hero, the two doors)
   read/page.tsx     — `/read`     ReadRoom + Player (share code · .storysync file · demo tape)

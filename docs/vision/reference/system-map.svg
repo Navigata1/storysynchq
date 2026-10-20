@@ -1,0 +1,112 @@
+<svg viewBox="0 0 1240 660" xmlns="http://www.w3.org/2000/svg" font-family="Geist, ui-sans-serif, system-ui, sans-serif">
+  <defs>
+    <marker id="sm-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#ffc93c"/>
+    </marker>
+    <marker id="sm-arrow-v" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#a59bff"/>
+    </marker>
+    <linearGradient id="sm-glass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.07"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0.025"/>
+    </linearGradient>
+  </defs>
+  <rect width="1240" height="660" fill="#0c1120"/>
+
+  <!-- Column labels -->
+  <text x="150" y="48" text-anchor="middle" fill="#f59e0b" font-family="IBM Plex Mono, ui-monospace, monospace" font-size="12" letter-spacing="2.4">CREATE</text>
+  <text x="620" y="48" text-anchor="middle" fill="#ffc93c" font-family="IBM Plex Mono, ui-monospace, monospace" font-size="12" letter-spacing="2.4">THE .STORYSYNC FILE</text>
+  <text x="1090" y="48" text-anchor="middle" fill="#a59bff" font-family="IBM Plex Mono, ui-monospace, monospace" font-size="12" letter-spacing="2.4">RECEIVE</text>
+
+  <!-- CREATE: StorySync Creator -->
+  <g>
+    <rect x="40" y="70" width="220" height="380" rx="18" fill="url(#sm-glass)" stroke="#ffffff" stroke-opacity="0.12"/>
+    <text x="64" y="106" fill="#ffffff" font-size="19" font-weight="600">StorySync Creator</text>
+    <text x="64" y="128" fill="#8d96ad" font-size="13">Simple mode is the product</text>
+    <g font-size="14" fill="#cdd3e2">
+      <rect x="60" y="148" width="180" height="56" rx="12" fill="#ffffff" fill-opacity="0.05"/>
+      <text x="76" y="171" fill="#ffffff" font-weight="600">Phone · tablet</text>
+      <text x="76" y="191" fill="#8d96ad" font-size="12.5">Drawings and a voice</text>
+      <rect x="60" y="214" width="180" height="56" rx="12" fill="#ffffff" fill-opacity="0.05"/>
+      <text x="76" y="237" fill="#ffffff" font-weight="600">Web studio</text>
+      <text x="76" y="257" fill="#8d96ad" font-size="12.5">Stage, filmstrip, transport</text>
+      <rect x="60" y="280" width="180" height="56" rx="12" fill="#ffffff" fill-opacity="0.05" stroke="#ffffff" stroke-opacity="0.2" stroke-dasharray="4 4"/>
+      <text x="76" y="303" fill="#ffffff" font-weight="600">Desktop app</text>
+      <text x="76" y="323" fill="#8d96ad" font-size="12.5">Advanced mode · later</text>
+    </g>
+    <text x="64" y="370" fill="#8d96ad" font-size="12.5">Inputs</text>
+    <text x="64" y="392" fill="#cdd3e2" font-size="13.5">Photos · voice per page</text>
+    <text x="64" y="412" fill="#cdd3e2" font-size="13.5">Mood · page timing</text>
+    <text x="64" y="432" fill="#cdd3e2" font-size="13.5">Accessibility presets</text>
+  </g>
+
+  <!-- The packet: seven layers -->
+  <g>
+    <rect x="450" y="70" width="340" height="380" rx="14" fill="#fffdf6" stroke="#1e1a16" stroke-width="3"/>
+    <rect x="450" y="70" width="340" height="12" fill="#e3452f"/>
+    <rect x="450" y="82" width="340" height="30" fill="#ffc93c" stroke="#1e1a16" stroke-width="3"/>
+    <circle cx="472" cy="97" r="5" fill="#1e1a16"/><circle cx="488" cy="97" r="5" fill="#1e1a16"/>
+    <text x="770" y="101" text-anchor="end" fill="#1e1a16" font-family="IBM Plex Mono, ui-monospace, monospace" font-size="11" letter-spacing="2.2">MANIFEST.JSON + ASSETS/</text>
+    <g font-family="IBM Plex Mono, ui-monospace, monospace" font-size="12.5" fill="#1e1a16">
+      <g><rect x="470" y="126" width="300" height="38" rx="8" fill="#f5eedc"/><text x="486" y="150" font-weight="600">1 · METADATA</text><text x="756" y="150" text-anchor="end" fill="#5a5148">title, author, age</text></g>
+      <g><rect x="470" y="170" width="300" height="38" rx="8" fill="#f5eedc"/><text x="486" y="194" font-weight="600">2 · VISUAL</text><text x="756" y="194" text-anchor="end" fill="#5a5148">pages, ≤2048 px</text></g>
+      <g><rect x="470" y="214" width="300" height="38" rx="8" fill="#f5eedc"/><text x="486" y="238" font-weight="600">3 · TEXT</text><text x="756" y="238" text-anchor="end" fill="#5a5148">read-along words</text></g>
+      <g><rect x="470" y="258" width="300" height="38" rx="8" fill="#ffc93c"/><text x="486" y="282" font-weight="600">4 · VOICE</text><text x="756" y="282" text-anchor="end">AAC/M4A, always</text></g>
+      <g><rect x="470" y="302" width="300" height="38" rx="8" fill="#f5eedc"/><text x="486" y="326" font-weight="600">5 · SOUND</text><text x="756" y="326" text-anchor="end" fill="#5a5148">mood bed, ducked −12 dB</text></g>
+      <g><rect x="470" y="346" width="300" height="38" rx="8" fill="#f5eedc"/><text x="486" y="370" font-weight="600">6 · BEHAVIOR</text><text x="756" y="370" text-anchor="end" fill="#5a5148">timing, turns, a11y</text></g>
+      <g><rect x="470" y="390" width="300" height="38" rx="8" fill="#1e1a16"/><text x="486" y="414" font-weight="600" fill="#fffdf6">7 · SIGNATURE</text><text x="756" y="414" text-anchor="end" fill="#ffc93c">consent · remix</text></g>
+    </g>
+  </g>
+
+  <!-- RECEIVE: StorySync Reader -->
+  <g>
+    <rect x="980" y="70" width="220" height="380" rx="18" fill="url(#sm-glass)" stroke="#ffffff" stroke-opacity="0.12"/>
+    <text x="1004" y="106" fill="#ffffff" font-size="19" font-weight="600">StorySync Reader</text>
+    <text x="1004" y="128" fill="#8d96ad" font-size="13">Any browser. No app.</text>
+    <g font-size="14">
+      <rect x="1000" y="148" width="180" height="56" rx="12" fill="#ffffff" fill-opacity="0.05"/>
+      <text x="1016" y="171" fill="#ffffff" font-weight="600">Tap to Begin</text>
+      <text x="1016" y="191" fill="#8d96ad" font-size="12.5">Unlocks sound on iPhone</text>
+      <rect x="1000" y="214" width="180" height="56" rx="12" fill="#ffffff" fill-opacity="0.05"/>
+      <text x="1016" y="237" fill="#ffffff" font-weight="600">Voice + melody</text>
+      <text x="1016" y="257" fill="#8d96ad" font-size="12.5">Read-along, pages turn</text>
+      <rect x="1000" y="280" width="180" height="56" rx="12" fill="#ffffff" fill-opacity="0.05" stroke="#ffffff" stroke-opacity="0.2" stroke-dasharray="4 4"/>
+      <text x="1016" y="303" fill="#ffffff" font-weight="600">TV and offline</text>
+      <text x="1016" y="323" fill="#8d96ad" font-size="12.5">Cast, saved tapes · later</text>
+    </g>
+    <text x="1004" y="370" fill="#8d96ad" font-size="12.5">Receives</text>
+    <text x="1004" y="392" fill="#cdd3e2" font-size="13.5">Unlisted link or QR</text>
+    <text x="1004" y="412" fill="#cdd3e2" font-size="13.5">A .storysync file</text>
+    <text x="1004" y="432" fill="#cdd3e2" font-size="13.5">The built-in demo tape</text>
+  </g>
+
+  <!-- Publish path: Creator -> packet -->
+  <path d="M262 170 C 340 170, 370 150, 446 150" fill="none" stroke="#ffc93c" stroke-width="2" marker-end="url(#sm-arrow)"/>
+  <text x="354" y="138" text-anchor="middle" fill="#ffc93c" font-family="IBM Plex Mono, ui-monospace, monospace" font-size="11" letter-spacing="1.6">PUBLISH</text>
+  <text x="354" y="196" text-anchor="middle" fill="#8d96ad" font-size="12">grown-up gate</text>
+  <text x="354" y="212" text-anchor="middle" fill="#8d96ad" font-size="12">voice → AAC</text>
+
+  <!-- Share path: packet -> Reader -->
+  <path d="M794 150 C 870 150, 900 170, 976 170" fill="none" stroke="#ffc93c" stroke-width="2" marker-end="url(#sm-arrow)"/>
+  <text x="886" y="138" text-anchor="middle" fill="#ffc93c" font-family="IBM Plex Mono, ui-monospace, monospace" font-size="11" letter-spacing="1.6">SHARE</text>
+  <text x="886" y="196" text-anchor="middle" fill="#8d96ad" font-size="12">link · QR · file</text>
+  <text x="886" y="212" text-anchor="middle" fill="#8d96ad" font-size="12">unlisted, revocable</text>
+
+  <!-- The loop: Reader -> Creator ("Make your own") -->
+  <path d="M1090 452 C 1090 560, 960 590, 620 590 C 280 590, 150 560, 150 452" fill="none" stroke="#a59bff" stroke-width="2" stroke-dasharray="6 6" marker-end="url(#sm-arrow-v)"/>
+  <rect x="530" y="572" width="180" height="36" rx="18" fill="#0c1120" stroke="#a59bff" stroke-opacity="0.6"/>
+  <text x="620" y="595" text-anchor="middle" fill="#cdc6ff" font-size="14" font-weight="600">Make your own</text>
+  <text x="620" y="632" text-anchor="middle" fill="#8d96ad" font-size="12.5">Every story ends with an invitation to make one back. Receive, then create.</text>
+
+  <!-- Satellites on the Signature layer -->
+  <g font-size="13">
+    <path d="M792 409 L 860 409 L 860 500" fill="none" stroke="#ffc93c" stroke-opacity="0.55" stroke-width="1.5"/><circle cx="860" cy="409" r="3.5" fill="#ffc93c"/>
+    <path d="M448 409 L 380 409 L 380 500" fill="none" stroke="#ffc93c" stroke-opacity="0.55" stroke-width="1.5"/><circle cx="380" cy="409" r="3.5" fill="#ffc93c"/>
+    <rect x="300" y="500" width="160" height="50" rx="12" fill="#ffffff" fill-opacity="0.04" stroke="#ffffff" stroke-opacity="0.14"/>
+    <text x="380" y="521" text-anchor="middle" fill="#ffffff" font-weight="600">Family library</text>
+    <text x="380" y="539" text-anchor="middle" fill="#8d96ad" font-size="12">tapes on a shelf</text>
+    <rect x="780" y="500" width="160" height="50" rx="12" fill="#ffffff" fill-opacity="0.04" stroke="#ffffff" stroke-opacity="0.14"/>
+    <text x="860" y="521" text-anchor="middle" fill="#ffffff" font-weight="600">Consent + remix</text>
+    <text x="860" y="539" text-anchor="middle" fill="#8d96ad" font-size="12">who may use a voice</text>
+  </g>
+</svg>

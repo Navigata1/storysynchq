@@ -1,0 +1,288 @@
+<section class="ss-screen" id="s03" style="--w:1600px;--h:1000px" aria-label="Snap. Tell. Hear it.">
+<style>
+#s03 { color: var(--ss-fg); }
+#s03 .s3-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
+/* ---------- the kitchen table (LOCAL stage) ---------- */
+#s03 .s3-table { position: absolute; inset: 0; background:
+  radial-gradient(760px 560px at 6% -4%, rgba(255,214,150,.25), transparent 64%),
+  radial-gradient(1100px 760px at 104% 108%, rgba(26,14,6,.62), transparent 70%),
+  radial-gradient(900px 300px at 50% 104%, rgba(26,14,6,.35), transparent 70%),
+  linear-gradient(160deg, #9a7552, #7c5a3d 55%, #6a4b32); }
+#s03 .s3-grain { position: absolute; inset: -40px; transform: rotate(-2deg); opacity: .9; background:
+  repeating-linear-gradient(180deg, transparent 0 9px, rgba(0,0,0,.05) 9px 10px),
+  repeating-linear-gradient(180deg, transparent 0 13px, rgba(0,0,0,.05) 13px 14px),
+  repeating-linear-gradient(180deg, transparent 0 11px, rgba(0,0,0,.035) 11px 12px); }
+#s03 .s3-wood { position: absolute; left: -60px; top: -60px; width: 1720px; height: 1120px; transform: rotate(-2deg); opacity: .5; mix-blend-mode: multiply; }
+#s03 .s3-plank { position: absolute; left: -40px; right: -40px; height: 2px; transform: rotate(-2deg);
+  background: rgba(40,22,10,.32); box-shadow: 0 1px 0 rgba(255,226,180,.10); }
+#s03 .s3-mug { position: absolute; left: 1466px; top: 846px; width: 110px; height: 110px; border-radius: 50%;
+  border: 5px solid rgba(40,20,6,.9); opacity: .22; box-shadow: inset 0 0 0 2px rgba(40,20,6,.5), 3px 2px 0 1px rgba(40,20,6,.4); }
+
+/* ---------- paper on the table ---------- */
+#s03 .s3-sheet { position: absolute; background: #FBF7EC; border-radius: 2px; overflow: hidden;
+  box-shadow: 0 1px 1px rgba(60,34,12,.3), 8px 16px 26px -10px rgba(40,20,6,.55), 2px 3px 6px rgba(40,20,6,.18);
+  display: grid; place-items: center; padding: 8px; }
+#s03 .s3-sheet .s3-draw { width: 100%; height: auto; aspect-ratio: 1; display: block; }
+#s03 .s3-sheet__tooth { position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(135deg, rgba(255,240,210,.18), transparent 40%, rgba(70,40,10,.08)); }
+#s03 .s3-sheet--told { box-shadow: 0 1px 1px rgba(60,34,12,.3), 12px 22px 34px -12px rgba(40,20,6,.6), 2px 3px 6px rgba(40,20,6,.2); }
+#s03 .s3-crayon { position: absolute; width: 100px; height: 16px; border-radius: 4px 2px 2px 4px;
+  background: linear-gradient(180deg, rgba(255,255,255,.38), rgba(255,255,255,0) 42%, rgba(0,0,0,.22)), var(--c);
+  box-shadow: 4px 7px 8px -3px rgba(40,20,6,.55); transform-origin: 50% 50%; }
+#s03 .s3-crayon::before { content: ""; position: absolute; left: 16px; width: 60px; top: 0; bottom: 0;
+  background: linear-gradient(90deg, rgba(0,0,0,.35) 0 2px, transparent 2px 4px, rgba(0,0,0,.35) 4px 6px, transparent 6px calc(100% - 6px), rgba(0,0,0,.35) calc(100% - 6px) calc(100% - 4px), transparent calc(100% - 4px) calc(100% - 2px), rgba(0,0,0,.35) calc(100% - 2px)),
+  linear-gradient(180deg, rgba(255,255,255,.25), rgba(0,0,0,.18)), var(--w); }
+#s03 .s3-crayon::after { content: ""; position: absolute; right: -18px; top: 1px; width: 19px; height: 14px;
+  background: linear-gradient(180deg, rgba(255,255,255,.3), rgba(0,0,0,.2)), var(--c);
+  clip-path: polygon(0 0, 100% 42%, 100% 58%, 0 100%); }
+
+/* ---------- the tablet, lying on the table ---------- */
+#s03 .s3-tab-wrap { position: absolute; left: 312px; top: 52px; transform: scale(.8); transform-origin: 0 0; }
+#s03 .ss-tablet { box-shadow: inset 0 0 0 1.5px #555a66, inset 0 0 0 6px #0b0c10,
+  26px 46px 70px -18px rgba(24,12,4,.72), 8px 14px 24px -8px rgba(24,12,4,.5); }
+#s03 .s3-cam { position: absolute; left: 50%; top: 7px; width: 7px; height: 7px; margin-left: -3px; border-radius: 50%; background: #1b2030; box-shadow: inset 0 0 0 1.5px #2c3346; }
+#s03 .s3-app { position: absolute; inset: 0; background:
+  radial-gradient(700px 520px at 69% 44%, rgba(227,69,47,.07), transparent 70%),
+  radial-gradient(600px 420px at 18% 30%, rgba(245,158,11,.05), transparent 70%),
+  var(--ss-navy); }
+#s03 .s3-mono { font: 500 11px/1.2 var(--ss-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--ss-fg-3); }
+
+/* top bar */
+#s03 .s3-top { position: absolute; left: 0; right: 0; top: 0; height: 68px; display: flex; align-items: center; justify-content: space-between;
+  padding: 0 20px 0 14px; border-bottom: 1px solid var(--ss-line); background: rgba(6,9,18,.55); }
+#s03 .s3-top .ss-btn--ghost { height: 40px; padding: 0 16px 0 12px; font-size: 15px; }
+#s03 .s3-title { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; align-items: center; gap: 10px;
+  font: 700 22px/1 var(--ss-display); letter-spacing: -.01em; white-space: nowrap; color: #fff; }
+#s03 .s3-title .ss-i { width: 16px; height: 16px; color: var(--ss-fg-4); }
+#s03 .s3-right { display: flex; align-items: center; gap: 16px; }
+#s03 .s3-finish { position: relative; display: flex; transform: translateY(-5px); }
+#s03 .s3-finish .ss-btn { height: 32px; padding: 0 18px 0 14px; font-size: 15px; opacity: 1; background: rgba(245,158,11,.14); color: rgba(251,191,74,.62); border: 1px solid rgba(245,158,11,.32); box-shadow: none; }
+#s03 .s3-finish .ss-btn .ss-i { color: #E3452F; opacity: .5; width: 16px; height: 16px; }
+#s03 .s3-finish .s3-mono { position: absolute; top: calc(100% + 2px); left: 0; right: 0; text-align: center; font-size: 11px; line-height: 1; letter-spacing: .1em; white-space: nowrap; }
+
+/* tool rail */
+#s03 .s3-rail { position: absolute; left: 0; top: 68px; bottom: 0; width: 116px; background: #0b0f1d; border-right: 1px solid var(--ss-line); }
+#s03 .s3-tool { position: absolute; left: 12px; width: 92px; height: 92px; border-radius: 22px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  background: rgba(255,255,255,.04); border: 1px solid var(--ss-line); color: var(--ss-fg-2); font: 600 14px/1 var(--ss-ui); }
+#s03 .s3-tool .ss-i { width: 30px; height: 30px; }
+#s03 .s3-tool.is-on { color: var(--ss-ink); background: linear-gradient(180deg, var(--ss-gold-2), var(--ss-gold)); border-color: transparent;
+  box-shadow: 0 0 0 4px rgba(245,158,11,.16), 0 12px 34px -6px rgba(245,158,11,.55), inset 0 1px 0 rgba(255,255,255,.45); }
+#s03 .s3-tool.is-on .ss-i { stroke-width: 2.4; }
+#s03 .s3-rail__div { position: absolute; left: 24px; right: 24px; top: 336px; height: 1px; background: var(--ss-line-2); }
+#s03 .s3-magic { position: absolute; left: 26px; top: 356px; width: 64px; display: flex; flex-direction: column; align-items: center; gap: 8px;
+  font: 500 12.5px/1 var(--ss-ui); color: var(--ss-fg-3); }
+#s03 .s3-magic i { width: 64px; height: 64px; border-radius: 18px; display: grid; place-items: center; border: 1px dashed rgba(255,255,255,.16); color: var(--ss-fg-3); }
+#s03 .s3-magic .ss-i { width: 24px; height: 24px; }
+
+/* voice card */
+#s03 .s3-voice { position: absolute; left: 128px; top: 80px; width: 312px; height: 520px; border-radius: 20px; padding: 20px; }
+#s03 .s3-voice .ss-h3 { color: #fff; }
+#s03 .s3-voice__sub { margin-top: 6px; font: 400 14px/1.4 var(--ss-ui); color: var(--ss-fg-2); }
+#s03 .s3-mascot { position: absolute; left: 96px; top: 104px; width: 120px; height: 73px; }
+#s03 .s3-mascot::before { content: ""; position: absolute; inset: -34px -40px; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(245,158,11,.20), rgba(245,158,11,.06) 60%, transparent); }
+#s03 .s3-face { position: absolute; inset: 0; border-radius: 9px; overflow: hidden; box-shadow: 0 10px 24px -8px rgba(0,0,0,.7); }
+#s03 .s3-face img { position: absolute; width: var(--iw); height: var(--iw); left: calc(var(--iw) * -55 / 512); top: calc(var(--iw) * -133 / 512); max-width: none; }
+#s03 .s3-mascot > svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 0 5px rgba(251,191,74,.5)); }
+#s03 .s3-voice .s3-idea { position: absolute; left: 226px; top: 100px; }
+#s03 .s3-voice .ss-recbtn { position: absolute; left: 90px; top: 226px; }
+#s03 .s3-voice .ss-recbtn.is-live::after { inset: -16px; border-width: 3px; border-color: rgba(227,69,47,.7);
+  box-shadow: 0 0 0 12px rgba(227,69,47,.12), 0 0 70px 14px rgba(227,69,47,.32); }
+#s03 .s3-stop { position: absolute; left: 0; right: 0; top: 392px; text-align: center; font: 600 18px/1 var(--ss-ui); color: #fff; }
+#s03 .s3-lockrow { position: absolute; left: 20px; right: 20px; top: 424px; display: flex; justify-content: center; align-items: center; gap: 8px;
+  font: 400 13px/1.3 var(--ss-ui); color: var(--ss-fg-3); }
+#s03 .s3-lockrow .ss-i { width: 14px; height: 14px; }
+#s03 .s3-foot { position: absolute; left: 20px; right: 20px; bottom: 18px; padding-top: 12px; border-top: 1px solid var(--ss-line);
+  font: 400 12.5px/1.45 var(--ss-ui); color: #6f7891; text-align: center; }
+
+/* the Stage monitor */
+#s03 .s3-mon { position: absolute; left: 452px; top: 80px; width: 716px; height: 520px; border-radius: 18px; overflow: hidden; background: #05070d;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 30px 60px -20px rgba(0,0,0,.85), 0 0 120px -20px rgba(227,69,47,.22); }
+#s03 .s3-amb { position: absolute; inset: 36px 0 0 0; overflow: hidden; }
+#s03 .s3-amb svg { position: absolute; left: -10%; top: -20%; width: 120%; height: 140%; filter: blur(36px) brightness(.5) saturate(1.35); }
+#s03 .s3-amb::after { content: ""; position: absolute; inset: 0; background:
+  linear-gradient(180deg, rgba(5,7,13,0) 50%, rgba(5,7,13,.72) 72%, rgba(5,7,13,.86)),
+  radial-gradient(60% 55% at 50% 40%, transparent 40%, rgba(5,7,13,.45)); }
+#s03 .s3-mon__head { position: absolute; left: 0; right: 0; top: 0; height: 36px; display: flex; align-items: center; justify-content: space-between;
+  padding: 0 14px; background: rgba(0,0,0,.4); border-bottom: 1px solid rgba(255,255,255,.06); z-index: 2; }
+#s03 .s3-mon__head .ss-chip { position: absolute; left: 50%; transform: translateX(-50%); height: 24px; font-size: 12px; padding: 0 10px; gap: 8px; }
+#s03 .s3-mon__head .ss-dot--live { width: 7px; height: 7px; box-shadow: 0 0 0 3px rgba(227,69,47,.25); }
+#s03 .s3-reels { display: flex; gap: 8px; }
+#s03 .s3-reel { position: relative; width: var(--r); height: var(--r); display: block; }
+#s03 .s3-reel .ss-reel { width: 100%; height: 100%; display: block; }
+#s03 .s3-reel.is-spin::after { content: ""; position: absolute; inset: 0; border-radius: 50%;
+  background: conic-gradient(from 20deg, rgba(255,253,246,0), rgba(255,253,246,.32) 12%, rgba(255,253,246,0) 24%, rgba(255,253,246,0) 50%, rgba(255,253,246,.3) 62%, rgba(255,253,246,0) 74%);
+  filter: blur(1.5px); mix-blend-mode: screen; }
+#s03 .s3-photo { position: absolute; left: 198px; top: 44px; width: 320px; height: 320px; border-radius: 10px; z-index: 1;
+  box-shadow: 0 0 0 6px rgba(227,69,47,.14), 0 0 60px 4px rgba(227,69,47,.3), 0 26px 50px -16px rgba(0,0,0,.8); }
+#s03 .s3-photo__paper { position: absolute; inset: 0; border-radius: 10px; overflow: hidden; background: #FBF7EC; padding: 8px; }
+#s03 .s3-photo__paper .s3-draw { width: 100%; height: 100%; display: block; }
+#s03 .s3-photo__paper::after { content: ""; position: absolute; inset: 0; background:
+  radial-gradient(75% 75% at 42% 38%, rgba(255,232,190,.06), rgba(120,74,30,.16) 100%); }
+#s03 .s3-photo__ring { position: absolute; inset: 0; border-radius: 10px; box-shadow: inset 0 0 0 3px #E3452F, inset 0 0 80px rgba(227,69,47,.35); }
+#s03 .s3-pill { position: absolute; left: 50%; bottom: -15px; transform: translateX(-50%); height: 30px; padding: 0 14px 0 12px; border-radius: 999px;
+  display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; background: #E3452F; color: #fff;
+  font: 600 13px/1 var(--ss-ui); box-shadow: 0 8px 22px -6px rgba(227,69,47,.8), 0 0 0 3px rgba(5,7,13,.6); }
+#s03 .s3-pill i { width: 8px; height: 8px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 3px rgba(255,255,255,.3); }
+#s03 .s3-next { position: absolute; left: 14px; top: 44px; z-index: 1; display: inline-flex; align-items: center; gap: 8px; }
+#s03 .s3-next__k { font: 500 11px/1 var(--ss-mono); letter-spacing: .14em; color: var(--ss-fg-3); }
+#s03 .s3-next .ss-chip { height: 22px; padding: 0 10px; font-size: 12px; }
+#s03 .s3-text { position: absolute; left: 40px; right: 40px; top: 386px; text-align: center; z-index: 1; }
+#s03 .s3-text .ss-story { font-size: 24px; line-height: 1.4; font-weight: 400; color: #F3E6C8; }
+#s03 .s3-credit { margin-top: 8px; font: 400 11px/1.2 var(--ss-mono); letter-spacing: .08em; color: var(--ss-fg-3); }
+#s03 .s3-prog { position: absolute; left: 20px; right: 20px; top: 492px; height: 3px; border-radius: 2px; background: rgba(255,255,255,.08); z-index: 1; }
+#s03 .s3-prog::before { content: ""; position: absolute; inset: 0 60% 0 0; border-radius: 2px; background: linear-gradient(90deg, var(--ss-gold), var(--ss-gold-2)); }
+#s03 .s3-status { position: absolute; left: 20px; right: 20px; top: 500px; display: flex; justify-content: space-between; align-items: center; z-index: 1;
+  font: 500 11px/1 var(--ss-mono); letter-spacing: .1em; color: var(--ss-fg-3); }
+#s03 .s3-status span { display: inline-flex; align-items: center; gap: 7px; }
+#s03 .s3-status .s3-rd { width: 6px; height: 6px; border-radius: 50%; background: var(--ss-red); }
+#s03 .s3-status .ss-i { width: 12px; height: 12px; color: var(--mood-wonder); }
+
+/* filmstrip as a strip of tape */
+#s03 .s3-film { position: absolute; left: 128px; top: 612px; width: 1040px; height: 100px; padding: 0 0 0 16px; gap: 12px; align-items: flex-start;
+  background: transparent; border-top: 0; }
+#s03 .s3-film::before, #s03 .s3-film::after { display: none; }
+#s03 .s3-film__tape { position: absolute; left: 0; right: 40px; top: 37px; height: 10px; border-radius: 2px;
+  background: linear-gradient(180deg, #5b3a24, #3d2616); box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 2px 6px rgba(0,0,0,.5); }
+#s03 .s3-film .ss-film__frame { width: 112px; height: 84px; aspect-ratio: auto; background: #FBF7EC; }
+#s03 .s3-film .ss-film__frame .s3-draw { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+#s03 .s3-film .ss-film__frame.is-active { box-shadow: 0 0 0 4px rgba(245,158,11,.22), 0 0 26px rgba(227,69,47,.35); }
+#s03 .s3-livedot { position: absolute; right: 11px; bottom: 11px; width: 12px; height: 12px; border-radius: 50%; background: var(--ss-red);
+  box-shadow: 0 0 0 4px rgba(227,69,47,.3), 0 0 0 8px rgba(227,69,47,.12); }
+#s03 .s3-add { position: relative; width: 112px; height: 84px; aspect-ratio: auto; display: flex; flex-direction: column; gap: 6px; justify-content: center; align-items: center;
+  background: rgba(10,14,26,.92); text-align: center; padding: 0 10px; font: 500 12px/1.25 var(--ss-ui); color: var(--ss-fg-2); }
+#s03 .s3-add .ss-i { width: 22px; height: 22px; color: var(--ss-gold-2); }
+#s03 .s3-move { position: absolute; right: 0; top: 27px; z-index: 1; height: 30px; padding: 0 14px 0 12px; display: inline-flex; align-items: center; gap: 7px; border-radius: 999px;
+  background: #0d1120; border: 1px solid rgba(255,255,255,.08); font: 500 13px/1 var(--ss-ui); color: var(--ss-fg-4); opacity: 1; }
+#s03 .s3-move .ss-i { width: 13px; height: 13px; color: var(--ss-fg-4); }
+#s03 .s3-lane { position: absolute; left: 16px; right: 0; top: 92px; height: 8px; display: flex; align-items: center; gap: 12px; }
+#s03 .s3-lane i { flex: 1; height: 8px; border-radius: 4px; background: linear-gradient(90deg, rgba(245,181,68,.95), rgba(245,181,68,.55)); box-shadow: 0 0 12px rgba(245,181,68,.3); }
+#s03 .s3-lane span { display: inline-flex; align-items: center; gap: 6px; font: 500 11px/1 var(--ss-mono); letter-spacing: .12em; color: var(--mood-wonder); white-space: nowrap; }
+#s03 .s3-lane .ss-i { width: 12px; height: 12px; }
+
+/* transport */
+#s03 .s3-trans { position: absolute; left: 128px; top: 724px; width: 1040px; height: 84px; border-radius: 20px; padding: 0 22px;
+  display: flex; align-items: center; background: rgba(255,255,255,.03); border: 1px solid var(--ss-line); }
+#s03 .s3-deck { display: flex; gap: 14px; align-items: center; padding: 6px 12px; border-radius: 999px; background: #05070d; box-shadow: inset 0 2px 6px rgba(0,0,0,.8), 0 0 0 1px rgba(255,255,255,.06); }
+#s03 .s3-ctrls { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; align-items: center; gap: 18px; }
+#s03 .s3-dim { opacity: .35; }
+#s03 .s3-rec56 { position: relative; width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; background: #1a1f33;
+  border: 3px solid rgba(227,69,47,.85); box-shadow: 0 0 0 6px rgba(227,69,47,.14), 0 0 26px rgba(227,69,47,.35); }
+#s03 .s3-rec56::before { content: ""; width: 20px; height: 20px; border-radius: 5px; background: radial-gradient(circle at 35% 30%, #ff7a62, var(--ss-red) 60%, #b02c1b); }
+#s03 .s3-readout { margin-left: auto; display: inline-flex; align-items: center; gap: 10px; font: 500 13px/1 var(--ss-mono); letter-spacing: .1em; color: #ff7a62; }
+
+/* ---------- spec figures (LOCAL shared piece 1) ---------- */
+#s03 .s3-fig { position: absolute; left: 1310px; width: 270px; border-radius: 12px; border: 1px solid rgba(255,255,255,.16); background: #0f1426;
+  box-shadow: 0 24px 48px -24px rgba(0,0,0,.7), 0 10px 26px -10px rgba(24,12,4,.55); }
+#s03 .s3-fig__tab { position: absolute; left: 12px; top: -11px; height: 22px; z-index: 2; display: inline-flex; align-items: center; gap: 7px; padding: 0 10px;
+  border-radius: 999px; background: #0a0e1a; border: 1px solid rgba(255,255,255,.16); white-space: nowrap;
+  font: 500 11px/1 var(--ss-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ss-fg-2); }
+#s03 .s3-fig__tab--long { letter-spacing: .06em; }
+#s03 .s3-fig__tab::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--ss-gold); flex: none; }
+#s03 .s3-fig__clip { position: absolute; inset: 0; border-radius: 12px; overflow: hidden; }
+#s03 .s3-fig__in { position: absolute; left: 0; top: 0; width: 200%; height: 200%; transform: scale(.5); transform-origin: 0 0; }
+
+/* figure A: hear it back (built at 2x) */
+#s03 .s3-hear { position: absolute; left: 32px; top: 50px; width: 192px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+#s03 .s3-hear__btn { width: 192px; height: 192px; border-radius: 50%; display: grid; place-items: center; color: var(--ss-ink);
+  background: radial-gradient(circle at 36% 30%, #ffd57a, var(--ss-gold-2) 40%, var(--ss-gold) 80%);
+  box-shadow: 0 20px 40px -20px rgba(245,158,11,.5), inset 0 3px 0 rgba(255,255,255,.5); }
+#s03 .s3-hear__btn .ss-i { width: 84px; height: 84px; margin-left: 10px; }
+#s03 .s3-hear__lbl { font: 600 30px/1 var(--ss-ui); color: #fff; }
+#s03 .s3-afterR { position: absolute; left: 264px; top: 50px; width: 244px; }
+#s03 .s3-afterR .s3-mascot2 { position: relative; width: 124px; height: 75px; }
+#s03 .s3-afterR .s3-mascot2 > svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+#s03 .s3-afterR .s3-face { border-radius: 12px; }
+#s03 .s3-afterR .ss-chip--future { position: absolute; left: 140px; top: 14px; height: 46px; padding: 0 16px; font-size: 22px; border-width: 2px; }
+#s03 .s3-afterR .s3-len { margin-top: 22px; font: 500 22px/1 var(--ss-mono); letter-spacing: .06em; color: var(--ss-fg-2); white-space: nowrap; }
+#s03 .s3-afterR .ss-wave { margin-top: 16px; height: 52px; gap: 4px; width: 244px; }
+#s03 .s3-afterR .ss-wave i { min-width: 3px; }
+#s03 .s3-btnrow { position: absolute; left: 32px; right: 32px; bottom: 44px; display: flex; gap: 14px; }
+#s03 .s3-btnrow .ss-btn { height: 60px; padding: 0 22px; font-size: 24px; gap: 10px; }
+#s03 .s3-btnrow .ss-btn .ss-i { width: 24px; height: 24px; }
+#s03 .s3-btnrow .ss-btn--gold { box-shadow: 0 14px 28px -14px rgba(245,158,11,.7), inset 0 1px 0 rgba(255,255,255,.45); }
+
+/* figure B: microphone off (built at 2x) */
+#s03 .s3-err { position: absolute; left: 32px; right: 32px; top: 44px; }
+#s03 .s3-err__t { font: 600 32px/1.15 var(--ss-ui); color: #fff; }
+#s03 .s3-err__s { margin-top: 6px; font: 400 25px/1.3 var(--ss-ui); color: var(--ss-fg-2); }
+#s03 .s3-err__h { margin-top: 22px; display: flex; align-items: center; gap: 18px; font: 700 30px/1.18 var(--ss-ui); color: #fff; }
+#s03 .s3-err__ic { width: 68px; height: 68px; border-radius: 50%; display: grid; place-items: center; flex: none;
+  color: #ff9a86; background: rgba(227,69,47,.14); border: 2px solid rgba(227,69,47,.5); }
+#s03 .s3-err__ic .ss-i { width: 32px; height: 32px; }
+#s03 .s3-err__b { margin-top: 16px; font: 400 24px/1.42 var(--ss-ui); color: var(--ss-fg-2); }
+#s03 .s3-err__row { position: absolute; left: 32px; right: 28px; bottom: 34px; display: flex; gap: 12px; }
+#s03 .s3-err__row .ss-btn { height: 56px; padding: 0 18px; font-size: 23px; gap: 9px; }
+#s03 .s3-err__row .ss-btn .ss-i { width: 22px; height: 22px; }
+#s03 .s3-err__row .ss-btn--gold { box-shadow: 0 14px 28px -14px rgba(245,158,11,.7), inset 0 1px 0 rgba(255,255,255,.45); }
+
+/* ---------- the ten-minute ribbon (annotation) ---------- */
+#s03 .s3-ten { position: absolute; left: 312px; top: 752px; width: 976px; height: 80px; }
+#s03 .s3-ten__h { position: absolute; left: 0; top: 0; font: 500 11px/1 var(--ss-mono); letter-spacing: .16em; color: rgba(255,240,214,.88); white-space: nowrap; }
+#s03 .s3-ten__rib { position: absolute; left: 0; top: 38px; height: 14px; width: 761px; border-radius: 3px;
+  background: linear-gradient(180deg, #5b3a24, #3d2616); box-shadow: inset 0 1px 0 rgba(255,255,255,.16), 0 0 0 1px rgba(20,10,4,.55), 0 4px 10px -1px rgba(20,10,4,.7); }
+#s03 .s3-ten__lead { position: absolute; left: 761px; top: 39px; width: 215px; height: 12px; border-radius: 0 3px 3px 0;
+  background: linear-gradient(180deg, rgba(255,253,246,.3), rgba(255,253,246,.14)); box-shadow: 0 3px 8px -2px rgba(20,10,4,.45); border: 1px dashed rgba(255,253,246,.35); border-left: 0; }
+#s03 .s3-tick { position: absolute; width: 2px; background: #1E1A16; border-radius: 1px; }
+#s03 .s3-ts { position: absolute; font: 400 11px/1 var(--ss-mono); letter-spacing: .02em; color: #f4e8d2; white-space: nowrap; }
+#s03 .s3-ts b { font-weight: 600; margin-right: 6px; }
+#s03 .s3-ts--end { color: rgba(255,240,214,.5); }
+#s03 .s3-ts.is-now { color: #ff8a73; }
+#s03 .s3-ts.is-end { color: var(--ss-gold-2); }
+#s03 .s3-now { position: absolute; top: 34px; width: 22px; height: 22px; margin-left: -11px; border-radius: 50%; background: #E3452F;
+  box-shadow: 0 0 0 4px rgba(227,69,47,.3), 0 2px 6px rgba(0,0,0,.4); border: 2px solid #1E1A16; }
+#s03 .s3-endstar { position: absolute; top: 37px; width: 16px; height: 16px; margin-left: -8px; color: var(--ss-gold-2); }
+
+/* ---------- callouts on oak ---------- */
+#s03 .ss-callout { color: #f1e6d2; text-shadow: 0 1px 2px rgba(20,10,4,.45); text-wrap: pretty; }
+#s03 .ss-callout b { color: #ffd166; }
+
+/* ---------- layers strip (LOCAL shared piece 2) ---------- */
+#s03 .s3-layers { position: absolute; left: 1316px; top: 960px; width: 236px; height: 24px; border-radius: 999px; display: flex; align-items: center; gap: 9px;
+  padding: 0 12px; background: rgba(10,14,26,.55); border: 1px solid rgba(255,255,255,.14); backdrop-filter: blur(12px); }
+#s03 .s3-layers span { font: 500 10px/1 var(--ss-mono); letter-spacing: .16em; color: var(--ss-fg-2); margin-right: auto; }
+#s03 .s3-layers i { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,.25); flex: none; }
+#s03 .s3-layers i.on { background: var(--c); border-color: var(--ss-ink); box-shadow: 0 0 0 1px rgba(255,253,246,.35); }
+</style>
+<svg class="s3-defs" width="0" height="0" aria-hidden="true" focusable="false"><defs>
+<filter id="s03-crayon" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency=".8" numOctaves="2" seed="4" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="3" xChannelSelector="R" yChannelSelector="G"/></filter>
+<pattern id="s03-hatch-or" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(30)"><path d="M0 0V9" stroke="#F08A24" stroke-width="2.4" opacity=".8"/></pattern>
+<pattern id="s03-hatch-red" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)"><path d="M0 0V8" stroke="#D93A2B" stroke-width="4.2" opacity=".9"/></pattern>
+<clipPath id="s03-c2ground"><path d="M0 248 Q38 234 78 246 T156 244 T234 246 T300 240 L300 300 L0 300Z"/></clipPath>
+<clipPath id="s03-c3room"><path clip-rule="evenodd" d="M0 0H300V300H0Z M40 40V260H260V40Z"/></clipPath>
+<clipPath id="s03-c3win"><rect x="44" y="44" width="212" height="212"/></clipPath>
+<clipPath id="s03-c3bed"><rect x="55" y="200" width="90" height="45" rx="4"/></clipPath>
+<mask id="s03-moonmask" maskUnits="userSpaceOnUse" x="0" y="0" width="300" height="300"><rect width="300" height="300" fill="#fff"/><circle cx="176" cy="230" r="52" fill="#000"/></mask>
+<filter id="s03-wood" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".0028 .095" numOctaves="4" seed="9"/><feColorMatrix values="0 0 0 0 .2  0 0 0 0 .11  0 0 0 0 .04  2.4 0 0 0 -1.05"/></filter>
+<symbol id="s03-d1" viewBox="0 0 300 300"><rect width="300" height="300" fill="#FBF7EC"/><g filter="url(#s03-crayon)" stroke-linecap="round"><path d="M282.5 5.5 L293.7 85.3 L226.6 6 L296.2 205.7 L170.4 7.1 L243.4 210.9 L112.4 3.3 L185.9 206.2 L59 9.9 L128.4 207.2 L5 7.5 L74.3 207.4 L4.5 123 L18.9 211.5" fill="none" stroke="#2F6BD8" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/><path d="M187.9 87.9 L204.1 65.6 M211.2 159.9 L237.5 168.4 M163.4 203 L169.1 230 M136.6 203 L130.9 230 M88.8 159.9 L62.5 168.4 M112.1 87.9 L95.9 65.6" stroke="#F08A24" stroke-width="6" stroke-linecap="round" fill="none"/><path d="M150 48 L174.3 106.5 L237.5 111.6 L189.4 152.8 L204.1 214.4 L150 181.4 L95.9 214.4 L110.6 152.8 L62.5 111.6 L125.7 106.5Z" fill="#F7C21B"/><path d="M150 48 L174.3 106.5 L237.5 111.6 L189.4 152.8 L204.1 214.4 L150 181.4 L95.9 214.4 L110.6 152.8 L62.5 111.6 L125.7 106.5Z" fill="url(#s03-hatch-or)"/><path d="M150 48 L174.3 106.5 L237.5 111.6 L189.4 152.8 L204.1 214.4 L150 181.4 L95.9 214.4 L110.6 152.8 L62.5 111.6 L125.7 106.5Z" fill="none" stroke="#F08A24" stroke-width="6" stroke-linejoin="round"/><circle cx="129.8" cy="132.6" r="4" fill="#2B2B2B"/><circle cx="170.2" cy="132.6" r="4" fill="#2B2B2B"/><path d="M131.6 151 Q150 173.1 168.4 151" fill="none" stroke="#2B2B2B" stroke-width="4"/><circle cx="118.7" cy="145.5" r="5" fill="#F29BB8"/><circle cx="181.3" cy="145.5" r="5" fill="#F29BB8"/><circle cx="50" cy="50" r="6" fill="#F7C21B"/><circle cx="250" cy="70" r="6" fill="#F7C21B"/><circle cx="240" cy="240" r="6" fill="#F7C21B"/></g></symbol><symbol id="s03-d2" viewBox="0 0 300 300"><rect width="300" height="300" fill="#FBF7EC"/><g filter="url(#s03-crayon)" stroke-linecap="round"><path d="M277.9 8.4 L287.8 106.3 L187.4 3 L199.5 101 L102.5 8 L110.9 98.8 L12.1 7.1 L23 101.6" fill="none" stroke="#2F6BD8" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/><path d="M0 248 Q38 234 78 246 T156 244 T234 246 T300 240 L300 300 L0 300Z" fill="#3BA55C" opacity=".85"/><g clip-path="url(#s03-c2ground)"><path d="M296.9 241.5 L299.4 261.4 L282.5 238.5 L297.5 297.5 L266.5 235.5 L282.5 300.2 L252.1 233.9 L266.4 296.5 L236.7 238.2 L253.5 298.7 L223 240.1 L236.2 297.1 L209.2 241.3 L221.7 296 L192.4 238.6 L208.8 299.1 L177.1 237.9 L192.1 297.4 L164.2 238.6 L178.7 300.4 L149.7 239.9 L164.6 300.6 L132.4 234.2 L146.4 297.9 L118.1 236.5 L133.8 299.5 L103.9 240 L119.5 299.5 L88.6 240.2 L102.7 295.4 L72.4 238.7 L86.4 297.9 L56.3 235.9 L74.5 301.4 L41.5 234.6 L56.3 297.2 L28.4 240.6 L41.8 298.3 L15 239.6 L27.4 294.4 L1 239.8 L14.4 298.1 L0.6 287.2" fill="none" stroke="#2E8A4A" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/></g><rect x="40" y="170" width="60" height="60" fill="#FBF7EC" stroke="#7A4A2A" stroke-width="6" stroke-linejoin="round"/><path d="M32 170 L70 137 L108 170Z" fill="#D93A2B" opacity=".9"/><path d="M32 170 L70 137 L108 170Z" fill="none" stroke="#D93A2B" stroke-width="5" stroke-linejoin="round"/><rect x="59.2" y="184.4" width="21.6" height="21.6" fill="#F7C21B" stroke="#7A4A2A" stroke-width="3"/><path d="M70 184.4 V206 M59.2 195.2 H80.8" stroke="#7A4A2A" stroke-width="3"/><rect x="120" y="150" width="70" height="80" fill="#FBF7EC" stroke="#7A4A2A" stroke-width="6" stroke-linejoin="round"/><path d="M112 150 L155 111.5 L198 150Z" fill="#D93A2B" opacity=".9"/><path d="M112 150 L155 111.5 L198 150Z" fill="none" stroke="#D93A2B" stroke-width="5" stroke-linejoin="round"/><rect x="142.4" y="171" width="25.2" height="25.2" fill="#F7C21B" stroke="#7A4A2A" stroke-width="3"/><path d="M155 171 V196.2 M142.4 183.6 H167.6" stroke="#7A4A2A" stroke-width="3"/><rect x="215" y="175" width="55" height="55" fill="#FBF7EC" stroke="#7A4A2A" stroke-width="6" stroke-linejoin="round"/><path d="M207 175 L242.5 144.8 L278 175Z" fill="#D93A2B" opacity=".9"/><path d="M207 175 L242.5 144.8 L278 175Z" fill="none" stroke="#D93A2B" stroke-width="5" stroke-linejoin="round"/><rect x="232.6" y="188.2" width="19.8" height="19.8" fill="#F7C21B" stroke="#7A4A2A" stroke-width="3"/><path d="M242.5 188.2 V208 M232.6 198.1 H252.4" stroke="#7A4A2A" stroke-width="3"/><path d="M240 20 L250.6 45.4 L278 47.6 L257.1 65.6 L263.5 92.4 L240 78 L216.5 92.4 L222.9 65.6 L202 47.6 L229.4 45.4Z" fill="#F7C21B"/><path d="M240 20 L250.6 45.4 L278 47.6 L257.1 65.6 L263.5 92.4 L240 78 L216.5 92.4 L222.9 65.6 L202 47.6 L229.4 45.4Z" fill="url(#s03-hatch-or)"/><path d="M240 20 L250.6 45.4 L278 47.6 L257.1 65.6 L263.5 92.4 L240 78 L216.5 92.4 L222.9 65.6 L202 47.6 L229.4 45.4Z" fill="none" stroke="#F08A24" stroke-width="6" stroke-linejoin="round"/><circle cx="231.2" cy="62.4" r="4" fill="#2B2B2B"/><circle cx="248.8" cy="62.4" r="4" fill="#2B2B2B"/><path d="M232 68.8 Q240 78.4 248 68.8" fill="none" stroke="#2B2B2B" stroke-width="4"/><circle cx="226.4" cy="62.4" r="5" fill="#F29BB8"/><circle cx="253.6" cy="62.4" r="5" fill="#F29BB8"/></g></symbol><symbol id="s03-d3" viewBox="0 0 300 300"><rect width="300" height="300" fill="#FBF7EC"/><g filter="url(#s03-crayon)" stroke-linecap="round"><g clip-path="url(#s03-c3room)"><path d="M292 2.8 L293.6 21.1 L280.2 3.9 L294.2 46.1 L266.1 4.9 L293.8 64.8 L256.2 7.9 L292.7 91.7 L242.8 3.4 L291.8 109.6 L230 4.7 L293 138.9 L217.9 4.7 L293.1 159.8 L207.3 12.1 L295.1 184.8 L193.9 11.3 L295.2 211.8 L182.5 11.1 L294.1 233.7 L170.6 9.2 L293.7 252.6 L154.5 3.4 L294.6 279 L143.6 9.4 L285.5 288.9 L132.9 12.4 L278.3 293.6 L119.3 8.8 L264.3 290.2 L103.9 5.5 L250.6 291.7 L92.3 3.9 L236.8 288.9 L84.6 11.6 L226.1 293.2 L68 7.6 L214.9 291.3 L53.4 4.8 L204.3 295.3 L42.8 6.5 L187.7 289.2 L30.9 8 L178.2 294.1 L19.4 8.8 L167.6 295.9 L4.5 4.8 L149.7 291.3 L8.3 32.4 L136.9 290.7 L7 51.8 L128.1 293.1 L6.1 73.8 L115.3 296.2 L4 96.9 L104.3 294.5 L8.4 126.7 L91.2 295.1 L7.3 149.3 L75.7 289 L5.9 171.5 L64.3 293 L7.2 193.6 L53.3 296.1 L6.4 220.7 L38.7 290.8 L3.9 238.9 L29.3 295.6 L5 261.4 L16 293.9 L7.3 290.1" fill="none" stroke="#2B2B2B" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" opacity="0.84"/><path d="M3.5 10.5 L36.6 6.5 L7.9 32.5 L80.4 4.6 L10.7 53 L116.1 9.5 L5.8 76.5 L159.3 6.6 L3.6 102.8 L202.2 8.9 L11.2 119.6 L250.5 3.4 L11.3 141.9 L292.2 3.5 L3 168.7 L293.2 26.2 L6.6 192.5 L295.7 49.7 L9.8 212.2 L292.1 74.1 L8 234.6 L293.5 94.2 L7.5 260.2 L292.4 116.9 L7.9 282 L293.1 141.3 L22.5 294.4 L290.3 163.2 L67.4 294.2 L294.4 183.7 L108.2 297.1 L291.3 211.1 L155.1 294.8 L289.3 233.6 L197.3 293.5 L294.6 252.7 L241.2 291.7 L289.3 278.6 L283.7 294" fill="none" stroke="#2F6BD8" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" opacity="0.55"/></g><g clip-path="url(#s03-c3win)"><path d="M252.9 46.5 L254.6 63.6 L236.9 47.4 L254.5 94.7 L222 47 L253.9 130.6 L206.5 45.9 L253.2 159 L190.5 44.1 L256.3 193.3 L174.8 46.9 L254.4 226.8 L160.9 48.9 L253.8 252.4 L141.1 43.2 L239.3 255.4 L129.1 49 L224 256.7 L112.5 43.6 L208.3 257.8 L96.8 44.3 L193.2 256 L79 42.9 L174.5 252.5 L65.7 42.6 L161.8 256.7 L49.5 42.3 L146.2 255.9 L45.5 67.3 L129.2 254.2 L44.2 98.8 L115 255 L45.1 129.8 L97.7 251.7 L47.5 164.1 L82 253.8 L43.2 193.2 L66.7 252.3 L44.6 226 L53.6 257" fill="none" stroke="#1F3F8F" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" opacity="0.68"/><path d="M46.1 51.8 L85.5 47.4 L48.2 84.4 L144 46.6 L43.8 120.7 L206.7 44.1 L44.3 156.8 L252.7 54.3 L42.2 190.7 L256 86.3 L48.5 224.3 L251.4 123.8 L54.2 253.9 L255.1 154.9 L113.9 255.1 L253.6 191.1 L172.6 254.7 L252.2 227.2 L235.7 254.8" fill="none" stroke="#2B2B2B" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/></g><rect x="40" y="40" width="220" height="220" fill="none" stroke="#2F6BD8" stroke-width="9" stroke-linejoin="round"/><path d="M150 40 V260 M40 150 H260" stroke="#2F6BD8" stroke-width="9" stroke-linecap="round"/><ellipse cx="68.5" cy="188.6" rx="6.5" ry="11.9" fill="#7A4A2A" transform="rotate(35 68.5 188.6)"/><ellipse cx="111.5" cy="188.6" rx="6.5" ry="11.9" fill="#7A4A2A" transform="rotate(-35 111.5 188.6)"/><circle cx="90" cy="185" r="18" fill="#F2C6A0" stroke="#7A4A2A" stroke-width="2.5"/><path d="M71 185.9 A19 19 0 0 1 109 185.9 L101.2 179.2 L95 182.1 L89.1 178.5 L83.2 181.8 L78.1 178.9Z" fill="#7A4A2A" stroke="#7A4A2A" stroke-width="2" stroke-linejoin="round"/><circle cx="73" cy="181.8" r="3.1" fill="#D93A2B"/><circle cx="107" cy="181.8" r="3.1" fill="#D93A2B"/><circle cx="83.9" cy="187.5" r="2.5" fill="#2B2B2B"/><circle cx="96.1" cy="187.5" r="2.5" fill="#2B2B2B"/><circle cx="90" cy="195.4" r="3.1" fill="none" stroke="#2B2B2B" stroke-width="2.4"/><circle cx="80.1" cy="192.2" r="2.3" fill="#F29BB8" opacity=".9"/><circle cx="99.9" cy="192.2" r="2.3" fill="#F29BB8" opacity=".9"/><rect x="55" y="200" width="90" height="45" rx="4" fill="#B79BE8"/><g clip-path="url(#s03-c3bed)"><path d="M141.9 202.5 L142.6 223 L127.8 200.7 L137.5 242.9 L116.4 204.2 L126.6 244.7 L104.5 203.6 L112.5 241.1 L94 204.8 L99.8 241.3 L76.8 198.5 L89.2 246.2 L66.4 200.2 L76.6 245.2 L57.8 211.2 L63.8 245.2 L56.7 247.2" fill="none" stroke="#7B4FC9" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/></g><rect x="55" y="200" width="90" height="45" rx="4" fill="none" stroke="#7B4FC9" stroke-width="6" stroke-linejoin="round"/><path d="M205 53 L216.1 79.7 L244.9 82 L223 100.8 L229.7 129 L205 113.9 L180.3 129 L187 100.8 L165.1 82 L193.9 79.7Z" fill="#F7C21B"/><path d="M205 53 L216.1 79.7 L244.9 82 L223 100.8 L229.7 129 L205 113.9 L180.3 129 L187 100.8 L165.1 82 L193.9 79.7Z" fill="url(#s03-hatch-or)"/><path d="M205 53 L216.1 79.7 L244.9 82 L223 100.8 L229.7 129 L205 113.9 L180.3 129 L187 100.8 L165.1 82 L193.9 79.7Z" fill="none" stroke="#F08A24" stroke-width="6" stroke-linejoin="round"/><circle cx="195.8" cy="91.6" r="4" fill="#2B2B2B"/><circle cx="214.2" cy="91.6" r="4" fill="#2B2B2B"/><path d="M196.6 100 Q205 110.1 213.4 100" fill="none" stroke="#2B2B2B" stroke-width="4"/><circle cx="190.7" cy="97.5" r="5" fill="#F29BB8"/><circle cx="219.3" cy="97.5" r="5" fill="#F29BB8"/></g></symbol><symbol id="s03-d4" viewBox="0 0 300 300"><rect width="300" height="300" fill="#FBF7EC"/><g filter="url(#s03-crayon)" stroke-linecap="round"><path d="M293.1 5.3 L295 32.2 L274.9 7.6 L294.8 64.5 L258.1 8.9 L293 99.4 L241.1 9.7 L297.1 140.8 L223.5 8.3 L293.7 173.4 L201.2 3.1 L295.7 215.9 L188.3 9.4 L293.1 245.9 L166.2 3.5 L295.2 288.1 L150 9 L283.8 297.1 L132.9 7.9 L263.9 296.7 L116.9 9.5 L246.8 296.7 L96.2 6.1 L228.2 293.2 L78.1 1.9 L209.7 294 L60.5 6.3 L191.1 293.4 L44.8 7.9 L177.3 296 L22.8 3 L154.4 290.3 L5.9 3.4 L139.5 297.2 L5.3 39.3 L120.9 292.2 L5.6 77.8 L104.6 295.5 L5.9 112.9 L86 294 L8 151 L68.5 296.1 L3.3 182.1 L49.5 295.4 L3.7 219.5 L30.4 291.4 L5 253.6 L17.2 297.1 L7.2 294" fill="none" stroke="#2F6BD8" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" opacity="0.82"/><g mask="url(#s03-moonmask)"><circle cx="150" cy="250" r="60" fill="#B8B8B8"/><circle cx="150" cy="250" r="60" fill="none" stroke="#8C8C8C" stroke-width="7"/></g><circle cx="40" cy="40" r="6" fill="#F7C21B"/><circle cx="258" cy="36" r="6" fill="#F7C21B"/><circle cx="42" cy="214" r="6" fill="#F7C21B"/><circle cx="266" cy="196" r="6" fill="#F7C21B"/><path d="M116 156 L162 114" stroke="#2B2B2B" stroke-width="5" stroke-linecap="round"/><ellipse cx="92.5" cy="132.8" rx="5" ry="9.2" fill="#7A4A2A" transform="rotate(35 92.5 132.8)"/><ellipse cx="127.5" cy="132.8" rx="5" ry="9.2" fill="#7A4A2A" transform="rotate(-35 127.5 132.8)"/><circle cx="110" cy="130" r="14" fill="#F2C6A0" stroke="#7A4A2A" stroke-width="2.5"/><path d="M95 130.7 A15 15 0 0 1 125 130.7 L118.7 125.5 L113.9 127.8 L109.3 125 L104.7 127.5 L100.8 125.2Z" fill="#7A4A2A" stroke="#7A4A2A" stroke-width="2" stroke-linejoin="round"/><circle cx="97" cy="127.5" r="2.4" fill="#D93A2B"/><circle cx="123" cy="127.5" r="2.4" fill="#D93A2B"/><circle cx="105.2" cy="132" r="2" fill="#2B2B2B"/><circle cx="114.8" cy="132" r="2" fill="#2B2B2B"/><path d="M105.8 136.4 Q110 140.4 114.2 136.4" fill="none" stroke="#2B2B2B" stroke-width="2.2" stroke-linecap="round"/><circle cx="102.3" cy="135.6" r="1.8" fill="#F29BB8" opacity=".9"/><circle cx="117.7" cy="135.6" r="1.8" fill="#F29BB8" opacity=".9"/><path d="M110 146 L91.1 189.4 L128.9 189.4Z" fill="#D93A2B" stroke="#D93A2B" stroke-width="4" stroke-linejoin="round"/><path d="M104 189.4 L102 211.8 M116 189.4 L118 211.8" stroke="#2B2B2B" stroke-width="4" stroke-linecap="round"/><path d="M105 155.8 L82 172.6" stroke="#2B2B2B" stroke-width="4" stroke-linecap="round"/><path d="M195 70 L205.6 95.4 L233 97.6 L212.1 115.6 L218.5 142.4 L195 128 L171.5 142.4 L177.9 115.6 L157 97.6 L184.4 95.4Z" fill="#F7C21B"/><path d="M195 70 L205.6 95.4 L233 97.6 L212.1 115.6 L218.5 142.4 L195 128 L171.5 142.4 L177.9 115.6 L157 97.6 L184.4 95.4Z" fill="url(#s03-hatch-or)"/><path d="M195 70 L205.6 95.4 L233 97.6 L212.1 115.6 L218.5 142.4 L195 128 L171.5 142.4 L177.9 115.6 L157 97.6 L184.4 95.4Z" fill="none" stroke="#F08A24" stroke-width="6" stroke-linejoin="round"/><circle cx="186.2" cy="106.8" r="4" fill="#2B2B2B"/><circle cx="203.8" cy="106.8" r="4" fill="#2B2B2B"/><path d="M187 114.8 Q195 124.4 203 114.8" fill="none" stroke="#2B2B2B" stroke-width="4"/><circle cx="181.4" cy="112.4" r="5" fill="#F29BB8"/><circle cx="208.6" cy="112.4" r="5" fill="#F29BB8"/></g></symbol><symbol id="s03-d5" viewBox="0 0 300 300"><rect width="300" height="300" fill="#FBF7EC"/><g filter="url(#s03-crayon)" stroke-linecap="round"><path d="M150 118 C150 88 80 78 80 128 C80 170 128 192 150 214 C172 192 220 170 220 128 C220 78 150 88 150 118Z" fill="#D93A2B" opacity=".35"/><path d="M150 118 C150 88 80 78 80 128 C80 170 128 192 150 214 C172 192 220 170 220 128 C220 78 150 88 150 118Z" fill="url(#s03-hatch-red)"/><path d="M150 118 C150 88 80 78 80 128 C80 170 128 192 150 214 C172 192 220 170 220 128 C220 78 150 88 150 118Z" fill="none" stroke="#D93A2B" stroke-width="7" stroke-linejoin="round"/><path d="M60 30 L67.9 49.1 L88.5 50.7 L72.8 64.2 L77.6 84.3 L60 73.5 L42.4 84.3 L47.2 64.2 L31.5 50.7 L52.1 49.1Z" fill="#F7C21B"/><path d="M60 30 L67.9 49.1 L88.5 50.7 L72.8 64.2 L77.6 84.3 L60 73.5 L42.4 84.3 L47.2 64.2 L31.5 50.7 L52.1 49.1Z" fill="url(#s03-hatch-or)"/><path d="M60 30 L67.9 49.1 L88.5 50.7 L72.8 64.2 L77.6 84.3 L60 73.5 L42.4 84.3 L47.2 64.2 L31.5 50.7 L52.1 49.1Z" fill="none" stroke="#F08A24" stroke-width="6" stroke-linejoin="round"/><circle cx="53.4" cy="57.6" r="4" fill="#2B2B2B"/><circle cx="66.6" cy="57.6" r="4" fill="#2B2B2B"/><path d="M54 63.6 Q60 70.8 66 63.6" fill="none" stroke="#2B2B2B" stroke-width="4"/><circle cx="49.8" cy="61.8" r="5" fill="#F29BB8"/><circle cx="70.2" cy="61.8" r="5" fill="#F29BB8"/><ellipse cx="224.5" cy="192.4" rx="4.3" ry="7.9" fill="#7A4A2A" transform="rotate(35 224.5 192.4)"/><ellipse cx="255.5" cy="192.4" rx="4.3" ry="7.9" fill="#7A4A2A" transform="rotate(-35 255.5 192.4)"/><circle cx="240" cy="190" r="12" fill="#F2C6A0" stroke="#7A4A2A" stroke-width="2.5"/><path d="M227 190.6 A13 13 0 0 1 253 190.6 L247.4 186.2 L243.4 188.1 L239.4 185.7 L235.4 187.8 L232.1 185.9Z" fill="#7A4A2A" stroke="#7A4A2A" stroke-width="2" stroke-linejoin="round"/><circle cx="229" cy="187.8" r="2.4" fill="#D93A2B"/><circle cx="251" cy="187.8" r="2.4" fill="#D93A2B"/><circle cx="235.9" cy="191.7" r="2" fill="#2B2B2B"/><circle cx="244.1" cy="191.7" r="2" fill="#2B2B2B"/><path d="M236.4 195.5 Q240 198.9 243.6 195.5" fill="none" stroke="#2B2B2B" stroke-width="2.2" stroke-linecap="round"/><circle cx="233.4" cy="194.8" r="1.6" fill="#F29BB8" opacity=".9"/><circle cx="246.6" cy="194.8" r="1.6" fill="#F29BB8" opacity=".9"/><path d="M240 204 L223.8 241.2 L256.2 241.2Z" fill="#7B4FC9" stroke="#7B4FC9" stroke-width="4" stroke-linejoin="round"/><path d="M234 241.2 L232 260.4 M246 241.2 L248 260.4" stroke="#2B2B2B" stroke-width="4" stroke-linecap="round"/><path d="M235 212.4 L216 229.2 M245 212.4 L264 186" stroke="#2B2B2B" stroke-width="4" stroke-linecap="round"/><path d="M272 176 q6 6 0 14 M279 171 q9 10 0 22" fill="none" stroke="#2B2B2B" stroke-width="3" stroke-linecap="round" opacity=".8"/><path d="M190 70 L190 30 L205 52 L220 30 L220 70 M236 30 L236 70 M250 70 L265 30 L280 70 M256 56 L274 56" fill="none" stroke="#F08A24" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></g></symbol>
+</defs></svg>
+<div class="s3-table"></div>
+<svg class="s3-wood" aria-hidden="true"><rect width="1720" height="1120" filter="url(#s03-wood)"/></svg>
+<div class="s3-grain"></div>
+<i class="s3-plank" style="top:398px"></i><i class="s3-plank" style="top:846px"></i>
+<i class="s3-mug"></i>
+<div class="s3-sheet " style="left:24px;top:640px;width:180px;height:230px;transform:rotate(-8deg)"><svg class="s3-draw " viewBox="0 0 300 300" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><use href="#s03-d4"/></svg><i class="s3-sheet__tooth"></i></div>
+<div class="s3-sheet " style="left:112px;top:744px;width:180px;height:230px;transform:rotate(6deg)"><svg class="s3-draw " viewBox="0 0 300 300" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><use href="#s03-d5"/></svg><i class="s3-sheet__tooth"></i></div>
+<div class="s3-sheet " style="left:48px;top:416px;width:200px;height:256px;transform:rotate(4deg)"><svg class="s3-draw " viewBox="0 0 300 300" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><use href="#s03-d1"/></svg><i class="s3-sheet__tooth"></i></div>
+<div class="s3-sheet " style="left:40px;top:410px;width:200px;height:256px;transform:rotate(-2deg)"><svg class="s3-draw " viewBox="0 0 300 300" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><use href="#s03-d2"/></svg><i class="s3-sheet__tooth"></i></div>
+<div class="s3-sheet s3-sheet--told" style="left:36px;top:60px;width:250px;height:320px;transform:rotate(-3deg)"><svg class="s3-draw " viewBox="0 0 300 300" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><use href="#s03-d3"/></svg><i class="s3-sheet__tooth"></i></div>
+<i class="s3-crayon" style="--c:#F7C21B;--w:#d9a40e;left:150px;top:668px;transform:rotate(-24deg)"></i>
+<i class="s3-crayon" style="--c:#2F6BD8;--w:#2457b3;left:176px;top:690px;transform:rotate(-9deg)"></i>
+<i class="s3-crayon" style="--c:#D93A2B;--w:#b52e22;left:184px;top:650px;transform:rotate(14deg)"></i>
+<div class="s3-tab-wrap"><div class="ss-tablet" style="--tw:1180px;--th:820px"><i class="s3-cam"></i><div class="ss-tablet__screen"><div class="s3-app">
+<div class="s3-top"><span class="ss-btn ss-btn--ghost"><svg class="ss-i"><use href="#i-arrow-left"/></svg>Exit</span><div class="s3-title">Twinkle Came to My Window<svg class="ss-i"><use href="#i-pen"/></svg></div><div class="s3-right"><span class="ss-seg"><span class="is-on">Simple</span><span>Advanced</span></span><div class="s3-finish"><span class="ss-btn ss-btn--gold"><svg class="ss-i"><use href="#i-rec-solid"/></svg>Finish my story</span><span class="s3-mono">after this take</span></div></div></div>
+<div class="s3-rail"><div class="s3-tool" style="top:20px"><svg class="ss-i"><use href="#i-camera"/></svg>Photo</div><div class="s3-tool is-on" style="top:124px"><svg class="ss-i"><use href="#i-mic"/></svg>Voice</div><div class="s3-tool" style="top:228px"><svg class="ss-i"><use href="#i-music"/></svg>Music</div><i class="s3-rail__div"></i><div class="s3-magic"><i><svg class="ss-i"><use href="#i-sparkles"/></svg></i>Magic</div></div>
+<div class="s3-voice ss-glass ss-glass--dark"><div class="ss-h3">Voice</div><p class="s3-voice__sub">Listening… tap again when you are done</p><div class="s3-mascot"><div class="s3-face" style="--iw:152px"><img src="assets/icon.png" alt=""></div><svg viewBox="55 133 403 245" aria-hidden="true"><circle cx="205" cy="222" r="47" fill="none" stroke="#FBBF4A" stroke-width="5" opacity=".55"/><circle cx="205" cy="222" r="39" fill="none" stroke="#C96A00" stroke-width="6" opacity=".85"/><circle cx="306" cy="222" r="47" fill="none" stroke="#FBBF4A" stroke-width="5" opacity=".55"/><circle cx="306" cy="222" r="39" fill="none" stroke="#C96A00" stroke-width="6" opacity=".85"/><circle cx="205" cy="222" r="32" fill="#FFF8E6" stroke="#1E1A16" stroke-width="3"/><circle cx="207" cy="224" r="13" fill="#1E1A16"/><circle cx="201" cy="217" r="4" fill="#fff"/><circle cx="306" cy="222" r="32" fill="#FFF8E6" stroke="#1E1A16" stroke-width="3"/><circle cx="308" cy="224" r="13" fill="#1E1A16"/><circle cx="302" cy="217" r="4" fill="#fff"/></svg></div><span class="ss-chip ss-chip--future s3-idea">Idea</span><span class="ss-recbtn ss-recbtn--xl is-live" aria-label="Stop recording"></span><div class="s3-stop">Stop — 0:05</div><div class="s3-lockrow"><svg class="ss-i"><use href="#i-lock"/></svg>Pages stay put while you record.</div><p class="s3-foot">Recordings live only in this browser until a grown-up taps Finish my story.</p></div>
+<div class="s3-mon"><div class="s3-amb"><svg class="s3-draw " viewBox="0 0 300 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><use href="#s03-d3"/></svg></div><div class="s3-mon__head"><span class="s3-mono">PAGE 3 / 5</span><span class="ss-chip ss-chip--red"><span class="ss-dot ss-dot--live"></span>recording</span><span class="s3-reels"><span class="s3-reel is-spin" style="--r:22px"><svg class="ss-reel ss-reel--spin"><use href="#i-reel"/></svg></span><span class="s3-reel is-spin" style="--r:22px"><svg class="ss-reel ss-reel--spin"><use href="#i-reel"/></svg></span></span></div><div class="s3-photo"><div class="s3-photo__paper"><svg class="s3-draw " viewBox="0 0 300 300" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><use href="#s03-d3"/></svg></div><i class="s3-photo__ring"></i><span class="s3-pill"><i></i>Listening… 0:05</span></div><span class="s3-next" aria-label="Ambient light from the page: Next"><span class="s3-next__k">AMBIENT LIGHT</span><span class="ss-chip ss-chip--violet">Next</span></span><div class="s3-text"><p class="ss-story">I was scared of the dark.<br>Twinkle came to my window.</p><p class="s3-credit">words typed by Mom, as Mia said them</p></div><div class="s3-prog"></div><div class="s3-status"><span><i class="s3-rd"></i>recording · 0:05</span><span><svg class="ss-i"><use href="#i-star"/></svg>Wonder · music on</span></div></div>
+<div class="ss-film s3-film"><i class="s3-film__tape"></i><div class="ss-film__frame"><svg class="s3-draw " viewBox="0 0 300 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><use href="#s03-d1"/></svg><span class="ss-film__num">1</span><span class="ss-film__badge"><svg class="ss-i"><use href="#i-mic"/></svg></span></div><div class="ss-film__frame"><svg class="s3-draw " viewBox="0 0 300 300" preserveAspectRatio="xMidYMin slice" aria-hidden="true"><use href="#s03-d2"/></svg><span class="ss-film__num">2</span><span class="ss-film__badge"><svg class="ss-i"><use href="#i-mic"/></svg></span></div><div class="ss-film__frame is-active"><svg class="s3-draw " viewBox="0 0 300 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><use href="#s03-d3"/></svg><span class="ss-film__num">3</span><i class="s3-livedot"></i></div><div class="ss-film__add s3-add"><svg class="ss-i"><use href="#i-camera"/></svg><span>Snap the next drawing</span></div><span class="s3-move"><svg class="ss-i"><use href="#i-lock"/></svg>move</span><div class="s3-lane"><i></i><span><svg class="ss-i"><use href="#i-star"/></svg>WONDER · GENTLE MUSIC ADDED FOR YOU</span></div></div>
+<div class="s3-trans"><div class="s3-deck"><span class="s3-reel is-spin" style="--r:34px"><svg class="ss-reel ss-reel--spin"><use href="#i-reel"/></svg></span><span class="s3-reel is-spin" style="--r:34px"><svg class="ss-reel ss-reel--spin"><use href="#i-reel"/></svg></span></div><div class="s3-ctrls"><span class="ss-iconbtn s3-dim"><svg class="ss-i"><use href="#i-prev-solid"/></svg></span><span class="s3-rec56" aria-label="Record, armed"></span><span class="ss-iconbtn ss-iconbtn--lg s3-dim"><svg class="ss-i"><use href="#i-play-solid"/></svg></span><span class="ss-iconbtn s3-dim"><svg class="ss-i"><use href="#i-next-solid"/></svg></span></div><span class="s3-readout"><i class="ss-dot ss-dot--live"></i>0:05 · pg 3/5</span></div>
+</div></div></div></div>
+<figure class="s3-fig" style="top:56px;height:210px" aria-label="Hear it back"><span class="s3-fig__tab s3-fig__tab--long">MONDAY 6:06 PM · HEAR IT BACK</span><div class="s3-fig__clip"><div class="s3-fig__in"><div class="s3-hear"><span class="s3-hear__btn"><svg class="ss-i"><use href="#i-play-solid"/></svg></span><span class="s3-hear__lbl">Hear it</span></div><div class="s3-afterR"><div class="s3-mascot2"><div class="s3-face" style="--iw:158px"><img src="assets/icon.png" alt=""></div><svg viewBox="55 133 403 245" aria-hidden="true"><path d="M224 266 Q256 290 288 266" fill="none" stroke="#1E1A16" stroke-width="10" stroke-linecap="round"/></svg></div><span class="ss-chip ss-chip--future">Idea</span><div class="s3-len">YOUR VOICE · 0:06</div><div class="ss-wave"><i class="is-past"></i><i class="is-past"></i><i class="is-past"></i><i class="is-past"></i><i class="is-past"></i><i class="is-past"></i><i class="is-past"></i><i class="is-past"></i><i class="is-past"></i><i class="is-past"></i><i class="is-past"></i><i class="is-past"></i><i class="is-past"></i><i class="is-past"></i><i class="is-past"></i><i class="is-past"></i><i class="is-past"></i><i class="is-past"></i><i class="is-past"></i><i class="is-past"></i><i class="is-past"></i><i class="is-past"></i><i class="is-past"></i><i class="is-past"></i><i class="is-past"></i><i class="is-past"></i><i class="is-past"></i><i class="is-past"></i><i class="is-past"></i><i class="is-past"></i></div></div><div class="s3-btnrow"><span class="ss-btn ss-btn--gold"><svg class="ss-i"><use href="#i-play-solid"/></svg>Listen</span><span class="ss-btn ss-btn--ghost"><svg class="ss-i"><use href="#i-undo"/></svg>Record it again</span></div></div></div></figure>
+<figure class="s3-fig" style="top:308px;height:248px" aria-label="If the microphone is off"><span class="s3-fig__tab">IF THE MICROPHONE IS OFF</span><div class="s3-fig__clip"><div class="s3-fig__in"><div class="s3-err"><div class="s3-err__t">Voice</div><div class="s3-err__s">We could not start listening</div><div class="s3-err__h"><span class="s3-err__ic"><svg class="ss-i"><use href="#i-mic-off"/></svg></span>The microphone is switched off</div><p class="s3-err__b">A grown-up needs to allow the microphone for this site — look for the lock or microphone icon next to the web address, choose Allow, then tap Try again.</p></div><div class="s3-err__row"><span class="ss-btn ss-btn--gold"><svg class="ss-i"><use href="#i-mic"/></svg>Try again</span><span class="ss-btn ss-btn--ghost"><svg class="ss-i"><use href="#i-pen"/></svg>Keep writing instead</span></div></div></div></figure>
+<div class="s3-ten" aria-label="The ten-minute test"><div class="s3-ten__h">THE TEN-MINUTE TEST · 5 PAGES · UNDER 10:00</div><div class="s3-ten__rib"></div><div class="s3-ten__lead"></div><i class="s3-tick" style="left:147px;top:24px;height:28px"></i><i class="s3-tick" style="left:656px;top:24px;height:28px"></i><i class="s3-tick" style="left:0px;top:38px;height:26px"></i><i class="s3-tick" style="left:324px;top:38px;height:26px"></i><i class="s3-tick" style="left:760px;top:38px;height:26px"></i><span class="s3-ts" style="left:154px;top:22px"><b>6:03:41</b>page 1 told</span><span class="s3-ts" style="left:663px;top:22px"><b>6:08:54</b>page 5 told</span><span class="s3-ts" style="left:7px;top:62px"><b>6:02:10</b>Studio opened, first photo</span><span class="s3-ts is-now" style="left:331px;top:62px"><b>6:05:30</b>page 3 · now</span><span class="s3-ts is-end" style="left:767px;top:62px;line-height:15px"><b>6:09:58</b>grown-up says yes<br>MADE IN 7:48</span><span class="s3-ts s3-ts--end" style="right:0;top:22px">10:00</span><i class="s3-now" style="left:325px"></i><svg class="s3-endstar" style="left:761px"><use href="#i-star-solid"/></svg></div>
+<div class="ss-callout" style="left:312px;top:852px;max-width:460px"><b>MAGIC STAYS QUIET</b>The fourth tool writes words and draws pictures from an idea, right on the tablet (Storybook, Watercolor, Night). It sits apart on purpose: the voice is the moat.</div>
+<div class="ss-callout" style="left:812px;top:852px;max-width:460px"><b>CAMERA FIRST</b>Photo opens the tablet's own camera. Every picture is turned upright, sized to 2048 px or less and kept on this device — about 340 KB a page.</div>
+<div class="ss-callout" style="left:1310px;top:580px;max-width:270px"><b>TAP, TELL, TAP</b>Record is tap to start, tap to stop: a four-year-old can't hold a button. Two rising blips mean go, one falling blip means got it, and the pages lock until she stops.</div>
+<div class="ss-callout" style="left:1310px;top:732px;max-width:270px"><b>WORDS LIGHT AFTER THE TAKE</b>While Mia talks the words stay still. Once the clip exists the Reader sweeps the light across it; lighting words live would need on-device speech alignment, which isn't built.</div>
+<div class="s3-layers" aria-label="Layers lit: Visual, Text, Voice, Sound"><span>LAYERS</span><i class="" style="--c:#EFE9DC"></i><i class="on" style="--c:#E4E0FA"></i><i class="on" style="--c:#FBF3DF"></i><i class="on" style="--c:#FADFDA"></i><i class="on" style="--c:#FBEBD2"></i><i class="" style="--c:#E6E9EE"></i><i class="" style="--c:#FFE9A8"></i></div>
+</section>

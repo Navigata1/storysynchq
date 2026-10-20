@@ -1,0 +1,323 @@
+<section class="ss-screen" id="s04" style="--w:1600px;--h:1000px" aria-label="A grown-up moment">
+<style>
+#s04 .s04-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
+#s04 .s04-lamp {
+  position: absolute; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(760px 520px at 1380px 40px, rgba(255, 186, 92, 0.12), transparent 64%),
+    radial-gradient(520px 260px at 1060px 760px, rgba(255, 201, 60, 0.05), transparent 70%);
+}
+#s04 .s04-floor {
+  position: absolute; left: 280px; top: 828px; width: 1040px; height: 64px; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(0, 0, 0, 0.7), transparent);
+  filter: blur(4px);
+}
+
+
+#s04 .s04-tablet {
+  position: absolute; left: 251px; top: 82px;
+  --tw: 1180px; --th: 820px;
+  transform: scale(0.9); transform-origin: top left;
+}
+#s04 .s04-cam {
+  position: absolute; top: 7px; left: 50%; width: 7px; height: 7px; margin-left: -3.5px; border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #3a4152, #07080b 70%);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+
+#s04 .s04-studio { position: absolute; inset: 0; filter: blur(8px); }
+#s04 .s04-scrim { position: absolute; inset: 0; background: rgba(6, 9, 16, 0.68); }
+#s04 .st-top {
+  position: absolute; left: 0; right: 0; top: 0; height: 68px;
+  display: flex; align-items: center; justify-content: space-between; padding: 0 16px 0 16px;
+  border-bottom: 1px solid var(--ss-line);
+}
+#s04 .st-top .ss-btn { height: 40px; padding: 0 18px; }
+#s04 .st-title { font: 600 22px/1 var(--ss-display); color: #fff; }
+#s04 .st-right { display: flex; gap: 12px; align-items: center; }
+#s04 .st-rail {
+  position: absolute; left: 0; top: 68px; bottom: 0; width: 116px;
+  background: #0b0f1d; border-right: 1px solid var(--ss-line);
+}
+#s04 .st-tool {
+  position: absolute; left: 12px; width: 92px; height: 92px; border-radius: 22px;
+  display: grid; place-items: center; align-content: center; gap: 6px;
+  background: rgba(255, 255, 255, 0.05); border: 1px solid var(--ss-line);
+  font: 600 13px/1 var(--ss-ui); color: var(--ss-fg-2);
+}
+#s04 .st-tool .ss-i { width: 30px; height: 30px; }
+#s04 .st-tool.is-on { background: var(--ss-gold); color: var(--ss-ink); box-shadow: 0 0 30px rgba(245, 158, 11, 0.4); }
+#s04 .st-tool--magic { left: 26px; width: 64px; height: 64px; border-radius: 18px; font-size: 11px; color: var(--ss-fg-3); }
+#s04 .st-tool--magic .ss-i { width: 22px; height: 22px; }
+#s04 .st-card {
+  position: absolute; left: 128px; top: 80px; width: 312px; height: 520px; border-radius: 20px;
+  background: rgba(8, 11, 21, 0.62); border: 1px solid rgba(255, 255, 255, 0.12);
+}
+#s04 .st-card img { position: absolute; left: 112px; top: 90px; width: 88px; height: 88px; border-radius: 20px; }
+#s04 .st-card .hear { position: absolute; left: 108px; top: 250px; width: 96px; height: 96px; border-radius: 50%; background: linear-gradient(180deg, var(--ss-gold-2), var(--ss-gold)); }
+#s04 .st-monitor {
+  position: absolute; left: 452px; top: 80px; width: 716px; height: 520px; border-radius: 18px;
+  background: #05070d; overflow: hidden; box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.8);
+}
+#s04 .st-ambient { position: absolute; left: -60px; top: -60px; width: 900px; height: 640px; filter: blur(36px) brightness(1) saturate(1.6); }
+#s04 .st-spill {
+  position: absolute; left: 940px; top: 70px; width: 300px; height: 560px; pointer-events: none;
+  background:
+    radial-gradient(120px 110px at 200px 96px, rgba(247, 194, 27, 0.95), transparent 72%),
+    radial-gradient(150px 190px at 196px 286px, rgba(217, 58, 43, 1), transparent 72%),
+    radial-gradient(130px 120px at 204px 450px, rgba(240, 138, 36, 0.7), transparent 72%);
+  filter: blur(12px);
+}
+#s04 .st-ambient svg { width: 100%; height: 100%; }
+#s04 .st-head {
+  position: absolute; left: 0; right: 0; top: 0; height: 36px; background: rgba(0, 0, 0, 0.4);
+  display: flex; align-items: center; justify-content: space-between; padding: 0 14px;
+  font: 500 11px/1 var(--ss-mono); letter-spacing: 0.14em; color: var(--ss-fg-3);
+}
+#s04 .st-head .reels { display: flex; gap: 8px; --reel-face: #1b2033; --reel-ink: #8d96ad; }
+#s04 .st-head .ss-reel { width: 22px; height: 22px; }
+#s04 .st-photo { position: absolute; left: 198px; top: 52px; width: 320px; height: 320px; border-radius: 10px; background: #FBF7EC; padding: 8px; }
+#s04 .st-photo svg { width: 100%; height: 100%; display: block; border-radius: 4px; }
+#s04 .st-words { position: absolute; left: 40px; right: 40px; top: 392px; text-align: center; font-size: 24px; }
+#s04 .st-film {
+  position: absolute; left: 128px; top: 612px; width: 1040px; height: 100px; border-radius: 14px;
+  display: flex; align-items: center; gap: 12px; padding: 0 16px;
+  background: #0d1120; border: 1px solid var(--ss-line);
+}
+#s04 .st-film::before { content: ""; position: absolute; left: 0; right: 0; top: 45px; height: 10px; background: linear-gradient(180deg, #5b3a24, #3d2616); }
+#s04 .st-frame { position: relative; flex: none; width: 112px; height: 84px; border-radius: 8px; overflow: hidden; background: #FBF7EC; border: 2px solid rgba(255, 255, 255, 0.12); }
+#s04 .st-frame svg { width: 100%; height: 100%; display: block; }
+#s04 .st-frame .ss-film__badge { right: 4px; bottom: 4px; background: #3b425c; color: #cdd3e2; }
+#s04 .st-frame.is-active { border-color: var(--ss-gold); }
+#s04 .st-transport {
+  position: absolute; left: 116px; right: 0; top: 724px; height: 84px;
+  display: flex; align-items: center; justify-content: center; gap: 22px;
+}
+#s04 .st-transport .reels { position: absolute; left: 24px; top: 25px; display: flex; gap: 10px; --reel-face: #1b2033; --reel-ink: #8d96ad; }
+#s04 .st-transport .ss-reel { width: 34px; height: 34px; }
+#s04 .st-transport .rec { width: 56px; height: 56px; border-radius: 50%; background: #2a3047; display: grid; place-items: center; }
+#s04 .st-transport .rec::before { content: ""; width: 22px; height: 22px; border-radius: 50%; background: #3b425c; }
+#s04 .st-transport .read { position: absolute; right: 24px; top: 34px; font: 500 13px/1 var(--ss-mono); letter-spacing: 0.12em; color: var(--ss-fg-3); }
+
+
+#s04 .s04-gate {
+  position: absolute; left: 76px; top: 50px; width: 520px; height: 720px;
+  display: flex; flex-direction: column; padding: 28px;
+  background: rgba(11, 16, 32, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 24px;
+  box-shadow: 0 50px 90px -30px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+#s04 .g-kicker { display: flex; align-items: center; gap: 8px; }
+#s04 .g-kicker .ss-i { width: 14px; height: 14px; stroke-width: 2.4; }
+#s04 .g-title { margin-top: 14px; font: 600 28px/1.15 var(--ss-ui); letter-spacing: -0.015em; color: #fff; }
+#s04 .g-body { margin-top: 10px; font: 400 14.5px/1.5 var(--ss-ui); color: var(--ss-fg-2); }
+#s04 .g-q { margin-top: 22px; font: 500 15px/28px var(--ss-ui); color: #fff; }
+#s04 .g-q b { font: 600 20px/28px var(--ss-ui); color: var(--ss-gold-2); letter-spacing: 0.02em; margin-left: 2px; }
+#s04 .g-answer {
+  margin-top: 8px; height: 56px; border-radius: 14px; padding: 0 16px 0 20px;
+  display: flex; align-items: center; justify-content: space-between;
+  background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(63, 182, 139, 0.55);
+  box-shadow: 0 0 0 4px rgba(63, 182, 139, 0.1);
+  font: 600 24px/1 var(--ss-ui); color: #fff; letter-spacing: 0.02em;
+}
+#s04 .g-answer .ok { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: rgba(63, 182, 139, 0.16); color: var(--ss-ok); }
+#s04 .g-answer .ok .ss-i { width: 18px; height: 18px; stroke-width: 3; }
+#s04 .g-label { margin-top: 20px; font: 500 11px/1.2 var(--ss-mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--ss-fg-3); }
+#s04 .g-by {
+  margin-top: 8px; height: 48px; border-radius: 12px; padding: 0 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(255, 255, 255, 0.12);
+  font: 400 15.5px/1 var(--ss-ui); color: #fff;
+}
+#s04 .g-by .ss-i { width: 16px; height: 16px; color: var(--ss-fg-4); }
+#s04 .g-consent {
+  margin-top: 20px; padding: 14px 14px 14px 12px; border-radius: 18px;
+  display: grid; grid-template-columns: 28px 1fr 22px; column-gap: 12px; row-gap: 6px;
+  background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.3);
+}
+#s04 .g-box {
+  width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center;
+  background: linear-gradient(180deg, var(--ss-gold-2), var(--ss-gold)); color: var(--ss-ink);
+  box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.2), 0 0 18px rgba(245, 158, 11, 0.45);
+}
+#s04 .g-box .ss-i { width: 18px; height: 18px; stroke-width: 3.2; }
+#s04 .g-consent p { grid-column: 2 / 4; font: 500 14.5px/1.45 var(--ss-ui); color: rgba(255, 255, 255, 0.85); }
+#s04 .g-consent small { grid-column: 2; font: 400 12px/1.45 var(--ss-ui); color: var(--ss-fg-3); }
+#s04 .g-07 {
+  grid-column: 3; grid-row: 2; align-self: end; margin-bottom: 1px;
+  width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--ss-ink); color: var(--ss-paper);
+  font: 600 11px/1 var(--ss-mono); letter-spacing: 0.02em;
+  box-shadow: 0 0 0 2px var(--ss-red), 0 0 10px rgba(227, 69, 47, 0.45);
+}
+#s04 .g-promise { margin-top: 20px; font: italic 500 18px/1.3 var(--ss-display); color: var(--ss-label); }
+#s04 .g-actions { margin-top: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+#s04 .g-actions .ss-btn { height: 56px; width: 100%; font-size: 16.5px; }
+#s04 .g-foot { margin-top: 14px; font: 400 12px/1.5 var(--ss-ui); color: var(--ss-fg-4); }
+
+
+#s04 .s04-sheet {
+  position: absolute; left: 624px; top: 50px; width: 480px; height: 720px;
+  border: 3px solid var(--ss-ink); border-radius: 14px; overflow: hidden;
+  color: var(--ss-ink);
+  background:
+    radial-gradient(420px 300px at 0% 0%, rgba(255, 255, 255, 0.7), transparent 70%),
+    linear-gradient(180deg, #fffdf6 0%, #fbf5e6 100%);
+  box-shadow: 0 50px 90px -30px rgba(0, 0, 0, 0.85), 0 0 60px -10px rgba(255, 201, 60, 0.12);
+}
+#s04 .sh-bar {
+  height: 44px; padding: 0 17px; display: flex; align-items: center; justify-content: space-between;
+  background: var(--ss-ink); color: var(--ss-paper);
+  font: 500 11px/1 var(--ss-mono); letter-spacing: 0.18em; text-transform: uppercase;
+}
+#s04 .sh-bar em { font: 700 18px/1 var(--ss-display); font-style: normal; letter-spacing: -0.005em; text-transform: none; color: var(--ss-label); }
+#s04 .sh-title { position: absolute; left: 17px; top: 58px; font: 800 26px/1.1 var(--ss-display); letter-spacing: -0.015em; }
+#s04 .sh-spine { position: absolute; left: 30px; top: 102px; height: 568px; border-left: 2px dashed var(--ss-ink); }
+#s04 .sh-num {
+  position: absolute; left: 20px; width: 22px; height: 22px; border-radius: 50%;
+  display: grid; place-items: center; background: var(--ss-ink); color: var(--ss-paper);
+  font: 600 11px/1 var(--ss-mono); letter-spacing: 0.02em;
+}
+#s04 .sh-num--sig { box-shadow: 0 0 0 2px var(--ss-red), 0 0 0 4px rgba(227, 69, 47, 0.16); }
+#s04 .sh-band {
+  position: absolute; left: 49px; width: 408px; height: 66px; padding: 6px 14px;
+  display: flex; flex-direction: column; justify-content: center; gap: 2px;
+  border: 2px solid var(--ss-ink); border-radius: 8px; background: var(--f);
+}
+#s04 .sh-band h4 { display: flex; align-items: center; justify-content: space-between; gap: 10px; font: 600 15px/18px var(--ss-display); letter-spacing: -0.005em; }
+#s04 .sh-band p { font: 400 12.5px/15px var(--ss-ui); color: var(--ss-ink-2); }
+#s04 .nb { white-space: nowrap; }
+#s04 .sh-thumbs { display: flex; gap: 5px; }
+#s04 .sh-thumbs svg { width: 26px; height: 26px; border: 1.5px solid var(--ss-ink); border-radius: 4px; background: #FBF7EC; display: block; }
+#s04 .sh-wave { width: 60px; height: 18px; color: var(--ss-ink); gap: 2px; }
+#s04 .sh-star { position: relative; width: 20px; height: 20px; }
+#s04 .sh-star .ss-i { position: absolute; inset: 0; width: 20px; height: 20px; }
+#s04 .sh-star .fill { color: var(--mood-wonder); }
+#s04 .sh-star .line { color: var(--ss-ink); stroke-width: 1.6; }
+#s04 .sh-mood { display: inline-flex; align-items: center; gap: 6px; font: 500 11px/1 var(--ss-mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--ss-ink-2); }
+#s04 .sh-band--sig {
+  height: 128px; padding: 10px 14px; justify-content: flex-start;
+  border: 3.5px solid var(--ss-red);
+  box-shadow: 0 0 0 4px rgba(227, 69, 47, 0.12), 0 14px 30px -12px rgba(227, 69, 47, 0.5);
+}
+#s04 .sh-band--sig h4 { justify-content: flex-start; }
+#s04 .sh-band--sig p { margin-top: 2px; }
+#s04 .sh-tag {
+  display: inline-flex; align-items: center; height: 18px; padding: 0 6px; border-radius: 4px;
+  border: 1.5px solid #B4301F; color: #B4301F;
+  font: 600 11px/1 var(--ss-mono); letter-spacing: 0.08em;
+}
+#s04 .sh-foot {
+  position: absolute; left: 0; right: 0; bottom: 12px; display: flex; justify-content: center; align-items: center; gap: 8px;
+  font: 500 11px/1 var(--ss-mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--ss-ink-3);
+}
+#s04 .sh-foot .ss-i { width: 13px; height: 13px; }
+
+
+#s04 .s04-stamp {
+  position: absolute; left: 176px; top: 600px; z-index: 2;
+  display: block; gap: 0; letter-spacing: 0; text-transform: none;
+  transform: rotate(-4deg); transform-origin: 50% 50%;
+  color: var(--ss-red); opacity: 0.92;
+  border: 3.5px solid currentColor; border-radius: 10px; padding: 2px;
+  -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='80'><filter id='s04-speck'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' seed='7'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -3 2.3'/></filter><rect width='240' height='80' filter='url(%23s04-speck)'/></svg>");
+  mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='80'><filter id='s04-speck'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' seed='7'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -3 2.3'/></filter><rect width='240' height='80' filter='url(%23s04-speck)'/></svg>");
+  -webkit-mask-size: 100% 100%; mask-size: 100% 100%;
+}
+#s04 .s04-stamp__in {
+  border: 1.5px solid currentColor; border-radius: 6px; padding: 6px 11px 5px;
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  text-shadow: 0 0 0.6px currentColor; -webkit-text-stroke: 0.35px currentColor;
+}
+#s04 .s04-stamp__a { font: 600 15px/1 var(--ss-mono); letter-spacing: 0.05em; white-space: nowrap; }
+#s04 .s04-stamp__b { font: 600 12.5px/1 var(--ss-mono); letter-spacing: 0.04em; white-space: nowrap; }
+
+
+#s04 .s04-co { max-width: 210px; text-wrap: pretty; }
+#s04 .s04-co--r { max-width: 204px; }
+#s04 .s04-co b { text-wrap: balance; }
+#s04 .s04-co code { font: 500 12px/1 var(--ss-mono); color: #fff; letter-spacing: 0; }
+#s04 .s04-layers {
+  position: absolute; left: 682px; top: 958px; width: 236px; height: 24px;
+  display: flex; align-items: center; gap: 9px; padding: 0 12px;
+  border-radius: 999px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.12);
+  font: 500 10px/1 var(--ss-mono); letter-spacing: 0.16em; color: var(--ss-fg-3);
+}
+#s04 .s04-layers span { margin-right: auto; }
+#s04 .s04-layers i { width: 10px; height: 10px; border-radius: 50%; background: var(--f); border: 1.5px solid var(--ss-ink); box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18); }
+#s04 .s04-layers i.sig { border-color: var(--ss-red); box-shadow: 0 0 0 1px rgba(227, 69, 47, 0.5), 0 0 8px rgba(227, 69, 47, 0.55); }
+</style>
+<svg class="s04-defs" aria-hidden="true"><defs><filter id="s04-crayon" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency=".8" numOctaves="2" seed="4" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="3" xChannelSelector="R" yChannelSelector="G"/></filter><pattern id="s04-hatch-or" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(30)"><path d="M0 0V9" stroke="#F08A24" stroke-width="2.4" opacity=".8"/></pattern><pattern id="s04-hatch-red" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)"><path d="M0 0V8" stroke="#D93A2B" stroke-width="4.2" opacity=".9"/></pattern><clipPath id="s04-c2ground"><path d="M0 248 Q38 234 78 246 T156 244 T234 246 T300 240 L300 300 L0 300Z"/></clipPath><clipPath id="s04-c3room"><path clip-rule="evenodd" d="M0 0H300V300H0Z M40 40V260H260V40Z"/></clipPath><clipPath id="s04-c3win"><rect x="44" y="44" width="212" height="212"/></clipPath><clipPath id="s04-c3bed"><rect x="55" y="200" width="90" height="45" rx="4"/></clipPath><mask id="s04-moonmask" maskUnits="userSpaceOnUse" x="0" y="0" width="300" height="300"><rect width="300" height="300" fill="#fff"/><circle cx="176" cy="230" r="52" fill="#000"/></mask><symbol id="s04-d1" viewBox="0 0 300 300"><rect width="300" height="300" fill="#FBF7EC"/><g filter="url(#s04-crayon)" stroke-linecap="round"><path d="M282.5 5.5 L293.7 85.3 L226.6 6 L296.2 205.7 L170.4 7.1 L243.4 210.9 L112.4 3.3 L185.9 206.2 L59 9.9 L128.4 207.2 L5 7.5 L74.3 207.4 L4.5 123 L18.9 211.5" fill="none" stroke="#2F6BD8" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/><path d="M187.9 87.9 L204.1 65.6 M211.2 159.9 L237.5 168.4 M163.4 203 L169.1 230 M136.6 203 L130.9 230 M88.8 159.9 L62.5 168.4 M112.1 87.9 L95.9 65.6" stroke="#F08A24" stroke-width="6" stroke-linecap="round" fill="none"/><path d="M150 48 L174.3 106.5 L237.5 111.6 L189.4 152.8 L204.1 214.4 L150 181.4 L95.9 214.4 L110.6 152.8 L62.5 111.6 L125.7 106.5Z" fill="#F7C21B"/><path d="M150 48 L174.3 106.5 L237.5 111.6 L189.4 152.8 L204.1 214.4 L150 181.4 L95.9 214.4 L110.6 152.8 L62.5 111.6 L125.7 106.5Z" fill="url(#s04-hatch-or)"/><path d="M150 48 L174.3 106.5 L237.5 111.6 L189.4 152.8 L204.1 214.4 L150 181.4 L95.9 214.4 L110.6 152.8 L62.5 111.6 L125.7 106.5Z" fill="none" stroke="#F08A24" stroke-width="6" stroke-linejoin="round"/><circle cx="129.8" cy="132.6" r="4" fill="#2B2B2B"/><circle cx="170.2" cy="132.6" r="4" fill="#2B2B2B"/><path d="M131.6 151 Q150 173.1 168.4 151" fill="none" stroke="#2B2B2B" stroke-width="4"/><circle cx="118.7" cy="145.5" r="5" fill="#F29BB8"/><circle cx="181.3" cy="145.5" r="5" fill="#F29BB8"/><circle cx="50" cy="50" r="6" fill="#F7C21B"/><circle cx="250" cy="70" r="6" fill="#F7C21B"/><circle cx="240" cy="240" r="6" fill="#F7C21B"/></g></symbol><symbol id="s04-d2" viewBox="0 0 300 300"><rect width="300" height="300" fill="#FBF7EC"/><g filter="url(#s04-crayon)" stroke-linecap="round"><path d="M277.9 8.4 L287.8 106.3 L187.4 3 L199.5 101 L102.5 8 L110.9 98.8 L12.1 7.1 L23 101.6" fill="none" stroke="#2F6BD8" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/><path d="M0 248 Q38 234 78 246 T156 244 T234 246 T300 240 L300 300 L0 300Z" fill="#3BA55C" opacity=".85"/><g clip-path="url(#s04-c2ground)"><path d="M296.9 241.5 L299.4 261.4 L282.5 238.5 L297.5 297.5 L266.5 235.5 L282.5 300.2 L252.1 233.9 L266.4 296.5 L236.7 238.2 L253.5 298.7 L223 240.1 L236.2 297.1 L209.2 241.3 L221.7 296 L192.4 238.6 L208.8 299.1 L177.1 237.9 L192.1 297.4 L164.2 238.6 L178.7 300.4 L149.7 239.9 L164.6 300.6 L132.4 234.2 L146.4 297.9 L118.1 236.5 L133.8 299.5 L103.9 240 L119.5 299.5 L88.6 240.2 L102.7 295.4 L72.4 238.7 L86.4 297.9 L56.3 235.9 L74.5 301.4 L41.5 234.6 L56.3 297.2 L28.4 240.6 L41.8 298.3 L15 239.6 L27.4 294.4 L1 239.8 L14.4 298.1 L0.6 287.2" fill="none" stroke="#2E8A4A" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/></g><rect x="40" y="170" width="60" height="60" fill="#FBF7EC" stroke="#7A4A2A" stroke-width="6" stroke-linejoin="round"/><path d="M32 170 L70 137 L108 170Z" fill="#D93A2B" opacity=".9"/><path d="M32 170 L70 137 L108 170Z" fill="none" stroke="#D93A2B" stroke-width="5" stroke-linejoin="round"/><rect x="59.2" y="184.4" width="21.6" height="21.6" fill="#F7C21B" stroke="#7A4A2A" stroke-width="3"/><path d="M70 184.4 V206 M59.2 195.2 H80.8" stroke="#7A4A2A" stroke-width="3"/><rect x="120" y="150" width="70" height="80" fill="#FBF7EC" stroke="#7A4A2A" stroke-width="6" stroke-linejoin="round"/><path d="M112 150 L155 111.5 L198 150Z" fill="#D93A2B" opacity=".9"/><path d="M112 150 L155 111.5 L198 150Z" fill="none" stroke="#D93A2B" stroke-width="5" stroke-linejoin="round"/><rect x="142.4" y="171" width="25.2" height="25.2" fill="#F7C21B" stroke="#7A4A2A" stroke-width="3"/><path d="M155 171 V196.2 M142.4 183.6 H167.6" stroke="#7A4A2A" stroke-width="3"/><rect x="215" y="175" width="55" height="55" fill="#FBF7EC" stroke="#7A4A2A" stroke-width="6" stroke-linejoin="round"/><path d="M207 175 L242.5 144.8 L278 175Z" fill="#D93A2B" opacity=".9"/><path d="M207 175 L242.5 144.8 L278 175Z" fill="none" stroke="#D93A2B" stroke-width="5" stroke-linejoin="round"/><rect x="232.6" y="188.2" width="19.8" height="19.8" fill="#F7C21B" stroke="#7A4A2A" stroke-width="3"/><path d="M242.5 188.2 V208 M232.6 198.1 H252.4" stroke="#7A4A2A" stroke-width="3"/><path d="M240 20 L250.6 45.4 L278 47.6 L257.1 65.6 L263.5 92.4 L240 78 L216.5 92.4 L222.9 65.6 L202 47.6 L229.4 45.4Z" fill="#F7C21B"/><path d="M240 20 L250.6 45.4 L278 47.6 L257.1 65.6 L263.5 92.4 L240 78 L216.5 92.4 L222.9 65.6 L202 47.6 L229.4 45.4Z" fill="url(#s04-hatch-or)"/><path d="M240 20 L250.6 45.4 L278 47.6 L257.1 65.6 L263.5 92.4 L240 78 L216.5 92.4 L222.9 65.6 L202 47.6 L229.4 45.4Z" fill="none" stroke="#F08A24" stroke-width="6" stroke-linejoin="round"/><circle cx="231.2" cy="62.4" r="4" fill="#2B2B2B"/><circle cx="248.8" cy="62.4" r="4" fill="#2B2B2B"/><path d="M232 68.8 Q240 78.4 248 68.8" fill="none" stroke="#2B2B2B" stroke-width="4"/><circle cx="226.4" cy="62.4" r="5" fill="#F29BB8"/><circle cx="253.6" cy="62.4" r="5" fill="#F29BB8"/></g></symbol><symbol id="s04-d3" viewBox="0 0 300 300"><rect width="300" height="300" fill="#FBF7EC"/><g filter="url(#s04-crayon)" stroke-linecap="round"><g clip-path="url(#s04-c3room)"><path d="M292 2.8 L293.6 21.1 L280.2 3.9 L294.2 46.1 L266.1 4.9 L293.8 64.8 L256.2 7.9 L292.7 91.7 L242.8 3.4 L291.8 109.6 L230 4.7 L293 138.9 L217.9 4.7 L293.1 159.8 L207.3 12.1 L295.1 184.8 L193.9 11.3 L295.2 211.8 L182.5 11.1 L294.1 233.7 L170.6 9.2 L293.7 252.6 L154.5 3.4 L294.6 279 L143.6 9.4 L285.5 288.9 L132.9 12.4 L278.3 293.6 L119.3 8.8 L264.3 290.2 L103.9 5.5 L250.6 291.7 L92.3 3.9 L236.8 288.9 L84.6 11.6 L226.1 293.2 L68 7.6 L214.9 291.3 L53.4 4.8 L204.3 295.3 L42.8 6.5 L187.7 289.2 L30.9 8 L178.2 294.1 L19.4 8.8 L167.6 295.9 L4.5 4.8 L149.7 291.3 L8.3 32.4 L136.9 290.7 L7 51.8 L128.1 293.1 L6.1 73.8 L115.3 296.2 L4 96.9 L104.3 294.5 L8.4 126.7 L91.2 295.1 L7.3 149.3 L75.7 289 L5.9 171.5 L64.3 293 L7.2 193.6 L53.3 296.1 L6.4 220.7 L38.7 290.8 L3.9 238.9 L29.3 295.6 L5 261.4 L16 293.9 L7.3 290.1" fill="none" stroke="#2B2B2B" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" opacity="0.84"/><path d="M3.5 10.5 L36.6 6.5 L7.9 32.5 L80.4 4.6 L10.7 53 L116.1 9.5 L5.8 76.5 L159.3 6.6 L3.6 102.8 L202.2 8.9 L11.2 119.6 L250.5 3.4 L11.3 141.9 L292.2 3.5 L3 168.7 L293.2 26.2 L6.6 192.5 L295.7 49.7 L9.8 212.2 L292.1 74.1 L8 234.6 L293.5 94.2 L7.5 260.2 L292.4 116.9 L7.9 282 L293.1 141.3 L22.5 294.4 L290.3 163.2 L67.4 294.2 L294.4 183.7 L108.2 297.1 L291.3 211.1 L155.1 294.8 L289.3 233.6 L197.3 293.5 L294.6 252.7 L241.2 291.7 L289.3 278.6 L283.7 294" fill="none" stroke="#2F6BD8" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" opacity="0.55"/></g><g clip-path="url(#s04-c3win)"><path d="M252.9 46.5 L254.6 63.6 L236.9 47.4 L254.5 94.7 L222 47 L253.9 130.6 L206.5 45.9 L253.2 159 L190.5 44.1 L256.3 193.3 L174.8 46.9 L254.4 226.8 L160.9 48.9 L253.8 252.4 L141.1 43.2 L239.3 255.4 L129.1 49 L224 256.7 L112.5 43.6 L208.3 257.8 L96.8 44.3 L193.2 256 L79 42.9 L174.5 252.5 L65.7 42.6 L161.8 256.7 L49.5 42.3 L146.2 255.9 L45.5 67.3 L129.2 254.2 L44.2 98.8 L115 255 L45.1 129.8 L97.7 251.7 L47.5 164.1 L82 253.8 L43.2 193.2 L66.7 252.3 L44.6 226 L53.6 257" fill="none" stroke="#1F3F8F" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" opacity="0.68"/><path d="M46.1 51.8 L85.5 47.4 L48.2 84.4 L144 46.6 L43.8 120.7 L206.7 44.1 L44.3 156.8 L252.7 54.3 L42.2 190.7 L256 86.3 L48.5 224.3 L251.4 123.8 L54.2 253.9 L255.1 154.9 L113.9 255.1 L253.6 191.1 L172.6 254.7 L252.2 227.2 L235.7 254.8" fill="none" stroke="#2B2B2B" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/></g><rect x="40" y="40" width="220" height="220" fill="none" stroke="#2F6BD8" stroke-width="9" stroke-linejoin="round"/><path d="M150 40 V260 M40 150 H260" stroke="#2F6BD8" stroke-width="9" stroke-linecap="round"/><ellipse cx="68.5" cy="188.6" rx="6.5" ry="11.9" fill="#7A4A2A" transform="rotate(35 68.5 188.6)"/><ellipse cx="111.5" cy="188.6" rx="6.5" ry="11.9" fill="#7A4A2A" transform="rotate(-35 111.5 188.6)"/><circle cx="90" cy="185" r="18" fill="#F2C6A0" stroke="#7A4A2A" stroke-width="2.5"/><path d="M71 185.9 A19 19 0 0 1 109 185.9 L101.2 179.2 L95 182.1 L89.1 178.5 L83.2 181.8 L78.1 178.9Z" fill="#7A4A2A" stroke="#7A4A2A" stroke-width="2" stroke-linejoin="round"/><circle cx="73" cy="181.8" r="3.1" fill="#D93A2B"/><circle cx="107" cy="181.8" r="3.1" fill="#D93A2B"/><circle cx="83.9" cy="187.5" r="2.5" fill="#2B2B2B"/><circle cx="96.1" cy="187.5" r="2.5" fill="#2B2B2B"/><circle cx="90" cy="195.4" r="3.1" fill="none" stroke="#2B2B2B" stroke-width="2.4"/><circle cx="80.1" cy="192.2" r="2.3" fill="#F29BB8" opacity=".9"/><circle cx="99.9" cy="192.2" r="2.3" fill="#F29BB8" opacity=".9"/><rect x="55" y="200" width="90" height="45" rx="4" fill="#B79BE8"/><g clip-path="url(#s04-c3bed)"><path d="M141.9 202.5 L142.6 223 L127.8 200.7 L137.5 242.9 L116.4 204.2 L126.6 244.7 L104.5 203.6 L112.5 241.1 L94 204.8 L99.8 241.3 L76.8 198.5 L89.2 246.2 L66.4 200.2 L76.6 245.2 L57.8 211.2 L63.8 245.2 L56.7 247.2" fill="none" stroke="#7B4FC9" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/></g><rect x="55" y="200" width="90" height="45" rx="4" fill="none" stroke="#7B4FC9" stroke-width="6" stroke-linejoin="round"/><path d="M205 53 L216.1 79.7 L244.9 82 L223 100.8 L229.7 129 L205 113.9 L180.3 129 L187 100.8 L165.1 82 L193.9 79.7Z" fill="#F7C21B"/><path d="M205 53 L216.1 79.7 L244.9 82 L223 100.8 L229.7 129 L205 113.9 L180.3 129 L187 100.8 L165.1 82 L193.9 79.7Z" fill="url(#s04-hatch-or)"/><path d="M205 53 L216.1 79.7 L244.9 82 L223 100.8 L229.7 129 L205 113.9 L180.3 129 L187 100.8 L165.1 82 L193.9 79.7Z" fill="none" stroke="#F08A24" stroke-width="6" stroke-linejoin="round"/><circle cx="195.8" cy="91.6" r="4" fill="#2B2B2B"/><circle cx="214.2" cy="91.6" r="4" fill="#2B2B2B"/><path d="M196.6 100 Q205 110.1 213.4 100" fill="none" stroke="#2B2B2B" stroke-width="4"/><circle cx="190.7" cy="97.5" r="5" fill="#F29BB8"/><circle cx="219.3" cy="97.5" r="5" fill="#F29BB8"/></g></symbol><symbol id="s04-d4" viewBox="0 0 300 300"><rect width="300" height="300" fill="#FBF7EC"/><g filter="url(#s04-crayon)" stroke-linecap="round"><path d="M293.1 5.3 L295 32.2 L274.9 7.6 L294.8 64.5 L258.1 8.9 L293 99.4 L241.1 9.7 L297.1 140.8 L223.5 8.3 L293.7 173.4 L201.2 3.1 L295.7 215.9 L188.3 9.4 L293.1 245.9 L166.2 3.5 L295.2 288.1 L150 9 L283.8 297.1 L132.9 7.9 L263.9 296.7 L116.9 9.5 L246.8 296.7 L96.2 6.1 L228.2 293.2 L78.1 1.9 L209.7 294 L60.5 6.3 L191.1 293.4 L44.8 7.9 L177.3 296 L22.8 3 L154.4 290.3 L5.9 3.4 L139.5 297.2 L5.3 39.3 L120.9 292.2 L5.6 77.8 L104.6 295.5 L5.9 112.9 L86 294 L8 151 L68.5 296.1 L3.3 182.1 L49.5 295.4 L3.7 219.5 L30.4 291.4 L5 253.6 L17.2 297.1 L7.2 294" fill="none" stroke="#2F6BD8" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" opacity="0.82"/><g mask="url(#s04-moonmask)"><circle cx="150" cy="250" r="60" fill="#B8B8B8"/><circle cx="150" cy="250" r="60" fill="none" stroke="#8C8C8C" stroke-width="7"/></g><circle cx="40" cy="40" r="6" fill="#F7C21B"/><circle cx="258" cy="36" r="6" fill="#F7C21B"/><circle cx="42" cy="214" r="6" fill="#F7C21B"/><circle cx="266" cy="196" r="6" fill="#F7C21B"/><path d="M116 156 L162 114" stroke="#2B2B2B" stroke-width="5" stroke-linecap="round"/><ellipse cx="92.5" cy="132.8" rx="5" ry="9.2" fill="#7A4A2A" transform="rotate(35 92.5 132.8)"/><ellipse cx="127.5" cy="132.8" rx="5" ry="9.2" fill="#7A4A2A" transform="rotate(-35 127.5 132.8)"/><circle cx="110" cy="130" r="14" fill="#F2C6A0" stroke="#7A4A2A" stroke-width="2.5"/><path d="M95 130.7 A15 15 0 0 1 125 130.7 L118.7 125.5 L113.9 127.8 L109.3 125 L104.7 127.5 L100.8 125.2Z" fill="#7A4A2A" stroke="#7A4A2A" stroke-width="2" stroke-linejoin="round"/><circle cx="97" cy="127.5" r="2.4" fill="#D93A2B"/><circle cx="123" cy="127.5" r="2.4" fill="#D93A2B"/><circle cx="105.2" cy="132" r="2" fill="#2B2B2B"/><circle cx="114.8" cy="132" r="2" fill="#2B2B2B"/><path d="M105.8 136.4 Q110 140.4 114.2 136.4" fill="none" stroke="#2B2B2B" stroke-width="2.2" stroke-linecap="round"/><circle cx="102.3" cy="135.6" r="1.8" fill="#F29BB8" opacity=".9"/><circle cx="117.7" cy="135.6" r="1.8" fill="#F29BB8" opacity=".9"/><path d="M110 146 L91.1 189.4 L128.9 189.4Z" fill="#D93A2B" stroke="#D93A2B" stroke-width="4" stroke-linejoin="round"/><path d="M104 189.4 L102 211.8 M116 189.4 L118 211.8" stroke="#2B2B2B" stroke-width="4" stroke-linecap="round"/><path d="M105 155.8 L82 172.6" stroke="#2B2B2B" stroke-width="4" stroke-linecap="round"/><path d="M195 70 L205.6 95.4 L233 97.6 L212.1 115.6 L218.5 142.4 L195 128 L171.5 142.4 L177.9 115.6 L157 97.6 L184.4 95.4Z" fill="#F7C21B"/><path d="M195 70 L205.6 95.4 L233 97.6 L212.1 115.6 L218.5 142.4 L195 128 L171.5 142.4 L177.9 115.6 L157 97.6 L184.4 95.4Z" fill="url(#s04-hatch-or)"/><path d="M195 70 L205.6 95.4 L233 97.6 L212.1 115.6 L218.5 142.4 L195 128 L171.5 142.4 L177.9 115.6 L157 97.6 L184.4 95.4Z" fill="none" stroke="#F08A24" stroke-width="6" stroke-linejoin="round"/><circle cx="186.2" cy="106.8" r="4" fill="#2B2B2B"/><circle cx="203.8" cy="106.8" r="4" fill="#2B2B2B"/><path d="M187 114.8 Q195 124.4 203 114.8" fill="none" stroke="#2B2B2B" stroke-width="4"/><circle cx="181.4" cy="112.4" r="5" fill="#F29BB8"/><circle cx="208.6" cy="112.4" r="5" fill="#F29BB8"/></g></symbol><symbol id="s04-d5" viewBox="0 0 300 300"><rect width="300" height="300" fill="#FBF7EC"/><g filter="url(#s04-crayon)" stroke-linecap="round"><path d="M150 118 C150 88 80 78 80 128 C80 170 128 192 150 214 C172 192 220 170 220 128 C220 78 150 88 150 118Z" fill="#D93A2B" opacity=".35"/><path d="M150 118 C150 88 80 78 80 128 C80 170 128 192 150 214 C172 192 220 170 220 128 C220 78 150 88 150 118Z" fill="url(#s04-hatch-red)"/><path d="M150 118 C150 88 80 78 80 128 C80 170 128 192 150 214 C172 192 220 170 220 128 C220 78 150 88 150 118Z" fill="none" stroke="#D93A2B" stroke-width="7" stroke-linejoin="round"/><path d="M60 30 L67.9 49.1 L88.5 50.7 L72.8 64.2 L77.6 84.3 L60 73.5 L42.4 84.3 L47.2 64.2 L31.5 50.7 L52.1 49.1Z" fill="#F7C21B"/><path d="M60 30 L67.9 49.1 L88.5 50.7 L72.8 64.2 L77.6 84.3 L60 73.5 L42.4 84.3 L47.2 64.2 L31.5 50.7 L52.1 49.1Z" fill="url(#s04-hatch-or)"/><path d="M60 30 L67.9 49.1 L88.5 50.7 L72.8 64.2 L77.6 84.3 L60 73.5 L42.4 84.3 L47.2 64.2 L31.5 50.7 L52.1 49.1Z" fill="none" stroke="#F08A24" stroke-width="6" stroke-linejoin="round"/><circle cx="53.4" cy="57.6" r="4" fill="#2B2B2B"/><circle cx="66.6" cy="57.6" r="4" fill="#2B2B2B"/><path d="M54 63.6 Q60 70.8 66 63.6" fill="none" stroke="#2B2B2B" stroke-width="4"/><circle cx="49.8" cy="61.8" r="5" fill="#F29BB8"/><circle cx="70.2" cy="61.8" r="5" fill="#F29BB8"/><ellipse cx="224.5" cy="192.4" rx="4.3" ry="7.9" fill="#7A4A2A" transform="rotate(35 224.5 192.4)"/><ellipse cx="255.5" cy="192.4" rx="4.3" ry="7.9" fill="#7A4A2A" transform="rotate(-35 255.5 192.4)"/><circle cx="240" cy="190" r="12" fill="#F2C6A0" stroke="#7A4A2A" stroke-width="2.5"/><path d="M227 190.6 A13 13 0 0 1 253 190.6 L247.4 186.2 L243.4 188.1 L239.4 185.7 L235.4 187.8 L232.1 185.9Z" fill="#7A4A2A" stroke="#7A4A2A" stroke-width="2" stroke-linejoin="round"/><circle cx="229" cy="187.8" r="2.4" fill="#D93A2B"/><circle cx="251" cy="187.8" r="2.4" fill="#D93A2B"/><circle cx="235.9" cy="191.7" r="2" fill="#2B2B2B"/><circle cx="244.1" cy="191.7" r="2" fill="#2B2B2B"/><path d="M236.4 195.5 Q240 198.9 243.6 195.5" fill="none" stroke="#2B2B2B" stroke-width="2.2" stroke-linecap="round"/><circle cx="233.4" cy="194.8" r="1.6" fill="#F29BB8" opacity=".9"/><circle cx="246.6" cy="194.8" r="1.6" fill="#F29BB8" opacity=".9"/><path d="M240 204 L223.8 241.2 L256.2 241.2Z" fill="#7B4FC9" stroke="#7B4FC9" stroke-width="4" stroke-linejoin="round"/><path d="M234 241.2 L232 260.4 M246 241.2 L248 260.4" stroke="#2B2B2B" stroke-width="4" stroke-linecap="round"/><path d="M235 212.4 L216 229.2 M245 212.4 L264 186" stroke="#2B2B2B" stroke-width="4" stroke-linecap="round"/><path d="M272 176 q6 6 0 14 M279 171 q9 10 0 22" fill="none" stroke="#2B2B2B" stroke-width="3" stroke-linecap="round" opacity=".8"/><path d="M190 70 L190 30 L205 52 L220 30 L220 70 M236 30 L236 70 M250 70 L265 30 L280 70 M256 56 L274 56" fill="none" stroke="#F08A24" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></g></symbol></defs></svg>
+<div class="ss-stage"></div>
+<div class="s04-lamp"></div>
+<div class="s04-floor"></div>
+<div class="ss-tablet s04-tablet"><span class="s04-cam"></span>
+  <div class="ss-tablet__screen">
+<div class="s04-studio" aria-hidden="true">
+  <div class="st-top">
+    <span class="ss-btn ss-btn--ghost"><svg class="ss-i" aria-hidden="true"><use href="#i-arrow-left"/></svg>Exit</span>
+    <span class="st-title">Twinkle Came to My Window</span>
+    <span class="st-right"><span class="ss-seg"><span class="is-on">Simple</span><span>Advanced</span></span>
+      <span class="ss-btn ss-btn--gold"><svg class="ss-i" aria-hidden="true"><use href="#i-check"/></svg>Finish my story</span></span>
+  </div>
+  <div class="st-rail">
+    <span class="st-tool" style="top:20px"><svg class="ss-i" aria-hidden="true"><use href="#i-camera"/></svg>Photo</span>
+    <span class="st-tool" style="top:124px"><svg class="ss-i" aria-hidden="true"><use href="#i-mic"/></svg>Voice</span>
+    <span class="st-tool" style="top:228px"><svg class="ss-i" aria-hidden="true"><use href="#i-music"/></svg>Music</span>
+    <span class="st-tool st-tool--magic" style="top:356px"><svg class="ss-i" aria-hidden="true"><use href="#i-sparkles"/></svg>Magic</span>
+  </div>
+  <div class="st-card"><img src="assets/icon.png" alt=""><span class="hear"></span></div>
+  <div class="st-monitor">
+    <div class="st-ambient"><svg class="" viewBox="0 0 300 300" aria-hidden="true"><use href="#s04-d5"/></svg></div>
+    <div class="st-head"><span>PAGE 5 / 5</span><span class="reels"><svg class="ss-reel" aria-hidden="true"><use href="#i-reel"/></svg><svg class="ss-reel" aria-hidden="true"><use href="#i-reel"/></svg></span></div>
+    <div class="st-photo"><svg class="" viewBox="0 0 300 300" aria-hidden="true"><use href="#s04-d5"/></svg></div>
+    <p class="ss-story st-words">Goodnight, Twinkle. Goodnight, Grandma!</p>
+  </div>
+  <div class="st-spill"></div>
+  <div class="st-film"><div class="st-frame"><svg class="" viewBox="0 0 300 300" aria-hidden="true"><use href="#s04-d1"/></svg><span class="ss-film__num">1</span><span class="ss-film__badge"><svg class="ss-i" aria-hidden="true"><use href="#i-mic"/></svg></span></div><div class="st-frame"><svg class="" viewBox="0 0 300 300" aria-hidden="true"><use href="#s04-d2"/></svg><span class="ss-film__num">2</span><span class="ss-film__badge"><svg class="ss-i" aria-hidden="true"><use href="#i-mic"/></svg></span></div><div class="st-frame"><svg class="" viewBox="0 0 300 300" aria-hidden="true"><use href="#s04-d3"/></svg><span class="ss-film__num">3</span><span class="ss-film__badge"><svg class="ss-i" aria-hidden="true"><use href="#i-mic"/></svg></span></div><div class="st-frame"><svg class="" viewBox="0 0 300 300" aria-hidden="true"><use href="#s04-d4"/></svg><span class="ss-film__num">4</span><span class="ss-film__badge"><svg class="ss-i" aria-hidden="true"><use href="#i-mic"/></svg></span></div><div class="st-frame is-active"><svg class="" viewBox="0 0 300 300" aria-hidden="true"><use href="#s04-d5"/></svg><span class="ss-film__num">5</span><span class="ss-film__badge"><svg class="ss-i" aria-hidden="true"><use href="#i-mic"/></svg></span></div><span class="ss-film__add" style="width:112px;height:84px;aspect-ratio:auto"><svg class="ss-i" aria-hidden="true"><use href="#i-camera"/></svg></span></div>
+  <div class="st-transport"><span class="reels"><svg class="ss-reel" aria-hidden="true"><use href="#i-reel"/></svg><svg class="ss-reel" aria-hidden="true"><use href="#i-reel"/></svg></span>
+    <span class="ss-iconbtn"><svg class="ss-i" aria-hidden="true"><use href="#i-prev-solid"/></svg></span><span class="rec"></span>
+    <span class="ss-iconbtn ss-iconbtn--lg"><svg class="ss-i" aria-hidden="true"><use href="#i-play-solid"/></svg></span><span class="ss-iconbtn"><svg class="ss-i" aria-hidden="true"><use href="#i-next-solid"/></svg></span>
+    <span class="read">0:24 &middot; 5 PAGES</span></div>
+</div>
+<div class="s04-scrim"></div>
+<div class="s04-gate" role="dialog" aria-label="A grown-up moment">
+  <p class="ss-kicker g-kicker"><svg class="ss-i" aria-hidden="true"><use href="#i-lock"/></svg>BEFORE ANYTHING LEAVES THIS TABLET</p>
+  <h2 class="g-title">A grown-up moment</h2>
+  <p class="g-body">Finishing the story saves it and can make a private link to share. A child's voice is personal information, so a grown-up answers this first. Nothing has left this device yet.</p>
+  <p class="g-q">What is <b>7 &times; 6</b>?</p>
+  <div class="g-answer"><span>42</span><span class="ok"><svg class="ss-i" aria-hidden="true"><use href="#i-check"/></svg></span></div>
+  <p class="g-label">STORY BY (OPTIONAL)</p>
+  <div class="g-by"><span>Mia, age 4 &mdash; with Mom</span><svg class="ss-i" aria-hidden="true"><use href="#i-pen"/></svg></div>
+  <div class="g-consent">
+    <span class="g-box"><svg class="ss-i" aria-hidden="true"><use href="#i-check"/></svg></span>
+    <p>I am this child's parent or guardian and I consent to sharing this recording.</p>
+    <small>This consent is written into the tape itself, so it travels with the story wherever the file goes.</small>
+    <span class="g-07" aria-label="Layer 07, Signature">07</span>
+  </div>
+  <p class="g-promise">Your child's voice never goes anywhere without you.</p>
+  <div class="g-actions">
+    <span class="ss-btn ss-btn--ghost"><svg class="ss-i" aria-hidden="true"><use href="#i-undo"/></svg>Not now</span>
+    <span class="ss-btn ss-btn--gold"><svg class="ss-i" aria-hidden="true"><use href="#i-check"/></svg>Continue</span>
+  </div>
+  <p class="g-foot">No trackers, no analytics. Share links are unlisted and random, and deleting the story removes the link, the pictures and the recordings.</p>
+</div>
+<div class="s04-sheet" aria-label="What goes into your tape">
+  <div class="sh-bar"><span>ONE FILE &middot; SEVEN LAYERS</span><em>.storysync</em></div>
+  <h3 class="sh-title">What goes into your tape</h3>
+  <span class="sh-spine"></span><span class="sh-num" style="top:124px">01</span><span class="sh-num" style="top:198px">02</span><span class="sh-num" style="top:272px">03</span><span class="sh-num" style="top:346px">04</span><span class="sh-num" style="top:420px">05</span><span class="sh-num" style="top:494px">06</span><span class="sh-num sh-num--sig" style="top:599px">07</span>
+  <div class="sh-band" style="top:102px;--f:#EFE9DC"><h4><span>Metadata</span></h4><p><span class="nb">Twinkle Came to My Window</span> &middot; <span class="nb">by Mia, age 4 &mdash; with Mom</span> &middot; English</p></div><div class="sh-band" style="top:176px;--f:#E4E0FA"><h4><span>Visual</span><span class="sh-thumbs"><svg class="" viewBox="0 0 300 300" aria-hidden="true"><use href="#s04-d1"/></svg><svg class="" viewBox="0 0 300 300" aria-hidden="true"><use href="#s04-d2"/></svg><svg class="" viewBox="0 0 300 300" aria-hidden="true"><use href="#s04-d3"/></svg><svg class="" viewBox="0 0 300 300" aria-hidden="true"><use href="#s04-d4"/></svg><svg class="" viewBox="0 0 300 300" aria-hidden="true"><use href="#s04-d5"/></svg></span></h4><p>5 photos of Mia's drawings &middot; about 340 KB each</p></div><div class="sh-band" style="top:250px;--f:#FBF3DF"><h4><span>Text</span></h4><p>the words Mia said, typed by Mom, kept as text &mdash; never baked into the pictures</p></div><div class="sh-band" style="top:324px;--f:#FADFDA"><h4><span>Voice</span><div class="ss-wave sh-wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></h4><p>5 recordings &middot; become AAC/M4A when you tap Continue (WAV if this browser can't make AAC)</p></div><div class="sh-band" style="top:398px;--f:#FBEBD2"><h4><span>Sound</span><span class="sh-star"><svg class="ss-i fill" aria-hidden="true"><use href="#i-star-solid"/></svg><svg class="ss-i line" aria-hidden="true"><use href="#i-star"/></svg></span></h4><p>Wonder, a music box that dips under every word</p></div><div class="sh-band" style="top:472px;--f:#E6E9EE"><h4><span>Behavior</span></h4><p>2-second pauses &middot; the turn-the-page chime &middot; words light up</p></div><div class="sh-band sh-band--sig" style="top:546px;--f:#FFE9A8"><h4><span>Signature</span><span class="sh-tag">V2.1 &middot; DRAFT</span></h4><p><span class="nb">&copy; 2026 Mia, age 4 &mdash; with Mom</span> &middot; personal use</p></div>
+  <div class="ss-stamp s04-stamp"><div class="s04-stamp__in"><span class="s04-stamp__a">VOICE CONSENT &middot; GRANTED</span><span class="s04-stamp__b">PARENT/GUARDIAN &middot; OCT 19 2026</span></div></div>
+  <p class="sh-foot"><svg class="ss-i" aria-hidden="true"><use href="#i-lock"/></svg>Nothing has left this tablet yet.</p>
+</div>
+  </div>
+</div>
+
+<div class="ss-callout s04-co" style="left:24px;top:363px"><b>Arithmetic, not a button</b>A pre-reader can't tap through <span class="nb">7 &times; 6</span>. A wrong answer brings a new question, and the gate asks every time a story is finished.</div>
+<div class="ss-callout s04-co" style="left:24px;top:513px"><b>Consent travels in the tape</b>Ticking the box writes <code>signature.voiceConsent</code> into <code>manifest.json</code>: voice 'Mia, age 4 &mdash; with Mom', granted by parent/guardian, dated. The file carries it, not a server.</div>
+<div class="ss-callout s04-co s04-co--r" style="left:1372px;top:446px"><b>WAV is the only fallback</b>On Chrome the Opus draft becomes AAC/M4A right on the tablet. A browser that can't encode AAC gets 16-bit WAV &mdash; bigger, still plays everywhere. Opus never ships.</div>
+<div class="ss-callout s04-co s04-co--r" style="left:1372px;top:704px"><b>One record today</b>The Creator writes one consent record named after 'story by', ownership '&copy; 2026 Mia, age 4 &mdash; with Mom' and rights 'personal use'. A record per voice comes next.</div>
+<i class="ss-leader" style="left:240px;top:372px;width:124px"></i><i class="ss-leader" style="left:240px;top:522px;width:124px"></i><i class="ss-leader" style="left:1366px;top:455px;width:121px;transform:rotate(180deg)"></i><i class="ss-leader" style="left:1366px;top:713px;width:121px;transform:rotate(180deg)"></i>
+<div class="s04-layers" aria-label="Layers: all seven written"><span>LAYERS</span><i class="" style="--f:#EFE9DC"></i><i class="" style="--f:#E4E0FA"></i><i class="" style="--f:#FBF3DF"></i><i class="" style="--f:#FADFDA"></i><i class="" style="--f:#FBEBD2"></i><i class="" style="--f:#E6E9EE"></i><i class="sig" style="--f:#FFE9A8"></i></div>
+</section>

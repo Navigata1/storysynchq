@@ -1,0 +1,468 @@
+{
+ "hero": {
+  "eyebrow": "SSYNC · The fused vision · October 2026",
+  "title_html": "Make any storybook <em>read itself</em> in the voice and mood you choose.",
+  "lede_html": "Ten screens, one family, one week. The library cassette book comes back as something families make: a picture, a voice, a little melody underneath, and a chime that says turn the page. This reel fuses every thread of the original StorySync vision into one product. It is built on what already runs at <strong>storysynchq.vercel.app</strong>, and it labels what comes next.",
+  "meta_html": [
+   "<b>10</b> screens",
+   "<b>2</b> sides",
+   "<b>1</b> open file",
+   "Cast · the Rivera family"
+  ]
+ },
+ "jcard_title": "StorySync · Vision Reel",
+ "sides": [
+  {
+   "label": "Side A · Receive, make, hand over",
+   "from": 1,
+   "to": 5
+  },
+  {
+   "label": "Side B · Answer, keep, open up, grow",
+   "from": 6,
+   "to": 10
+  }
+ ],
+ "track_codes": {
+  "1": "A1",
+  "2": "A2",
+  "3": "A3",
+  "4": "A4",
+  "5": "A5",
+  "6": "B1",
+  "7": "B2",
+  "8": "B3",
+  "9": "B4",
+  "10": "B5"
+ },
+ "devices": {
+  "1": "Laptop + phone",
+  "2": "Laptop",
+  "3": "Tablet",
+  "4": "Tablet",
+  "5": "Tablet + iPhone",
+  "6": "Two iPhones",
+  "7": "Laptop",
+  "8": "Laptop + e-reader",
+  "9": "Desktop app",
+  "10": "Classroom + tablet"
+ },
+ "moments": {
+  "1": "Sunday 7:52 pm · First contact",
+  "2": "Sunday 7:53 pm · Page 2 of 8",
+  "3": "Monday 6:05 pm · Page 3 of 5",
+  "4": "Monday 6:09 pm · Before anything leaves",
+  "5": "Monday 6:11 pm · Shared by text",
+  "6": "Monday 6:31 pm · The reply",
+  "7": "Tuesday 7:40 am · Breakfast",
+  "8": "Saturday 9:40 am · Taking it apart",
+  "9": "Saturday 10:15 am · Imagined in Phase 3",
+  "10": "A school morning · Phase 3"
+ },
+ "who": {
+  "1": "Jess Rivera and Mia, 4, at the kitchen table after a friend's text.",
+  "2": "Mia on Jess's lap, lights low, the house tape reading itself.",
+  "3": "Mia photographs her crayon drawings and tells each page. Jess types her words.",
+  "4": "Jess, the grown-up. Mia has gone to find her slippers.",
+  "5": "Jess sends from the family tablet. Grandma Rose, 71, listens on her iPhone.",
+  "6": "Grandma Rose in her armchair, reading glasses on, recording a goodnight.",
+  "7": "Jess and Mia at breakfast. Mia wants to hear Grandma again.",
+  "8": "Marco Rivera, the engineer in the family, with his Saturday coffee.",
+  "9": "Marco in Advanced mode, with Jess and Mia recording their parts beside him.",
+  "10": "Ms. Okafor and the 22 children of Room 4 at Maple Street Pre-K."
+ },
+ "status": {
+  "1": {
+   "kind": "now",
+   "label": "Shipped, small changes"
+  },
+  "2": {
+   "kind": "now",
+   "label": "Shipped, plus next"
+  },
+  "3": {
+   "kind": "now",
+   "label": "Shipped, plus next"
+  },
+  "4": {
+   "kind": "now",
+   "label": "Shipped, plus next"
+  },
+  "5": {
+   "kind": "now",
+   "label": "Shipped, plus next"
+  },
+  "6": {
+   "kind": "next",
+   "label": "Next"
+  },
+  "7": {
+   "kind": "next",
+   "label": "Next"
+  },
+  "8": {
+   "kind": "now",
+   "label": "Shipped, plus next"
+  },
+  "9": {
+   "kind": "later",
+   "label": "Phase 3"
+  },
+  "10": {
+   "kind": "later",
+   "label": "Phase 3"
+  }
+ },
+ "fuses": {
+  "1": [
+   {
+    "what": "Exactly one signature moment, the cassette pressed into the deck",
+    "src": "docs/design-direction.md §10; Landing.tsx HeroDeck (760 ms, then /read?demo=1)"
+   },
+   {
+    "what": "Two doors, one loop: receive and create",
+    "src": "design-direction §1, §4; Landing.tsx PlayDoor/MakeDoor"
+   },
+   {
+    "what": "Jon's first words for the emotional core, 'Remember the magic?' and 'Read along. Listen. Feel.'",
+    "src": "/classic hero and 'What is SSYNC' (git 588aeff)"
+   },
+   {
+    "what": "The wedge: any storybook reads itself in the voice and mood you choose",
+    "src": "design-direction §9.1"
+   },
+   {
+    "what": "Naming: StorySync Reader, StorySync Creator, SSYNC Protocol; like PDF, for storybooks",
+    "src": "design-direction §9.3; CLAUDE.md §1"
+   },
+   {
+    "what": "Brand frame: a product of Island Development Crew LLC, part of the SyncHQ Suite",
+    "src": "/classic footer"
+   }
+  ],
+  "2": [
+   {
+    "what": "The three sounds of the cassette memory: narrator, 'turn the page' chime, melody",
+    "src": "CLAUDE.md §9"
+   },
+   {
+    "what": "The Player as the room: ambient blurred backdrop, vignette, no dead black",
+    "src": "docs/10x-plan.md G3/WP-P; player.css"
+   },
+   {
+    "what": "Read-along: amber current word, warm past words; TTS boundaries or a linear sweep for a recorded voice",
+    "src": "WP-P; player/timing.ts"
+   },
+   {
+    "what": "Music bed ducked about −12 dB on the dual-bus engine; moods crossfade at page 4",
+    "src": "src/lib/audio/engine.ts, music.ts; demo manifest"
+   },
+   {
+    "what": "Page-turn cue: synthesized paper swish + wooden thock, under 300 ms, own AudioContext",
+    "src": "player/sound.ts"
+   },
+   {
+    "what": "Tap to Begin cover gate, the iOS audio unlock",
+    "src": "docs/format-spec.md §4; Player.tsx"
+   }
+  ],
+  "3": [
+   {
+    "what": "North Star Child Journey: photos of her drawings, her voice on every page, gentle music auto-added",
+    "src": "CLAUDE.md §1"
+   },
+   {
+    "what": "The ten-minute test, a 5-page narrated story made in under 10 minutes, shown happening",
+    "src": "design-direction §9.5; PLAN_OF_ATTACK POC checks"
+   },
+   {
+    "what": "'Child Mode is a phone pointed at drawings on the kitchen table'",
+    "src": "ARCHITECTURE_REVIEW.md, Dropzone row"
+   },
+   {
+    "what": "Camera-first native capture; EXIF-safe resize to 2048 px or less, about 350 KB a page",
+    "src": "CLAUDE.md §2; src/lib/images.ts"
+   },
+   {
+    "what": "Simple mode is the product: huge targets, Stage + rail + filmstrip + transport",
+    "src": "design-direction §5, §9.2"
+   },
+   {
+    "what": "Three friendly tools first, Magic set apart (resolves the three-versus-four tension)",
+    "src": "design-direction §1 vs ToolRail.tsx"
+   }
+  ],
+  "4": [
+   {
+    "what": "COPPA rule 1: nothing leaves the device without a parent; arithmetic a pre-reader can't tap through",
+    "src": "PRIVACY.md; ParentGate.tsx"
+   },
+   {
+    "what": "Voice consent written into the tape (signature.voiceConsent) so it travels with the file",
+    "src": "10x-plan WP-S; manifest.ts"
+   },
+   {
+    "what": "Trust wedge: 'your child's voice never goes anywhere without you'",
+    "src": "ARCHITECTURE_REVIEW.md Miss #2"
+   },
+   {
+    "what": "The seven-layer packet explained in plain words",
+    "src": "design-direction §9.4; layers.ts; PacketDiagram.tsx fills"
+   },
+   {
+    "what": "Signature layer, v2.1 draft: ownership, rights, consent",
+    "src": "format-spec §7"
+   },
+   {
+    "what": "Published-audio rule in plain words: AAC/M4A, WAV the only fallback, Opus never",
+    "src": "CLAUDE.md §2; transcode.ts"
+   }
+  ],
+  "5": [
+   {
+    "what": "Finish flow: gate → AAC → assemble → save → link, shown as a printed, labeled tape",
+    "src": "design-direction §5; PublishCard.tsx"
+   },
+   {
+    "what": "Published narration is always AAC/M4A, so an Android recording plays on an iPhone",
+    "src": "CLAUDE.md §2; ARCHITECTURE_REVIEW Miss #1; format-spec §3"
+   },
+   {
+    "what": "Client-side normalization: a child's voice never goes to a server to be transcoded",
+    "src": "format-spec §3; decisions 2026-08-02"
+   },
+   {
+    "what": "The grandparent moment, the reason the format exists",
+    "src": "docs/10x-plan.md G1"
+   },
+   {
+    "what": "Hand-off as one link or one file: unlisted link, QR, Web Share, .storysync",
+    "src": "design-direction §1; PublishCard.tsx"
+   },
+   {
+    "what": "'Made in m:ss' as proof of the ten-minute test",
+    "src": "Studio.tsx madeIn; design-direction §9.5"
+   }
+  ],
+  "6": [
+   {
+    "what": "The Signature layer shown to the listener as liner notes",
+    "src": "design-direction §9.4; format-spec §7"
+   },
+   {
+    "what": "End card closes the loop: replay, Make your own story, and a QR when opened from a link",
+    "src": "Player.tsx; 10x-plan WP-P"
+   },
+   {
+    "what": "Receive ↔ create in both directions; Jon's 'BOTH receiving and creating loops'",
+    "src": "design-direction §1; Aug 2026 directive"
+   },
+   {
+    "what": "Families persona: a loved one's voice, a gift that lasts",
+    "src": "/classic 'Who is this for?'"
+   },
+   {
+    "what": "The demo moment 'Google cannot read this in your voice'",
+    "src": "design-direction §9.1"
+   },
+   {
+    "what": "READ THIS teleprompter from the first record panel",
+    "src": "tests/screenshots/reader-record-panel.png"
+   }
+  ],
+  "7": [
+   {
+    "what": "A library is cassettes on a shelf; deleting is pulling the tape out",
+    "src": "design-direction §2"
+   },
+   {
+    "what": "Read Room 'Pick a tape.' and its missing-tape state",
+    "src": "ReadRoom.tsx"
+   },
+   {
+    "what": "My Stories and accounts from the first build, recast as a shelf",
+    "src": "/classic MyStoriesLibrary (Phase 5)"
+   },
+   {
+    "what": "Curated public library: featured tape, search, genre pills incl. Faith-Based and Personal, original starter catalog, Premium badges",
+    "src": "/classic PUBLIC_LIBRARY (Phase 7, git da18028)"
+   },
+   {
+    "what": "'Public' means unlisted by URL; family tapes are never listed",
+    "src": "PRIVACY.md rule 4; decisions 2026-09-05"
+   },
+   {
+    "what": "The wedge: any storybook reads itself in the voice and mood you choose",
+    "src": "design-direction §9.1"
+   }
+  ],
+  "8": [
+   {
+    "what": "SSYNC as PDF for storybooks; StorySyncHQ is two things",
+    "src": "CLAUDE.md §1; format-spec intro"
+   },
+   {
+    "what": "The seven-layer packet with its exact names, order, fills and the red-stroked 'V2.1 · DRAFT' Signature",
+    "src": "layers.ts; PacketDiagram.tsx"
+   },
+   {
+    "what": "'Each layer adds a sense'; only metadata.title is required",
+    "src": "PacketDiagram caption; layers.ts"
+   },
+   {
+    "what": "Container: a ZIP via fflate, manifest.json + assets/, dangling references rejected",
+    "src": "format-spec §1; container.ts"
+   },
+   {
+    "what": "The normative codec rule MUST / MAY / MUST NOT",
+    "src": "format-spec §3"
+   },
+   {
+    "what": "Real validator language",
+    "src": "manifest.ts validateManifest"
+   }
+  ],
+  "9": [
+   {
+    "what": "Jon's Aug 2026 directive: a digital studio with a viewport like Vegas or After Effects, Advanced for engineers, a desktop app later",
+    "src": "design-direction §1, §5; decisions 2026-08-25"
+   },
+   {
+    "what": "'Both are the same room'; do not lead with Studio Mode (shown ninth of ten)",
+    "src": "design-direction §1, §9.2"
+   },
+   {
+    "what": "The shipped Inspector, unchanged: timing, mix, mood readout, activity-envelope honesty, codec badges, manifest JSON",
+    "src": "Inspector.tsx"
+   },
+   {
+    "what": "Stage = Player: one SsyncManifest",
+    "src": "design-direction §7"
+   },
+   {
+    "what": "Professional timeline editor and the Tauri 2 Creator (Phase 3)",
+    "src": "PLAN_OF_ATTACK Deferred; ARCHITECTURE_REVIEW"
+   },
+   {
+    "what": "Remixable moods: a Hush bedtime Side B, the moat of post-creation ownership",
+    "src": "design-direction §9.1; moods.ts"
+   }
+  ],
+  "10": [
+   {
+    "what": "Go-to-market order: families first, schools second, remix later",
+    "src": "design-direction §9.2"
+   },
+   {
+    "what": "Enterprise education from the first build: assign stories, link or QR with no install, multilingual",
+    "src": "/classic 'Built for Classrooms' (git 2f6b7bc)"
+   },
+   {
+    "what": "'Track progress' reconciled with COPPA: recorded or not yet, nothing else measured",
+    "src": "PRIVACY.md rule 3"
+   },
+   {
+    "what": "School batch deployment with a written retention policy",
+    "src": "PRIVACY.md Phase 3; PLAN_OF_ATTACK Deferred"
+   },
+   {
+    "what": "Multi-language narration as a protocol change",
+    "src": "PLAN_OF_ATTACK Deferred; v1 voices registry"
+   },
+   {
+    "what": "Consent from home per voice, with the browser voice as the fallback",
+    "src": "ParentGate voiceConsent; truth review"
+   }
+  ]
+ },
+ "realism": {
+  "1": "Shipped: the cassette-into-deck hero (760 ms, then /read?demo=1; instant under reduced motion), the two doors, the starfield, the footer privacy line. Vision changes, all small: the hero tape carries the demo's title (today it reads 'StorySyncHQ · SIDE A · PRESS PLAY'), page 1's sky aligned behind the deck, the 'Remember the magic?' band carried over from /classic, the three-surfaces row and the company line. The landing's protocol teaser must stop printing '4:32 · AAC/M4A' for a tape with no recorded voice; the true label is '~1:47 · READ-ALONG'.",
+  "2": "Shipped: Tap to Begin, the ambient room, read-along (exact for the browser voice, a linear sweep for recorded voices), the page-turn cue, ducking, mood crossfades (1.6 s - the manifest's own crossfade duration is not read yet), Reading options, keyboard, chrome that hides after 4.2 s, silent-tape mode. Vision: the two-page spread at desktop width (today page 2 renders full-bleed with its text on a measured scrim), the expanded three-sounds chip, tape packs as progress, fullscreen on open (from /classic), and word-to-picture hotspots (Idea). Honest: the house tape has no recorded narration - it is read by the browser voice.",
+  "3": "Shipped: Simple mode, camera-first capture through processImageSafe, tap-to-record and stop with blips, the page lock, voice badges, Wonder on by default, autosave on this device only, the microphone-switched-off recovery, Magic as a local generator. Vision: the rail with Magic visually set apart (today four equal tools), the Stage borrowing the Player's ambient backdrop (Next), the filmstrip as a tape ribbon with a mood lane, the listening mascot and the giant Hear-it button (Idea). The ten-minute ribbon is an annotation - there is deliberately no clock in a child's view; 'Made in 7:48' is printed on the finished tape. Words do not light during a take: that would need on-device speech alignment.",
+  "4": "Shipped as shown: 'A grown-up moment', an a × b question asked every time a story is finished, the consent row that appears only when a recorded voice exists, consent, ownership and rights written into the manifest, and AAC conversion in the browser with a WAV fallback. Next: the plain-words sheet of seven layers beside the gate, the inked consent stamp, and the line 'Your child's voice never goes anywhere without you.' Today there is one consent record per tape, named after 'story by'.",
+  "5": "Shipped: the printing label, 'Made in m:ss', the step list, the private link with Copy, the QR, Share the link (Web Share), the unlisted note, the .storysync download, Delete everything, AAC conversion, Tap to Begin, read-along on a recorded voice, and Reading options. Next: Mia's drawing on the label, the size meter, delete drawn as pulling the tape out, 'VOICE: MIA' on the cover and the narrator in the deck chip (the Creator never writes metadata.narrator today), and evening out each voice. The passport ribbon is a diagram, not UI. Cloud share codes are 16 hex characters (64-bit) today, short of the 128-bit that PRIVACY.md promises.",
+  "6": "Shipped: the end card with its tape label, Read it again, Make your own story, and a QR of the share link when the tape was opened from one; the Creator on a phone; Safari's AAC passed straight through at publish. Next: the J-card liner notes with 'What's inside this tape?', Send a thank-you back with its reply-to chip, the READ THIS card, and consent wording for a grown-up's own voice. Idea: keeping a tape on the phone offline. Today Grandma would sign in to get a link, or send the .storysync file.",
+  "7": "Shipped: the Read Room ('Pick a tape.', the demo, open a .storysync, make your own), the missing-tape state, a delete that removes every copy and the link, and the eight moods. Next: a shelf of the family's saved tapes (the cloud library already exists), Sent to you, and Read it in…, which re-voices any tape in the family's voices once the Creator can open a .storysync. Ideas: search, genres, keeping tapes on the laptop, the curated catalog beyond the Star, and Premium editions. Phase 3: made voices.",
+  "8": "Shipped: the /protocol page (facts, the seven layers as flat bands, the container layout, the codec rule and browser ladder, the privacy section, the demo download), the validator messages, the v1 and v2 schemas, and fflate packing. Next: the exploded page taken apart into its layers. Marco's e-reader player is possible today because the spec is open; none exists yet. The WARN line is a real nit: the Creator writes voiceConsent dates as full timestamps where the v2.1 draft expects a date.",
+  "9": "Phase 3: the desktop app (Tauri 2), the professional timeline, Cast with several narration tracks per page (an SSYNC v2.x change), and consent per voice. Shipped inside the frame: the Simple and Advanced toggle and every Inspector section shown (timing, mix, mood readout, the activity note, codec badges, the codec rule, manifest JSON), and the restore prompt. Next: per-page moods, the type-a-feeling field (the mood resolver already exists in the engine), and evening out each voice.",
+  "10": "Everything here beyond the Reader is Phase 3 or an idea, and is labeled that way: StorySync for Schools, assignments, the class tape, consent links home, retention, bilingual narration, and every sealed cassette. Shipped underneath: any tape plays from a link or QR with no account, consent records travel in the file, and the browser voice reads any page without a recording. The plans are the March 2026 draft and are not on sale."
+ },
+ "pillars": [
+  {
+   "k": "The feeling",
+   "h": "A picture, a voice, a melody, a chime",
+   "p_html": "The kid at the library table with a book and a cassette. Every screen protects that undivided attention: the room recedes and the story glows."
+  },
+  {
+   "k": "The loop",
+   "h": "Receive a story, then make one back",
+   "p_html": "Every tape ends with an invitation to make your own. Grandma listens, then answers in her own voice. That loop is the reason the format exists."
+  },
+  {
+   "k": "The promise",
+   "h": "Nothing leaves without a grown-up",
+   "p_html": "A parent's gate before anything is shared, consent written into the file, one tap to delete every copy, unlisted links, and no trackers anywhere."
+  },
+  {
+   "k": "The format",
+   "h": "One open file outlives the app",
+   "p_html": "SSYNC packs seven layers into one ZIP. Voices are always AAC, so a tape made on an Android tablet plays on an iPhone, and anyone can write a player."
+  }
+ ],
+ "system": {
+  "eyebrow": "How it fits together",
+  "title": "One tape, every surface",
+  "lede_html": "The Creator writes one manifest. The grown-up gate signs it, voices become AAC, and it travels as a link, a QR code or a <code>.storysync</code> file. The Reader plays that same manifest on any device, and its last page invites you to make one back. Nothing leaves a device before the gate, consent travels inside the file, and deleting removes every copy.",
+  "aria": "Diagram: the StorySync Creator publishes through the grown-up gate into the .storysync file, whose seven layers are Metadata, Visual, Text, Voice (always AAC), Sound, Behavior and Signature. The file is shared as a link, QR or file to the StorySync Reader on any browser, and the Reader's last page loops back to the Creator with Make your own."
+ },
+ "roadmap": {
+  "eyebrow": "The path",
+  "title": "What is live, what is next, what comes later",
+  "lede_html": "Side A runs on today's engine, and main deploys itself on every merge. The rest is drawn so the path is visible, and labeled so nobody mistakes it for shipped.",
+  "cols": [
+   {
+    "kind": "now",
+    "label": "Live today",
+    "title": "Shipped",
+    "items_html": [
+     "<b>Landing</b> with the cassette pressed into the deck, and the two doors",
+     "<b>StorySync Reader</b>: Tap to Begin, the ambient room, read-along for the browser voice and recorded voices, the page-turn chime, the music ducking under the voice, eight generative moods, Reading options, an end card with Make your own",
+     "<b>StorySync Creator</b>: Simple and Advanced, camera-first capture, tap-to-record, autosave, the Inspector",
+     "<b>Publishing</b>: the grown-up gate with a consent record, AAC with a WAV fallback, unlisted link, QR, .storysync download, Made in m:ss, Delete everything",
+     "<b>/protocol</b>: the seven layers, the codec rule, the container, schemas, the demo download"
+    ]
+   },
+   {
+    "kind": "next",
+    "label": "Buildable now",
+    "title": "Next",
+    "items_html": [
+     "<b>Fix first:</b> the landing's tape teaser prints 4:32 for a tape with no recorded voice; the true label is ~1:47 and read-along",
+     "<b>Fix first:</b> cloud share codes are 16 hex characters (64-bit) while PRIVACY.md promises 128-bit; one migration closes the gap",
+     "<b>Fix first:</b> the Creator never writes metadata.narrator, and writes voiceConsent dates as timestamps where the schema expects a date",
+     "Liner notes for listeners, the family shelf with resume and Sent to you, a thank-you back from the end card",
+     "Opening a .storysync in the Creator so any tape can be re-voiced: the wedge",
+     "Per-page moods, the Stage borrowing the Player's light, the exploded packet on /protocol"
+    ]
+   },
+   {
+    "kind": "later",
+    "label": "Phase 3",
+    "title": "Later",
+    "items_html": [
+     "The Creator as a desktop, iPad and Android app (Tauri 2) with a professional timeline",
+     "Cast and bilingual narration: several voice tracks per page, an SSYNC v2.x change",
+     "Made voices only with written, revocable consent",
+     "StorySync for Schools with consent from home and a written retention policy",
+     "A licensed music library, PDF import, embed, print and EPUB3, storysynchq.com",
+     "Plans drafted as tape lengths C-30, C-60 and C-90; not on sale"
+    ]
+   }
+  ]
+ },
+ "footer_html": [
+  "Built from the StorySyncHQ repo at <code>main 4a62bb0</code>: CLAUDE.md, docs/design-direction.md, docs/10x-plan.md, docs/format-spec.md, PLAN_OF_ATTACK.md, ARCHITECTURE_REVIEW.md, PRIVACY.md, the shipped components, and the history of the first build that now lives at /classic.",
+  "Every screen is a static HTML mockup drawn at 1600 by 1000. Click one to open it full size. Illustrations from The Brave Little Star by Island Development Crew. Mia's crayon drawings and Grandma's window are drawn in SVG for this reel. Icons from Lucide (ISC license).",
+  "The Rivera family is invented for the story. The QR codes encode Mia's example share link, which is also invented."
+ ]
+}
