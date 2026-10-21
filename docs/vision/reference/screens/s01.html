@@ -1,0 +1,488 @@
+<section class="ss-screen" id="s01" style="--w:1600px;--h:1000px" aria-label="Press play">
+<style>
+/* ===== s01 · Press play — stage ===== */
+#s01 .s01-spill {
+  position: absolute; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(820px 560px at 634px 360px, rgba(245, 158, 11, 0.09), transparent 70%),
+    radial-gradient(520px 420px at 1380px 520px, rgba(124, 107, 255, 0.07), transparent 70%);
+}
+
+/* Layers strip (LOCAL shared piece 2) */
+#s01 .s01-layers {
+  position: absolute; left: 76px; top: 20px; z-index: 8;
+  width: 236px; height: 24px; padding: 0 10px 0 12px;
+  display: flex; align-items: center; gap: 7px;
+  border-radius: 999px; background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font: 500 10px/1 var(--ss-mono); letter-spacing: 0.18em; color: var(--ss-fg-3);
+}
+#s01 .s01-layers b { font-weight: 500; margin-right: auto; }
+#s01 .s01-layers i { width: 10px; height: 10px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.25); flex: none; }
+#s01 .s01-layers i.is-lit { background: #EFE9DC; border: 1.5px solid var(--ss-ink); box-shadow: 0 0 0 1px rgba(239, 233, 220, 0.35), 0 0 10px rgba(239, 233, 220, 0.35); }
+
+/* ===== Laptop ===== */
+#s01 .s01-laptop { position: absolute; left: 76px; top: 56px; z-index: 3; }
+
+/* Hero viewport, 1080 x 675, Register A */
+#s01 .s01-hero {
+  position: absolute; inset: 0; overflow: hidden;
+  background:
+    radial-gradient(760px 520px at 540px 300px, #151b37 0%, #0c1122 52%, #080b16 100%);
+}
+#s01 .s01-sky {
+  position: absolute; left: -293px; top: -301px; width: 1300px; height: 1300px;
+  background-color: transparent; opacity: 0.16;
+  -webkit-mask: radial-gradient(600px 400px at 833px 520px, #000 30%, transparent 100%);
+          mask: radial-gradient(600px 400px at 833px 520px, #000 30%, transparent 100%);
+}
+#s01 .s01-starcore {
+  position: absolute; left: -293px; top: -301px; width: 1300px; height: 1300px;
+  background-color: transparent;
+  -webkit-mask: radial-gradient(circle 120px at 833px 601px, #000 22%, rgba(0, 0, 0, 0.45) 52%, transparent 100%);
+          mask: radial-gradient(circle 120px at 833px 601px, #000 22%, rgba(0, 0, 0, 0.45) 52%, transparent 100%);
+}
+#s01 .s01-stars { position: absolute; inset: 0; }
+#s01 .s01-stars i { position: absolute; border-radius: 50%; background: #fff3d6; }
+#s01 .s01-glow {
+  position: absolute; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(70px 70px at 540px 300px, rgba(255, 236, 190, 0.22), transparent 100%),
+    radial-gradient(300px 150px at 540px 300px, rgba(245, 158, 11, 0.12), transparent 100%);
+}
+
+/* Nav */
+#s01 .s01-nav {
+  position: absolute; left: 32px; right: 32px; top: 0; height: 52px; z-index: 4;
+  display: flex; align-items: center; justify-content: space-between;
+}
+#s01 .s01-brand { display: flex; align-items: center; gap: 10px; font: 700 18px/1 var(--ss-display); letter-spacing: -0.01em; color: #fff; }
+#s01 .s01-brand img { width: 22px; height: 22px; border-radius: 5px; }
+#s01 .s01-links { display: flex; gap: 28px; font: 400 13px/1 var(--ss-ui); color: var(--ss-fg-3); }
+
+#s01 .s01-kick { position: absolute; left: 0; right: 0; top: 58px; text-align: center; z-index: 4; }
+
+/* Cassette, frozen mid-insert */
+#s01 .s01-well {
+  position: absolute; left: 350px; top: 52px; width: 380px; height: 180px; /* bottom edge = y232, the near lip of the mouth */
+  overflow: hidden; z-index: 3;
+}
+#s01 .s01-ghost {
+  position: absolute; left: 20px; width: 340px; height: 120px; border-radius: 20px;
+  background: linear-gradient(180deg, #5a534b, #3b3733 60%);
+}
+#s01 .s01-ghost--1 { top: 24px; opacity: 0.46; filter: blur(3px); }
+#s01 .s01-ghost--2 { top: 16px; opacity: 0.16; filter: blur(6px); }
+#s01 .s01-casbox { position: absolute; left: 20px; top: 36px; width: 340px; } /* cassette top = y88 */
+#s01 .s01-cas .ss-tape__band { font-size: 11px; letter-spacing: 0.22em; }
+#s01 .s01-cas .ss-tape__field { padding: 7px 14px; }
+#s01 .s01-cas .ss-tape__title { font-size: 21px; }
+#s01 .s01-cas .ss-tape__meta { margin-top: 3px; font-size: 11px; letter-spacing: 0.16em; color: var(--ss-ink-2); }
+#s01 .s01-cas .ss-cassette__window { top: 104px; height: 46px; transform: translate(-50%, 0); }
+#s01 .s01-pack { position: absolute; top: 50%; border-radius: 50%; transform: translate(-50%, -50%);
+  background: radial-gradient(circle, #6b4630 0 38%, #4a2f1d 39% 70%, #3a2416 71%); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06); }
+#s01 .s01-pack--l { left: 44px; width: 42px; height: 42px; }
+#s01 .s01-pack--r { left: 153px; width: 30px; height: 30px; }
+#s01 .s01-reel { position: relative; z-index: 1; width: 34px; height: 34px; flex: none; }
+#s01 .s01-reel svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+#s01 .s01-reel .s01-r0 { transform: rotate(18deg); }
+#s01 .s01-reel .s01-r1 { transform: rotate(7deg); opacity: 0.45; --reel-face: transparent; }
+#s01 .s01-reel .s01-r2 { transform: rotate(-4deg); opacity: 0.22; --reel-face: transparent; }
+#s01 .s01-reel i {
+  position: absolute; inset: 2px; border-radius: 50%;
+  background: repeating-conic-gradient(from -18deg, rgba(30, 26, 22, 0) 0deg, rgba(30, 26, 22, 0.34) 34deg, rgba(30, 26, 22, 0) 34.5deg 60deg);
+  -webkit-mask: radial-gradient(circle closest-side, transparent 26%, #000 34%, #000 62%, transparent 70%);
+          mask: radial-gradient(circle closest-side, transparent 26%, #000 34%, #000 62%, transparent 70%);
+  filter: blur(0.5px);
+}
+#s01 .s01-spill-slot {
+  position: absolute; left: 20px; right: 20px; bottom: 0; height: 56px; pointer-events: none;
+  background: linear-gradient(0deg, rgba(255, 196, 96, 0.36), rgba(255, 196, 96, 0) 100%);
+  mix-blend-mode: screen;
+}
+
+/* The deck: a glass slab */
+#s01 .s01-deck {
+  position: absolute; left: 270px; top: 224px; width: 540px; height: 110px; z-index: 2;
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.035));
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  -webkit-backdrop-filter: blur(1.5px) saturate(1.3);
+          backdrop-filter: blur(1.5px) saturate(1.3);
+  box-shadow: 0 34px 60px -24px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+#s01 .s01-deck-top {
+  position: absolute; left: 0; right: 0; top: 0; height: 18px; border-radius: 21px 21px 0 0;
+  background:
+    radial-gradient(150px 16px at 50% 100%, rgba(255, 206, 120, 0.22), transparent 100%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.02));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+#s01 .s01-mouth {
+  position: absolute; left: 80px; top: 3px; width: 380px; height: 9px; border-radius: 5px;
+  background: linear-gradient(180deg, #020306, #0b0a0c);
+  box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.95), 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+#s01 .s01-lip {
+  position: absolute; left: 350px; top: 232px; width: 380px; height: 2px; z-index: 4; border-radius: 1px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.04), rgba(255, 236, 190, 0.32) 50%, rgba(255, 255, 255, 0.04));
+}
+#s01 .s01-lamp {
+  position: absolute; left: 24px; top: 30px; width: 10px; height: 10px; border-radius: 50%;
+  background: var(--ss-gold);
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.8), 0 0 0 3px rgba(245, 158, 11, 0.16);
+}
+#s01 .s01-readout {
+  position: absolute; right: 24px; top: 26px; width: 170px; height: 28px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center; gap: 9px;
+  background: #050506;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07), inset 0 2px 8px rgba(0, 0, 0, 0.9);
+  font: 500 12px/1 var(--ss-mono); letter-spacing: 0.2em; color: #ffb43c;
+  text-shadow: 0 0 8px rgba(255, 168, 40, 0.75);
+}
+#s01 .s01-readout .ss-i { width: 10px; height: 10px; filter: drop-shadow(0 0 4px rgba(255, 168, 40, 0.8)); }
+#s01 .s01-vents { position: absolute; left: 24px; bottom: 20px; display: flex; gap: 5px; }
+#s01 .s01-vents i {
+  width: 3px; height: 16px; border-radius: 2px; background: rgba(0, 0, 0, 0.55);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.8), 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+#s01 .s01-key {
+  position: absolute; left: 255px; top: 61px; width: 30px; height: 30px; border-radius: 50%;
+  display: grid; place-items: center; color: #fff1c9;
+  background: radial-gradient(circle at 50% 35%, rgba(40, 34, 30, 0.72), rgba(12, 12, 20, 0.82) 75%);
+  -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+  box-shadow: inset 0 0 0 2px var(--ss-gold-2), 0 0 0 1px rgba(255, 236, 190, 0.5), 0 0 18px 2px rgba(245, 158, 11, 0.55);
+}
+#s01 .s01-key .ss-i { width: 13px; height: 13px; margin-left: 2px; filter: drop-shadow(0 0 4px rgba(255, 210, 120, 0.9)); }
+
+/* Words */
+#s01 .s01-h1 {
+  position: absolute; left: 190px; width: 700px; top: 362px; z-index: 4;
+  font: 800 46px/1.05 var(--ss-display); letter-spacing: -0.02em; text-align: center; text-wrap: balance; color: #fff;
+}
+#s01 .s01-sub {
+  position: absolute; left: 240px; width: 600px; top: 476px; z-index: 4;
+  font: 400 17px/1.5 var(--ss-ui); color: var(--ss-fg-2); text-align: center; text-wrap: balance;
+}
+#s01 .s01-cta {
+  position: absolute; left: 0; right: 0; top: 548px; z-index: 4;
+  display: flex; justify-content: center; align-items: center; gap: 26px;
+}
+#s01 .s01-pressed {
+  transform: translateY(2px);
+  box-shadow: 0 7px 16px -6px rgba(245, 158, 11, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.45), inset 0 -2px 0 rgba(150, 90, 0, 0.25);
+}
+#s01 .s01-hint {
+  display: inline-flex; align-items: center; gap: 8px;
+  font: 500 12px/1 var(--ss-mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--ss-fg-3);
+}
+#s01 .s01-hint .ss-i { width: 15px; height: 15px; }
+
+/* The two doors, peeking in at the fold */
+#s01 .s01-fold-play { position: absolute; left: 120px; top: 642px; width: 400px; height: 80px; z-index: 4; border-radius: 12px 12px 0 0; }
+#s01 .s01-fold-play .ss-tape__band { padding: 7px 14px; }
+#s01 .s01-fold-make {
+  position: absolute; left: 560px; top: 642px; width: 400px; height: 80px; z-index: 4;
+  padding: 13px 18px; border-radius: 18px;
+  background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.12);
+  display: flex; align-items: flex-start; gap: 10px;
+}
+#s01 .s01-fold-make .ss-dot { margin-top: 2px; }
+#s01 .s01-fold-make .ss-kicker { font-size: 11px; }
+
+/* ===== Phone ===== */
+#s01 .s01-phone { position: absolute; left: 1168px; top: 64px; z-index: 6; }
+#s01 .s01-p {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(440px 220px at 50% -60px, rgba(245, 158, 11, 0.12), transparent 70%),
+    linear-gradient(180deg, #0c1122 0%, #0a0e1a 40%, #090c17 100%);
+}
+#s01 .s01-p-head {
+  position: absolute; top: 54px; left: 0; right: 0; height: 44px; z-index: 20;
+  padding: 0 12px 0 20px; display: flex; align-items: center; justify-content: space-between;
+  background: rgba(10, 14, 26, 0.86); border-bottom: 1px solid var(--ss-line);
+}
+#s01 .s01-p-brand { display: flex; align-items: center; gap: 8px; font: 700 17px/1 var(--ss-display); letter-spacing: -0.01em; }
+#s01 .s01-p-brand img { width: 22px; height: 22px; border-radius: 5px; }
+#s01 .s01-p-menu { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 10px; color: var(--ss-fg-2); }
+#s01 .s01-p-menu .ss-i { width: 20px; height: 20px; }
+#s01 .s01-p-col {
+  position: absolute; top: 104px; left: 16px; right: 16px;
+  display: flex; flex-direction: column;
+}
+/* Play door: tape stock */
+#s01 .s01-pdoor { border-radius: 14px; }
+#s01 .s01-pdoor .ss-tape__stripe { height: 9px; }
+#s01 .s01-pdoor .ss-tape__band { padding: 5px 14px; font-size: 11px; }
+#s01 .s01-pdoor .ss-tape__field { position: relative; padding: 9px 16px 13px; }
+#s01 .s01-pdoor .ss-tape__title { font-size: 26px; }
+#s01 .s01-pdoor p { margin-top: 5px; padding-right: 0; font: 400 14px/1.42 var(--ss-ui); color: var(--ss-ink-2); }
+#s01 .s01-pdoor .s01-dreels { position: absolute; right: 14px; bottom: 14px; display: flex; gap: 5px; }
+#s01 .s01-pdoor .s01-dreels .ss-reel { width: 22px; height: 22px; }
+/* Make door: studio glass */
+#s01 .s01-mdoor {
+  margin-top: 10px; padding: 13px 16px 15px; border-radius: 18px;
+  background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.12);
+}
+#s01 .s01-mdoor-k { display: flex; align-items: center; gap: 9px; }
+#s01 .s01-mdoor-k .ss-kicker { font-size: 11px; }
+#s01 .s01-mdoor h3 { margin-top: 7px; font: 800 26px/1.05 var(--ss-display); letter-spacing: -0.015em; color: #fff; }
+#s01 .s01-mdoor p { margin-top: 5px; font: 400 14px/1.42 var(--ss-ui); color: var(--ss-fg-2); }
+#s01 .s01-p-seam { margin: 12px 0 0; border-radius: 3px; }
+/* Remember the magic */
+#s01 .s01-magic { margin-top: 12px; display: flex; flex-direction: column; }
+#s01 .s01-magic .ss-kicker { font-size: 11px; }
+#s01 .s01-magic h3 { margin-top: 6px; font: italic 700 28px/1.1 var(--ss-display); letter-spacing: -0.01em; color: #fff; }
+#s01 .s01-magic blockquote {
+  margin: 7px 0 0; padding-left: 12px; border-left: 2px solid rgba(245, 158, 11, 0.45);
+  font: 400 14px/1.45 var(--ss-ui); color: var(--ss-fg-2);
+}
+#s01 .s01-magic .s01-wedge { margin-top: 8px; font: 500 17px/1.3 var(--ss-display); color: var(--ss-label); text-wrap: pretty; }
+/* Three surfaces */
+#s01 .s01-surf { margin-top: 12px; display: flex; flex-direction: column; gap: 4px; }
+#s01 .s01-surf .ss-meta { font-size: 11px; margin-bottom: 1px; }
+#s01 .s01-row { display: flex; align-items: center; gap: 12px; min-height: 36px; }
+#s01 .s01-row > span:first-child {
+  width: 28px; height: 28px; border-radius: 50%; flex: none; display: grid; place-items: center;
+  background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.13); color: var(--ss-gold-2);
+}
+#s01 .s01-row .ss-i { width: 14px; height: 14px; }
+#s01 .s01-row p { font: 400 13.5px/1.35 var(--ss-ui); color: var(--ss-fg-2); }
+#s01 .s01-row b { font-weight: 600; color: #fff; }
+/* Footer */
+#s01 .s01-foot { margin-top: 9px; padding-top: 8px; border-top: 1px solid var(--ss-line); display: flex; flex-direction: column; gap: 3px; }
+#s01 .s01-foot p { font: 400 11px/1.4 var(--ss-mono); color: var(--ss-fg-4); text-wrap: pretty; }
+#s01 .s01-foot .s01-nw { white-space: nowrap; }
+#s01 .s01-foot p:first-child { color: var(--ss-fg-3); }
+
+/* ===== Spec figure (LOCAL shared piece 1) ===== */
+#s01 .s01-fig { position: absolute; left: 48px; top: 836px; width: 232px; height: 145px; z-index: 7; }
+#s01 .s01-fig-frame {
+  position: absolute; inset: 0; overflow: hidden; border-radius: 12px;
+  background: #0f1426; border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 24px 48px -24px rgba(0, 0, 0, 0.7);
+}
+#s01 .s01-tab {
+  position: absolute; left: 12px; top: -11px; z-index: 2; height: 22px; padding: 0 10px;
+  display: inline-flex; align-items: center; gap: 7px; border-radius: 999px;
+  background: var(--ss-navy); border: 1px solid rgba(255, 255, 255, 0.16);
+  font: 500 11px/1 var(--ss-mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--ss-fg-2);
+}
+#s01 .s01-tab i { width: 6px; height: 6px; border-radius: 50%; background: var(--ss-gold); }
+#s01 .s01-fig-in {
+  position: absolute; left: 0; top: 0; width: 464px; height: 290px; transform: scale(0.5); transform-origin: top left;
+  overflow: hidden;
+  background: radial-gradient(360px 240px at 232px 176px, #161c38 0%, #0c1122 55%, #0a0d1a 100%);
+}
+#s01 .s01-fig-in .s01-stars i { background: #fff3d6; }
+#s01 .s01-fsky { position: absolute; left: -383px; top: -268px; width: 960px; height: 960px; background-color: transparent; opacity: 0.18;
+  -webkit-mask: radial-gradient(420px 340px at 615px 444px, #000 25%, transparent 100%);
+          mask: radial-gradient(420px 340px at 615px 444px, #000 25%, transparent 100%); }
+#s01 .s01-fcore { position: absolute; left: -383px; top: -268px; width: 960px; height: 960px; background-color: transparent;
+  -webkit-mask: radial-gradient(circle 88px at 615px 444px, #000 22%, rgba(0, 0, 0, 0.45) 52%, transparent 100%);
+          mask: radial-gradient(circle 88px at 615px 444px, #000 22%, rgba(0, 0, 0, 0.45) 52%, transparent 100%); }
+#s01 .s01-fglow { position: absolute; inset: 0;
+  background: radial-gradient(52px 52px at 232px 176px, rgba(255, 236, 190, 0.3), transparent 100%),
+              radial-gradient(220px 110px at 232px 176px, rgba(245, 158, 11, 0.12), transparent 100%); }
+#s01 .s01-fwell { position: absolute; left: 92px; top: 60px; width: 280px; height: 70px; overflow: hidden; }
+#s01 .s01-fcas {
+  position: absolute; left: 10px; top: 30px; width: 260px; height: 162px; border-radius: 16px; padding: 13px;
+  background: linear-gradient(165deg, #4a443e 0%, var(--ss-shell) 40%, var(--ss-shell-2) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), inset 0 0 0 2px rgba(0, 0, 0, 0.35);
+}
+#s01 .s01-fcas .ss-screw { width: 9px; height: 9px; }
+#s01 .s01-flabel { height: 110px; border: 3px solid var(--ss-ink); border-radius: 8px; overflow: hidden; background: var(--ss-paper); }
+#s01 .s01-flabel b { display: block; height: 10px; background: var(--ss-red); border-bottom: 3px solid var(--ss-ink); }
+#s01 .s01-flabel span { display: flex; gap: 6px; padding: 6px 10px; height: 22px; background: var(--ss-label); border-bottom: 3px solid var(--ss-ink); }
+#s01 .s01-flabel span i { width: 9px; height: 9px; border-radius: 50%; background: var(--ss-ink); }
+#s01 .s01-fdeck {
+  position: absolute; left: 22px; top: 122px; width: 420px; height: 86px; border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.035));
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  box-shadow: 0 26px 44px -20px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+#s01 .s01-fdeck .s01-deck-top { height: 15px; border-radius: 17px 17px 0 0; }
+#s01 .s01-fdeck .s01-mouth { left: 70px; top: 4px; width: 280px; height: 8px; }
+#s01 .s01-fdeck .s01-lamp { left: 20px; top: 26px; width: 9px; height: 9px; background: rgba(245, 158, 11, 0.3); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.5); }
+#s01 .s01-fdeck .s01-readout { right: 20px; top: 22px; width: 116px; height: 24px; gap: 6px; }
+#s01 .s01-fdeck .s01-readout em { width: 14px; height: 4px; border-radius: 2px; background: rgba(255, 180, 60, 0.35); box-shadow: none; }
+#s01 .s01-fdeck .s01-vents { left: 20px; bottom: 16px; gap: 4px; }
+#s01 .s01-fdeck .s01-vents i { height: 13px; }
+#s01 .s01-fdeck .s01-key { left: 198px; top: 42px; width: 24px; height: 24px; box-shadow: inset 0 0 0 2px var(--ss-gold-2), 0 0 0 3px rgba(245, 158, 11, 0.12), 0 0 18px rgba(245, 158, 11, 0.5); }
+#s01 .s01-fdeck .s01-key .ss-i { width: 10px; height: 10px; }
+#s01 .s01-fbtn { position: absolute; left: 0; right: 0; top: 224px; display: flex; justify-content: center; }
+#s01 .s01-fbtn .ss-btn { height: 52px; padding: 0 28px; font-size: 22px; gap: 10px; }
+#s01 .s01-fbtn .ss-btn .ss-i { width: 20px; height: 20px; }
+
+/* ===== Callouts ===== */
+#s01 .s01-c1 { left: 304px; top: 840px; max-width: 390px; }
+#s01 .s01-c2 { left: 724px; top: 840px; max-width: 390px; }
+</style>
+
+<div class="ss-stage ss-grain"></div>
+<div class="s01-spill"></div>
+
+<div class="s01-layers" aria-label="SSYNC layers in play: Metadata">
+  <b>LAYERS</b>
+  <i class="is-lit" title="Metadata"></i><i title="Visual"></i><i title="Text"></i><i title="Voice"></i><i title="Sound"></i><i title="Behavior"></i><i title="Signature"></i>
+</div>
+
+<!-- ============ LAPTOP · the landing hero, Sunday 7:52 pm ============ -->
+<div class="ss-laptop s01-laptop" style="--lw:1080px;--lh:675px">
+  <div class="ss-laptop__lid"><div class="ss-laptop__screen">
+    <div class="s01-hero">
+      <div class="ss-art ss-art--1 s01-sky" aria-hidden="true"></div>
+      <div class="ss-art ss-art--1 s01-starcore" aria-hidden="true"></div>
+      <div class="s01-stars" aria-hidden="true"><i style="left:27.94%;top:75.72%;width:1.79px;height:1.79px;opacity:0.38"></i><i style="left:84.08%;top:4.97%;width:1.36px;height:1.36px;opacity:0.29"></i><i style="left:55.17%;top:74.19%;width:1.69px;height:1.69px;opacity:0.69"></i><i style="left:31.27%;top:48.12%;width:1.80px;height:1.80px;opacity:0.66"></i><i style="left:76.29%;top:56.79%;width:1.15px;height:1.15px;opacity:0.26"></i><i style="left:86.54%;top:80.62%;width:1.82px;height:1.82px;opacity:0.32"></i><i style="left:28.71%;top:44.24%;width:1.22px;height:1.22px;opacity:0.22"></i><i style="left:93.49%;top:15.76%;width:1.95px;height:1.95px;opacity:0.23"></i><i style="left:92.48%;top:31.12%;width:1.56px;height:1.56px;opacity:0.39"></i><i style="left:15.92%;top:55.34%;width:1.01px;height:1.01px;opacity:0.55"></i><i style="left:38.08%;top:23.15%;width:1.34px;height:1.34px;opacity:0.69"></i><i style="left:17.23%;top:35.94%;width:1.62px;height:1.62px;opacity:0.60"></i><i style="left:16.08%;top:1.87%;width:1.44px;height:1.44px;opacity:0.21"></i><i style="left:23.30%;top:22.31%;width:1.68px;height:1.68px;opacity:0.57"></i><i style="left:2.63%;top:20.95%;width:1.39px;height:1.39px;opacity:0.22"></i><i style="left:93.63%;top:97.61%;width:1.84px;height:1.84px;opacity:0.26"></i><i style="left:31.18%;top:36.63%;width:1.01px;height:1.01px;opacity:0.45"></i><i style="left:82.80%;top:68.37%;width:1.39px;height:1.39px;opacity:0.65"></i><i style="left:58.20%;top:81.06%;width:1.76px;height:1.76px;opacity:0.27"></i><i style="left:83.86%;top:90.35%;width:1.31px;height:1.31px;opacity:0.21"></i><i style="left:67.65%;top:93.80%;width:1.47px;height:1.47px;opacity:0.39"></i><i style="left:14.64%;top:34.66%;width:1.13px;height:1.13px;opacity:0.38"></i><i style="left:52.33%;top:97.05%;width:2.00px;height:2.00px;opacity:0.64"></i><i style="left:88.49%;top:54.33%;width:1.61px;height:1.61px;opacity:0.64"></i><i style="left:40.05%;top:92.93%;width:1.66px;height:1.66px;opacity:0.31"></i><i style="left:72.98%;top:32.68%;width:1.82px;height:1.82px;opacity:0.44"></i><i style="left:1.47%;top:1.44%;width:2.00px;height:2.00px;opacity:0.52"></i><i style="left:79.04%;top:78.88%;width:1.42px;height:1.42px;opacity:0.57"></i><i style="left:1.32%;top:57.00%;width:1.23px;height:1.23px;opacity:0.22"></i><i style="left:35.25%;top:60.91%;width:1.74px;height:1.74px;opacity:0.60"></i><i style="left:7.72%;top:88.27%;width:1.73px;height:1.73px;opacity:0.39"></i><i style="left:41.04%;top:41.66%;width:1.44px;height:1.44px;opacity:0.28"></i><i style="left:82.57%;top:39.29%;width:1.91px;height:1.91px;opacity:0.27"></i><i style="left:83.93%;top:8.45%;width:1.02px;height:1.02px;opacity:0.47"></i><i style="left:59.80%;top:63.67%;width:1.78px;height:1.78px;opacity:0.31"></i><i style="left:57.12%;top:95.40%;width:1.13px;height:1.13px;opacity:0.35"></i><i style="left:86.34%;top:9.94%;width:1.57px;height:1.57px;opacity:0.22"></i><i style="left:88.36%;top:0.72%;width:1.42px;height:1.42px;opacity:0.44"></i><i style="left:24.04%;top:48.96%;width:1.44px;height:1.44px;opacity:0.29"></i><i style="left:22.77%;top:64.51%;width:1.73px;height:1.73px;opacity:0.62"></i><i style="left:50.36%;top:87.56%;width:1.81px;height:1.81px;opacity:0.44"></i><i style="left:89.06%;top:37.50%;width:1.01px;height:1.01px;opacity:0.48"></i><i style="left:78.96%;top:16.15%;width:1.85px;height:1.85px;opacity:0.57"></i><i style="left:57.06%;top:28.40%;width:1.90px;height:1.90px;opacity:0.70"></i><i style="left:5.42%;top:30.17%;width:1.65px;height:1.65px;opacity:0.21"></i><i style="left:8.28%;top:22.67%;width:1.78px;height:1.78px;opacity:0.21"></i><i style="left:66.68%;top:75.79%;width:1.14px;height:1.14px;opacity:0.67"></i><i style="left:44.02%;top:3.50%;width:1.77px;height:1.77px;opacity:0.31"></i><i style="left:19.27%;top:13.80%;width:1.42px;height:1.42px;opacity:0.30"></i><i style="left:13.26%;top:88.43%;width:1.53px;height:1.53px;opacity:0.42"></i><i style="left:89.34%;top:6.64%;width:1.07px;height:1.07px;opacity:0.41"></i><i style="left:38.82%;top:37.91%;width:1.26px;height:1.26px;opacity:0.33"></i><i style="left:2.93%;top:29.18%;width:1.06px;height:1.06px;opacity:0.65"></i><i style="left:32.73%;top:10.93%;width:1.08px;height:1.08px;opacity:0.35"></i><i style="left:80.58%;top:60.29%;width:1.10px;height:1.10px;opacity:0.28"></i><i style="left:46.12%;top:26.91%;width:1.07px;height:1.07px;opacity:0.21"></i><i style="left:85.25%;top:33.99%;width:1.38px;height:1.38px;opacity:0.65"></i><i style="left:19.77%;top:93.99%;width:1.30px;height:1.30px;opacity:0.67"></i><i style="left:2.16%;top:18.06%;width:1.08px;height:1.08px;opacity:0.48"></i><i style="left:2.67%;top:31.66%;width:1.20px;height:1.20px;opacity:0.53"></i><i style="left:49.51%;top:88.12%;width:1.41px;height:1.41px;opacity:0.68"></i><i style="left:28.31%;top:32.90%;width:1.17px;height:1.17px;opacity:0.61"></i><i style="left:4.93%;top:67.97%;width:1.57px;height:1.57px;opacity:0.46"></i><i style="left:98.77%;top:73.30%;width:1.87px;height:1.87px;opacity:0.54"></i><i style="left:32.26%;top:57.05%;width:1.72px;height:1.72px;opacity:0.50"></i><i style="left:86.89%;top:99.04%;width:1.06px;height:1.06px;opacity:0.29"></i><i style="left:75.34%;top:10.31%;width:1.61px;height:1.61px;opacity:0.60"></i><i style="left:22.00%;top:45.54%;width:1.36px;height:1.36px;opacity:0.66"></i><i style="left:69.43%;top:55.57%;width:1.32px;height:1.32px;opacity:0.46"></i><i style="left:75.84%;top:43.12%;width:1.39px;height:1.39px;opacity:0.33"></i><i style="left:83.60%;top:19.26%;width:1.87px;height:1.87px;opacity:0.34"></i><i style="left:25.55%;top:13.50%;width:1.43px;height:1.43px;opacity:0.32"></i></div>
+      <div class="s01-glow" aria-hidden="true"></div>
+
+      <nav class="s01-nav">
+        <span class="s01-brand"><img src="assets/icon.png" alt=""><span>StorySyncHQ</span></span>
+        <span class="s01-links"><span>StorySync Reader</span><span>StorySync Creator</span><span>The SSYNC Protocol</span><span>Privacy</span></span>
+      </nav>
+
+      <p class="ss-kicker s01-kick">THE LIBRARY CASSETTE · REBUILT FOR THE WEB</p>
+
+      <div class="s01-deck" aria-hidden="true">
+        <span class="s01-deck-top"></span>
+        <span class="s01-mouth"></span>
+        <span class="s01-lamp"></span>
+        <span class="s01-readout"><svg class="ss-i"><use href="#i-play-solid"/></svg>PLAY · SIDE A</span>
+        <span class="s01-vents"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+        <span class="s01-key"><svg class="ss-i"><use href="#i-play-solid"/></svg></span>
+      </div>
+
+      <div class="s01-well" aria-hidden="true">
+        <span class="s01-ghost s01-ghost--2"></span><span class="s01-ghost s01-ghost--1"></span>
+        <div class="s01-casbox">
+          <div class="ss-cassette s01-cas" style="--cw:340px">
+            <span class="ss-screw" style="left:9px;top:9px"></span>
+            <span class="ss-screw" style="right:9px;top:9px"></span>
+            <div class="ss-cassette__label">
+              <div class="ss-tape__stripe"></div>
+              <div class="ss-tape__band"><span class="ss-tape__holes"><i></i><i></i></span><span>STORYSYNC</span></div>
+              <div class="ss-tape__field">
+                <div class="ss-tape__title">The Brave Little Star</div>
+                <div class="ss-tape__meta">SIDE A · PRESS PLAY</div>
+              </div>
+            </div>
+            <div class="ss-cassette__window">
+              <span class="s01-pack s01-pack--l"></span><span class="s01-pack s01-pack--r"></span>
+              <span class="s01-reel"><svg class="ss-reel s01-r0"><use href="#i-reel"/></svg><svg class="ss-reel s01-r1"><use href="#i-reel"/></svg><svg class="ss-reel s01-r2"><use href="#i-reel"/></svg><i></i></span>
+              <span class="s01-reel"><svg class="ss-reel s01-r0"><use href="#i-reel"/></svg><svg class="ss-reel s01-r1"><use href="#i-reel"/></svg><svg class="ss-reel s01-r2"><use href="#i-reel"/></svg><i></i></span>
+            </div>
+            <div class="ss-cassette__foot"></div>
+          </div>
+        </div>
+        <span class="s01-spill-slot"></span>
+      </div>
+      <span class="s01-lip" aria-hidden="true"></span>
+
+      <h1 class="s01-h1">Press play on the stories you make together.</h1>
+      <p class="s01-sub">Photos of their drawings. Their voice on every page. A little music underneath. One link that plays anywhere.</p>
+
+      <div class="s01-cta">
+        <span class="ss-btn ss-btn--gold ss-btn--xl s01-pressed"><svg class="ss-i"><use href="#i-play-solid"/></svg>Press play</span>
+        <span class="s01-hint">or scroll to the two doors<svg class="ss-i"><use href="#i-chevron-down"/></svg></span>
+      </div>
+
+      <div class="ss-tape s01-fold-play" aria-hidden="true">
+        <div class="ss-tape__stripe"></div>
+        <div class="ss-tape__band"><span class="ss-tape__holes"><i></i><i></i></span><span>SIDE A · RECEIVE</span></div>
+      </div>
+      <div class="s01-fold-make" aria-hidden="true">
+        <span class="ss-dot ss-dot--live"></span><span class="ss-kicker">THE STUDIO · CREATE</span>
+      </div>
+    </div>
+  </div></div>
+  <div class="ss-laptop__base"></div>
+</div>
+
+<!-- ============ PHONE · the same landing at 390, already calm ============ -->
+<div class="ss-phone s01-phone">
+  <div class="ss-phone__screen">
+    <div class="ss-phone__island"></div>
+    <div class="s01-p"></div>
+    <div class="ss-statusbar"><span>7:52</span><span class="ss-statusbar__icons"><svg class="ss-i"><use href="#i-signal"/></svg><svg class="ss-i"><use href="#i-wifi"/></svg><svg class="ss-i"><use href="#i-battery"/></svg></span></div>
+
+    <header class="s01-p-head">
+      <span class="s01-p-brand"><img src="assets/icon.png" alt=""><span>StorySyncHQ</span></span>
+      <span class="s01-p-menu"><svg class="ss-i"><use href="#i-menu"/></svg></span>
+    </header>
+
+    <div class="s01-p-col">
+      <div class="ss-tape s01-pdoor">
+        <div class="ss-tape__stripe"></div>
+        <div class="ss-tape__band"><span class="ss-tape__holes"><i></i><i></i></span><span>SIDE A · RECEIVE</span></div>
+        <div class="ss-tape__field">
+          <div class="ss-tape__title">Play a story</div>
+          <p>Open a tape someone made for you: a shared link, a .storysync file, or our demo tape.</p>
+          <span class="s01-dreels"><svg class="ss-reel"><use href="#i-reel"/></svg><svg class="ss-reel"><use href="#i-reel"/></svg></span>
+        </div>
+      </div>
+
+      <div class="s01-mdoor">
+        <div class="s01-mdoor-k"><span class="ss-dot ss-dot--live"></span><span class="ss-kicker">THE STUDIO · CREATE</span></div>
+        <h3>Make a story</h3>
+        <p>Snap the drawings. Record the voice, page by page. The Stage shows precisely what your listener will get — then hand it over as one link.</p>
+      </div>
+
+      <div class="ss-seam s01-p-seam"></div>
+
+      <div class="s01-magic">
+        <span class="ss-kicker">READ ALONG. LISTEN. FEEL.</span>
+        <h3>Remember the magic?</h3>
+        <blockquote>Library books with cassette tapes. Reading along while the narrator guided you page by page. Background music that made every story feel alive.</blockquote>
+        <p class="s01-wedge">Now any storybook can read itself — in the voice and mood you choose.</p>
+      </div>
+
+      <div class="s01-surf">
+        <span class="ss-meta">THREE SURFACES · ONE FILE</span>
+        <div class="s01-row"><span><svg class="ss-i"><use href="#i-headphones"/></svg></span><p><b>StorySync Reader</b> — plays any tape in any browser. No app, no account.</p></div>
+        <div class="s01-row"><span><svg class="ss-i"><use href="#i-mic"/></svg></span><p><b>StorySync Creator</b> — pictures, voices, a little music and timing, made together.</p></div>
+        <div class="s01-row"><span><svg class="ss-i"><use href="#i-package"/></svg></span><p><b>SSYNC Protocol</b> — the open file between them. Like PDF, for storybooks.</p></div>
+      </div>
+
+      <div class="s01-foot">
+        <p>Nothing leaves this device until a <span class="s01-nw">grown-up</span> taps through the gate. No trackers, ever.</p>
+        <p>A product of Island Development Crew LLC ·<br>Part of the SyncHQ Suite</p>
+      </div>
+    </div>
+
+    <div class="ss-homebar"></div>
+  </div>
+</div>
+
+<!-- ============ SPEC FIGURE · reduced motion ============ -->
+<figure class="s01-fig" aria-label="Reduced motion: the tape is already in">
+  <span class="s01-tab"><i></i>REDUCED MOTION</span>
+  <div class="s01-fig-frame">
+    <div class="s01-fig-in">
+      <div class="ss-art ss-art--1 s01-fsky"></div>
+      <div class="ss-art ss-art--1 s01-fcore"></div>
+      <div class="s01-stars"><i style="left:27.94%;top:75.72%;width:2.86px;height:2.86px;opacity:0.38"></i><i style="left:31.27%;top:48.12%;width:2.88px;height:2.88px;opacity:0.66"></i><i style="left:28.71%;top:44.24%;width:1.95px;height:1.95px;opacity:0.22"></i><i style="left:15.92%;top:55.34%;width:1.62px;height:1.62px;opacity:0.55"></i><i style="left:16.08%;top:1.87%;width:2.30px;height:2.30px;opacity:0.21"></i><i style="left:93.63%;top:97.61%;width:2.94px;height:2.94px;opacity:0.26"></i><i style="left:58.20%;top:81.06%;width:2.82px;height:2.82px;opacity:0.27"></i><i style="left:14.64%;top:34.66%;width:1.81px;height:1.81px;opacity:0.38"></i><i style="left:40.05%;top:92.93%;width:2.66px;height:2.66px;opacity:0.31"></i><i style="left:79.04%;top:78.88%;width:2.27px;height:2.27px;opacity:0.57"></i><i style="left:7.72%;top:88.27%;width:2.77px;height:2.77px;opacity:0.39"></i><i style="left:83.93%;top:8.45%;width:1.63px;height:1.63px;opacity:0.47"></i><i style="left:86.34%;top:9.94%;width:2.51px;height:2.51px;opacity:0.22"></i><i style="left:22.77%;top:64.51%;width:2.77px;height:2.77px;opacity:0.62"></i><i style="left:78.96%;top:16.15%;width:2.96px;height:2.96px;opacity:0.57"></i><i style="left:8.28%;top:22.67%;width:2.85px;height:2.85px;opacity:0.21"></i><i style="left:19.27%;top:13.80%;width:2.27px;height:2.27px;opacity:0.30"></i><i style="left:38.82%;top:37.91%;width:2.02px;height:2.02px;opacity:0.33"></i><i style="left:80.58%;top:60.29%;width:1.76px;height:1.76px;opacity:0.28"></i><i style="left:19.77%;top:93.99%;width:2.08px;height:2.08px;opacity:0.67"></i><i style="left:49.51%;top:88.12%;width:2.26px;height:2.26px;opacity:0.68"></i><i style="left:98.77%;top:73.30%;width:2.99px;height:2.99px;opacity:0.54"></i><i style="left:75.34%;top:10.31%;width:2.58px;height:2.58px;opacity:0.60"></i><i style="left:75.84%;top:43.12%;width:2.22px;height:2.22px;opacity:0.33"></i></div>
+      <div class="s01-fglow"></div>
+      <div class="s01-fdeck">
+        <span class="s01-deck-top"></span>
+        <span class="s01-mouth"></span>
+        <span class="s01-lamp"></span>
+        <span class="s01-readout"><svg class="ss-i"><use href="#i-play-solid"/></svg><em></em><em></em><em></em></span>
+        <span class="s01-vents"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+        <span class="s01-key"><svg class="ss-i"><use href="#i-play-solid"/></svg></span>
+      </div>
+      <div class="s01-fwell">
+        <div class="s01-fcas">
+          <span class="ss-screw" style="left:7px;top:7px"></span><span class="ss-screw" style="right:7px;top:7px"></span>
+          <div class="s01-flabel"><b></b><span><i></i><i></i></span></div>
+        </div>
+      </div>
+      <div class="s01-fbtn"><span class="ss-btn ss-btn--gold"><svg class="ss-i"><use href="#i-play-solid"/></svg>Press play</span></div>
+    </div>
+  </div>
+</figure>
+
+<!-- ============ CALLOUTS ============ -->
+<div class="ss-callout s01-c1"><b>The one spectacle</b>Press play slides the tape into the deck in 760 ms, ease-out, then opens the demo's cover gate. Every other screen in StorySync is calm; with reduced motion the tape is simply already in.</div>
+<div class="ss-callout s01-c2"><b>One light</b>The single bright star from page 1 sits exactly behind the deck's play key: the brand's gold and the story's light are the same point.</div>
+</section>

@@ -1,0 +1,541 @@
+<section class="ss-screen" id="s05" style="--w:1600px;--h:1000px" aria-label="One link, Grandma's iPhone">
+<style>
+#s05 .s05-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
+#s05 .ss-stage::after { bottom: 158px; }
+#s05 .s05-haze {
+  position: absolute; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(440px 380px at 1368px 610px, rgba(255, 201, 60, 0.11), transparent 70%),
+    radial-gradient(520px 300px at 480px 40px, rgba(255, 201, 60, 0.06), transparent 70%);
+}
+
+/* ---------- passport ribbon (reference diagram, behind everything) ---------- */
+#s05 .s05-ribbon { position: absolute; left: 0; top: 0; width: 1600px; height: 1000px; z-index: 1; overflow: visible; filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.55)); }
+
+/* ---------- tablet: native 1180x820, scaled .76 ---------- */
+#s05 .s05-tab { position: absolute; left: 24px; top: 30px; z-index: 2; transform: scale(0.76); transform-origin: 0 0; }
+#s05 .t-bg {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(620px 300px at 50% -60px, rgba(255, 201, 60, 0.12), transparent 70%),
+    radial-gradient(760px 520px at 100% 105%, rgba(124, 107, 255, 0.13), transparent 65%),
+    linear-gradient(180deg, #0e1324 0%, #0a0e1a 100%);
+}
+#s05 .t-status {
+  position: absolute; left: 0; right: 0; top: 0; height: 32px; padding: 0 30px;
+  display: flex; align-items: center; justify-content: space-between;
+  font: 600 14px/1 var(--ss-ui); color: var(--ss-fg-3);
+}
+#s05 .t-status__i { display: flex; gap: 8px; align-items: center; }
+#s05 .t-status .ss-i { width: 16px; height: 16px; }
+#s05 .t-slot {
+  position: absolute; left: 270px; top: 19px; width: 640px; height: 14px; z-index: 3;
+  border-radius: 7px; background: #05070d;
+  box-shadow: inset 0 4px 6px rgba(0, 0, 0, 0.95), inset 0 -1px 0 rgba(255, 255, 255, 0.07), 0 1px 0 rgba(255, 255, 255, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.5);
+}
+#s05 .t-label {
+  position: absolute; left: 290px; top: 26px; width: 600px; height: 176px; z-index: 2;
+  box-shadow: 0 30px 60px -24px rgba(0, 0, 0, 0.85), 0 0 90px rgba(255, 201, 60, 0.08);
+}
+#s05 .t-label::after {
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 18px; pointer-events: none;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.5), transparent);
+}
+#s05 .t-field { display: flex; align-items: center; gap: 18px; padding: 13px 18px 14px; }
+#s05 .t-inset {
+  width: 72px; height: 72px; flex: none; padding: 3px;
+  border: 2px solid var(--ss-ink); border-radius: 6px; overflow: hidden; background: #fbf7ec;
+  box-shadow: 2px 3px 0 rgba(30, 26, 22, 0.12);
+}
+#s05 .t-inset svg { width: 100%; height: 100%; display: block; border-radius: 2px; }
+#s05 .t-txt { min-width: 0; }
+#s05 .t-label .ss-tape__meta { margin-top: 9px; font-size: 13px; letter-spacing: 0.13em; }
+#s05 .t-label .t-meta2 { margin-top: 3px; color: var(--ss-ink-2); }
+
+#s05 .t-chips {
+  position: absolute; left: 0; right: 0; top: 222px;
+  display: flex; justify-content: center; align-items: center; gap: 6px;
+}
+#s05 .t-chip {
+  width: 80px; height: 26px; display: grid; place-items: center;
+  border: 1.5px solid var(--ss-ink); border-radius: 6px; background: var(--f);
+  font: 500 12px/1 var(--ss-mono); letter-spacing: 0.01em; color: var(--ss-ink);
+  box-shadow: 0 6px 14px -8px rgba(0, 0, 0, 0.8);
+}
+#s05 .t-chip--sig { background: var(--ss-label); border: 2px solid var(--ss-red); font-weight: 600; }
+#s05 .t-note {
+  display: inline-flex; align-items: center; gap: 6px; margin-left: 8px;
+  font: 500 13px/1 var(--ss-mono); letter-spacing: 0.1em; color: var(--ss-gold-2);
+}
+#s05 .t-note .ss-i { width: 14px; height: 14px; }
+
+#s05 .t-card {
+  position: absolute; left: 40px; top: 262px; width: 1100px; height: 538px; padding: 24px;
+  display: grid; grid-template-columns: 1fr 1fr; column-gap: 32px;
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.035));
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  box-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+#s05 .t-col { display: flex; flex-direction: column; min-width: 0; }
+#s05 .t-head { height: 34px; display: flex; align-items: center; justify-content: space-between; }
+#s05 .t-head h3 { font: 600 26px/1 var(--ss-ui); letter-spacing: -0.015em; color: #fff; }
+#s05 .t-made {
+  display: inline-flex; align-items: center; gap: 7px;
+  font: 500 12.5px/1 var(--ss-mono); letter-spacing: 0.16em; color: var(--ss-gold-2);
+}
+#s05 .t-made .ss-i { width: 14px; height: 14px; }
+#s05 .t-steps { margin-top: 14px; display: flex; flex-direction: column; gap: 4px; }
+#s05 .t-steps li {
+  height: 28px; display: flex; align-items: center; gap: 12px; white-space: nowrap;
+  font: 400 14px/1 var(--ss-mono); color: var(--ss-fg-2);
+}
+#s05 .t-done {
+  width: 18px; height: 18px; flex: none; border-radius: 50%;
+  display: grid; place-items: center; background: var(--ss-gold); color: var(--ss-ink);
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.45);
+}
+#s05 .t-done .ss-i { width: 12px; height: 12px; }
+#s05 .t-steps li.is-planned { color: #6b7591; }
+#s05 .t-todo { width: 18px; height: 18px; flex: none; border-radius: 50%; border: 1.5px dashed rgba(255, 255, 255, 0.3); }
+#s05 .t-next { height: 22px; padding: 0 9px; font: 600 12px/1 var(--ss-ui); }
+
+#s05 .t-meter { margin-top: 18px; }
+#s05 .t-meter__lbl {
+  display: flex; align-items: center; justify-content: space-between;
+  font: 500 12px/1 var(--ss-mono); letter-spacing: 0.14em; color: var(--ss-fg-3);
+}
+#s05 .t-legend { display: inline-flex; align-items: center; gap: 8px; letter-spacing: 0.12em; }
+#s05 .t-legend i { width: 12px; height: 12px; border-radius: 3px; }
+#s05 .t-legend .k-pic { background: var(--ss-ink); border: 2px solid var(--ss-paper); }
+#s05 .t-legend .k-voi { background: var(--ss-gold); margin-left: 12px; }
+#s05 .t-tape {
+  position: relative; margin-top: 9px; width: 480px; height: 14px; border-radius: 2px;
+  display: flex; align-items: center; padding: 0 2px;
+  background: linear-gradient(180deg, #5b3a24, #3d2616);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 6px 12px -6px rgba(0, 0, 0, 0.7);
+}
+#s05 .t-fill {
+  display: flex; height: 10px; width: 62px; flex: none; border-radius: 1px; overflow: hidden;
+  box-shadow: 0 0 0 1px rgba(255, 253, 246, 0.55);
+}
+#s05 .t-seg { display: flex; flex: 1 0 0; }
+#s05 .t-seg + .t-seg { border-left: 1px solid rgba(255, 253, 246, 0.45); }
+#s05 .t-seg i { flex: 0 0 72%; background: linear-gradient(180deg, #3a332c, var(--ss-ink)); }
+#s05 .t-seg b { flex: 1 0 0; background: var(--ss-gold-2); }
+
+#s05 .t-wide { width: 100%; }
+#s05 .t-gold { margin-top: auto; box-shadow: 0 10px 22px -14px rgba(245, 158, 11, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.45); }
+#s05 .t-back { margin-top: 10px; }
+#s05 .t-del {
+  position: relative; margin-top: 18px; height: 60px;
+  color: #ffb9ad; background: rgba(227, 69, 47, 0.07); border: 1.5px solid rgba(227, 69, 47, 0.72);
+}
+#s05 .t-del .t-delicon { width: 30px; height: 26px; flex: none; }
+#s05 .t-del .t-next { position: absolute; right: 16px; top: -11px; background: linear-gradient(rgba(124, 107, 255, 0.2), rgba(124, 107, 255, 0.2)), #141a2c; }
+#s05 .t-fine { margin-top: 12px; font: 400 14px/1.45 var(--ss-ui); color: #6f7a96; text-wrap: pretty; }
+
+#s05 .t-lbl {
+  height: 34px; display: flex; align-items: center; gap: 8px;
+  font: 500 12.5px/1 var(--ss-mono); letter-spacing: 0.16em; color: var(--ss-fg-3);
+}
+#s05 .t-lbl .ss-i { width: 14px; height: 14px; color: var(--ss-gold-2); }
+#s05 .t-url {
+  margin-top: 14px; height: 56px; display: flex; align-items: center; gap: 8px; padding: 0 8px 0 14px;
+  border-radius: 14px; background: rgba(0, 0, 0, 0.42); border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+#s05 .t-url__txt { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; font: 400 13px/1 var(--ss-mono); color: var(--ss-fg-3); }
+#s05 .t-url__txt b { font-weight: 500; color: #fff; }
+#s05 .t-copy {
+  flex: none; height: 38px; display: inline-flex; align-items: center; gap: 7px; padding: 0 10px;
+  border-radius: 10px; border: 1.5px solid rgba(245, 158, 11, 0.75); background: rgba(245, 158, 11, 0.08);
+  font: 600 14px/1 var(--ss-ui); color: var(--ss-gold-2);
+}
+#s05 .t-copy .ss-i { width: 15px; height: 15px; }
+#s05 .t-qr {
+  margin-top: 24px; display: flex; align-items: center; gap: 22px; padding: 20px;
+  border-radius: 18px; background: var(--ss-paper); border: 2px solid var(--ss-ink); color: var(--ss-ink);
+  box-shadow: 0 24px 40px -24px rgba(0, 0, 0, 0.8);
+}
+#s05 .t-qr__k {
+  display: flex; align-items: center; gap: 8px;
+  font: 500 12px/1.2 var(--ss-mono); letter-spacing: 0.16em; color: var(--ss-ink-3);
+}
+#s05 .t-qr__k .ss-i { width: 15px; height: 15px; color: var(--ss-ink-2); }
+#s05 .t-qr__s { margin-top: 12px; font: 400 17px/1.45 var(--ss-ui); color: var(--ss-ink-2); text-wrap: pretty; }
+#s05 .t-share {
+  position: relative; margin-top: auto;
+  background: linear-gradient(180deg, #6d5df0, #5b4cdd);
+  box-shadow: inset 0 3px 10px rgba(10, 6, 40, 0.5), inset 0 -1px 0 rgba(255, 255, 255, 0.12), 0 6px 14px -10px rgba(124, 107, 255, 0.5);
+  transform: translateY(1px);
+}
+
+/* ---------- spec figure: Grandma's cover gate, built at 390x844 ---------- */
+#s05 .s05-fig {
+  position: absolute; left: 965px; top: 78px; width: 180px; height: 390px; z-index: 2;
+  border-radius: 12px; background: #0f1426; border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 24px 48px -24px rgba(0, 0, 0, 0.7);
+}
+#s05 .s05-fig__clip { position: absolute; inset: 0; border-radius: 11px; overflow: hidden; }
+#s05 .s05-fig__in { position: absolute; left: 0; top: 0; width: 390px; height: 844px; transform: scale(0.4615); transform-origin: 0 0; overflow: hidden; }
+#s05 .s05-fig__tab {
+  position: absolute; z-index: 5; left: 12px; top: -11px; height: 22px;
+  display: inline-flex; align-items: center; gap: 7px; padding: 0 10px;
+  border-radius: 999px; background: var(--ss-navy); border: 1px solid rgba(255, 255, 255, 0.16);
+  font: 500 11px/1 var(--ss-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ss-fg-2);
+  white-space: nowrap;
+}
+#s05 .s05-fig__tab::before {
+  content: ""; width: 6px; height: 6px; flex: none; border-radius: 50%;
+  background: var(--ss-gold); box-shadow: 0 0 6px rgba(245, 158, 11, 0.7);
+}
+#s05 .g-bg { position: absolute; inset: -70px; filter: blur(22px) brightness(0.5) saturate(1.15); }
+#s05 .g-bg svg, #s05 .p-room svg { width: 100%; height: 100%; display: block; }
+#s05 .g-dim { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(6, 9, 16, 0.3), rgba(6, 9, 16, 0.62)); }
+#s05 .g-note {
+  position: absolute; left: 14px; right: 14px; top: 66px; padding: 18px 20px 20px;
+  border-radius: 30px; background: rgba(52, 58, 82, 0.66); border: 1px solid rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(20px); box-shadow: 0 20px 40px -20px rgba(0, 0, 0, 0.6);
+}
+#s05 .g-note__app { display: flex; align-items: center; gap: 12px; font: 600 24px/1 var(--ss-ui); color: rgba(255, 255, 255, 0.78); }
+#s05 .g-note__ic {
+  width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center;
+  background: linear-gradient(180deg, #8f80ff, #6b5bf0); color: #fff;
+}
+#s05 .g-note__ic .ss-i { width: 24px; height: 24px; }
+#s05 .g-note p { margin-top: 12px; font: 500 25px/1.3 var(--ss-ui); color: #fff; }
+#s05 .g-col { position: absolute; left: 24px; right: 24px; top: 244px; display: flex; flex-direction: column; }
+#s05 .g-shell {
+  height: 56px; display: flex; align-items: center; gap: 16px; padding: 0 18px;
+  border: 3px solid var(--ss-ink); border-bottom: 0; border-radius: 16px 16px 0 0;
+  background: linear-gradient(180deg, #4a4540 0%, #3b3733 62%, #2f2b28 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+#s05 .g-shell .ss-reel { width: 34px; height: 34px; }
+#s05 .g-shell span { flex: 1; height: 20px; border-radius: 7px; border: 2px solid rgba(0, 0, 0, 0.45); background: linear-gradient(180deg, rgba(20, 18, 16, 0.85), rgba(60, 55, 50, 0.55)); }
+#s05 .g-label { border-radius: 0 0 16px 16px; box-shadow: 0 30px 50px -20px rgba(0, 0, 0, 0.7); }
+#s05 .g-label .ss-tape__stripe { height: 10px; }
+#s05 .g-label .ss-tape__band { padding: 8px 16px; font-size: 24px; }
+#s05 .g-label .ss-tape__holes i { width: 16px; height: 16px; }
+#s05 .g-label .ss-tape__field { padding: 14px 18px 30px; background: var(--ss-paper); }
+#s05 .g-lwrap { position: relative; }
+#s05 .g-next {
+  position: absolute; right: 16px; bottom: -22px; z-index: 2; height: 44px; padding: 0 18px;
+  border-width: 2px; font: 600 24px/1 var(--ss-ui);
+  background: linear-gradient(rgba(124, 107, 255, 0.24), rgba(124, 107, 255, 0.24)), #141a2c;
+  box-shadow: 0 8px 16px -8px rgba(0, 0, 0, 0.7);
+}
+#s05 .g-label .ss-tape__title { font-size: 36px; line-height: 1.04; }
+#s05 .g-label .ss-tape__author { margin-top: 8px; font-size: 25px; }
+#s05 .g-label .ss-tape__meta { margin-top: 12px; font-size: 24px; line-height: 1.3; letter-spacing: 0.06em; }
+#s05 .g-btn { margin-top: 36px; height: 96px; font-size: 36px; gap: 14px; }
+#s05 .g-btn .ss-i { width: 34px; height: 34px; }
+#s05 .g-micro { margin-top: 20px; text-align: center; font: 500 24px/1.4 var(--ss-mono); letter-spacing: 0.04em; color: rgba(226, 232, 240, 0.74); }
+
+#s05 .s05-tapline {
+  position: absolute; left: 1054px; top: 476px; width: 2px; height: 248px; z-index: 1;
+  background: repeating-linear-gradient(180deg, rgba(255, 201, 60, 0.5) 0 4px, transparent 4px 9px);
+}
+#s05 .s05-tapline::before, #s05 .s05-tapline::after { content: ""; position: absolute; left: 50%; border-radius: 50%; transform: translateX(-50%); }
+#s05 .s05-tapline::before { top: -4px; width: 8px; height: 8px; background: var(--ss-label); box-shadow: 0 0 0 4px rgba(255, 201, 60, 0.16); }
+#s05 .s05-tapline::after { bottom: -3px; width: 7px; height: 7px; border: 1.5px solid rgba(255, 201, 60, 0.85); background: var(--ss-navy); }
+
+/* ---------- iPhone: Grandma's Reader at 6:15 ---------- */
+#s05 .s05-phone { position: absolute; left: 1158px; top: 64px; z-index: 3; }
+#s05 .p-room { position: absolute; inset: -90px; filter: blur(40px) brightness(0.55) saturate(1.2); }
+#s05 .p-vig {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(150px 60px at 92px 668px, rgba(255, 201, 60, 0.12), transparent 72%),
+    radial-gradient(130% 80% at 50% 32%, transparent 40%, rgba(4, 6, 12, 0.72) 100%),
+    linear-gradient(180deg, rgba(6, 9, 16, 0.3) 0%, transparent 16%, transparent 54%, rgba(6, 9, 16, 0.5) 76%, rgba(6, 9, 16, 0.78) 100%);
+}
+#s05 .p-deck {
+  position: absolute; left: 16px; top: 58px; width: 290px; height: 40px; z-index: 5;
+  display: flex; align-items: center; justify-content: space-between; padding: 0 18px 0 6px;
+  border-radius: 20px; background: rgba(8, 11, 21, 0.5); border: 1px solid rgba(255, 255, 255, 0.13);
+  backdrop-filter: blur(14px);
+}
+#s05 .dk-win { position: relative; width: 62px; height: 30px; flex: none; }
+#s05 .dk-pack {
+  position: absolute; top: 50%; border-radius: 50%; transform: translate(-50%, -50%);
+  background:
+    radial-gradient(circle, transparent 0 52%, rgba(0, 0, 0, 0.28) 100%),
+    repeating-radial-gradient(circle, #5b3a24 0 1.1px, #45291a 1.1px 2.2px);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+#s05 .dk-pack--a { left: 15px; width: 29px; height: 29px; }
+#s05 .dk-pack--b { left: 47px; width: 24px; height: 24px; }
+#s05 .dk-reel { position: absolute; top: 50%; width: 18px; height: 18px; border-radius: 50%; transform: translate(-50%, -50%) rotate(18deg); }
+#s05 .dk-reel .ss-reel { width: 18px; height: 18px; display: block; }
+#s05 .dk-reel::after {
+  content: ""; position: absolute; inset: -1px; border-radius: 50%; filter: blur(1px);
+  background: conic-gradient(from 20deg, transparent 0 20%, rgba(255, 253, 246, 0.28) 30%, transparent 42% 70%, rgba(255, 253, 246, 0.22) 80%, transparent 92%);
+}
+#s05 .dk-reel--a { left: 15px; }
+#s05 .dk-reel--b { left: 47px; }
+#s05 .dk-count { font: 500 12px/1 var(--ss-mono); letter-spacing: 0.14em; color: var(--ss-fg-2); white-space: nowrap; }
+#s05 .dk-rule { width: 1px; height: 18px; flex: none; background: rgba(255, 255, 255, 0.16); }
+#s05 .dk-voice { display: inline-flex; align-items: center; gap: 6px; font: 600 13px/1 var(--ss-ui); color: #fff; }
+#s05 .dk-voice .ss-i { width: 12px; height: 12px; color: var(--ss-gold-2); }
+#s05 .dk-next { height: 20px; padding: 0 8px; gap: 5px; font: 600 11px/1 var(--ss-ui); letter-spacing: 0.02em; }
+#s05 .p-photo {
+  position: absolute; left: 16px; top: 112px; width: 358px; height: 358px; padding: 8px;
+  border-radius: 16px; overflow: hidden; background: #fbf7ec;
+  box-shadow: 0 34px 60px -24px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+#s05 .p-photo svg { width: 100%; height: 100%; display: block; border-radius: 6px; }
+#s05 .p-photo::after {
+  content: ""; position: absolute; inset: 0; border-radius: 16px; pointer-events: none;
+  background: radial-gradient(circle at 48% 44%, transparent 56%, rgba(122, 74, 42, 0.18) 100%);
+}
+#s05 .p-text { position: absolute; left: 24px; top: 508px; width: 342px; font-size: 34px; font-weight: 500; line-height: 1.34; }
+#s05 .p-text .s1 { display: block; text-wrap: balance; }
+#s05 .p-text .said { color: #fbeed3; }
+#s05 .p-text .now { text-shadow: 0 0 26px rgba(255, 201, 60, 0.55), 0 0 2px rgba(255, 201, 60, 0.4); }
+#s05 .p-tape { position: absolute; left: 16px; right: 16px; top: 822px; height: 3px; display: flex; gap: 4px; z-index: 5; }
+#s05 .p-tape i { position: relative; flex: 1; border-radius: 2px; overflow: hidden; background: rgba(255, 255, 255, 0.18); }
+#s05 .p-tape i::before { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--p, 0%); background: var(--ss-gold); }
+#s05 .p-tape::after { content: ""; position: absolute; left: 0; width: 46.5%; top: -2px; bottom: -2px; border-radius: 3px; box-shadow: 0 0 10px rgba(245, 158, 11, 0.45); pointer-events: none; }
+
+/* ---------- passport stamps ---------- */
+#s05 .s05-stamp {
+  position: absolute; top: 730px; width: 224px; height: 92px; z-index: 4;
+  padding: 8px 14px; border: 2px solid var(--ss-ink); border-radius: 8px; color: var(--ss-ink);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55), transparent 45%), var(--ss-paper);
+  box-shadow: 0 18px 26px -14px rgba(0, 0, 0, 0.85), 0 2px 0 rgba(0, 0, 0, 0.3);
+}
+#s05 .s05-stamp__k { font: 600 11px/13px var(--ss-mono); letter-spacing: 0.16em; color: var(--ss-red); }
+#s05 .s05-stamp__w { margin-top: 5px; font: 500 11px/13px var(--ss-mono); color: var(--ss-ink); }
+#s05 .s05-stamp__d { margin-top: 2px; font: 400 11px/13px var(--ss-mono); color: var(--ss-ink-2); }
+#s05 .s05-ring {
+  position: absolute; right: 9px; top: 8px; width: 34px; height: 34px;
+  display: grid; place-items: center; border-radius: 50%;
+  border: 2.5px solid var(--ss-red); color: var(--ss-red);
+  transform: rotate(-14deg); opacity: 0.92; filter: url(#s05-ink);
+}
+#s05 .s05-ring::before { content: ""; position: absolute; inset: 2px; border-radius: 50%; border: 1px solid rgba(227, 69, 47, 0.55); }
+#s05 .s05-ring .ss-i { width: 18px; height: 18px; }
+#s05 .s05-arw {
+  position: absolute; z-index: 5; top: 767px; width: 18px; height: 18px; margin-left: -9px;
+  display: grid; place-items: center; border-radius: 50%;
+  background: var(--ss-paper); border: 1.5px solid var(--ss-ink); color: var(--ss-ink);
+  box-shadow: 0 3px 6px -2px rgba(0, 0, 0, 0.6);
+}
+#s05 .s05-arw .ss-i { width: 11px; height: 11px; }
+
+/* ---------- callouts + layers strip ---------- */
+#s05 .s05-co { top: 852px; max-width: 352px; }
+#s05 .s05-layers {
+  position: absolute; left: 24px; top: 962px; width: 236px; height: 24px; z-index: 4;
+  display: flex; align-items: center; gap: 9px; padding: 0 12px;
+  border-radius: 999px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.12);
+  font: 500 10px/1 var(--ss-mono); letter-spacing: 0.16em; color: var(--ss-fg-3);
+}
+#s05 .s05-layers span { margin-right: auto; }
+#s05 .s05-layers i { width: 10px; height: 10px; border-radius: 50%; background: var(--f); border: 1.5px solid var(--ss-ink); box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18); }
+#s05 .s05-layers i.sig { border-color: var(--ss-red); box-shadow: 0 0 0 1px rgba(227, 69, 47, 0.5), 0 0 8px rgba(227, 69, 47, 0.55); }
+</style>
+
+<svg class="s05-defs" width="0" height="0" aria-hidden="true" focusable="false"><defs>
+<filter id="s05-crayon" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency=".8" numOctaves="2" seed="4" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="3" xChannelSelector="R" yChannelSelector="G"/></filter>
+<pattern id="s05-hatch-or" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(30)"><path d="M0 0V9" stroke="#F08A24" stroke-width="2.4" opacity=".8"/></pattern>
+<clipPath id="s05-c3room"><path clip-rule="evenodd" d="M0 0H300V300H0Z M40 40V260H260V40Z"/></clipPath>
+<clipPath id="s05-c3win"><rect x="44" y="44" width="212" height="212"/></clipPath>
+<clipPath id="s05-c3bed"><rect x="55" y="200" width="90" height="45" rx="4"/></clipPath>
+<symbol id="s05-d1" viewBox="0 0 300 300"><rect width="300" height="300" fill="#FBF7EC"/><g filter="url(#s05-crayon)" stroke-linecap="round"><path d="M282.5 5.5 L293.7 85.3 L226.6 6 L296.2 205.7 L170.4 7.1 L243.4 210.9 L112.4 3.3 L185.9 206.2 L59 9.9 L128.4 207.2 L5 7.5 L74.3 207.4 L4.5 123 L18.9 211.5" fill="none" stroke="#2F6BD8" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/><path d="M187.9 87.9 L204.1 65.6 M211.2 159.9 L237.5 168.4 M163.4 203 L169.1 230 M136.6 203 L130.9 230 M88.8 159.9 L62.5 168.4 M112.1 87.9 L95.9 65.6" stroke="#F08A24" stroke-width="6" stroke-linecap="round" fill="none"/><path d="M150 48 L174.3 106.5 L237.5 111.6 L189.4 152.8 L204.1 214.4 L150 181.4 L95.9 214.4 L110.6 152.8 L62.5 111.6 L125.7 106.5Z" fill="#F7C21B"/><path d="M150 48 L174.3 106.5 L237.5 111.6 L189.4 152.8 L204.1 214.4 L150 181.4 L95.9 214.4 L110.6 152.8 L62.5 111.6 L125.7 106.5Z" fill="url(#s05-hatch-or)"/><path d="M150 48 L174.3 106.5 L237.5 111.6 L189.4 152.8 L204.1 214.4 L150 181.4 L95.9 214.4 L110.6 152.8 L62.5 111.6 L125.7 106.5Z" fill="none" stroke="#F08A24" stroke-width="6" stroke-linejoin="round"/><circle cx="129.8" cy="132.6" r="4" fill="#2B2B2B"/><circle cx="170.2" cy="132.6" r="4" fill="#2B2B2B"/><path d="M131.6 151 Q150 173.1 168.4 151" fill="none" stroke="#2B2B2B" stroke-width="4"/><circle cx="118.7" cy="145.5" r="5" fill="#F29BB8"/><circle cx="181.3" cy="145.5" r="5" fill="#F29BB8"/><circle cx="50" cy="50" r="6" fill="#F7C21B"/><circle cx="250" cy="70" r="6" fill="#F7C21B"/><circle cx="240" cy="240" r="6" fill="#F7C21B"/></g></symbol>
+<symbol id="s05-d3" viewBox="0 0 300 300"><rect width="300" height="300" fill="#FBF7EC"/><g filter="url(#s05-crayon)" stroke-linecap="round"><g clip-path="url(#s05-c3room)"><path d="M292 2.8 L293.6 21.1 L280.2 3.9 L294.2 46.1 L266.1 4.9 L293.8 64.8 L256.2 7.9 L292.7 91.7 L242.8 3.4 L291.8 109.6 L230 4.7 L293 138.9 L217.9 4.7 L293.1 159.8 L207.3 12.1 L295.1 184.8 L193.9 11.3 L295.2 211.8 L182.5 11.1 L294.1 233.7 L170.6 9.2 L293.7 252.6 L154.5 3.4 L294.6 279 L143.6 9.4 L285.5 288.9 L132.9 12.4 L278.3 293.6 L119.3 8.8 L264.3 290.2 L103.9 5.5 L250.6 291.7 L92.3 3.9 L236.8 288.9 L84.6 11.6 L226.1 293.2 L68 7.6 L214.9 291.3 L53.4 4.8 L204.3 295.3 L42.8 6.5 L187.7 289.2 L30.9 8 L178.2 294.1 L19.4 8.8 L167.6 295.9 L4.5 4.8 L149.7 291.3 L8.3 32.4 L136.9 290.7 L7 51.8 L128.1 293.1 L6.1 73.8 L115.3 296.2 L4 96.9 L104.3 294.5 L8.4 126.7 L91.2 295.1 L7.3 149.3 L75.7 289 L5.9 171.5 L64.3 293 L7.2 193.6 L53.3 296.1 L6.4 220.7 L38.7 290.8 L3.9 238.9 L29.3 295.6 L5 261.4 L16 293.9 L7.3 290.1" fill="none" stroke="#2B2B2B" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" opacity="0.84"/><path d="M3.5 10.5 L36.6 6.5 L7.9 32.5 L80.4 4.6 L10.7 53 L116.1 9.5 L5.8 76.5 L159.3 6.6 L3.6 102.8 L202.2 8.9 L11.2 119.6 L250.5 3.4 L11.3 141.9 L292.2 3.5 L3 168.7 L293.2 26.2 L6.6 192.5 L295.7 49.7 L9.8 212.2 L292.1 74.1 L8 234.6 L293.5 94.2 L7.5 260.2 L292.4 116.9 L7.9 282 L293.1 141.3 L22.5 294.4 L290.3 163.2 L67.4 294.2 L294.4 183.7 L108.2 297.1 L291.3 211.1 L155.1 294.8 L289.3 233.6 L197.3 293.5 L294.6 252.7 L241.2 291.7 L289.3 278.6 L283.7 294" fill="none" stroke="#2F6BD8" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" opacity="0.55"/></g><g clip-path="url(#s05-c3win)"><path d="M252.9 46.5 L254.6 63.6 L236.9 47.4 L254.5 94.7 L222 47 L253.9 130.6 L206.5 45.9 L253.2 159 L190.5 44.1 L256.3 193.3 L174.8 46.9 L254.4 226.8 L160.9 48.9 L253.8 252.4 L141.1 43.2 L239.3 255.4 L129.1 49 L224 256.7 L112.5 43.6 L208.3 257.8 L96.8 44.3 L193.2 256 L79 42.9 L174.5 252.5 L65.7 42.6 L161.8 256.7 L49.5 42.3 L146.2 255.9 L45.5 67.3 L129.2 254.2 L44.2 98.8 L115 255 L45.1 129.8 L97.7 251.7 L47.5 164.1 L82 253.8 L43.2 193.2 L66.7 252.3 L44.6 226 L53.6 257" fill="none" stroke="#1F3F8F" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" opacity="0.68"/><path d="M46.1 51.8 L85.5 47.4 L48.2 84.4 L144 46.6 L43.8 120.7 L206.7 44.1 L44.3 156.8 L252.7 54.3 L42.2 190.7 L256 86.3 L48.5 224.3 L251.4 123.8 L54.2 253.9 L255.1 154.9 L113.9 255.1 L253.6 191.1 L172.6 254.7 L252.2 227.2 L235.7 254.8" fill="none" stroke="#2B2B2B" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/></g><rect x="40" y="40" width="220" height="220" fill="none" stroke="#2F6BD8" stroke-width="9" stroke-linejoin="round"/><path d="M150 40 V260 M40 150 H260" stroke="#2F6BD8" stroke-width="9" stroke-linecap="round"/><ellipse cx="68.5" cy="188.6" rx="6.5" ry="11.9" fill="#7A4A2A" transform="rotate(35 68.5 188.6)"/><ellipse cx="111.5" cy="188.6" rx="6.5" ry="11.9" fill="#7A4A2A" transform="rotate(-35 111.5 188.6)"/><circle cx="90" cy="185" r="18" fill="#F2C6A0" stroke="#7A4A2A" stroke-width="2.5"/><path d="M71 185.9 A19 19 0 0 1 109 185.9 L101.2 179.2 L95 182.1 L89.1 178.5 L83.2 181.8 L78.1 178.9Z" fill="#7A4A2A" stroke="#7A4A2A" stroke-width="2" stroke-linejoin="round"/><circle cx="73" cy="181.8" r="3.1" fill="#D93A2B"/><circle cx="107" cy="181.8" r="3.1" fill="#D93A2B"/><circle cx="83.9" cy="187.5" r="2.5" fill="#2B2B2B"/><circle cx="96.1" cy="187.5" r="2.5" fill="#2B2B2B"/><circle cx="90" cy="195.4" r="3.1" fill="none" stroke="#2B2B2B" stroke-width="2.4"/><circle cx="80.1" cy="192.2" r="2.3" fill="#F29BB8" opacity=".9"/><circle cx="99.9" cy="192.2" r="2.3" fill="#F29BB8" opacity=".9"/><rect x="55" y="200" width="90" height="45" rx="4" fill="#B79BE8"/><g clip-path="url(#s05-c3bed)"><path d="M141.9 202.5 L142.6 223 L127.8 200.7 L137.5 242.9 L116.4 204.2 L126.6 244.7 L104.5 203.6 L112.5 241.1 L94 204.8 L99.8 241.3 L76.8 198.5 L89.2 246.2 L66.4 200.2 L76.6 245.2 L57.8 211.2 L63.8 245.2 L56.7 247.2" fill="none" stroke="#7B4FC9" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/></g><rect x="55" y="200" width="90" height="45" rx="4" fill="none" stroke="#7B4FC9" stroke-width="6" stroke-linejoin="round"/><path d="M205 53 L216.1 79.7 L244.9 82 L223 100.8 L229.7 129 L205 113.9 L180.3 129 L187 100.8 L165.1 82 L193.9 79.7Z" fill="#F7C21B"/><path d="M205 53 L216.1 79.7 L244.9 82 L223 100.8 L229.7 129 L205 113.9 L180.3 129 L187 100.8 L165.1 82 L193.9 79.7Z" fill="url(#s05-hatch-or)"/><path d="M205 53 L216.1 79.7 L244.9 82 L223 100.8 L229.7 129 L205 113.9 L180.3 129 L187 100.8 L165.1 82 L193.9 79.7Z" fill="none" stroke="#F08A24" stroke-width="6" stroke-linejoin="round"/><circle cx="195.8" cy="91.6" r="4" fill="#2B2B2B"/><circle cx="214.2" cy="91.6" r="4" fill="#2B2B2B"/><path d="M196.6 100 Q205 110.1 213.4 100" fill="none" stroke="#2B2B2B" stroke-width="4"/><circle cx="190.7" cy="97.5" r="5" fill="#F29BB8"/><circle cx="219.3" cy="97.5" r="5" fill="#F29BB8"/></g></symbol>
+<filter id="s05-ink" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="1.3" numOctaves="2" seed="7" result="n"/><feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -1.7 0 0 0 1.62" result="m"/><feComposite in="SourceGraphic" in2="m" operator="in"/></filter>
+</defs></svg>
+
+<div class="ss-stage ss-stage--night ss-grain"></div>
+<div class="s05-haze"></div>
+
+<!-- the passport ribbon: out of the tablet's corner (clear of the card), behind four stamps, into Grandma's iPhone -->
+<svg class="s05-ribbon" viewBox="0 0 1600 1000" aria-hidden="true">
+  <defs>
+    <path id="s05-route" d="M66 640 L66 716 C66 752 82 776 118 776 L1110 776 C1132 776 1136 760 1160 760 L1204 760"/>
+    <filter id="s05-soft" x="-5%" y="-20%" width="110%" height="140%"><feGaussianBlur stdDeviation="1.6"/></filter>
+    <mask id="s05-rib-lit" maskUnits="userSpaceOnUse" x="0" y="0" width="1600" height="1000">
+      <use href="#s05-route" fill="none" stroke="#fff" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+      <use href="#s05-route" fill="none" stroke="#000" stroke-width="13" stroke-linecap="round" stroke-linejoin="round" transform="translate(2.5 5.5)" filter="url(#s05-soft)"/>
+    </mask>
+    <mask id="s05-rib-hl" maskUnits="userSpaceOnUse" x="0" y="0" width="1600" height="1000">
+      <use href="#s05-route" fill="none" stroke="#fff" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+      <use href="#s05-route" fill="none" stroke="#000" stroke-width="13" stroke-linecap="round" stroke-linejoin="round" transform="translate(.9 1.3)"/>
+    </mask>
+  </defs>
+  <use href="#s05-route" fill="none" stroke="#3d2616" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+  <use href="#s05-route" fill="none" stroke="#5b3a24" stroke-width="13" stroke-linecap="round" stroke-linejoin="round" mask="url(#s05-rib-lit)"/>
+  <use href="#s05-route" fill="none" stroke="rgba(255,255,255,.13)" stroke-width="13" stroke-linecap="round" stroke-linejoin="round" mask="url(#s05-rib-hl)"/>
+</svg>
+
+<!-- ================= TABLET · Jess, 6:11 pm ================= -->
+<div class="s05-tab">
+  <div class="ss-tablet" style="--tw:1180px;--th:820px">
+    <div class="ss-tablet__screen">
+      <div class="t-bg"></div>
+      <div class="t-status"><span>6:11</span><span class="t-status__i"><svg class="ss-i"><use href="#i-wifi"/></svg><svg class="ss-i"><use href="#i-battery"/></svg></span></div>
+      <div class="t-slot"></div>
+      <div class="ss-tape t-label">
+        <div class="ss-tape__stripe"></div>
+        <div class="ss-tape__band"><span class="ss-tape__holes"><i></i><i></i></span><span>STORYSYNC</span></div>
+        <div class="ss-tape__field t-field">
+          <div class="t-inset"><svg viewBox="0 0 300 300" aria-hidden="true"><use href="#s05-d1"/></svg></div>
+          <div class="t-txt">
+            <div class="ss-tape__title">Twinkle Came to My Window</div>
+            <div class="ss-tape__author">by Mia, age 4 — with Mom</div>
+            <div class="ss-tape__meta">SIDE A · 5 PAGES · 0:24 · AAC/M4A</div>
+            <div class="ss-tape__meta t-meta2">SSYNC 2.0 · SHARED UNLISTED</div>
+          </div>
+        </div>
+      </div>
+      <div class="t-chips">
+        <span class="t-chip" style="--f:#EFE9DC">Metadata</span>
+        <span class="t-chip" style="--f:#E4E0FA">Visual</span>
+        <span class="t-chip" style="--f:#FBF3DF">Text</span>
+        <span class="t-chip" style="--f:#FADFDA">Voice</span>
+        <span class="t-chip" style="--f:#FBEBD2">Sound</span>
+        <span class="t-chip" style="--f:#E6E9EE">Behavior</span>
+        <span class="t-chip t-chip--sig">Signature</span>
+        <span class="t-note"><svg class="ss-i"><use href="#i-arrow-left"/></svg>consent written</span>
+      </div>
+
+      <div class="t-card">
+        <div class="t-col">
+          <div class="t-head"><h3>Your tape is ready</h3><span class="t-made"><svg class="ss-i"><use href="#i-timer"/></svg>MADE IN 7:48</span></div>
+          <ul class="t-steps">
+            <li><i class="t-done"><svg class="ss-i"><use href="#i-check"/></svg></i>Converting voices to AAC · 5/5</li>
+            <li><i class="t-done"><svg class="ss-i"><use href="#i-check"/></svg></i>Assembling the SSYNC manifest · 5 pages</li>
+            <li><i class="t-done"><svg class="ss-i"><use href="#i-check"/></svg></i>Saving your tape · cloud library</li>
+            <li class="is-planned"><i class="t-todo"></i>Evening out each voice · planned<span class="ss-chip ss-chip--violet t-next">Next</span></li>
+          </ul>
+          <div class="t-meter">
+            <div class="t-meter__lbl"><span>2.0 MB OF 15 MB</span><span class="t-legend"><i class="k-pic"></i>PICTURES<i class="k-voi"></i>VOICES</span></div>
+            <div class="t-tape"><span class="t-fill"><span class="t-seg"><i></i><b></b></span><span class="t-seg"><i></i><b></b></span><span class="t-seg"><i></i><b></b></span><span class="t-seg"><i></i><b></b></span><span class="t-seg"><i></i><b></b></span></span></div>
+          </div>
+          <span class="ss-btn ss-btn--gold ss-btn--lg t-wide t-gold"><svg class="ss-i"><use href="#i-download"/></svg>Download the .storysync file</span>
+          <span class="ss-btn ss-btn--ghost t-wide t-back"><svg class="ss-i"><use href="#i-undo"/></svg>Back to the studio</span>
+          <span class="ss-btn t-wide t-del">
+            <svg class="t-delicon" viewBox="0 0 30 26" aria-hidden="true"><rect x="2" y="1.5" width="26" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="8" y="5.5" width="14" height="6" rx="3" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="11" cy="8.5" r="1.6" fill="currentColor"/><circle cx="19" cy="8.5" r="1.6" fill="currentColor"/><path d="M9 17.5 L10.5 14.5 H19.5 L21 17.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M13.5 15.5 C13 21 7 24.5 6.5 21.2 C6 18 12.5 19 15.5 21.5 C18 23.6 21.5 24.8 24 22" fill="none" stroke="#a8703f" stroke-width="2.2" stroke-linecap="round"/></svg>
+            Pull the tape out — delete everything
+            <span class="ss-chip ss-chip--violet t-next">Next</span>
+          </span>
+          <p class="t-fine">Delete removes the pictures, the recordings, the saved copy and the link. Nothing is kept in an archive.</p>
+        </div>
+        <div class="t-col">
+          <div class="t-lbl"><svg class="ss-i"><use href="#i-lock"/></svg>PRIVATE LINK</div>
+          <div class="t-url"><span class="t-url__txt">storysynchq.vercel.app/read?story=<b>3f9c2a7be41d0c58</b></span><span class="t-copy"><svg class="ss-i"><use href="#i-copy"/></svg>Copy</span></div>
+          <div class="t-qr">
+            <div class="ss-qr" style="--q:172px"></div>
+            <div>
+              <p class="t-qr__k"><svg class="ss-i"><use href="#i-scan"/></svg>POINT A PHONE CAMERA HERE</p>
+              <p class="t-qr__s">Grandparents do not need the app, an account, or the file — the camera app opens the story in any browser.</p>
+            </div>
+          </div>
+          <span class="ss-btn ss-btn--violet ss-btn--lg t-wide t-share"><svg class="ss-i"><use href="#i-share"/></svg>Share the link…</span>
+          <p class="t-fine">Unlisted and unguessable. Only someone holding this link can open the story — deleting the story revokes it.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= SPEC FIGURE · the cover gate, 6:14 pm ================= -->
+<div class="s05-fig">
+  <span class="s05-fig__tab">MONDAY 6:14 PM</span>
+  <div class="s05-fig__clip"><div class="s05-fig__in">
+    <div class="g-bg"><svg viewBox="0 0 300 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><use href="#s05-d1"/></svg></div>
+    <div class="g-dim"></div>
+    <div class="g-note">
+      <div class="g-note__app"><span class="g-note__ic"><svg class="ss-i"><use href="#i-message"/></svg></span>Messages · Jess</div>
+      <p>Mia made you something. Turn the sound up.</p>
+    </div>
+    <div class="g-col">
+      <div class="g-shell"><svg class="ss-reel"><use href="#i-reel"/></svg><span></span><svg class="ss-reel"><use href="#i-reel"/></svg></div>
+      <div class="g-lwrap">
+        <div class="ss-tape ss-tape--sm g-label">
+          <div class="ss-tape__stripe"></div>
+          <div class="ss-tape__band"><span class="ss-tape__holes"><i></i><i></i></span><span>STORYSYNC</span></div>
+          <div class="ss-tape__field">
+            <div class="ss-tape__title">Twinkle Came to My Window</div>
+            <div class="ss-tape__author">by Mia, age 4 — with Mom</div>
+            <div class="ss-tape__meta">SIDE A · 5 PAGES · ~0:24 · VOICE: MIA</div>
+          </div>
+        </div>
+        <span class="ss-chip ss-chip--violet g-next">Next</span>
+      </div>
+      <span class="ss-btn ss-btn--gold ss-btn--xl g-btn"><svg class="ss-i"><use href="#i-sparkles"/></svg>Tap to Begin</span>
+      <p class="g-micro">BEST WITH THE LIGHTS LOW AND THE SOUND UP</p>
+    </div>
+    <div class="ss-homebar"></div>
+  </div></div>
+</div>
+
+<!-- one tap: the cover gate (6:14) is what the PLAYED stamp means by "after one tap" -->
+<i class="s05-tapline"></i>
+
+<!-- ================= iPHONE · Grandma Rose, 6:15 pm ================= -->
+<div class="s05-phone">
+  <div class="ss-phone">
+    <div class="ss-phone__screen">
+      <div class="ss-phone__island"></div>
+      <div class="ss-statusbar"><span>6:15</span><span class="ss-statusbar__icons"><svg class="ss-i"><use href="#i-signal"/></svg><svg class="ss-i"><use href="#i-wifi"/></svg><svg class="ss-i"><use href="#i-battery"/></svg></span></div>
+      <div class="p-room"><svg viewBox="0 0 300 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><use href="#s05-d3"/></svg></div>
+      <div class="p-vig"></div>
+      <div class="p-deck">
+        <span class="dk-win">
+          <span class="dk-pack dk-pack--a"></span><span class="dk-pack dk-pack--b"></span>
+          <span class="dk-reel dk-reel--a"><svg class="ss-reel"><use href="#i-reel"/></svg></span>
+          <span class="dk-reel dk-reel--b"><svg class="ss-reel"><use href="#i-reel"/></svg></span>
+        </span>
+        <span class="dk-count">03 / 05</span>
+        <i class="dk-rule"></i>
+        <span class="dk-voice"><svg class="ss-i"><use href="#i-mic"/></svg>Mia</span>
+        <span class="ss-chip ss-chip--violet dk-next">Next</span>
+      </div>
+      <div class="p-photo"><svg viewBox="0 0 300 300" aria-hidden="true"><use href="#s05-d3"/></svg></div>
+      <p class="ss-story ss-readalong p-text"><span class="said s1">I was scared of the dark.</span> <span class="said">Twinkle came to my</span> <span class="now">window.</span></p>
+      <div class="p-tape"><i style="--p:100%"></i><i style="--p:100%"></i><i style="--p:80%"></i><i></i><i></i></div>
+      <div class="ss-homebar"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= PASSPORT STAMPS ================= -->
+<div class="s05-stamp" style="left:24px;transform:rotate(-2deg)">
+  <span class="s05-ring"><svg class="ss-i"><use href="#i-check"/></svg></span>
+  <div class="s05-stamp__k">RECORDED</div>
+  <div class="s05-stamp__w">The family's Android<br>tablet · Chrome</div>
+  <div class="s05-stamp__d">draft Opus/WebM</div>
+</div>
+<div class="s05-stamp" style="left:311px;transform:rotate(2deg)">
+  <span class="s05-ring"><svg class="ss-i"><use href="#i-check"/></svg></span>
+  <div class="s05-stamp__k">FINISHED</div>
+  <div class="s05-stamp__w">On that tablet,<br>at Finish my story</div>
+  <div class="s05-stamp__d">AAC-LC · 48 kHz<br>mono · ~96 kbps · M4A</div>
+</div>
+<div class="s05-stamp" style="left:598px;transform:rotate(-1.5deg)">
+  <span class="s05-ring"><svg class="ss-i"><use href="#i-check"/></svg></span>
+  <div class="s05-stamp__k">CARRIED</div>
+  <div class="s05-stamp__w">One unlisted link,<br>by text message</div>
+  <div class="s05-stamp__d">2.0 MB tape</div>
+</div>
+<div class="s05-stamp" style="left:885px;transform:rotate(2.5deg)">
+  <span class="s05-ring"><svg class="ss-i"><use href="#i-check"/></svg></span>
+  <div class="s05-stamp__k">PLAYED</div>
+  <div class="s05-stamp__w">Grandma Rose's<br>iPhone · Safari</div>
+  <div class="s05-stamp__d">after one tap</div>
+</div>
+<span class="s05-arw" style="left:280px"><svg class="ss-i"><use href="#i-arrow-right"/></svg></span>
+<span class="s05-arw" style="left:567px"><svg class="ss-i"><use href="#i-arrow-right"/></svg></span>
+<span class="s05-arw" style="left:854px"><svg class="ss-i"><use href="#i-arrow-right"/></svg></span>
+
+<!-- ================= CALLOUTS ================= -->
+<div class="ss-callout s05-co" style="left:24px"><b>The codec rule is the magic</b>Chrome records Opus and iPhones can't reliably play it. At Finish the tablet re-encodes every voice to AAC in the browser — a child's voice is never sent to a server just to be converted.</div>
+<div class="ss-callout s05-co" style="left:400px"><b>The link, honestly</b>Cloud share codes are 16 hex characters today (64-bit); the privacy page promises 128-bit — one migration closes it. Signed out, the card says so: 'Saved on this device… no link yet.'</div>
+<div class="ss-callout s05-co" style="left:776px"><b>Tap to Begin is the unlock</b>iPhones keep sound off until a tap. The cover gate is that tap; then the tape reads itself. If sound still can't start, the pages turn and the words light anyway.</div>
+
+<div class="s05-layers" aria-label="Layers: all seven"><span>LAYERS</span><i style="--f:#EFE9DC"></i><i style="--f:#E4E0FA"></i><i style="--f:#FBF3DF"></i><i style="--f:#FADFDA"></i><i style="--f:#FBEBD2"></i><i style="--f:#E6E9EE"></i><i class="sig" style="--f:#FFE9A8"></i></div>
+</section>

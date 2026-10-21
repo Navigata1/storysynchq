@@ -1,0 +1,487 @@
+<section class="ss-screen" id="s07" style="--w:1600px;--h:1000px" aria-label="Our shelf">
+<style>
+#s07 { color: var(--ss-fg); }
+#s07 .s7-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
+
+/* ---------- stage: navy room, pale morning light from the top-left ---------- */
+#s07 .s7-morning { position: absolute; inset: 0; pointer-events: none; background:
+  radial-gradient(980px 460px at 30% -8%, rgba(255,214,150,.10), transparent 70%),
+  radial-gradient(520px 260px at 46% 104%, rgba(255,214,150,.05), transparent 70%); }
+#s07 .s7-floor { position: absolute; left: 40px; top: 806px; width: 1260px; height: 60px; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(0,0,0,.55), transparent); filter: blur(6px); }
+#s07 .s7-spill { position: absolute; left: 98px; top: 820px; width: 1140px; height: 120px; pointer-events: none; filter: blur(14px);
+  background: radial-gradient(240px 80px at 30% 0%, rgba(245,158,11,.10), transparent 70%),
+              radial-gradient(260px 80px at 81% 0%, rgba(255,201,60,.08), transparent 70%),
+              radial-gradient(60% 100% at 50% 0%, rgba(165,155,255,.06), transparent 75%);
+  -webkit-mask: linear-gradient(180deg, #000, transparent); mask: linear-gradient(180deg, #000, transparent); }
+
+/* ---------- laptop ---------- */
+#s07 .s7-laptop { position: absolute; left: 80px; top: 40px; }
+#s07 .s7-view { position: absolute; inset: 0; overflow: hidden; background:
+  radial-gradient(760px 420px at 18% 22%, rgba(255,186,92,.075), transparent 70%),
+  radial-gradient(600px 480px at 96% 70%, rgba(124,107,255,.08), transparent 70%),
+  linear-gradient(180deg, #0c1121, #0a0e1a 60%, #090c17); }
+#s07 .s7-mono { font: 500 11px/1.2 var(--ss-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--ss-fg-3); }
+
+/* header */
+#s07 .s7-kick { position: absolute; left: 24px; top: 16px; }
+#s07 .s7-title { position: absolute; left: 24px; top: 32px; font: 900 40px/1 var(--ss-display); letter-spacing: -.02em; color: #fff; white-space: nowrap; }
+#s07 .s7-search { position: absolute; left: 300px; top: 31px; width: 300px; height: 40px; border-radius: 12px; display: flex; align-items: center; gap: 10px; padding: 0 14px;
+  font: 400 14px/1 var(--ss-ui); color: var(--ss-fg-3); }
+#s07 .s7-search .ss-i { width: 16px; height: 16px; color: var(--ss-fg-3); }
+#s07 .s7-search .ss-chip { height: 20px; margin-left: auto; padding: 0 8px; }
+#s07 .s7-who { position: absolute; right: 24px; top: 31px; height: 40px; display: flex; align-items: center; gap: 16px; }
+#s07 .s7-me { display: flex; align-items: center; gap: 9px; font: 500 13px/1 var(--ss-ui); color: var(--ss-fg-2); }
+#s07 .s7-me .ss-avatar { width: 32px; height: 32px; font-size: 14px; }
+
+/* Row A — your tapes */
+#s07 .s7-lbl { position: absolute; left: 24px; top: 90px; color: var(--ss-fg-2); display: flex; align-items: center; gap: 10px; }
+#s07 .s7-next { height: 20px; padding: 0 8px; font: 500 11px/1 var(--ss-ui); letter-spacing: 0; text-transform: none; }
+#s07 .s7-note { position: absolute; left: 24px; top: 112px; font: 400 12px/1.3 var(--ss-ui); color: var(--ss-fg-3); white-space: nowrap; }
+#s07 .s7-note .ss-i { width: 12px; height: 12px; margin-right: 5px; vertical-align: -2px; }
+#s07 .s7-toast { position: absolute; left: 366px; top: 88px; width: 262px; display: flex; gap: 10px; align-items: flex-start; padding: 9px 12px 10px;
+  border-radius: 12px; background: rgba(8,11,21,.84); border: 1px solid rgba(255,255,255,.16);
+  box-shadow: 0 16px 30px -14px rgba(0,0,0,.8); backdrop-filter: blur(14px);
+  font: 400 12px/1.38 var(--ss-ui); color: var(--ss-fg-2); }
+#s07 .s7-toast b { color: #fff; font-weight: 600; }
+#s07 .s7-toast svg { flex: none; width: 22px; height: 18px; margin-top: 1px; }
+#s07 .s7-toast::after { content: ""; position: absolute; left: 48px; bottom: -6px; width: 10px; height: 10px; transform: rotate(45deg);
+  background: rgba(8,11,21,.96); border-right: 1px solid rgba(255,255,255,.16); border-bottom: 1px solid rgba(255,255,255,.16); }
+
+/* the shelf (LOCAL piece 8) */
+#s07 .s7-cubby { position: absolute; left: 24px; top: 156px; width: 636px; height: 144px; border-radius: 14px 14px 0 0;
+  background: linear-gradient(180deg, rgba(255,255,255,.0), rgba(255,255,255,.028));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.03); }
+#s07 .s7-sunlight { position: absolute; left: 24px; top: 150px; width: 636px; height: 160px; pointer-events: none;
+  background: radial-gradient(460px 170px at 36% 100%, rgba(255,214,150,.12), transparent 72%); }
+#s07 .s7-ledge { position: absolute; left: 24px; width: 636px; height: 8px; border-radius: 2px; z-index: 2;
+  background: linear-gradient(180deg, #4d4741, var(--ss-shell) 45%, var(--ss-shell-2));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.2), 0 12px 18px -6px rgba(0,0,0,.75), 0 3px 4px rgba(0,0,0,.4); }
+#s07 .s7-face { position: absolute; width: 150px; height: 110px; border-radius: 10px; z-index: 3;
+  background: linear-gradient(165deg, #4d4741 0%, var(--ss-shell) 42%, var(--ss-shell-2) 100%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.16), inset 0 0 0 1.5px rgba(0,0,0,.35), 0 16px 22px -12px rgba(0,0,0,.85), 0 3px 6px rgba(0,0,0,.35); }
+#s07 .s7-face__label { position: absolute; left: 6px; right: 6px; top: 6px; border-radius: 5px; overflow: hidden; color: var(--ss-ink);
+  background: var(--ss-paper); border: 1.5px solid var(--ss-ink); }
+#s07 .s7-stripe { display: block; height: 4px; background: var(--ss-red); }
+#s07 .s7-band { height: 9px; display: flex; align-items: center; padding: 0 5px; background: var(--ss-label);
+  border-top: 1px solid var(--ss-ink); border-bottom: 1px solid var(--ss-ink); }
+#s07 .s7-holes { display: flex; gap: 3px; }
+#s07 .s7-holes i { width: 4px; height: 4px; border-radius: 50%; background: var(--ss-ink); }
+#s07 .s7-field { padding: 4px 4px 4px; background:
+  repeating-linear-gradient(180deg, transparent 0 11px, rgba(30,26,22,.07) 11px 12px), var(--ss-paper); }
+#s07 .s7-row { display: flex; gap: 5px; align-items: flex-start; }
+#s07 .s7-inset { flex: none; width: 32px; height: 32px; border-radius: 3px; overflow: hidden; border: 1.5px solid var(--ss-ink); background: #FBF7EC; position: relative; }
+#s07 .s7-inset svg { display: block; width: 100%; height: 100%; }
+#s07 .s7-inset--draw { padding: 1.5px; }
+#s07 .s7-inset--draw::after { content: ""; position: absolute; inset: 0; box-shadow: inset 0 0 6px rgba(150,100,40,.28); }
+#s07 .s7-ftitle { font: 800 12px/1.04 var(--ss-display); letter-spacing: -.01em; padding-top: 1px; }
+#s07 .s7-fmeta { margin-top: 4px; font: 500 10px/1.16 var(--ss-mono); letter-spacing: 0; color: var(--ss-ink); }
+#s07 .s7-win { position: absolute; left: 41px; top: 93px; width: 68px; height: 12px; border-radius: 999px; display: flex; align-items: center; justify-content: space-between; padding: 0 9px;
+  background: linear-gradient(180deg, #16120f, #2a241f); box-shadow: inset 0 2px 4px rgba(0,0,0,.8), 0 0 0 1.5px #1a1612; }
+#s07 .s7-win::before { content: ""; position: absolute; left: 18px; right: 18px; top: 4px; height: 4px; border-radius: 1px; background: linear-gradient(180deg, #5b3a24, #3d2616); }
+#s07 .s7-win .ss-reel { position: relative; width: 9px; height: 9px; --reel-face: #e9dfc6; }
+#s07 .s7-screw { position: absolute; bottom: 5px; width: 5px; height: 5px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #8a837c, #3d3833 70%); }
+
+/* (a) Grandma's reply */
+#s07 .s7-new { position: absolute; right: 2px; top: -9px; z-index: 4; padding: 3px 6px 2px; background: var(--ss-paper); font-size: 11px; letter-spacing: .14em; border-width: 2px;
+  transform: rotate(-6deg); box-shadow: 0 4px 8px -4px rgba(0,0,0,.6); }
+/* (b) Mia's tape — lifted over gold */
+#s07 .s7-face--mia { box-shadow: inset 0 1px 0 rgba(255,255,255,.18), inset 0 0 0 1.5px rgba(0,0,0,.35), 0 0 0 2px rgba(245,158,11,.95),
+  0 0 26px 2px rgba(245,158,11,.38), 0 22px 26px -14px rgba(0,0,0,.9); }
+#s07 .s7-glow { position: absolute; left: 156px; top: 252px; width: 210px; height: 70px; z-index: 1; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(245,158,11,.55), rgba(245,158,11,.14) 55%, transparent); filter: blur(4px); }
+#s07 .s7-glow2 { position: absolute; left: 186px; top: 294px; width: 150px; height: 6px; z-index: 3; border-radius: 3px;
+  background: linear-gradient(90deg, transparent, rgba(255,201,60,.85), transparent); filter: blur(1.5px); }
+/* (c) Bath Time Song — pulled out */
+#s07 .s7-slot { position: absolute; left: 348px; top: 190px; width: 150px; height: 110px; border-radius: 10px; z-index: 2;
+  border: 1.5px dashed rgba(255,255,255,.18); background: rgba(0,0,0,.12); }
+#s07 .s7-face--pulled { transform: rotate(8deg); transform-origin: 50% 50%; z-index: 5;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.16), inset 0 0 0 1.5px rgba(0,0,0,.35), 0 26px 30px -12px rgba(0,0,0,.85); }
+#s07 .s7-face--pulled .s7-face__label { filter: saturate(.75); }
+#s07 .s7-face--pulled .s7-field { height: 60px; }
+#s07 .s7-face--pulled .s7-ftitle { font-size: 13.5px; }
+#s07 .s7-loop { position: absolute; left: 0; top: 0; width: 700px; height: 380px; z-index: 4; overflow: visible; pointer-events: none; filter: drop-shadow(0 3px 3px rgba(0,0,0,.55)); }
+/* (d) blank tape */
+#s07 .s7-blank { position: absolute; width: 150px; height: 110px; border-radius: 10px; z-index: 3; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 8px 10px;
+  color: var(--ss-ink); background: rgba(255,253,246,.94); border: 2px dashed var(--ss-ink); text-align: center;
+  box-shadow: 0 16px 22px -12px rgba(0,0,0,.8); }
+#s07 .s7-blank__plus { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; border: 2px solid var(--ss-ink); background: var(--ss-label); }
+#s07 .s7-blank__plus .ss-i { width: 15px; height: 15px; stroke-width: 2.6; }
+#s07 .s7-blank b { font: 800 14px/1.1 var(--ss-display); letter-spacing: -.01em; margin-top: 1px; }
+#s07 .s7-blank p { font: 500 11px/1.25 var(--ss-mono); letter-spacing: .04em; color: var(--ss-ink-2); }
+#s07 .s7-sent { position: absolute; left: 24px; top: 316px; height: 24px; padding: 0 10px; font-size: 12px; }
+
+/* Row B — house tapes */
+#s07 .s7-lblB { position: absolute; left: 24px; top: 346px; color: var(--ss-fg-2); display: flex; align-items: center; gap: 10px; }
+#s07 .s7-lblB .ss-chip { height: 20px; padding: 0 8px; }
+#s07 .s7-pills { position: absolute; left: 24px; top: 372px; display: flex; gap: 8px; }
+#s07 .s7-pills .ss-chip { height: 30px; }
+#s07 .s7-feat { position: absolute; left: 24px; top: 412px; width: 636px; height: 132px; border-radius: 16px; overflow: hidden;
+  border: 1px solid rgba(255,255,255,.12); box-shadow: 0 24px 40px -24px rgba(0,0,0,.8); }
+#s07 .s7-feat__bg { position: absolute; inset: -40px; background-position: 34% 12%; }
+#s07 .s7-feat__shade { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(10,14,26,.95) 0%, rgba(10,14,26,.88) 48%, rgba(10,14,26,.6) 80%, rgba(10,14,26,.42) 100%); }
+#s07 .s7-feat__img { position: absolute; left: 12px; top: 12px; width: 108px; height: 108px; border-radius: 10px; object-fit: cover;
+  box-shadow: 0 0 0 1px rgba(255,253,246,.22), 0 14px 26px -10px rgba(0,0,0,.8); }
+#s07 .s7-feat__txt { position: absolute; left: 140px; top: 13px; right: 18px; display: flex; flex-direction: column; }
+#s07 .s7-feat__k { font: 500 11px/1.2 var(--ss-mono); letter-spacing: .14em; color: var(--ss-label); }
+#s07 .s7-feat__h { margin-top: 8px; font: 700 22px/1.1 var(--ss-display); letter-spacing: -.01em; color: #fffdf6; }
+#s07 .s7-feat__btns { margin-top: 12px; display: flex; align-items: center; gap: 10px; }
+#s07 .s7-feat__btns .ss-btn { height: 40px; padding: 0 18px; font-size: 14.5px; gap: 8px; }
+#s07 .s7-feat__btns .ss-btn .ss-i { width: 14px; height: 14px; }
+#s07 .s7-feat__btns .ss-chip { height: 24px; font-size: 12px; padding: 0 10px; }
+#s07 .s7-feat__prog { position: absolute; left: 140px; right: 18px; bottom: 10px; display: flex; gap: 4px; }
+#s07 .s7-feat__prog i { flex: 1; height: 3px; border-radius: 2px; background: rgba(255,255,255,.14); }
+#s07 .s7-feat__prog i.on { background: var(--ss-gold); }
+#s07 .s7-feat__prog i.half { background: linear-gradient(90deg, var(--ss-gold) 50%, rgba(255,255,255,.14) 50%); }
+
+/* sealed originals (LOCAL piece 9) */
+#s07 .s7-sealed .s7-face__label { top: 6px; }
+#s07 .s7-sealed .s7-face__label.kraft, #s07 .s7-sealed .kraft .s7-sfield { background: #DFD2B8; }
+#s07 .s7-sband { height: 16px; display: flex; align-items: center; gap: 5px; padding: 0 6px; background: var(--ss-label); border-top: 1px solid var(--ss-ink); border-bottom: 1px solid var(--ss-ink);
+  font: 600 11px/1 var(--ss-mono); letter-spacing: .12em; color: var(--ss-ink); }
+#s07 .s7-sband--prem { background: linear-gradient(180deg, #2a241f, var(--ss-ink)); color: #f2c45a; }
+#s07 .s7-sband--prem .ss-i { width: 11px; height: 11px; color: #f5c84c; filter: drop-shadow(0 0 2px rgba(255,214,120,.75)); }
+#s07 .s7-sfield { padding: 5px 6px 6px; height: 40px; background: var(--ss-paper); }
+#s07 .s7-sfield b { display: block; font: 700 12.5px/1.08 var(--ss-display); letter-spacing: -.01em; }
+#s07 .s7-sealed .s7-win { top: 79px; left: 9px; width: 50px; }
+#s07 .s7-cello { position: absolute; inset: 0; border-radius: 10px; z-index: 4; pointer-events: none;
+  background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,.22) 45%, transparent 60%),
+              linear-gradient(120deg, transparent 62%, rgba(255,255,255,.08) 70%, transparent 76%);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.42); }
+#s07 .s7-cello::after { content: ""; position: absolute; right: 0; top: 0; width: 16px; height: 16px; border-radius: 0 10px 0 0;
+  background: linear-gradient(225deg, rgba(255,255,255,.34) 0 45%, rgba(255,255,255,.05) 50%, transparent 52%); }
+#s07 .s7-sstamp { position: absolute; z-index: 5; right: 5px; bottom: 5px; padding: 2px 5px 1px; gap: 0; display: block; text-align: center;
+  font-size: 11px; line-height: 1.05; letter-spacing: .08em; border-width: 1.5px; border-radius: 5px; background: rgba(255,253,246,.92); box-shadow: 0 3px 6px -3px rgba(0,0,0,.6); }
+#s07 .s7-under { position: absolute; left: 24px; top: 682px; font: 500 11px/1.2 var(--ss-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--ss-fg-4); }
+
+/* RIGHT — Read it in… */
+#s07 .s7-panel { position: absolute; left: 676px; top: 92px; width: 440px; height: 604px; border-radius: 20px; padding: 12px; display: flex; flex-direction: column; }
+#s07 .s7-hero { position: relative; flex: none; height: 110px; border-radius: 12px; overflow: hidden; background-position: 50% 8%; box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); }
+#s07 .s7-hero__q { position: absolute; right: 16px; top: 14px; font: 800 24px/1 var(--ss-display); letter-spacing: -.015em; color: var(--ss-ink); }
+#s07 .s7-hero__tab { position: absolute; left: 10px; bottom: 10px; padding: 4px 8px 3px; border-radius: 5px; background: var(--ss-paper); border: 1.5px solid var(--ss-ink);
+  font: 600 11px/1 var(--ss-mono); letter-spacing: .14em; color: var(--ss-ink); }
+#s07 .s7-ph { margin-top: 12px; display: flex; align-items: center; gap: 10px; }
+#s07 .s7-ph .ss-chip { height: 24px; padding: 0 10px; font-size: 12px; }
+#s07 .s7-ph h3 { font: 600 17px/1.2 var(--ss-ui); letter-spacing: -.01em; color: #fff; }
+#s07 .s7-pline { margin-top: 3px; font: 500 16px/1.3 var(--ss-display); color: var(--ss-fg-2); white-space: nowrap; }
+#s07 .s7-plbl { margin-top: 10px; }
+#s07 .s7-voices { margin-top: 6px; display: flex; justify-content: space-between; align-items: flex-start; }
+#s07 .s7-vc { position: relative; width: 68px; display: flex; flex-direction: column; align-items: center; }
+#s07 .s7-vc__shell { position: relative; width: 68px; height: 60px; border-radius: 7px;
+  background: linear-gradient(165deg, #4d4741 0%, var(--ss-shell) 42%, var(--ss-shell-2) 100%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.16), inset 0 0 0 1.5px rgba(0,0,0,.35), 0 10px 16px -8px rgba(0,0,0,.8); }
+#s07 .s7-vc__label { position: absolute; left: 3px; right: 3px; top: 3px; height: 33px; border-radius: 4px; border: 1.5px solid var(--ss-ink); background: var(--ss-paper);
+  color: var(--ss-ink); display: flex; align-items: flex-end; padding: 0 3px 4px; overflow: hidden; }
+#s07 .s7-vc__label::before { content: ""; position: absolute; left: 3px; right: 3px; bottom: 4px; border-bottom: 1px dashed rgba(30,26,22,.75); }
+#s07 .s7-vc__name { position: relative; font: italic 500 11px/1 var(--ss-display); white-space: nowrap; padding-bottom: 2px; }
+#s07 .s7-vc__label--rec::before { right: 14px; }
+#s07 .s7-vc__rec { position: absolute; right: 4px; bottom: 3px; width: 7px; height: 7px; border-radius: 50%; background: var(--ss-red); box-shadow: 0 0 0 1.5px rgba(227,69,47,.25); }
+#s07 .s7-vc__win { position: absolute; left: 13px; top: 39px; width: 42px; height: 11px; border-radius: 999px; display: flex; align-items: center; justify-content: space-between; padding: 0 5px;
+  background: linear-gradient(180deg, #16120f, #2a241f); box-shadow: inset 0 2px 3px rgba(0,0,0,.8), 0 0 0 1.5px #1a1612; }
+#s07 .s7-vc__win::before { content: ""; position: absolute; left: 12px; right: 12px; top: 4px; height: 3px; background: linear-gradient(180deg, #5b3a24, #3d2616); }
+#s07 .s7-vc__win .ss-reel { position: relative; width: 9px; height: 9px; --reel-face: #e9dfc6; }
+#s07 .s7-vc__foot { position: absolute; left: 18px; right: 18px; bottom: 0; height: 6px; border-radius: 4px 4px 0 0; background: #24211f; box-shadow: inset 0 1px 0 rgba(255,255,255,.08); }
+#s07 .s7-vc__cap { margin-top: 5px; font: 500 11px/1.1 var(--ss-mono); letter-spacing: .04em; text-align: center; white-space: nowrap; color: var(--ss-fg-3); }
+#s07 .s7-vc--now .s7-vc__shell { box-shadow: inset 0 1px 0 rgba(255,255,255,.16), inset 0 0 0 1.5px rgba(0,0,0,.35), 0 0 0 2px rgba(255,201,60,.85), 0 0 18px rgba(255,201,60,.3); }
+#s07 .s7-vc--now .ss-reel { transform: rotate(18deg); filter: blur(.35px); }
+#s07 .s7-vc--now .s7-vc__win::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: conic-gradient(from 0deg, transparent, rgba(255,255,255,.08), transparent 30%); }
+#s07 .s7-vc--now .s7-vc__cap { color: var(--ss-label); align-self: flex-start; }
+#s07 .s7-vc--locked .s7-vc__shell { filter: grayscale(1); opacity: .5; }
+#s07 .s7-vc--locked .s7-vc__label { background: #cfcac0; justify-content: center; align-items: center; padding: 0; }
+#s07 .s7-vc--locked .s7-vc__label::before { display: none; }
+#s07 .s7-vc--locked .s7-vc__label .ss-i { width: 15px; height: 15px; color: var(--ss-ink-2); }
+#s07 .s7-vc--locked .s7-vc__cap { white-space: normal; width: 92px; align-self: flex-end; text-align: right; }
+#s07 .s7-moods { margin-top: 6px; display: grid; grid-template-columns: 1fr 1fr; gap: 5px 8px; }
+/* mood tape chip (LOCAL piece 5) */
+#s07 .s7-mood { position: relative; height: 48px; border-radius: 8px; overflow: hidden; color: var(--ss-ink); background: var(--ss-paper); border: 2px solid var(--ss-ink);
+  padding: 9px 6px 0 7px; }
+#s07 .s7-mood::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 5px; background: var(--c); border-bottom: 1px solid rgba(30,26,22,.35); }
+#s07 .s7-mood__top { display: flex; align-items: center; gap: 5px; height: 16px; }
+#s07 .s7-mood__top .ss-i { width: 14px; height: 14px; color: color-mix(in srgb, var(--c) 55%, var(--ss-ink)); stroke-width: 2.3; }
+#s07 .s7-mood__top b { font: 700 14px/1 var(--ss-display); letter-spacing: -.005em; }
+#s07 .s7-mood p { margin-top: 3px; font: 400 11px/1.2 var(--ss-ui); letter-spacing: -.016em; color: var(--ss-ink-2); white-space: nowrap; }
+#s07 .s7-contour { position: relative; margin-left: auto; width: 35px; height: 15px; flex: none; }
+#s07 .s7-contour i { position: absolute; width: 5px; height: 5px; border-radius: 50%; background: var(--c); top: calc(var(--y) * 1px); box-shadow: 0 0 0 .5px rgba(30,26,22,.35); }
+#s07 .s7-contour i:nth-child(1) { left: 0; } #s07 .s7-contour i:nth-child(2) { left: 6px; } #s07 .s7-contour i:nth-child(3) { left: 12px; }
+#s07 .s7-contour i:nth-child(4) { left: 18px; } #s07 .s7-contour i:nth-child(5) { left: 24px; } #s07 .s7-contour i:nth-child(6) { left: 30px; }
+#s07 .s7-mood.is-on { background: var(--ss-label); border-width: 3px; padding: 8px 5px 0 6px; box-shadow: 0 6px 16px -6px rgba(255,201,60,.55); }
+#s07 .s7-mood.is-on .s7-contour i { box-shadow: 0 0 0 .5px var(--ss-ink); }
+#s07 .s7-mood.is-on p { color: var(--ss-ink); }
+#s07 .s7-make { margin-top: auto; width: 100%; height: 42px; flex: none; font-size: 15px; box-shadow: inset 0 1px 0 rgba(255,255,255,.45); }
+
+/* ---------- spec figure (LOCAL piece 1) ---------- */
+#s07 .s7-fig { position: absolute; left: 1290px; top: 48px; width: 290px; height: 220px; border-radius: 12px; border: 1px solid rgba(255,255,255,.16); background: #0f1426;
+  box-shadow: 0 24px 48px -24px rgba(0,0,0,.7); }
+#s07 .s7-fig__tab { position: absolute; left: 12px; top: -11px; height: 22px; z-index: 2; display: inline-flex; align-items: center; gap: 7px; padding: 0 10px;
+  border-radius: 999px; background: #0a0e1a; border: 1px solid rgba(255,255,255,.16); white-space: nowrap;
+  font: 500 11px/1 var(--ss-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ss-fg-2); }
+#s07 .s7-fig__tab::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--ss-gold); flex: none; }
+#s07 .s7-fig__clip { position: absolute; inset: 0; border-radius: 12px; overflow: hidden; }
+#s07 .s7-fig__in { position: absolute; left: 0; top: 0; width: 580px; height: 440px; transform: scale(.5); transform-origin: 0 0; padding: 30px 24px 24px; display: flex; flex-direction: column; }
+#s07 .s7-ktape { color: var(--ss-ink); background: var(--ss-paper); border: 4px solid var(--ss-ink); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 36px -18px rgba(0,0,0,.8); }
+#s07 .s7-ktape__stripe { height: 12px; background: var(--ss-red); border-bottom: 4px solid var(--ss-ink); }
+#s07 .s7-ktape__band { height: 26px; display: flex; align-items: center; padding: 0 16px; background: var(--ss-label); border-bottom: 4px solid var(--ss-ink); }
+#s07 .s7-ktape__band i { width: 12px; height: 12px; border-radius: 50%; background: var(--ss-ink); margin-right: 8px; }
+#s07 .s7-ktape__field { padding: 16px 20px 18px; background: repeating-linear-gradient(180deg, transparent 0 31px, rgba(30,26,22,.08) 31px 32px), #DFD2B8; }
+#s07 .s7-ktape__t { font: 800 36px/1.05 var(--ss-display); letter-spacing: -.015em; }
+#s07 .s7-ktape__m { margin-top: 10px; font: 500 22px/1.2 var(--ss-mono); letter-spacing: .02em; }
+#s07 .s7-ktape__m span { letter-spacing: .02em; }
+#s07 .s7-fig__p { margin-top: 20px; font: 400 25px/1.42 var(--ss-ui); color: rgba(255,255,255,.72); }
+#s07 .s7-fig__btns { margin-top: auto; display: flex; gap: 12px; }
+#s07 .s7-fig__btns .ss-btn { height: 56px; padding: 0 20px; font-size: 22px; gap: 10px; }
+#s07 .s7-fig__btns .ss-btn--gold { box-shadow: 0 14px 28px -12px rgba(245,158,11,.6), inset 0 2px 0 rgba(255,255,255,.45); }
+
+/* ---------- callouts + layers strip (LOCAL piece 2) ---------- */
+#s07 .ss-callout { max-width: 290px; }
+#s07 .s7-layers { position: absolute; left: 80px; top: 958px; width: 236px; height: 24px; border-radius: 999px; display: flex; align-items: center; gap: 9px;
+  padding: 0 12px; background: rgba(10,14,26,.55); border: 1px solid rgba(255,255,255,.14); backdrop-filter: blur(12px); }
+#s07 .s7-layers span { font: 500 10px/1 var(--ss-mono); letter-spacing: .16em; color: var(--ss-fg-2); margin-right: auto; }
+#s07 .s7-layers i { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,.25); flex: none; }
+#s07 .s7-layers i.on { background: var(--c); border-color: var(--ss-ink); box-shadow: 0 0 0 1px rgba(255,253,246,.35); }
+#s07 .s7-layers i.on.sig { border-color: var(--ss-red); box-shadow: 0 0 0 1px rgba(227,69,47,.35); }
+</style>
+
+<svg class="s7-defs" width="0" height="0" aria-hidden="true" focusable="false"><defs>
+<filter id="s07-crayon" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency=".8" numOctaves="2" seed="4" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="3" xChannelSelector="R" yChannelSelector="G"/></filter>
+<pattern id="s07-hatch-or" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(30)"><path d="M0 0V9" stroke="#F08A24" stroke-width="2.4" opacity=".8"/></pattern>
+<!-- Grandma's window photo (shared recipe) -->
+<linearGradient id="s07-gw-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0d1b3a"/><stop offset="1" stop-color="#1d3466"/></linearGradient>
+<radialGradient id="s07-gw-glow" cx="220" cy="60" r="70" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#f4ecd0" stop-opacity=".45"/><stop offset=".35" stop-color="#f4ecd0" stop-opacity=".14"/><stop offset="1" stop-color="#f4ecd0" stop-opacity="0"/></radialGradient>
+<mask id="s07-gw-moon" maskUnits="userSpaceOnUse" x="0" y="0" width="300" height="240"><rect width="300" height="240" fill="#000"/><circle cx="220" cy="60" r="22" fill="#fff"/><circle cx="231" cy="53" r="19" fill="#000"/></mask>
+<radialGradient id="s07-gw-vig" cx="150" cy="120" r="190" gradientUnits="userSpaceOnUse"><stop offset=".55" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".55"/></radialGradient>
+<filter id="s07-gw-grain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="1.6" numOctaves="2" seed="7"/><feColorMatrix values="0 0 0 0 .5  0 0 0 0 .5  0 0 0 0 .5  0 0 0 .22 0"/></filter>
+<linearGradient id="s07-gw-sill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#efe9de"/><stop offset="1" stop-color="#b9b1a3"/></linearGradient>
+<linearGradient id="s07-gw-pot" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8f4a2a"/><stop offset=".45" stop-color="#b5653c"/><stop offset="1" stop-color="#7a3d22"/></linearGradient>
+<symbol id="s07-gw" viewBox="0 0 300 240" preserveAspectRatio="xMidYMid slice">
+  <rect width="300" height="240" fill="#2b2620"/>
+  <rect x="36" y="10" width="252" height="186" fill="url(#s07-gw-sky)"/>
+  <rect x="36" y="10" width="252" height="186" fill="url(#s07-gw-glow)"/>
+  <rect width="300" height="240" fill="#f4ecd0" mask="url(#s07-gw-moon)"/>
+  <g fill="#f4ecd0"><circle cx="78" cy="38" r="2"/><circle cx="128" cy="70" r="1.6"/><circle cx="150" cy="28" r="1.8"/><circle cx="96" cy="128" r="1.5"/><circle cx="252" cy="140" r="1.9"/></g>
+  <g fill="none" stroke="#e9e4da"><rect x="36" y="10" width="252" height="186" stroke-width="16"/><path d="M162 10V196M36 104H288" stroke-width="10"/></g>
+  <g fill="none" stroke="#c9c2b5" stroke-width="1.5" opacity=".8"><rect x="44" y="18" width="236" height="170"/></g>
+  <rect x="0" y="190" width="300" height="50" fill="url(#s07-gw-sill)"/>
+  <rect x="0" y="190" width="300" height="5" fill="#fffaf0" opacity=".7"/>
+  <path d="M0 0H40 Q50 12 40 24 Q50 36 40 48 Q50 60 40 72 Q50 84 40 96 Q50 108 40 120 Q50 132 40 144 Q50 156 40 168 Q50 180 40 192 Q50 204 40 216 Q50 228 40 240H0Z" fill="#ffffff" opacity=".35"/>
+  <g fill="#ffffff" opacity=".22"><circle cx="14" cy="20" r="4"/><circle cx="26" cy="46" r="4"/><circle cx="12" cy="76" r="4"/><circle cx="26" cy="104" r="4"/><circle cx="12" cy="132" r="4"/><circle cx="26" cy="160" r="4"/><circle cx="12" cy="190" r="4"/><circle cx="26" cy="218" r="4"/></g>
+  <g><circle cx="214" cy="170" r="12" fill="#3e7b45"/><circle cx="236" cy="164" r="13" fill="#356c3c"/><circle cx="252" cy="176" r="10" fill="#3e7b45"/>
+     <circle cx="222" cy="152" r="9" fill="#d8342c"/><circle cx="242" cy="146" r="10" fill="#e0453a"/><circle cx="230" cy="140" r="7" fill="#c42a23"/><circle cx="250" cy="158" r="6" fill="#d8342c"/>
+     <path d="M208 186 L258 186 L252 226 L214 226Z" fill="url(#s07-gw-pot)"/><rect x="204" y="180" width="58" height="10" rx="2" fill="#a85a34"/></g>
+  <rect width="300" height="240" filter="url(#s07-gw-grain)"/>
+  <rect width="300" height="240" fill="url(#s07-gw-vig)"/>
+</symbol>
+<!-- Mia's drawing 1 (shared recipe) -->
+<symbol id="s07-d1" viewBox="0 0 300 300"><rect width="300" height="300" fill="#FBF7EC"/><g filter="url(#s07-crayon)" stroke-linecap="round"><path d="M282.5 5.5 L293.7 85.3 L226.6 6 L296.2 205.7 L170.4 7.1 L243.4 210.9 L112.4 3.3 L185.9 206.2 L59 9.9 L128.4 207.2 L5 7.5 L74.3 207.4 L4.5 123 L18.9 211.5" fill="none" stroke="#2F6BD8" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/><path d="M187.9 87.9 L204.1 65.6 M211.2 159.9 L237.5 168.4 M163.4 203 L169.1 230 M136.6 203 L130.9 230 M88.8 159.9 L62.5 168.4 M112.1 87.9 L95.9 65.6" stroke="#F08A24" stroke-width="6" stroke-linecap="round" fill="none"/><path d="M150 48 L174.3 106.5 L237.5 111.6 L189.4 152.8 L204.1 214.4 L150 181.4 L95.9 214.4 L110.6 152.8 L62.5 111.6 L125.7 106.5Z" fill="#F7C21B"/><path d="M150 48 L174.3 106.5 L237.5 111.6 L189.4 152.8 L204.1 214.4 L150 181.4 L95.9 214.4 L110.6 152.8 L62.5 111.6 L125.7 106.5Z" fill="url(#s07-hatch-or)"/><path d="M150 48 L174.3 106.5 L237.5 111.6 L189.4 152.8 L204.1 214.4 L150 181.4 L95.9 214.4 L110.6 152.8 L62.5 111.6 L125.7 106.5Z" fill="none" stroke="#F08A24" stroke-width="6" stroke-linejoin="round"/><circle cx="129.8" cy="132.6" r="4" fill="#2B2B2B"/><circle cx="170.2" cy="132.6" r="4" fill="#2B2B2B"/><path d="M131.6 151 Q150 173.1 168.4 151" fill="none" stroke="#2B2B2B" stroke-width="4"/><circle cx="118.7" cy="145.5" r="5" fill="#F29BB8"/><circle cx="181.3" cy="145.5" r="5" fill="#F29BB8"/><circle cx="50" cy="50" r="6" fill="#F7C21B"/><circle cx="250" cy="70" r="6" fill="#F7C21B"/><circle cx="240" cy="240" r="6" fill="#F7C21B"/></g></symbol>
+<!-- tape-brown ribbon -->
+<linearGradient id="s07-ribbon" gradientUnits="userSpaceOnUse" x1="360" y1="262" x2="458" y2="362"><stop offset="0" stop-color="#5b3a24"/><stop offset="1" stop-color="#3d2616"/></linearGradient>
+<filter id="s07-rblur" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="1.6"/></filter>
+<linearGradient id="s07-ribbon-back" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#6e4b33"/><stop offset=".5" stop-color="#8a6448"/><stop offset="1" stop-color="#5e3f2a"/></linearGradient>
+</defs></svg>
+
+<div class="ss-stage"></div>
+<div class="s7-morning"></div>
+<div class="s7-floor"></div>
+<div class="s7-spill"></div>
+
+<!-- ================= LAPTOP · the Read Room shelf ================= -->
+<div class="ss-laptop s7-laptop" style="--lw:1140px;--lh:712px">
+ <div class="ss-laptop__lid"><div class="ss-laptop__screen"><div class="s7-view">
+
+  <!-- header -->
+  <div class="ss-kicker s7-kick">STORYSYNC READER</div>
+  <h1 class="s7-title">Pick a tape.</h1>
+  <div class="ss-glass s7-search"><svg class="ss-i"><use href="#i-search"/></svg>Search the shelf…<span class="ss-chip ss-chip--future">Idea</span></div>
+  <div class="s7-who">
+    <span class="ss-chip ss-chip--future"><svg class="ss-i"><use href="#i-download"/></svg>Keep tapes on this laptop · Idea</span>
+    <span class="s7-me"><span class="ss-avatar" style="--c:var(--ss-gold)">J</span>Jess</span>
+  </div>
+
+  <!-- Row A · your tapes -->
+  <div class="s7-mono s7-lbl">YOUR TAPES <span class="ss-chip ss-chip--violet s7-next">Next</span></div>
+  <p class="s7-note"><svg class="ss-i"><use href="#i-lock"/></svg>Unlisted. Only people you send a link to can open them.</p>
+  <div class="s7-toast" role="status">
+    <svg viewBox="0 0 22 18" aria-hidden="true"><rect x="1" y="1" width="20" height="13" rx="2.5" fill="none" stroke="#E3452F" stroke-width="1.8"/><circle cx="7" cy="7" r="2" fill="none" stroke="#E3452F" stroke-width="1.6"/><circle cx="15" cy="7" r="2" fill="none" stroke="#E3452F" stroke-width="1.6"/><path d="M9 14 C8 17.5 12 18.2 12.5 15.5 C13 13.5 14.5 14 14.5 14" fill="none" stroke="#8a5a36" stroke-width="2.2" stroke-linecap="round"/></svg>
+    <span><b>Pulled out.</b> Pictures, voices, the saved copy and the link are gone.</span>
+  </div>
+
+  <div class="s7-cubby"></div>
+  <div class="s7-sunlight"></div>
+  <div class="s7-glow"></div>
+
+  <!-- (a) Grandma's reply -->
+  <div class="s7-face" style="left:24px;top:190px" aria-label="Goodnight, Mia">
+    <div class="s7-face__label">
+      <i class="s7-stripe"></i>
+      <div class="s7-band"><span class="s7-holes"><i></i><i></i></span></div>
+      <div class="s7-field">
+        <div class="s7-row"><span class="s7-inset"><svg viewBox="0 0 300 240" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><use href="#s07-gw" width="300" height="240"/></svg></span><b class="s7-ftitle">Goodnight, Mia</b></div>
+        <p class="s7-fmeta">FROM GRANDMA ROSE<br>1 PAGE · 0:08</p>
+      </div>
+    </div>
+    <div class="s7-win"><svg class="ss-reel"><use href="#i-reel"/></svg><svg class="ss-reel"><use href="#i-reel"/></svg></div>
+    <i class="s7-screw" style="left:8px"></i><i class="s7-screw" style="right:8px"></i>
+    <span class="ss-stamp s7-new">NEW</span>
+  </div>
+
+  <!-- (b) Mia's tape, lifted -->
+  <div class="s7-face s7-face--mia" style="left:186px;top:180px" aria-label="Twinkle Came to My Window">
+    <div class="s7-face__label">
+      <i class="s7-stripe"></i>
+      <div class="s7-band"><span class="s7-holes"><i></i><i></i></span></div>
+      <div class="s7-field">
+        <div class="s7-row"><span class="s7-inset s7-inset--draw"><svg viewBox="0 0 300 300" aria-hidden="true"><use href="#s07-d1"/></svg></span><b class="s7-ftitle">Twinkle Came to My Window</b></div>
+        <p class="s7-fmeta">MIA, AGE 4 — WITH MOM<br>0:24 · MADE IN 7:48</p>
+      </div>
+    </div>
+    <div class="s7-win"><svg class="ss-reel"><use href="#i-reel"/></svg><svg class="ss-reel"><use href="#i-reel"/></svg></div>
+    <i class="s7-screw" style="left:8px"></i><i class="s7-screw" style="right:8px"></i>
+  </div>
+
+  <!-- (c) Bath Time Song, pulled out -->
+  <div class="s7-slot"></div>
+  <svg class="s7-loop" viewBox="0 0 700 380" aria-hidden="true"><g transform="matrix(.8 0 0 .8 82 52.4)">
+    <path d="M394.4 261.6 L394.3 263.5 L394.1 265.5 L394.0 267.4 L393.9 269.4 L393.8 271.3 L393.7 273.2 L393.6 275.1 L393.6 277.0 L393.5 278.9 L393.5 280.7 L393.5 282.6 L393.5 284.4 L393.5 286.2 L393.5 288.0 L393.6 289.8 L393.6 291.6 L393.7 293.4 L393.8 295.2 L393.9 296.9 L394.0 298.7 L394.2 300.4 L394.3 302.2 L394.5 303.9 L394.7 305.6 L394.9 307.3 L395.2 309.0 L395.4 310.7 L395.7 312.4 L396.0 314.0 L396.3 315.7 L396.7 317.3 L397.0 319.0 L397.4 320.6 L397.8 322.2 L398.2 323.9 L398.7 325.5 L399.2 327.1 L399.7 328.7 L400.2 330.3 L400.7 331.8 L400.7 331.9 L411.3 328.1 L411.3 328.2 L410.8 326.7 L410.3 325.3 L409.9 323.9 L409.5 322.4 L409.1 320.9 L408.7 319.5 L408.3 318.0 L408.0 316.5 L407.6 315.0 L407.3 313.5 L407.0 312.0 L406.8 310.5 L406.5 308.9 L406.3 307.4 L406.0 305.8 L405.8 304.2 L405.7 302.6 L405.5 301.0 L405.3 299.4 L405.2 297.8 L405.1 296.2 L405.0 294.5 L404.9 292.9 L404.8 291.2 L404.8 289.5 L404.7 287.8 L404.7 286.1 L404.7 284.4 L404.7 282.6 L404.7 280.9 L404.7 279.1 L404.8 277.3 L404.8 275.5 L404.9 273.7 L405.0 271.8 L405.1 270.0 L405.2 268.1 L405.3 266.2 L405.4 264.3 L405.6 262.4Z" fill="url(#s07-ribbon)"/>
+    <path d="M394.4 261.6 L394.3 263.5 L394.1 265.5 L394.0 267.4 L393.9 269.4 L393.8 271.3 L393.7 273.2 L393.6 275.1 L393.6 277.0 L393.5 278.9 L393.5 280.7 L393.5 282.6 L393.5 284.4 L393.5 286.2 L393.5 288.0 L393.6 289.8 L393.6 291.6 L393.7 293.4 L393.8 295.2 L393.9 296.9 L394.0 298.7 L394.2 300.4 L394.3 302.2 L394.5 303.9 L394.7 305.6 L394.9 307.3 L395.2 309.0 L395.4 310.7 L395.7 312.4 L396.0 314.0 L396.3 315.7 L396.7 317.3 L397.0 319.0 L397.4 320.6 L397.8 322.2 L398.2 323.9 L398.7 325.5 L399.2 327.1 L399.7 328.7" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="1"/>
+    <path d="M385.8 308.4 L387.1 308.1 L388.4 307.9 L389.8 307.8 L391.1 307.7 L392.4 307.7 L393.7 307.7 L395.0 307.7 L396.4 307.8 L397.7 308.0 L398.9 308.2 L400.2 308.4 L401.5 308.7 L402.8 309.0 L404.0 309.4 L405.2 309.8 L406.4 310.2 L407.6 310.7 L408.8 311.3 L410.0 311.9 L411.1 312.5 L412.2 313.2 L413.3 313.8 L414.4 314.6 L415.4 315.4 L416.4 316.2 L417.4 317.0 L418.3 317.9 L419.3 318.8 L420.1 319.8 L421.0 320.7 L421.8 321.8 L422.6 322.8" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="13" stroke-linecap="round" filter="url(#s07-rblur)" transform="translate(1,2)"/>
+    <path d="M400.5 331.2 L400.7 331.9 L401.2 333.3 L401.6 334.6 L401.9 335.9 L402.1 337.1 L402.3 338.2 L402.3 339.2 L402.4 340.2 L402.3 341.1 L402.2 341.9 L402.1 342.7 L401.9 343.4 L401.7 344.1 L401.4 344.7 L401.1 345.2 L400.8 345.8 L400.5 346.3 L400.1 346.7 L399.7 347.2 L399.2 347.6 L398.7 348.0 L398.2 348.3 L397.6 348.7 L397.0 349.0 L396.3 349.3 L395.6 349.5 L394.9 349.8 L394.1 349.9 L393.3 350.1 L392.4 350.2 L391.6 350.3 L390.7 350.3 L389.8 350.3 L388.8 350.3 L387.9 350.2 L386.9 350.1 L385.9 349.9 L384.9 349.7 L383.9 349.4 L383.0 349.1 L382.0 348.8 L382.0 348.8 L381.0 348.4 L380.1 347.9 L379.2 347.4 L378.4 346.8 L377.6 346.2 L376.9 345.6 L376.2 344.9 L375.6 344.1 L375.0 343.4 L374.4 342.6 L373.9 341.7 L373.4 340.8 L373.0 339.9 L372.6 339.0 L372.3 338.0 L372.1 337.1 L371.8 336.1 L371.7 335.1 L371.5 334.0 L371.5 333.0 L371.5 332.0 L371.5 330.9 L371.6 329.9 L371.7 328.9 L371.9 327.9 L372.1 326.9 L372.4 325.9 L372.8 324.9 L373.1 324.0 L373.6 323.1 L374.1 322.2 L374.6 321.4 L375.2 320.6 L375.8 319.8 L376.5 319.0 L377.2 318.3 L378.0 317.7 L378.8 317.1 L379.7 316.5 L380.6 315.9 L380.4 316.1 L381.5 315.6 L382.5 315.2 L383.6 314.8 L384.7 314.4 L385.8 314.1 L386.9 313.9 L388.1 313.7 L389.2 313.5 L390.3 313.4 L391.4 313.3 L392.5 313.3 L393.6 313.3 L394.7 313.3 L395.8 313.4 L396.9 313.5 L398.0 313.7 L399.1 313.9 L400.2 314.1 L401.2 314.4 L402.3 314.7 L403.3 315.1 L404.4 315.5 L405.4 315.9 L406.4 316.3 L407.4 316.8 L408.3 317.4 L409.3 317.9 L410.2 318.5 L411.1 319.1 L412.0 319.8 L412.8 320.5 L413.7 321.2 L414.5 321.9 L415.2 322.7 L416.0 323.5 L416.7 324.3 L417.4 325.2 L418.0 326.1 L418.6 327.0 L418.8 327.9 L427.8 322.1 L428.8 322.1 L428.0 320.8 L427.1 319.6 L426.2 318.4 L425.3 317.2 L424.3 316.0 L423.3 314.9 L422.2 313.9 L421.1 312.8 L420.0 311.9 L418.8 310.9 L417.6 310.0 L416.4 309.2 L415.2 308.4 L413.9 307.6 L412.6 306.9 L411.2 306.2 L409.9 305.6 L408.5 305.0 L407.1 304.5 L405.7 304.0 L404.3 303.6 L402.8 303.2 L401.3 302.9 L399.9 302.6 L398.4 302.4 L396.9 302.2 L395.4 302.1 L393.9 302.1 L392.3 302.1 L390.8 302.1 L389.3 302.2 L387.7 302.4 L386.2 302.6 L384.7 302.9 L383.1 303.3 L381.6 303.7 L380.1 304.1 L378.6 304.7 L377.1 305.3 L375.6 305.9 L375.4 306.1 L373.8 306.9 L372.4 307.9 L371.0 308.9 L369.7 310.1 L368.4 311.2 L367.3 312.5 L366.3 313.8 L365.3 315.1 L364.4 316.5 L363.6 318.0 L362.9 319.4 L362.3 320.9 L361.8 322.4 L361.3 324.0 L360.9 325.6 L360.6 327.1 L360.4 328.7 L360.3 330.3 L360.3 331.9 L360.3 333.5 L360.4 335.1 L360.6 336.7 L360.8 338.2 L361.2 339.8 L361.6 341.3 L362.1 342.9 L362.7 344.3 L363.4 345.8 L364.2 347.2 L365.0 348.6 L365.9 350.0 L366.9 351.3 L368.0 352.5 L369.2 353.7 L370.5 354.8 L371.8 355.9 L373.2 356.8 L374.7 357.7 L376.3 358.5 L378.0 359.2 L378.0 359.2 L379.5 359.7 L380.9 360.2 L382.3 360.6 L383.7 360.9 L385.2 361.1 L386.6 361.3 L388.0 361.5 L389.5 361.5 L390.9 361.5 L392.3 361.5 L393.7 361.3 L395.1 361.1 L396.5 360.9 L397.8 360.6 L399.1 360.2 L400.4 359.7 L401.7 359.1 L402.9 358.5 L404.1 357.8 L405.3 357.0 L406.4 356.2 L407.4 355.2 L408.4 354.2 L409.3 353.1 L410.2 351.9 L410.9 350.7 L411.6 349.4 L412.2 348.0 L412.7 346.5 L413.0 345.1 L413.3 343.5 L413.5 342.0 L413.6 340.3 L413.5 338.7 L413.4 337.0 L413.2 335.3 L412.8 333.5 L412.4 331.8 L411.9 329.9 L411.3 328.1 L411.1 327.6Z" fill="url(#s07-ribbon)"/>
+    <path d="M412.4 331.8 L412.8 333.5 L413.2 335.3 L413.4 337.0 L413.5 338.7 L413.6 340.3 L413.5 342.0 L413.3 343.5 L413.0 345.1 L412.7 346.5 L412.2 348.0 L411.6 349.4 L410.9 350.7 L410.2 351.9 L409.3 353.1 L408.4 354.2 L407.4 355.2 L406.4 356.2 L405.3 357.0 L404.1 357.8 L402.9 358.5 L401.7 359.1 L400.4 359.7 L399.1 360.2 L397.8 360.6 L396.5 360.9 L395.1 361.1 L393.7 361.3 L392.3 361.5 L390.9 361.5 L389.5 361.5 L388.0 361.5 L386.6 361.3 L385.2 361.1 L383.7 360.9 L382.3 360.6 L380.9 360.2 L379.5 359.7 L378.0 359.2 L378.0 359.2 L376.3 358.5 L374.7 357.7 L373.2 356.8 L371.8 355.9 L370.5 354.8 L369.2 353.7 L368.0 352.5 L366.9 351.3 L365.9 350.0 L365.0 348.6 L364.2 347.2 L363.4 345.8 L362.7 344.3 L362.1 342.9 L361.6 341.3 L361.2 339.8 L360.8 338.2 L360.6 336.7 L360.4 335.1 L360.3 333.5 L360.3 331.9 L360.3 330.3 L360.4 328.7 L360.6 327.1 L360.9 325.6 L361.3 324.0 L361.8 322.4 L362.3 320.9 L362.9 319.4 L363.6 318.0 L364.4 316.5 L365.3 315.1 L366.3 313.8 L367.3 312.5 L368.4 311.2 L369.7 310.1 L371.0 308.9 L372.4 307.9 L373.8 306.9 L375.4 306.1 L375.6 305.9 L377.1 305.3 L378.6 304.7 L380.1 304.1 L381.6 303.7 L383.1 303.3 L384.7 302.9 L386.2 302.6 L387.7 302.4 L389.3 302.2 L390.8 302.1 L392.3 302.1 L393.9 302.1 L395.4 302.1 L396.9 302.2 L398.4 302.4 L399.9 302.6 L401.3 302.9 L402.8 303.2 L404.3 303.6 L405.7 304.0 L407.1 304.5 L408.5 305.0 L409.9 305.6 L411.2 306.2 L412.6 306.9 L413.9 307.6 L415.2 308.4 L416.4 309.2 L417.6 310.0 L418.8 310.9 L420.0 311.9 L421.1 312.8 L422.2 313.9 L423.3 314.9 L424.3 316.0 L425.3 317.2 L426.2 318.4 L427.1 319.6" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="1"/>
+    <path d="M418.6 327.0 L418.8 327.9 L419.1 329.2 L420.0 330.5 L421.0 331.7 L422.1 332.8 L423.2 333.7 L424.5 334.6 L425.8 335.2 L427.2 335.6 L428.7 335.8 L430.1 335.7 L431.4 335.4 L432.7 334.9 L433.8 334.2 L434.8 333.4 L435.7 332.4 L436.4 331.4 L436.9 330.3 L437.7 329.7 L437.1 328.7 L436.2 329.1 L435.1 328.9 L434.2 328.7 L433.4 328.3 L432.7 327.8 L432.1 327.4 L431.7 326.9 L431.4 326.5 L431.1 326.1 L430.9 325.7 L430.7 325.4 L430.4 325.1 L430.1 324.9 L429.7 324.3 L429.3 323.3 L428.9 322.3 L428.4 321.6 L427.0 322.3Z" fill="url(#s07-ribbon)"/>
+    <path d="M437.7 329.7 L438.6 329.1 L439.9 328.9 L441.2 328.5 L442.5 328.0 L443.8 327.3 L445.1 326.5 L446.3 325.5 L447.4 324.5 L448.5 323.2 L449.4 321.9 L450.3 320.5 L451.0 318.9 L451.6 317.3 L452.1 315.6 L452.6 313.9 L453.1 312.1 L453.5 310.2 L453.8 308.3 L454.1 306.4 L454.3 304.4 L454.5 302.3 L454.6 300.2 L454.6 300.5 L454.7 299.6 L454.7 298.7 L454.8 297.8 L454.9 296.9 L455.0 296.1 L455.0 295.2 L455.1 294.4 L455.2 293.5 L455.3 292.7 L455.3 291.8 L455.4 291.0 L455.5 290.1 L455.6 289.3 L455.6 288.5 L455.7 287.6 L455.8 286.8 L455.9 286.0 L455.9 285.2 L456.0 284.3 L456.1 283.5 L456.2 282.7 L456.2 281.9 L456.3 281.0 L456.4 280.2 L456.5 279.4 L456.5 278.5 L456.6 277.7 L456.7 276.9 L456.8 276.0 L456.8 275.2 L456.9 274.3 L457.0 273.5 L457.1 272.6 L457.1 271.8 L457.2 270.9 L457.3 270.0 L457.4 269.1 L457.4 268.3 L457.5 267.4 L457.6 266.5 L446.4 265.5 L446.3 266.4 L446.3 267.3 L446.2 268.2 L446.1 269.1 L446.0 269.9 L446.0 270.8 L445.9 271.6 L445.8 272.5 L445.7 273.3 L445.7 274.2 L445.6 275.0 L445.5 275.9 L445.4 276.7 L445.4 277.5 L445.3 278.4 L445.2 279.2 L445.1 280.0 L445.1 280.8 L445.0 281.7 L444.9 282.5 L444.8 283.3 L444.8 284.1 L444.7 285.0 L444.6 285.8 L444.5 286.6 L444.5 287.5 L444.4 288.3 L444.3 289.1 L444.2 290.0 L444.2 290.8 L444.1 291.7 L444.0 292.5 L443.9 293.4 L443.9 294.2 L443.8 295.1 L443.7 296.0 L443.6 296.9 L443.6 297.7 L443.5 298.6 L443.4 299.5 L443.4 299.8 L443.3 301.5 L443.2 303.3 L443.0 304.9 L442.7 306.5 L442.5 308.1 L442.2 309.6 L441.8 311.0 L441.4 312.4 L441.0 313.7 L440.6 315.0 L440.2 316.3 L439.9 317.5 L439.6 318.7 L439.3 319.9 L439.1 321.0 L438.9 322.2 L438.7 323.4 L438.5 324.5 L438.3 325.7 L438.1 326.9 L437.8 328.0 L437.1 328.7Z" fill="url(#s07-ribbon-back)"/>
+    <path d="M439.1 321.0 L439.3 319.9 L439.6 318.7 L439.9 317.5 L440.2 316.3 L440.6 315.0 L441.0 313.7 L441.4 312.4 L441.8 311.0 L442.2 309.6 L442.5 308.1 L442.7 306.5 L443.0 304.9 L443.2 303.3 L443.3 301.5 L443.4 299.8 L443.4 299.5 L443.5 298.6 L443.6 297.7 L443.6 296.9 L443.7 296.0 L443.8 295.1 L443.9 294.2 L443.9 293.4 L444.0 292.5 L444.1 291.7 L444.2 290.8 L444.2 290.0 L444.3 289.1 L444.4 288.3 L444.5 287.5 L444.5 286.6 L444.6 285.8 L444.7 285.0 L444.8 284.1 L444.8 283.3 L444.9 282.5 L445.0 281.7 L445.1 280.8 L445.1 280.0 L445.2 279.2 L445.3 278.4 L445.4 277.5 L445.4 276.7 L445.5 275.9 L445.6 275.0 L445.7 274.2 L445.7 273.3 L445.8 272.5 L445.9 271.6 L446.0 270.8 L446.0 269.9 L446.1 269.1" fill="none" stroke="rgba(255,255,255,.16)" stroke-width="1"/>
+  </g></svg>
+  <div class="s7-face s7-face--pulled" style="left:348px;top:160px" aria-label="Bath Time Song, pulled out">
+    <div class="s7-face__label">
+      <i class="s7-stripe"></i>
+      <div class="s7-band"><span class="s7-holes"><i></i><i></i></span></div>
+      <div class="s7-field"><b class="s7-ftitle">Bath Time Song</b></div>
+    </div>
+    <div class="s7-win"><svg class="ss-reel"><use href="#i-reel"/></svg><svg class="ss-reel"><use href="#i-reel"/></svg></div>
+    <i class="s7-screw" style="left:8px"></i><i class="s7-screw" style="right:8px"></i>
+  </div>
+
+  <!-- (d) blank tape -->
+  <div class="s7-blank" style="left:510px;top:190px">
+    <span class="s7-blank__plus"><svg class="ss-i"><use href="#i-plus"/></svg></span>
+    <b>Make your own</b>
+    <p>BLANK TAPE ·<br>YOUR VOICE ·<br>YOUR PICTURES</p>
+  </div>
+
+  <div class="s7-ledge" style="top:300px"></div>
+  <div class="s7-glow2"></div>
+  <span class="ss-chip ss-chip--violet s7-sent">Sent to you · Next</span>
+
+  <!-- Row B · house tapes -->
+  <div class="s7-mono s7-lblB">HOUSE TAPES · CHOSEN BY PEOPLE <span class="ss-chip ss-chip--future">Genres · Idea</span></div>
+  <div class="s7-pills">
+    <span class="ss-chip ss-chip--gold">All</span><span class="ss-chip">Children</span><span class="ss-chip">Educational</span><span class="ss-chip">Fantasy</span><span class="ss-chip">Poetry</span><span class="ss-chip">Faith-Based</span><span class="ss-chip">Personal</span>
+  </div>
+
+  <div class="s7-feat">
+    <div class="s7-feat__bg ss-art ss-art--5 ss-art-blur"></div>
+    <div class="s7-feat__shade"></div>
+    <img class="s7-feat__img" src="assets/page5.jpg" alt="Page 5: the little star glowing at a child's window">
+    <div class="s7-feat__txt">
+      <div class="s7-feat__k">THE BRAVE LITTLE STAR · ISLAND DEVELOPMENT CREW</div>
+      <div class="s7-feat__h">On Sunday you heard all 8 pages.</div>
+      <div class="s7-feat__btns">
+        <span class="ss-btn ss-btn--gold"><svg class="ss-i"><use href="#i-repeat"/></svg>Read it again</span>
+        <span class="ss-btn ss-btn--ghost">Read it in…</span>
+        <span class="ss-chip ss-chip--violet">Next</span>
+      </div>
+    </div>
+    <div class="s7-feat__prog" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></div>
+  </div>
+
+  <!-- sealed originals -->
+  <div class="s7-face s7-sealed" style="left:24px;top:556px;transform:rotate(-.6deg)">
+    <div class="s7-face__label kraft"><i class="s7-stripe"></i><div class="s7-sband s7-sband--prem"><svg class="ss-i"><use href="#i-star-solid"/></svg>PREMIUM</div><div class="s7-sfield"><b>Luna and the Lost Kitten</b></div></div>
+    <div class="s7-win"><svg class="ss-reel"><use href="#i-reel"/></svg><svg class="ss-reel"><use href="#i-reel"/></svg></div>
+    <i class="s7-screw" style="left:8px"></i><i class="s7-screw" style="right:8px"></i>
+    <i class="s7-cello"></i>
+    <span class="ss-stamp s7-sstamp" style="transform:rotate(-7deg)">COMING TO<br>THE SHELF</span>
+  </div>
+  <div class="s7-face s7-sealed" style="left:186px;top:556px">
+    <div class="s7-face__label"><i class="s7-stripe"></i><div class="s7-sband s7-sband--prem"><svg class="ss-i"><use href="#i-star-solid"/></svg>PREMIUM</div><div class="s7-sfield"><b>The Robot Who Learned to Dream</b></div></div>
+    <div class="s7-win"><svg class="ss-reel"><use href="#i-reel"/></svg><svg class="ss-reel"><use href="#i-reel"/></svg></div>
+    <i class="s7-screw" style="left:8px"></i><i class="s7-screw" style="right:8px"></i>
+    <i class="s7-cello"></i>
+    <span class="ss-stamp s7-sstamp" style="transform:rotate(5deg)">COMING TO<br>THE SHELF</span>
+  </div>
+  <div class="s7-face s7-sealed" style="left:348px;top:556px;transform:rotate(.5deg)">
+    <div class="s7-face__label kraft"><i class="s7-stripe"></i><div class="s7-sband">POETRY</div><div class="s7-sfield"><b>A Walk Through Autumn</b></div></div>
+    <div class="s7-win"><svg class="ss-reel"><use href="#i-reel"/></svg><svg class="ss-reel"><use href="#i-reel"/></svg></div>
+    <i class="s7-screw" style="left:8px"></i><i class="s7-screw" style="right:8px"></i>
+    <i class="s7-cello"></i>
+    <span class="ss-stamp s7-sstamp" style="transform:rotate(-4deg)">COMING TO<br>THE SHELF</span>
+  </div>
+  <div class="s7-face s7-sealed" style="left:510px;top:556px">
+    <div class="s7-face__label"><i class="s7-stripe"></i><div class="s7-sband">FAITH-BASED</div><div class="s7-sfield"><b>The Courage of a Small Seed</b></div></div>
+    <div class="s7-win"><svg class="ss-reel"><use href="#i-reel"/></svg><svg class="ss-reel"><use href="#i-reel"/></svg></div>
+    <i class="s7-screw" style="left:8px"></i><i class="s7-screw" style="right:8px"></i>
+    <i class="s7-cello"></i>
+    <span class="ss-stamp s7-sstamp" style="transform:rotate(6deg)">COMING TO<br>THE SHELF</span>
+  </div>
+  <div class="s7-ledge" style="top:666px"></div>
+  <p class="s7-under">Family tapes never appear here. Unlisted means unlisted.</p>
+
+  <!-- RIGHT · Read it in… -->
+  <aside class="ss-glass s7-panel">
+    <div class="s7-hero ss-art ss-art--6">
+      <div class="s7-hero__q">Thank you, little star.</div>
+      <span class="s7-hero__tab">PAGE 6</span>
+    </div>
+    <div class="s7-ph"><h3>Read it in…</h3><span class="ss-chip ss-chip--violet">Next</span></div>
+    <p class="s7-pline">A computer read you this one. Now read it in yours.</p>
+
+    <div class="s7-mono s7-plbl">WHOSE VOICE?</div>
+    <div class="s7-voices">
+      <div class="s7-vc s7-vc--now"><div class="s7-vc__shell"><div class="s7-vc__label"><span class="s7-vc__name">Browser<br>voice</span></div><div class="s7-vc__win"><svg class="ss-reel"><use href="#i-reel"/></svg><svg class="ss-reel"><use href="#i-reel"/></svg></div><i class="s7-vc__foot"></i></div><span class="s7-vc__cap">READING NOW</span></div>
+      <div class="s7-vc"><div class="s7-vc__shell"><div class="s7-vc__label s7-vc__label--rec"><span class="s7-vc__rec"></span><span class="s7-vc__name">Mom</span></div><div class="s7-vc__win"><svg class="ss-reel"><use href="#i-reel"/></svg><svg class="ss-reel"><use href="#i-reel"/></svg></div><i class="s7-vc__foot"></i></div></div>
+      <div class="s7-vc"><div class="s7-vc__shell"><div class="s7-vc__label s7-vc__label--rec"><span class="s7-vc__rec"></span><span class="s7-vc__name">Mia,<br>age 4</span></div><div class="s7-vc__win"><svg class="ss-reel"><use href="#i-reel"/></svg><svg class="ss-reel"><use href="#i-reel"/></svg></div><i class="s7-vc__foot"></i></div></div>
+      <div class="s7-vc"><div class="s7-vc__shell"><div class="s7-vc__label s7-vc__label--rec"><span class="s7-vc__rec"></span><span class="s7-vc__name">Grandma<br>Rose</span></div><div class="s7-vc__win"><svg class="ss-reel"><use href="#i-reel"/></svg><svg class="ss-reel"><use href="#i-reel"/></svg></div><i class="s7-vc__foot"></i></div></div>
+      <div class="s7-vc s7-vc--locked"><div class="s7-vc__shell"><div class="s7-vc__label"><svg class="ss-i"><use href="#i-lock"/></svg></div><div class="s7-vc__win"><svg class="ss-reel"><use href="#i-reel"/></svg><svg class="ss-reel"><use href="#i-reel"/></svg></div><i class="s7-vc__foot"></i></div><span class="s7-vc__cap">MADE VOICE · PHASE 3</span></div>
+    </div>
+
+    <div class="s7-mono s7-plbl">WHAT SHOULD IT FEEL LIKE?</div>
+    <div class="s7-moods">
+      <div class="s7-mood" style="--c:var(--mood-wonder)"><div class="s7-mood__top"><svg class="ss-i"><use href="#i-star"/></svg><b>Wonder</b><span class="s7-contour"><i style="--y:9"></i><i style="--y:6"></i><i style="--y:8"></i><i style="--y:3"></i><i style="--y:5"></i><i style="--y:0"></i></span></div><p>Twinkly, a little magic in the air</p></div>
+      <div class="s7-mood" style="--c:var(--mood-adventure)"><div class="s7-mood__top"><svg class="ss-i"><use href="#i-compass"/></svg><b>Adventure</b><span class="s7-contour"><i style="--y:10"></i><i style="--y:3"></i><i style="--y:8"></i><i style="--y:0"></i><i style="--y:6"></i><i style="--y:1"></i></span></div><p>Bold, off we go</p></div>
+      <div class="s7-mood" style="--c:var(--mood-calm)"><div class="s7-mood__top"><svg class="ss-i"><use href="#i-moon"/></svg><b>Calm</b><span class="s7-contour"><i style="--y:2"></i><i style="--y:4"></i><i style="--y:5"></i><i style="--y:7"></i><i style="--y:8"></i><i style="--y:10"></i></span></div><p>Soft and sleepy, for bedtime</p></div>
+      <div class="s7-mood" style="--c:var(--mood-joy)"><div class="s7-mood__top"><svg class="ss-i"><use href="#i-sun"/></svg><b>Joy</b><span class="s7-contour"><i style="--y:7"></i><i style="--y:1"></i><i style="--y:7"></i><i style="--y:1"></i><i style="--y:4"></i><i style="--y:0"></i></span></div><p>Bright and skipping</p></div>
+      <div class="s7-mood is-on" style="--c:var(--mood-hush)"><div class="s7-mood__top"><svg class="ss-i"><use href="#i-cloud"/></svg><b>Hush</b><span class="s7-contour"><i style="--y:7"></i><i style="--y:8"></i><i style="--y:6"></i><i style="--y:9"></i><i style="--y:8"></i><i style="--y:10"></i></span></div><p>Quiet and curious — almost a whisper</p></div>
+      <div class="s7-mood" style="--c:var(--mood-rain)"><div class="s7-mood__top"><svg class="ss-i"><use href="#i-cloud-rain"/></svg><b>Rain</b><span class="s7-contour"><i style="--y:1"></i><i style="--y:4"></i><i style="--y:3"></i><i style="--y:6"></i><i style="--y:5"></i><i style="--y:9"></i></span></div><p>Grey-sky weather, warm indoors</p></div>
+      <div class="s7-mood" style="--c:var(--mood-suspense)"><div class="s7-mood__top"><svg class="ss-i"><use href="#i-eye"/></svg><b>Suspense</b><span class="s7-contour"><i style="--y:9"></i><i style="--y:10"></i><i style="--y:9"></i><i style="--y:10"></i><i style="--y:8"></i><i style="--y:0"></i></span></div><p>Something is about to happen</p></div>
+      <div class="s7-mood" style="--c:var(--mood-melancholy)"><div class="s7-mood__top"><svg class="ss-i"><use href="#i-leaf"/></svg><b>Melancholy</b><span class="s7-contour"><i style="--y:0"></i><i style="--y:3"></i><i style="--y:2"></i><i style="--y:5"></i><i style="--y:7"></i><i style="--y:10"></i></span></div><p>Wistful, a little bit of missing someone</p></div>
+    </div>
+    <span class="ss-btn ss-btn--gold s7-make"><svg class="ss-i"><use href="#i-mic"/></svg>Make our own copy</span>
+  </aside>
+
+ </div></div></div>
+ <div class="ss-laptop__base"></div>
+</div>
+
+<!-- ================= spec figure · the old link, after a pull ================= -->
+<figure class="s7-fig" aria-label="The old link, after a pull">
+  <span class="s7-fig__tab">TUESDAY 7:40 AM · AFTER A PULL</span>
+  <div class="s7-fig__clip"><div class="s7-fig__in">
+    <div class="s7-ktape">
+      <div class="s7-ktape__stripe"></div>
+      <div class="s7-ktape__band"><i></i><i></i></div>
+      <div class="s7-ktape__field">
+        <div class="s7-ktape__t">We couldn't find that tape</div>
+        <div class="s7-ktape__m">NO STORY AT CODE · <span>9a41c07e3d5b2f16</span></div>
+      </div>
+    </div>
+    <p class="s7-fig__p">The link may be incomplete, or the person who made this story may have deleted it — one tap wipes a story everywhere, on purpose.</p>
+    <div class="s7-fig__btns"><span class="ss-btn ss-btn--gold">Play the demo tape</span><span class="ss-btn ss-btn--ghost">Make your own story</span></div>
+  </div></div>
+</figure>
+
+<!-- ================= callouts ================= -->
+<div class="ss-callout" style="left:1290px;top:300px"><b>Sent to you</b>A tape opened from a link could stay on the shelf, on this device. Today it plays and is gone; the shelf view is next (the cloud library behind it already exists).</div>
+<div class="ss-callout" style="left:1290px;top:452px"><b>Unlisted means unlisted</b>The house shelf holds originals chosen by people. A family's tapes are reachable only by their link — never listed, searched or counted.</div>
+<div class="ss-callout" style="left:1290px;top:612px"><b>Any book, your voices</b>The wedge: make any storybook read itself in the voice and mood you choose. Re-voicing a house tape needs the Creator to open a .storysync — next on the roadmap, and the file format already supports it.</div>
+<i class="ss-leader" style="left:1285px;top:621px;width:68px;transform:rotate(192.8deg)"></i>
+
+<div class="s7-layers" aria-label="Layers lit: Metadata and Signature"><span>LAYERS</span><i class="on" style="--c:#EFE9DC"></i><i style="--c:#E4E0FA"></i><i style="--c:#FBF3DF"></i><i style="--c:#FADFDA"></i><i style="--c:#FBEBD2"></i><i style="--c:#E6E9EE"></i><i class="on sig" style="--c:#FFE9A8"></i></div>
+</section>

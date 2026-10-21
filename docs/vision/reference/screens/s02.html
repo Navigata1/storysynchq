@@ -1,0 +1,469 @@
+<section class="ss-screen" id="s02" style="--w:1600px;--h:1000px" aria-label="The room around a page">
+<style>
+/* ---------- stage: one warm light from the top-left ---------- */
+#s02 .ss-stage--warm {
+  background:
+    radial-gradient(820px 600px at 4% 0%, rgba(255, 186, 92, 0.2), transparent 62%),
+    radial-gradient(760px 520px at 100% 100%, rgba(124, 107, 255, 0.1), transparent 60%),
+    linear-gradient(170deg, #1a1420 0%, #120f1a 55%, #0b0a12 100%);
+}
+#s02 .ss-stage::after { bottom: auto; top: 807px; }
+#s02 .spill {
+  position: absolute; left: 150px; top: 90px; width: 1020px; height: 760px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(92, 122, 190, 0.2), rgba(255, 186, 92, 0.05) 62%, transparent);
+  filter: blur(30px);
+}
+
+/* ---------- laptop ---------- */
+#s02 .lap { position: absolute; left: 80px; top: 40px; z-index: 2; }
+
+/* ---------- the Reader viewport (1120 x 700) ---------- */
+#s02 .rd {
+  position: absolute; inset: 0; overflow: hidden;
+  background:
+    radial-gradient(130% 90% at 50% 4%, rgba(245, 158, 11, 0.2), transparent 58%),
+    radial-gradient(120% 100% at 8% 96%, rgba(124, 107, 255, 0.24), transparent 60%),
+    linear-gradient(180deg, #141a2c 0%, #0d1322 52%, #0a0e1a 100%);
+}
+#s02 .rd-room { position: absolute; inset: 0; opacity: 0.66; filter: blur(44px) saturate(1.4) brightness(0.92); transform: scale(1.18); }
+#s02 .rd-light {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(720px 480px at 0% 0%, rgba(255, 186, 92, 0.18), transparent 70%),
+    radial-gradient(720px 500px at 100% 100%, rgba(124, 107, 255, 0.12), transparent 70%),
+    radial-gradient(118% 88% at 50% 46%, rgba(10, 14, 26, 0) 42%, rgba(10, 14, 26, 0.4) 80%, rgba(10, 14, 26, 0.7) 100%),
+    linear-gradient(180deg, rgba(10, 14, 26, 0.3) 0%, rgba(10, 14, 26, 0) 22%, rgba(10, 14, 26, 0) 70%, rgba(10, 14, 26, 0.45) 100%);
+}
+
+/* deck chip — three sounds */
+#s02 .rd-deck {
+  position: absolute; left: 20px; top: 16px; z-index: 6;
+  display: flex; align-items: center; gap: 14px;
+  padding: 10px 16px 10px 12px;
+  border-radius: 18px;
+  background: rgba(8, 11, 21, 0.56);
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  backdrop-filter: blur(14px);
+}
+#s02 .dk-next {
+  position: absolute; right: 14px; top: -10px;
+  height: 20px; padding: 0 8px; gap: 5px;
+  font: 600 11px/1 var(--ss-ui); letter-spacing: 0.02em;
+  background: #241f4a;
+}
+#s02 .dk-left { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+#s02 .dk-win {
+  position: relative; width: 96px; height: 42px; border-radius: 12px;
+  background: linear-gradient(180deg, #07090f, #141823);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+#s02 .dk-pack {
+  position: absolute; top: 50%; border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background:
+    radial-gradient(circle, transparent 0 52%, rgba(0, 0, 0, 0.25) 100%),
+    repeating-radial-gradient(circle, #5b3a24 0 1.2px, #4a2e1b 1.2px 2.4px);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12) inset;
+}
+#s02 .dk-pack--a { left: 25px; width: 38px; height: 38px; }
+#s02 .dk-pack--b { left: 71px; width: 29px; height: 29px; }
+#s02 .dk-tape {
+  position: absolute; left: 25px; right: 25px; bottom: 2px; height: 2px;
+  background: linear-gradient(180deg, #5b3a24, #3d2616);
+}
+#s02 .dk-reel {
+  position: absolute; top: 50%; width: 20px; height: 20px;
+  transform: translate(-50%, -50%) rotate(18deg);
+  border-radius: 50%;
+}
+#s02 .dk-reel::after {
+  content: ""; position: absolute; inset: -1px; border-radius: 50%;
+  background: conic-gradient(from 20deg, transparent 0 20%, rgba(255, 253, 246, 0.28) 30%, transparent 42% 70%, rgba(255, 253, 246, 0.22) 80%, transparent 92%);
+  filter: blur(1px);
+}
+#s02 .dk-reel .ss-reel { width: 20px; height: 20px; display: block; }
+#s02 .dk-reel--a { left: 25px; }
+#s02 .dk-reel--b { left: 71px; }
+#s02 .dk-count { font: 500 12px/1 var(--ss-mono); letter-spacing: 0.16em; color: var(--ss-fg-2); }
+#s02 .dk-rule { width: 1px; align-self: stretch; background: rgba(255, 255, 255, 0.1); }
+#s02 .dk-rows { display: flex; flex-direction: column; gap: 5px; }
+#s02 .dk-row {
+  display: flex; align-items: center; gap: 9px; white-space: nowrap;
+  font: 400 11px/14px var(--ss-mono); color: var(--ss-fg-2);
+}
+#s02 .dk-row b { font-weight: 500; letter-spacing: 0.12em; color: var(--ss-fg-3); }
+#s02 .dk-g { width: 26px; height: 12px; flex: none; overflow: visible; }
+
+/* top-right chips */
+#s02 .rd-top { position: absolute; right: 20px; top: 16px; z-index: 6; display: flex; gap: 8px; }
+#s02 .rd-top .ss-chip { backdrop-filter: blur(12px); background: rgba(8, 11, 21, 0.5); }
+#s02 .rd-top .ss-chip--gold { background: rgba(245, 158, 11, 0.18); }
+
+/* the open-book spread */
+#s02 .rd-spread {
+  position: absolute; left: 60px; top: 116px; width: 1000px; height: 500px; z-index: 3;
+  display: grid; grid-template-columns: 500px 500px;
+  border-radius: 14px;
+  box-shadow: 0 40px 80px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+#s02 .rd-art {
+  position: relative; width: 500px; height: 500px;
+  border-radius: 14px 0 0 14px;
+  box-shadow: inset 0 0 0 1px rgba(255, 253, 246, 0.16);
+}
+#s02 .rd-page {
+  position: relative; width: 500px; height: 500px;
+  display: flex; flex-direction: column;
+  padding: 40px;
+  border-radius: 0 14px 14px 0;
+  background:
+    radial-gradient(420px 300px at 0% 0%, rgba(255, 186, 92, 0.08), transparent 70%),
+    linear-gradient(180deg, rgba(10, 14, 26, 0.42), rgba(10, 14, 26, 0.58));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-left: 0;
+  backdrop-filter: blur(18px) saturate(1.1);
+}
+#s02 .rd-spine {
+  position: absolute; left: 470px; top: 0; bottom: 0; width: 60px; pointer-events: none;
+  background: linear-gradient(90deg, transparent 0, rgba(0, 0, 0, 0.22) 44%, rgba(0, 0, 0, 0.32) 50%, rgba(255, 253, 246, 0.05) 51%, rgba(0, 0, 0, 0.16) 56%, transparent 100%);
+}
+#s02 .rd-kicker {
+  display: flex; align-items: center; gap: 8px;
+  font: 500 11px/1 var(--ss-mono); letter-spacing: 0.18em; color: var(--ss-fg-3);
+}
+#s02 .rd-kicker i { width: 7px; height: 7px; border-radius: 50%; background: var(--mood-wonder); box-shadow: 0 0 10px rgba(245, 181, 68, 0.7); }
+#s02 .rd-text {
+  margin: auto 0;
+  font-size: 26px; line-height: 1.5; font-weight: 450;
+}
+#s02 .rd-text .said { color: #f3e6c8; }
+#s02 .rd-text .now { text-shadow: 0 0 26px rgba(255, 201, 60, 0.7), 0 0 8px rgba(255, 201, 60, 0.35); }
+#s02 .rd-foot { display: flex; align-items: center; gap: 10px; font: 400 11px/1 var(--ss-mono); letter-spacing: 0.06em; color: var(--ss-fg-3); }
+#s02 .rd-foot svg { width: 24px; height: 24px; flex: none; }
+
+/* word-to-picture hotspot (Idea) */
+#s02 .rd-hot {
+  position: absolute; left: 98px; top: 358px; width: 64px; height: 64px;
+  border-radius: 50%;
+  border: 2px dashed rgba(255, 201, 60, 0.8);
+  box-shadow: 0 0 0 4px rgba(255, 201, 60, 0.1), 0 0 24px rgba(255, 201, 60, 0.25);
+}
+#s02 .rd-hotcap {
+  position: absolute; left: 16px; top: 436px;
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 4px 12px 4px 4px; border-radius: 999px;
+  background: rgba(8, 11, 21, 0.7);
+  backdrop-filter: blur(8px);
+  font: 500 12.5px/1 var(--ss-ui); color: #f3e6c8; white-space: nowrap;
+}
+#s02 .rd-hotcap .ss-chip--future { height: 22px; padding: 0 8px; border-color: rgba(255, 201, 60, 0.55); color: #ffd78a; }
+#s02 .rd-hottail { position: absolute; left: 129px; top: 423px; width: 0; height: 13px; border-left: 2px dashed rgba(255, 201, 60, 0.7); }
+
+/* bottom chrome */
+#s02 .rd-keys {
+  position: absolute; left: 24px; top: 657px; z-index: 6;
+  font: 400 11px/14px var(--ss-mono); letter-spacing: 0.06em; color: #6c7590;
+}
+#s02 .rd-transport {
+  position: absolute; left: 460px; top: 640px; width: 200px; height: 48px; z-index: 6;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 18px;
+  border-radius: 999px;
+  background: rgba(8, 11, 21, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(14px);
+}
+#s02 .tp { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; color: var(--ss-fg-2); }
+#s02 .tp .ss-i { width: 18px; height: 18px; }
+#s02 .tp--main { width: 40px; height: 40px; background: #fffdf6; color: var(--ss-navy); box-shadow: 0 6px 18px -6px rgba(255, 201, 60, 0.6); }
+#s02 .tp--main .ss-i { width: 22px; height: 22px; }
+#s02 .rd-tape {
+  position: absolute; left: 0; right: 0; top: 696px; height: 3px; z-index: 6;
+  background: linear-gradient(180deg, rgba(91, 58, 36, 0.9), rgba(61, 38, 22, 0.9));
+  box-shadow: 0 -1px 0 rgba(255, 255, 255, 0.08);
+}
+#s02 .rd-tape .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 238px; background: linear-gradient(90deg, var(--ss-gold) 0 140px, rgba(251, 191, 74, 0.95) 140px); box-shadow: 0 0 10px rgba(245, 158, 11, 0.55); }
+#s02 .rd-tape b { position: absolute; bottom: 3px; width: 1px; height: 6px; background: rgba(255, 255, 255, 0.28); }
+#s02 .rd-tape b:first-of-type { background: var(--ss-gold); }
+
+/* ---------- spec figures ---------- */
+#s02 .fig {
+  position: absolute; left: 1316px; width: 268px; height: 176px; z-index: 4;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: #0f1426;
+  box-shadow: 0 24px 48px -24px rgba(0, 0, 0, 0.7);
+}
+#s02 .fig__clip { position: absolute; inset: 0; border-radius: 11px; overflow: hidden; }
+#s02 .fig__2x { position: absolute; left: 0; top: 0; width: 532px; height: 348px; transform: scale(0.5); transform-origin: 0 0; overflow: hidden; }
+#s02 .fig__tab {
+  position: absolute; z-index: 5; left: 12px; top: -11px; height: 22px;
+  display: inline-flex; align-items: center; gap: 7px; padding: 0 10px;
+  border-radius: 999px; background: var(--ss-navy); border: 1px solid rgba(255, 255, 255, 0.16);
+  font: 500 11px/1 var(--ss-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ss-fg-2);
+  white-space: nowrap;
+}
+#s02 .fig__tab::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--ss-gold); box-shadow: 0 0 6px rgba(245, 158, 11, 0.7); }
+
+/* A · cover gate */
+#s02 .ga-bg { position: absolute; inset: -30px; filter: blur(12px) saturate(1.2); }
+#s02 .ga-dim { position: absolute; inset: 0; background: rgba(6, 9, 16, 0.68); }
+#s02 .ga-col { position: absolute; left: 66px; top: 30px; width: 400px; display: flex; flex-direction: column; align-items: stretch; }
+#s02 .ga-shell {
+  height: 42px; display: flex; align-items: center; gap: 14px; padding: 0 14px;
+  border: 3px solid var(--ss-ink); border-bottom: 0; border-radius: 12px 12px 0 0;
+  background: linear-gradient(180deg, #4a4540 0%, #3b3733 62%, #2f2b28 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+#s02 .ga-shell .ss-reel { width: 28px; height: 28px; --reel-face: #efe4d2; }
+#s02 .ga-shell span { flex: 1; height: 16px; border-radius: 5px; border: 2px solid rgba(0, 0, 0, 0.45); background: linear-gradient(180deg, rgba(20, 18, 16, 0.85), rgba(60, 55, 50, 0.55)); }
+#s02 .ga-label { border-width: 3px; border-radius: 0 0 12px 12px; box-shadow: none; }
+#s02 .ga-label .ss-tape__stripe { height: 8px; border-bottom-width: 3px; }
+#s02 .ga-label .ss-tape__band { padding: 6px 14px; font-size: 16px; border-bottom-width: 3px; }
+#s02 .ga-label .ss-tape__holes i { width: 11px; height: 11px; }
+#s02 .ga-label .ss-tape__field { padding: 10px 18px 12px; background: var(--ss-paper); }
+#s02 .ga-label .ss-tape__title { font-size: 30px; }
+#s02 .ga-label .ss-tape__author { font-size: 21px; margin-top: 3px; }
+#s02 .ga-label .ss-tape__meta { font-size: 19px; margin-top: 8px; letter-spacing: 0.14em; }
+#s02 .ga-btn { margin-top: 14px; height: 52px; font-size: 23px; gap: 10px; }
+#s02 .ga-btn .ss-i { width: 22px; height: 22px; }
+#s02 .ga-note { margin: 12px -60px 0; text-align: center; font: 500 17px/1.2 var(--ss-mono); letter-spacing: 0.1em; color: rgba(226, 232, 240, 0.5); white-space: nowrap; }
+
+/* B · the turn */
+#s02 .gb-bg { position: absolute; inset: -30px; filter: blur(18px) brightness(0.32) saturate(1.1); }
+#s02 .gb-book { position: absolute; left: 70px; top: 40px; width: 392px; height: 196px; }
+#s02 .gb-l { position: absolute; left: 0; top: 0; width: 196px; height: 196px; border-radius: 8px 0 0 8px; box-shadow: 0 18px 30px rgba(0, 0, 0, 0.5); }
+#s02 .gb-r { position: absolute; left: 196px; top: 0; width: 196px; height: 196px; border-radius: 0 8px 8px 0; overflow: hidden; box-shadow: 0 18px 30px rgba(0, 0, 0, 0.5); }
+#s02 .gb-r::after { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 150px; background: linear-gradient(90deg, rgba(0, 0, 0, 0.7) 0 50%, rgba(0, 0, 0, 0.25) 75%, transparent); }
+#s02 .gb-leaf {
+  position: absolute; left: 196px; top: 0; width: 196px; height: 196px;
+  transform-origin: 0 50%;
+  transform: perspective(1400px) rotateY(-64deg);
+  border-radius: 0 14px 14px 0;
+  padding: 58px 22px 0 26px;
+  display: flex; flex-direction: column; gap: 14px;
+  background: linear-gradient(90deg, #121829 0%, #1b2238 42%, #2c3558 76%, #5a5f8c 91%, #e9dfc6 96%, #2a2f4a 100%);
+  box-shadow: 14px 0 26px rgba(0, 0, 0, 0.5);
+}
+#s02 .gb-leaf i { display: block; height: 7px; border-radius: 4px; background: rgba(243, 230, 200, 0.62); }
+#s02 .gb-gut { position: absolute; left: 186px; top: 0; width: 20px; height: 196px; background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.45), transparent); }
+#s02 .gb-rings { position: absolute; left: 286px; top: 66px; width: 144px; height: 144px; overflow: visible; }
+#s02 .gb-chime {
+  position: absolute; left: 404px; top: 40px; padding: 4px 10px; border-radius: 999px;
+  font: 500 21px/1 var(--ss-mono); letter-spacing: 0.08em; color: var(--ss-label);
+  background: rgba(8, 11, 21, 0.78); border: 1px solid rgba(255, 201, 60, 0.4);
+}
+#s02 .gb-labels { position: absolute; left: 70px; top: 262px; width: 392px; height: 26px; font: 500 20px/26px var(--ss-mono); letter-spacing: 0.04em; color: var(--ss-fg-2); }
+#s02 .gb-labels span { position: absolute; top: 0; display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+#s02 .gb-labels .ss-i { width: 20px; height: 20px; }
+#s02 .gb-lane { position: absolute; left: 70px; top: 296px; width: 392px; height: 20px; border-radius: 6px; overflow: hidden; box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.3); }
+
+/* C · reading options */
+#s02 .gc-sub { position: absolute; left: 24px; top: 32px; font: 500 22px/1 var(--ss-mono); letter-spacing: 0.12em; color: var(--ss-fg-2); }
+#s02 .gc-row { position: absolute; left: 14px; top: 66px; display: flex; gap: 12px; }
+#s02 .gc-crop {
+  width: 160px; height: 196px; border-radius: 12px; padding: 0 16px;
+  display: flex; align-items: center;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.08);
+}
+#s02 .gc-crop p span { opacity: 1; }
+#s02 .gc-crop--def { background: radial-gradient(120% 90% at 20% 0%, rgba(92, 122, 190, 0.28), transparent 70%), #0d1322; }
+#s02 .gc-crop--def p { font: 500 27px/1.42 var(--ss-display); color: rgba(233, 240, 250, 0.42); }
+#s02 .gc-crop--def .said { color: #f3e6c8; }
+#s02 .gc-crop--def .now { color: var(--ss-label); text-shadow: 0 0 16px rgba(255, 201, 60, 0.55); }
+#s02 .gc-crop--easy { background: radial-gradient(120% 90% at 20% 0%, rgba(92, 122, 190, 0.28), transparent 70%), #0d1322; }
+#s02 .gc-crop--easy p { font: 500 24px/1.8 var(--ss-ui); letter-spacing: 0.06em; word-spacing: 0.2em; color: rgba(233, 240, 250, 0.42); }
+#s02 .gc-crop--easy .said { color: #f3e6c8; }
+#s02 .gc-crop--easy .now { color: var(--ss-label); text-shadow: 0 0 16px rgba(255, 201, 60, 0.55); }
+#s02 .gc-crop--hc { background: #000; box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.22); }
+#s02 .gc-crop--hc p { font: 600 27px/1.42 var(--ss-display); color: rgba(255, 255, 255, 0.72); }
+#s02 .gc-crop--hc .said { color: #fff; }
+#s02 .gc-crop--hc .now { color: #ffe36a; }
+#s02 .gc-labels { position: absolute; left: 14px; top: 272px; display: flex; gap: 12px; }
+#s02 .gc-labels span { width: 160px; text-align: center; font: 600 22px/1 var(--ss-ui); color: var(--ss-fg-2); white-space: nowrap; }
+#s02 .gc-foot { position: absolute; left: 0; right: 0; top: 312px; display: flex; justify-content: center; align-items: center; gap: 10px; font: 500 20px/1 var(--ss-mono); letter-spacing: 0.1em; color: var(--ss-fg-3); }
+#s02 .gc-foot .ss-i { width: 20px; height: 20px; }
+
+/* ---------- layers strip ---------- */
+#s02 .layers {
+  position: absolute; left: 1316px; top: 960px; width: 236px; height: 24px; z-index: 4;
+  display: flex; align-items: center; gap: 8px; padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.12);
+}
+#s02 .layers span { margin-right: auto; font: 500 10px/1 var(--ss-mono); letter-spacing: 0.16em; color: var(--ss-fg-3); }
+#s02 .layers i { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+#s02 .layers .on { background: var(--f); box-shadow: 0 0 0 1.5px var(--ss-ink), 0 0 0 2.5px rgba(255, 255, 255, 0.18); }
+#s02 .layers .half { background: linear-gradient(90deg, var(--f) 0 50%, transparent 50%); box-shadow: inset 0 0 0 1.5px var(--f); }
+#s02 .layers .off { box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.25); }
+
+/* ---------- callouts ---------- */
+#s02 .ss-callout { font-size: 13.5px; line-height: 1.5; }
+
+/* ---------- handoff to screen 3: the end card ---------- */
+#s02 .handoff b { margin-bottom: 8px; }
+#s02 .handoff__btn {
+  display: inline-flex; align-items: center; gap: 7px; height: 28px; padding: 0 12px;
+  border-radius: 999px; border: 1.5px solid rgba(245, 158, 11, 0.75); background: rgba(245, 158, 11, 0.08);
+  font: 600 12.5px/1 var(--ss-ui); color: var(--ss-gold-2); white-space: nowrap;
+}
+#s02 .handoff__btn .ss-i { width: 14px; height: 14px; }
+#s02 .handoff__ask { display: block; margin-top: 9px; font: italic 500 19px/1.2 var(--ss-display); color: #f3e6c8; }
+#s02 .handoff__ask small { margin-left: 6px; font: 500 11px/1 var(--ss-mono); font-style: normal; letter-spacing: 0.1em; color: var(--ss-fg-3); }
+#s02 .handoff__then { display: block; margin-top: 7px; font: 500 11px/1.3 var(--ss-mono); letter-spacing: 0.1em; color: var(--ss-fg-3); }
+</style>
+
+<div class="ss-stage ss-stage--warm ss-grain"></div>
+<div class="spill"></div>
+
+<!-- =========================== LAPTOP · StorySync Reader =========================== -->
+<div class="ss-laptop lap" style="--lw:1120px;--lh:700px">
+  <div class="ss-laptop__lid"><div class="ss-laptop__screen">
+    <div class="rd">
+      <div class="rd-room ss-art ss-art--2"></div>
+      <div class="rd-light"></div>
+
+      <!-- deck chip: the three cassette sounds -->
+      <div class="rd-deck">
+        <span class="ss-chip ss-chip--violet dk-next">Next</span>
+        <div class="dk-left">
+          <div class="dk-win">
+            <span class="dk-pack dk-pack--a"></span><span class="dk-pack dk-pack--b"></span>
+            <i class="dk-tape"></i>
+            <span class="dk-reel dk-reel--a"><svg class="ss-reel"><use href="#i-reel"/></svg></span>
+            <span class="dk-reel dk-reel--b"><svg class="ss-reel"><use href="#i-reel"/></svg></span>
+          </div>
+          <span class="dk-count">02 / 08</span>
+        </div>
+        <i class="dk-rule"></i>
+        <div class="dk-rows">
+          <div class="dk-row">
+            <svg class="dk-g" viewBox="0 0 26 12"><g fill="#f5b544"><rect x="0" y="4" width="2" height="4" rx="1"/><rect x="3" y="2" width="2" height="8" rx="1"/><rect x="6" y="0" width="2" height="12" rx="1"/><rect x="9" y="3" width="2" height="6" rx="1"/><rect x="12" y="1" width="2" height="10" rx="1"/><rect x="15" y="4" width="2" height="4" rx="1"/><rect x="18" y="2" width="2" height="8" rx="1"/><rect x="21" y="3.5" width="2" height="5" rx="1"/><rect x="24" y="5" width="2" height="2" rx="1"/></g></svg>
+            <span><b>VOICE</b> · Storyteller (browser voice)</span>
+          </div>
+          <div class="dk-row">
+            <svg class="dk-g" viewBox="0 0 26 12"><g fill="#f5b544"><circle cx="2.5" cy="8" r="2.2"/><circle cx="8.5" cy="3.5" r="2.2"/><circle cx="14.5" cy="6" r="2.2"/></g><path d="M22 1.5v8M19 6.8l3 3 3-3" fill="none" stroke="#8d96ad" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span><b>MELODY</b> · Wonder, 12 dB under the voice</span>
+          </div>
+          <div class="dk-row">
+            <svg class="dk-g" viewBox="0 0 26 12"><circle cx="6" cy="6" r="4.6" fill="none" stroke="#ffc93c" stroke-width="1.5"/><circle cx="6" cy="6" r="1.4" fill="#ffc93c" opacity=".5"/></svg>
+            <span><b>CHIME</b> · next turn in 0:03</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="rd-top">
+        <span class="ss-chip ss-chip--gold"><svg class="ss-i"><use href="#i-music"/></svg>Music on</span>
+        <span class="ss-chip"><svg class="ss-i"><use href="#i-settings"/></svg>Reading options</span>
+        <span class="ss-chip"><svg class="ss-i"><use href="#i-x"/></svg>Close</span>
+      </div>
+
+      <!-- the open book -->
+      <div class="rd-spread">
+        <div class="rd-art ss-art ss-art--2">
+          <span class="rd-hotcap"><span class="ss-chip ss-chip--future">Idea</span>· tap a word, the picture answers</span>
+          <i class="rd-hottail"></i>
+          <span class="rd-hot"></span>
+        </div>
+        <div class="rd-page">
+          <p class="rd-kicker"><i></i>PAGE 2 · WONDER</p>
+          <p class="ss-story ss-readalong rd-text"><span class="said">Every night, she watched the world below. She saw children sleeping, parents reading stories, and </span><span class="now">cats</span><span> prowling on rooftops.</span></p>
+          <div class="rd-foot">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="rgba(255,255,255,.16)" stroke-width="2.5"/><circle cx="12" cy="12" r="10" fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="43.98 62.83" transform="rotate(-90 12 12)"/></svg>
+            <span>next page in 3 s · turn cue ready</span>
+          </div>
+        </div>
+        <i class="rd-spine"></i>
+      </div>
+
+      <div class="rd-keys">← → turn · space pause · P music · esc close</div>
+      <div class="rd-transport">
+        <span class="tp"><svg class="ss-i"><use href="#i-prev-solid"/></svg></span>
+        <span class="tp tp--main"><svg class="ss-i"><use href="#i-pause-solid"/></svg></span>
+        <span class="tp"><svg class="ss-i"><use href="#i-next-solid"/></svg></span>
+      </div>
+      <div class="rd-tape"><i class="fill"></i><b style="left:0"></b><b style="left:140px"></b><b style="left:280px"></b><b style="left:420px"></b><b style="left:560px"></b><b style="left:700px"></b><b style="left:840px"></b><b style="left:980px"></b></div>
+    </div>
+  </div></div>
+  <div class="ss-laptop__base"></div>
+</div>
+
+<!-- =========================== SPEC FIGURES =========================== -->
+<!-- A · the cover gate -->
+<div class="fig" style="top:52px">
+  <span class="fig__tab">SUNDAY 7:52 PM · TAP TO BEGIN</span>
+  <div class="fig__clip"><div class="fig__2x">
+    <div class="ga-bg ss-art ss-art--1"></div>
+    <div class="ga-dim"></div>
+    <div class="ga-col">
+      <div class="ga-shell"><svg class="ss-reel"><use href="#i-reel"/></svg><span></span><svg class="ss-reel"><use href="#i-reel"/></svg></div>
+      <div class="ss-tape ga-label">
+        <div class="ss-tape__stripe"></div>
+        <div class="ss-tape__band"><span class="ss-tape__holes"><i></i><i></i></span><span>StorySync</span></div>
+        <div class="ss-tape__field">
+          <div class="ss-tape__title">The Brave Little Star</div>
+          <div class="ss-tape__author">by Island Development Crew</div>
+          <div class="ss-tape__meta">SIDE A · 8 PAGES · ~1:47</div>
+        </div>
+      </div>
+      <span class="ss-btn ss-btn--gold ga-btn"><svg class="ss-i"><use href="#i-sparkles"/></svg>Tap to Begin</span>
+      <p class="ga-note">BEST WITH THE LIGHTS LOW AND THE SOUND UP</p>
+    </div>
+  </div></div>
+</div>
+
+<!-- B · the turn -->
+<div class="fig" style="top:262px">
+  <span class="fig__tab">PAGE 3 → 4 · THE TURN</span>
+  <div class="fig__clip"><div class="fig__2x">
+    <div class="gb-bg ss-art ss-art--3"></div>
+    <div class="gb-book">
+      <div class="gb-l ss-art ss-art--3"></div>
+      <div class="gb-r ss-art ss-art--4"></div>
+      <i class="gb-gut"></i>
+      <div class="gb-leaf"><i style="width:92%"></i><i style="width:78%"></i><i style="width:86%"></i><i style="width:50%"></i></div>
+    </div>
+    <svg class="gb-rings" viewBox="0 0 144 144"><g fill="none" stroke="#ffc93c" stroke-linecap="round"><circle cx="72" cy="72" r="16" stroke-width="3" opacity=".95"/><circle cx="72" cy="72" r="32" stroke-width="2.5" opacity=".6"/><circle cx="72" cy="72" r="50" stroke-width="2" opacity=".32"/></g></svg>
+    <span class="gb-chime">chime</span>
+    <div class="gb-labels">
+      <span style="left:0;color:#f5b544"><svg class="ss-i"><use href="#i-star"/></svg>Wonder</span>
+      <span style="left:158px">1.6 s</span>
+      <span style="right:0;color:#f28c38"><svg class="ss-i"><use href="#i-compass"/></svg>Adventure</span>
+    </div>
+    <svg class="gb-lane" viewBox="0 0 392 20" preserveAspectRatio="none">
+      <defs><linearGradient id="s02-xfade" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="#f5b544"/><stop offset="1" stop-color="#f28c38"/></linearGradient></defs>
+      <rect x="0" y="0" width="392" height="20" fill="#f28c38"/>
+      <polygon points="0,0 220,0 156,20 0,20" fill="#f5b544"/>
+      <polygon points="156,0 220,0 220,20 156,20" fill="url(#s02-xfade)" opacity=".55"/>
+      <line x1="220" y1="0" x2="156" y2="20" stroke="#1e1a16" stroke-width="2" stroke-dasharray="3 3"/>
+    </svg>
+  </div></div>
+</div>
+
+<!-- C · reading options -->
+<div class="fig" style="top:472px">
+  <span class="fig__tab">READING OPTIONS</span>
+  <div class="fig__clip"><div class="fig__2x">
+    <p class="gc-sub">ONE PAGE, THREE WAYS</p>
+    <div class="gc-row">
+      <div class="gc-crop gc-crop--def"><p><span class="said">and </span><span class="now">cats</span><span> prowling on rooftops.</span></p></div>
+      <div class="gc-crop gc-crop--easy"><p><span class="said">and </span><span class="now">cats</span><span> prowling on rooftops.</span></p></div>
+      <div class="gc-crop gc-crop--hc"><p><span class="said">and </span><span class="now">cats</span><span> prowling on rooftops.</span></p></div>
+    </div>
+    <div class="gc-labels"><span>Default</span><span>Easier to read</span><span>High contrast</span></div>
+    <p class="gc-foot"><svg class="ss-i"><use href="#i-lock"/></svg>saved on this device only</p>
+  </div></div>
+</div>
+
+<!-- =========================== CALLOUTS =========================== -->
+<div class="ss-callout" style="left:80px;top:832px;max-width:440px"><b>THREE SOUNDS, AT ONCE</b>The narrator on the voice bus; the Wonder melody, a music box over a soft pad, ducked about 12 dB beneath it; and a paper-and-wood chime, under 300 ms, on its own channel when the page turns.</div>
+<div class="ss-callout" style="left:560px;top:832px;max-width:440px"><b>WORDS LIGHT AS THEY'RE SPOKEN</b>With the browser voice each word lights on its spoken boundary; with a recorded voice the light sweeps across the clip's length. Lines stay under 62 characters.</div>
+<i class="ss-leader" style="left:1308px;top:690px;width:136px;transform:rotate(151deg)"></i>
+<div class="ss-callout" style="left:1316px;top:676px;max-width:268px"><b>NOT VIDEO</b>A still page in a room lit by its own colors. Sound carries the motion: no scrubber, no timecode, only a strip of tape filling up.</div>
+<div class="ss-callout handoff" style="left:1316px;top:832px;max-width:268px"><b>8 / 8 · THE END</b><span class="handoff__btn"><svg class="ss-i"><use href="#i-star"/></svg>Make your own story</span><span class="handoff__ask"><q>Can I make one?</q><small>MIA, 4</small></span><span class="handoff__then">MONDAY, WITH HER OWN DRAWINGS →</span></div>
+
+<!-- =========================== LAYERS =========================== -->
+<div class="layers"><span>LAYERS</span><i class="on" style="--f:#EFE9DC"></i><i class="on" style="--f:#E4E0FA"></i><i class="on" style="--f:#FBF3DF"></i><i class="half" style="--f:#FADFDA"></i><i class="on" style="--f:#FBEBD2"></i><i class="on" style="--f:#E6E9EE"></i><i class="off"></i></div>
+</section>

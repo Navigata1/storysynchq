@@ -109,3 +109,10 @@ build stamps `<meta name="ssync-build">` with `VERCEL_GIT_COMMIT_SHA` ("local" e
 production serving commit X" is answered from page source, not inferred. The Vercel project had lost
 its Git link after March (the Sep 6 redesign deploy was pushed by hand); Jon reconnected it on
 2026-10-19, so pushes to `main` deploy to production and PR branches get preview deployments again.
+
+**2026-10-20 · The Vision Reel is the build target; handoff written for an outside builder** — Ten
+reference screens (one family's week, Side A receive/make/hand over, Side B answer/keep/open up/grow)
+were produced from the full recovered vision and live in `docs/vision/` with their brief, design
+foundation and renders. `docs/vision/HANDOFF.md` is the spec for building the app to them: Shipped
+and Next items get built, Idea and Phase 3 items stay out, work runs PRD → vertical-slice tickets →
+TDD, and the result comes back to Claude for a fidelity and taste review before merging.

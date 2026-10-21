@@ -1,0 +1,560 @@
+<section class="ss-screen" id="s10" style="--w:1600px;--h:1000px" aria-label="Room 4, and the shelf to come">
+<style>
+/* ============ stage ============ */
+#s10 .glow {
+  position: absolute; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(760px 460px at 470px 300px, rgba(169, 139, 245, 0.16), transparent 70%),
+    radial-gradient(420px 260px at 300px 280px, rgba(245, 181, 68, 0.10), transparent 70%);
+}
+
+/* ============ classroom display ============ */
+#s10 .tv { position: absolute; left: 36px; top: 36px; --tvw: 920px; }
+#s10 .tv-room { position: absolute; inset: 0; }
+#s10 .tv-art {
+  position: absolute; left: 0; top: 0; width: 517.5px; height: 100%;
+  background-size: cover; background-position: center;
+}
+#s10 .tv-art::after {
+  /* where the page meets the panel: a soft paper edge, no text on the art */
+  content: ""; position: absolute; top: 0; right: 0; bottom: 0; width: 1px;
+  background: rgba(255, 253, 246, 0.14);
+}
+#s10 .tv-panel {
+  position: absolute; left: 517.5px; top: 0; right: 0; bottom: 0;
+  padding: 24px 24px 26px;
+  display: flex; flex-direction: column;
+  background: rgba(10, 14, 26, 0.72);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+}
+#s10 .tv-top { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+
+/* deck chip (compact): two reels on tape packs + counter */
+#s10 .deck {
+  display: inline-flex; align-items: center; gap: 12px;
+  height: 40px; padding: 0 14px 0 6px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+#s10 .deck-win {
+  position: relative; width: 66px; height: 30px; border-radius: 14px;
+  background: linear-gradient(180deg, #07090f, #141823);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+#s10 .pack {
+  position: absolute; top: 50%; border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background:
+    radial-gradient(circle, transparent 0 50%, rgba(0, 0, 0, 0.25) 100%),
+    repeating-radial-gradient(circle, #5b3a24 0 1.2px, #4a2e1b 1.2px 2.4px);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12) inset;
+}
+#s10 .pack--a { left: 17px; width: 28px; height: 28px; }
+#s10 .pack--b { left: 49px; width: 26px; height: 26px; }
+#s10 .reel {
+  position: absolute; top: 50%; width: 18px; height: 18px; border-radius: 50%;
+  transform: translate(-50%, -50%) rotate(18deg);
+}
+#s10 .reel::after {
+  content: ""; position: absolute; inset: -1px; border-radius: 50%;
+  background: conic-gradient(from 20deg, transparent 0 20%, rgba(255, 253, 246, 0.28) 30%, transparent 42% 70%, rgba(255, 253, 246, 0.22) 80%, transparent 92%);
+  filter: blur(1px);
+}
+#s10 .reel .ss-reel { width: 18px; height: 18px; display: block; }
+#s10 .reel--a { left: 17px; }
+#s10 .reel--b { left: 49px; }
+#s10 .deck-count { font: 500 11.5px/1 var(--ss-mono); letter-spacing: 0.14em; color: var(--ss-fg-2); white-space: nowrap; }
+#s10 .deck-count b { color: #fff; font-weight: 600; }
+
+#s10 .tv-es {
+  margin-top: 26px;
+  font: 500 21px/1.42 var(--ss-display);
+  color: #fffdf6;
+  letter-spacing: -0.003em;
+  text-wrap: pretty;
+}
+#s10 .tv-en {
+  margin-top: 16px; padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  font: 400 13px/1.55 var(--ss-ui);
+  color: var(--ss-fg-2);
+  text-wrap: pretty;
+}
+#s10 .tv-bottom { margin-top: auto; display: flex; align-items: center; gap: 16px; }
+#s10 .tv-bottom .ss-qr { --q: 84px; padding: 7px; background-size: calc(100% - 14px); }
+#s10 .tv-home { display: flex; flex-direction: column; gap: 8px; }
+#s10 .tv-home b { position: relative; display: block; font: 500 11px/1.45 var(--ss-mono); letter-spacing: 0.14em; color: var(--ss-label); }
+#s10 .tv-home b span { display: block; }
+#s10 .tv-home b .tv-sep { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+#s10 .tv-url { font: 400 11px/1.3 var(--ss-mono); color: var(--ss-fg-3); }
+#s10 .tv-strip {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 3px;
+  background: linear-gradient(90deg, var(--ss-gold) 0 43.75%, rgba(255, 255, 255, 0.12) 43.75%);
+}
+#s10 .tv-strip::after {
+  content: ""; position: absolute; inset: 0;
+  background: repeating-linear-gradient(90deg, transparent 0 calc(12.5% - 2px), rgba(10, 14, 26, 0.9) calc(12.5% - 2px) 12.5%);
+}
+
+/* ============ teacher tablet ============ */
+#s10 .tab {
+  position: absolute; left: 1020px; top: 36px; --tw: 500px; --th: 724px;
+  box-shadow: inset 0 0 0 1.5px #555a66, inset 0 0 0 6px #0b0c10, 0 34px 60px -34px rgba(0, 0, 0, 0.8), 0 16px 32px -20px rgba(0, 0, 0, 0.6);
+}
+#s10 .con {
+  position: absolute; inset: 0;
+  padding: 18px 20px 18px;
+  display: flex; flex-direction: column; gap: 10px;
+  background:
+    radial-gradient(420px 260px at 85% -10%, rgba(124, 107, 255, 0.12), transparent 70%),
+    linear-gradient(180deg, #0d1222, #0a0e1a);
+}
+#s10 .con-head { display: flex; align-items: flex-start; justify-content: space-between; padding: 0 2px 2px; }
+#s10 .con-head .ss-kicker { font-size: 11px; }
+#s10 .con-class { margin-top: 5px; font: 600 18px/1.2 var(--ss-ui); letter-spacing: -0.01em; }
+#s10 .con-school { margin-top: 2px; font: 400 12px/1.3 var(--ss-ui); color: var(--ss-fg-3); }
+#s10 .card {
+  border-radius: 16px; padding: 14px 16px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.025));
+  border: 1px solid var(--ss-line);
+}
+#s10 .card-title { font: 600 14px/1.2 var(--ss-ui); color: #fff; }
+#s10 .mono-label { font: 500 11px/1.2 var(--ss-mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--ss-fg-3); }
+
+/* assign */
+#s10 .assign { display: flex; gap: 16px; align-items: stretch; padding: 12px 14px 12px 12px; }
+#s10 .assign .ss-tape { width: 286px; flex: none; box-shadow: 0 14px 28px -16px rgba(0, 0, 0, 0.7); }
+#s10 .assign .ss-tape__band { font-size: 9px; }
+#s10 .assign .ss-tape__holes i { width: 8px; height: 8px; }
+#s10 .assign .ss-tape__meta { margin-top: 8px; letter-spacing: 0.1em; white-space: nowrap; }
+#s10 .assign-side { flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+#s10 .due { display: flex; align-items: center; gap: 7px; margin-top: 6px; font: 400 12.5px/1.2 var(--ss-ui); color: var(--ss-fg-2); }
+#s10 .due .ss-i { width: 14px; height: 14px; color: var(--ss-fg-3); }
+#s10 .assign .ss-btn { height: 34px; padding: 0 14px; gap: 7px; font-size: 13.5px; align-self: flex-start; }
+#s10 .assign .ss-btn .ss-i { width: 15px; height: 15px; }
+
+/* class tape shelf */
+#s10 .klass { padding: 13px 16px 13px; }
+#s10 .shelf { margin-top: 11px; position: relative; }
+#s10 .shelf + .shelf { margin-top: 12px; }
+#s10 .spines { display: flex; justify-content: space-between; align-items: flex-end; padding: 0 2px; }
+#s10 .sp {
+  position: relative; width: 32px; height: 80px;
+  border-radius: 4px 4px 2px 2px;
+  background: var(--sc, var(--ss-label));
+  box-shadow: inset 0 0 0 1.5px var(--ss-ink), 0 6px 10px -6px rgba(0, 0, 0, 0.8);
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+  padding: 0 0 7px;
+  overflow: hidden;
+}
+#s10 .sp::before {
+  /* the shell cap at the top of each spine */
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 11px;
+  background: linear-gradient(180deg, #4a443e, var(--ss-shell));
+  border-bottom: 1.5px solid var(--ss-ink);
+  border-radius: 4px 4px 0 0;
+  box-shadow: inset 0 0 0 1.5px var(--ss-ink);
+}
+#s10 .sp::after {
+  /* a fine tape-red tab line under the cap: this tape holds a voice */
+  content: ""; position: absolute; left: 6px; right: 6px; top: 15px; height: 2px; border-radius: 1px;
+  background: var(--ss-red);
+}
+#s10 .sp span {
+  writing-mode: vertical-rl; transform: rotate(180deg);
+  font: 500 11px/1 var(--ss-mono); letter-spacing: 0.06em;
+  color: var(--ss-ink); white-space: nowrap;
+}
+#s10 .sp--no { --sc: #dfd2b8; box-shadow: inset 0 0 0 1.5px rgba(30, 26, 22, 0.75), 0 6px 10px -6px rgba(0, 0, 0, 0.8); }
+#s10 .sp--no::after { display: none; }
+#s10 .sp--no span { color: var(--ss-ink-2); }
+#s10 .sp--mia .mia { position: absolute; top: 0.5px; left: 50%; transform: translateX(-50%); width: 10px; height: 10px; color: var(--ss-gold-2, #fbbf4a); filter: drop-shadow(0 0 2px rgba(251, 191, 74, 0.55)); }
+#s10 .sp--tts { --sc: #8c9bb0; }
+#s10 .sp--tts::after { display: none; }
+#s10 .sp--tts .ss-i { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); width: 13px; height: 13px; color: var(--ss-ink); }
+#s10 .ledge {
+  position: relative; height: 8px; margin: 0 -6px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #4a443e 0 1px, var(--ss-shell) 1px, var(--ss-shell-2));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 8px 14px -6px rgba(0, 0, 0, 0.75);
+}
+#s10 .legend { margin-top: 13px; display: flex; align-items: center; gap: 10px; font: 500 11px/1 var(--ss-mono); letter-spacing: 0.12em; color: var(--ss-fg-2); white-space: nowrap; }
+#s10 .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; box-shadow: inset 0 0 0 1px rgba(30, 26, 22, 0.6); }
+#s10 .legend .sep { color: var(--ss-fg-4); }
+#s10 .klass-note { margin-top: 6px; font: 400 12px/1.4 var(--ss-ui); color: var(--ss-fg-3); }
+
+/* data & consent */
+#s10 .data { padding: 12px 16px 13px; }
+#s10 .data-head { display: flex; align-items: center; justify-content: space-between; }
+#s10 .data-head .ss-btn { height: 30px; padding: 0 12px; gap: 6px; font-size: 12.5px; font-weight: 500; }
+#s10 .data-head .ss-btn .ss-i { width: 14px; height: 14px; }
+#s10 .rows { margin-top: 9px; display: flex; flex-direction: column; gap: 6px; }
+#s10 .row { display: flex; gap: 10px; align-items: flex-start; font: 400 12px/1.42 var(--ss-ui); color: var(--ss-fg-2); }
+#s10 .row .ss-i { width: 15px; height: 15px; margin-top: 1px; color: var(--ss-ok); }
+#s10 .row .ss-i.sh { color: var(--ss-violet-2); }
+
+/* ============ callouts ============ */
+#s10 .ss-callout { max-width: 290px; }
+
+/* ============ layers strip ============ */
+#s10 .layers {
+  position: absolute; left: 36px; top: 776px; width: 236px; height: 24px; z-index: 4;
+  display: flex; align-items: center; gap: 8px; padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.12);
+}
+#s10 .layers span { margin-right: auto; font: 500 10px/1 var(--ss-mono); letter-spacing: 0.16em; color: var(--ss-fg-3); }
+#s10 .layers i { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+#s10 .layers .on { background: var(--f); box-shadow: 0 0 0 1.5px var(--ss-ink), 0 0 0 2.5px rgba(255, 255, 255, 0.18); }
+#s10 .layers .sig { background: #FFE9A8; box-shadow: 0 0 0 1.5px var(--ss-red), 0 0 0 3px rgba(227, 69, 47, 0.25); }
+#s10 .layers .off { box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.25); }
+
+/* ============ horizon shelf ============ */
+#s10 .hz {
+  position: absolute; left: 36px; top: 824px; width: 1524px; height: 166px;
+  border-radius: 18px; overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.9);
+  background: #0a1022;
+}
+#s10 .hz-sky {
+  /* page 7, top 80% only: its painted caption never shows */
+  position: absolute; left: -16px; top: -16px; right: -16px; bottom: -16px;
+  background-image: url("assets/page7.jpg");
+  background-size: 100% auto;
+  background-position: 50% 12%;
+  filter: blur(6px) brightness(0.45) saturate(1.1);
+}
+#s10 .hz-shade {
+  position: absolute; inset: 0;
+  background:
+    linear-gradient(90deg, rgba(7, 10, 20, 0.7) 0, rgba(7, 10, 20, 0.18) 290px, rgba(7, 10, 20, 0) 480px),
+    linear-gradient(180deg, rgba(7, 10, 20, 0) 55%, rgba(7, 10, 20, 0.35) 100%);
+}
+#s10 .hz-stars {
+  position: absolute; left: 0; top: 0; width: 1.5px; height: 1.5px; border-radius: 50%;
+  background: transparent;
+  box-shadow:
+    1033px 38px 0 0px rgba(255,246,214,0.52),
+    640px 21px 0 0px rgba(255,246,214,0.47),
+    1121px 13px 0 0.5px rgba(255,246,214,0.75),
+    889px 11px 0 1px rgba(255,246,214,0.55),
+    1119px 25px 0 0px rgba(255,246,214,0.51),
+    854px 16px 0 0px rgba(255,246,214,0.32),
+    1503px 12px 0 0px rgba(255,246,214,0.35),
+    674px 32px 0 0px rgba(255,246,214,0.73),
+    971px 32px 0 0px rgba(255,246,214,0.52),
+    933px 27px 0 0px rgba(255,246,214,0.39),
+    315px 39px 0 0px rgba(255,246,214,0.59),
+    819px 13px 0 0px rgba(255,246,214,0.41),
+    1006px 32px 0 1px rgba(255,246,214,0.73),
+    80px 12px 0 0px rgba(255,246,214,0.62),
+    1304px 39px 0 0px rgba(255,246,214,0.30),
+    599px 25px 0 0.5px rgba(255,246,214,0.74),
+    1275px 40px 0 0px rgba(255,246,214,0.30),
+    1398px 39px 0 0.5px rgba(255,246,214,0.27),
+    838px 30px 0 0px rgba(255,246,214,0.60),
+    378px 6px 0 0px rgba(255,246,214,0.38),
+    625px 36px 0 0.5px rgba(255,246,214,0.56),
+    344px 15px 0 0px rgba(255,246,214,0.26),
+    970px 22px 0 0px rgba(255,246,214,0.26),
+    1247px 37px 0 0px rgba(255,246,214,0.37),
+    1082px 25px 0 1px rgba(255,246,214,0.41),
+    1039px 22px 0 0px rgba(255,246,214,0.52),
+    729px 18px 0 1px rgba(255,246,214,0.55),
+    745px 31px 0 0.5px rgba(255,246,214,0.30),
+    1216px 20px 0 0px rgba(255,246,214,0.72),
+    245px 23px 0 0.5px rgba(255,246,214,0.48),
+    1136px 43px 0 0.5px rgba(255,246,214,0.73),
+    1163px 23px 0 0px rgba(255,246,214,0.59),
+    773px 5px 0 0px rgba(255,246,214,0.51),
+    1091px 39px 0 0px rgba(255,246,214,0.56);
+}
+#s10 .hz-ledge {
+  position: absolute; left: 0; right: 0; top: 148px; height: 8px;
+  background: linear-gradient(180deg, #4a443e 0 1px, var(--ss-shell) 1px, var(--ss-shell-2));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 10px 18px -4px rgba(0, 0, 0, 0.8);
+}
+#s10 .hz-ledge::after { content: ""; position: absolute; left: 0; right: 0; top: 8px; height: 10px; background: #08090d; }
+#s10 .hz-left { position: absolute; left: 16px; top: 30px; width: 216px; }
+#s10 .hz-line { font: italic 500 22px/1.25 var(--ss-display); color: #fffdf6; letter-spacing: -0.005em; text-wrap: balance; }
+#s10 .hz-label { margin-top: 12px; font: 500 10.5px/1.5 var(--ss-mono); letter-spacing: 0.14em; color: var(--ss-label); }
+
+/* sealed cassette (LOCAL piece 9): a shelf-tape face, kraft label + tape-red stripe, reel window, under cellophane */
+#s10 .sealed { position: absolute; left: 250px; top: 44px; display: flex; gap: 4px; align-items: flex-end; }
+#s10 .sc {
+  position: relative; width: 82px; height: 104px; flex: none;
+  padding: 4px 4px 0;
+  border-radius: 8px;
+  background: linear-gradient(165deg, #4a443e 0%, var(--ss-shell) 40%, var(--ss-shell-2) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 0 0 1px rgba(0, 0, 0, 0.5), 0 10px 16px -8px rgba(0, 0, 0, 0.9);
+}
+#s10 .sc::before {
+  /* two shell screws in the bottom corners */
+  content: ""; position: absolute; left: 6px; right: 6px; bottom: 8px; height: 5px;
+  background:
+    radial-gradient(circle at 2.5px 2.5px, #8a837c 0, #3d3833 2px, transparent 2.6px) left / 5px 5px no-repeat,
+    radial-gradient(circle at 2.5px 2.5px, #8a837c 0, #3d3833 2px, transparent 2.6px) right / 5px 5px no-repeat;
+}
+#s10 .sc__card {
+  position: relative; height: 80px;
+  border: 1.5px solid var(--ss-ink); border-top: 5px solid var(--ss-red);
+  border-radius: 3px;
+  padding: 6px 4px 0 5px;
+  overflow: hidden;
+  color: var(--ss-ink);
+  background:
+    repeating-linear-gradient(180deg, transparent 0 12px, rgba(30, 26, 22, 0.07) 12px 13px),
+    radial-gradient(120% 90% at 30% 10%, #e8dcc4, #dfd2b8 60%, #d3c3a4);
+  box-shadow: inset 0 1.5px 0 var(--ss-ink);
+}
+#s10 .sc__card p { font: 600 11px/1.17 var(--ss-ui); letter-spacing: -0.015em; color: var(--ss-ink); text-wrap: balance; }
+#s10 .sc__card p.tight { letter-spacing: -0.045em; }
+#s10 .sc__card p.wrap { text-wrap: wrap; }
+#s10 .sc__win {
+  position: absolute; left: 50%; bottom: 5px; transform: translateX(-50%);
+  width: 52px; height: 13px; padding: 0 6px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-radius: 7px;
+  background: linear-gradient(180deg, #14100e, #2a231f);
+  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.8);
+}
+#s10 .sc__win::before {
+  /* the tape between the reels */
+  content: ""; position: absolute; left: 14px; right: 14px; top: 4.5px; height: 4px; border-radius: 1px;
+  background: linear-gradient(180deg, #5b3a24, #3d2616);
+}
+#s10 .sc__win .ss-reel { position: relative; width: 9px; height: 9px; --reel-face: #e9dfc6; }
+#s10 .sc::after {
+  /* cellophane */
+  content: ""; position: absolute; inset: 0; border-radius: 8px; pointer-events: none;
+  background:
+    linear-gradient(120deg, transparent 30%, rgba(255, 255, 255, 0.22) 45%, transparent 60%),
+    linear-gradient(120deg, transparent 66%, rgba(255, 255, 255, 0.08) 72%, transparent 78%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.42);
+}
+#s10 .sc .ss-stamp {
+  position: absolute; right: 3px; top: -9px; z-index: 2;
+  padding: 3px 6px; gap: 0;
+  border-width: 1.5px; border-radius: 4px;
+  font-size: 10px; letter-spacing: 0.1em; font-weight: 600;
+  background: #fffdf6;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.45);
+  transform: rotate(4deg);
+}
+#s10 .sc:nth-child(even) .ss-stamp { transform: rotate(-3deg); }
+
+/* plans trio: tape lengths */
+#s10 .plans { position: absolute; right: 16px; top: 18px; width: 298px; display: flex; flex-direction: column; align-items: flex-end; }
+#s10 .plans-note { font: 500 10px/1 var(--ss-mono); letter-spacing: 0.06em; color: var(--ss-fg-3); white-space: nowrap; }
+#s10 .plans-row { margin-top: 16px; display: flex; gap: 8px; align-items: flex-end; filter: saturate(0.8) brightness(0.9); }
+#s10 .pl {
+  position: relative; width: var(--pw); height: 104px; flex: none;
+  padding: 3px;
+  border-radius: 6px;
+  background: linear-gradient(165deg, #4a443e 0%, var(--ss-shell) 40%, var(--ss-shell-2) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 0 0 1px rgba(0, 0, 0, 0.5), 0 10px 16px -8px rgba(0, 0, 0, 0.9);
+}
+#s10 .pl__card {
+  height: 100%; border-radius: 3px; overflow: hidden;
+  display: flex; flex-direction: column;
+  background: var(--ss-paper); border: 1.5px solid var(--ss-ink); color: var(--ss-ink);
+}
+#s10 .pl__band { height: 5px; background: var(--ss-red); border-bottom: 1.5px solid var(--ss-ink); flex: none; }
+#s10 .pl__name { padding: 4px 6px 3px; background: var(--ss-label); border-bottom: 1.5px solid var(--ss-ink); font: 800 15px/1 var(--ss-display); letter-spacing: -0.01em; }
+#s10 .pl__win {
+  position: relative; margin: 6px 6px 0; height: 16px; border-radius: 8px;
+  background: linear-gradient(180deg, #14100e, #2a231f);
+  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.8);
+  overflow: hidden;
+}
+#s10 .pl__win i {
+  position: absolute; top: 50%; border-radius: 50%; transform: translate(-50%, -50%);
+  width: var(--pk); height: var(--pk);
+  background: repeating-radial-gradient(circle, #5b3a24 0 1px, #4a2e1b 1px 2px);
+}
+#s10 .pl__win i:nth-of-type(1) { left: 26%; }
+#s10 .pl__win i:nth-of-type(2) { left: 74%; width: 10px; height: 10px; } /* fresh tape: the take-up hub is still empty */
+#s10 .pl__win b {
+  position: absolute; top: 50%; width: 8px; height: 8px; border-radius: 50%; transform: translate(-50%, -50%);
+  background: var(--ss-paper); box-shadow: inset 0 0 0 1.5px var(--ss-ink);
+}
+#s10 .pl__win b:nth-of-type(1) { left: 26%; }
+#s10 .pl__win b:nth-of-type(2) { left: 74%; }
+#s10 .pl__tier { padding: 6px 6px 0; font: 600 10px/1 var(--ss-mono); letter-spacing: 0.1em; color: var(--ss-ink); }
+#s10 .pl__price { padding: 3px 6px 0; font: 500 10.5px/1.25 var(--ss-ui); color: var(--ss-ink-2); }
+#s10 .pl::after {
+  content: ""; position: absolute; inset: 0; border-radius: 6px; pointer-events: none;
+  background: linear-gradient(120deg, transparent 30%, rgba(255, 255, 255, 0.2) 45%, transparent 60%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.36);
+}
+</style>
+
+<div class="ss-stage ss-stage--night ss-grain"></div>
+<div class="glow"></div>
+
+<!-- ======================= CLASSROOM DISPLAY ======================= -->
+<div class="ss-tv tv">
+  <div class="ss-tv__bezel">
+    <div class="ss-tv__screen">
+      <div class="tv-room ss-art ss-art--4 ss-art-blur"></div>
+      <div class="tv-art ss-art ss-art--4" role="img" aria-label="Page 4: the little star flies through the clouds"></div>
+      <div class="tv-panel">
+        <div class="tv-top">
+          <div class="deck">
+            <div class="deck-win">
+              <span class="pack pack--a"></span><span class="pack pack--b"></span>
+              <span class="reel reel--a"><svg class="ss-reel"><use href="#i-reel"/></svg></span>
+              <span class="reel reel--b"><svg class="ss-reel"><use href="#i-reel"/></svg></span>
+            </div>
+            <span class="deck-count"><b>04 / 08</b> · ES · SR. RUIZ</span>
+          </div>
+          <span class="ss-chip ss-chip--future">Phase 3 · two narration tracks</span>
+        </div>
+        <p class="tv-es ss-readalong" lang="es"><span class="said">Pero la pequeña estrella no estaba satisfecha. Una noche, respiró hondo y </span><span class="now">voló</span><span>: atravesó las nubes, pasó junto a la luna, rumbo al mundo de abajo.</span></p>
+        <p class="tv-en" lang="en">But the little star wasn't satisfied. One night, she took a deep breath and flew — right through the clouds, past the moon, toward the world below.</p>
+        <div class="tv-bottom">
+          <div class="ss-qr" role="img" aria-label="QR code for storysynchq.vercel.app/read"></div>
+          <div class="tv-home">
+            <b><span>READ IT AT HOME</span><span class="tv-sep"> · </span><span>NO APP, NO ACCOUNT</span></b>
+            <span class="tv-url">storysynchq.vercel.app/read</span>
+          </div>
+        </div>
+      </div>
+      <div class="tv-strip"></div>
+    </div>
+  </div>
+  <div class="ss-tv__stand"></div>
+</div>
+
+<!-- ======================= TEACHER TABLET ======================= -->
+<div class="ss-tablet tab">
+  <div class="ss-tablet__screen">
+    <div class="con">
+      <div class="con-head">
+        <div>
+          <div class="ss-kicker">STORYSYNC FOR SCHOOLS</div>
+          <div class="con-class">Room 4 · Ms. Okafor</div>
+          <div class="con-school">Maple Street Pre-K</div>
+        </div>
+        <span class="ss-chip ss-chip--future">Phase 3</span>
+      </div>
+
+      <div class="card assign">
+        <div class="ss-tape ss-tape--sm">
+          <div class="ss-tape__stripe"></div>
+          <div class="ss-tape__band"><span class="ss-tape__holes"><i></i><i></i></span></div>
+          <div class="ss-tape__field">
+            <div class="ss-tape__title">The Brave Little Star</div>
+            <div class="ss-tape__meta">EN · MS. OKAFOR · ES · SR. RUIZ</div>
+          </div>
+        </div>
+        <div class="assign-side">
+          <div>
+            <div class="card-title">Assign a tape</div>
+            <div class="due"><svg class="ss-i"><use href="#i-calendar"/></svg>Due Friday</div>
+          </div>
+          <span class="ss-btn ss-btn--gold"><svg class="ss-i"><use href="#i-check"/></svg>Assigned</span>
+        </div>
+      </div>
+
+      <div class="card klass">
+        <div class="mono-label">Our class tape · one page each</div>
+        <div class="shelf">
+          <div class="spines">
+            <div class="sp"><span>Ava</span></div>
+            <div class="sp sp--no"><span>Ben</span></div>
+            <div class="sp"><span>Carmen</span></div>
+            <div class="sp"><span>Dev</span></div>
+            <div class="sp"><span>Eli</span></div>
+            <div class="sp"><span>Fatima</span></div>
+            <div class="sp sp--no"><span>Gus</span></div>
+            <div class="sp"><span>Hana</span></div>
+            <div class="sp"><span>Ivan</span></div>
+            <div class="sp sp--no"><span>Jada</span></div>
+            <div class="sp"><span>Kofi</span></div>
+          </div>
+          <div class="ledge"></div>
+        </div>
+        <div class="shelf">
+          <div class="spines">
+            <div class="sp sp--no"><span>Lena</span></div>
+            <div class="sp"><span>Mateo</span></div>
+            <div class="sp sp--mia"><svg class="ss-i mia" aria-hidden="true"><use href="#i-star-solid"/></svg><span>Mia</span></div>
+            <div class="sp"><span>Noor</span></div>
+            <div class="sp sp--no"><span>Owen</span></div>
+            <div class="sp"><span>Priya</span></div>
+            <div class="sp sp--tts"><svg class="ss-i"><use href="#i-volume"/></svg><span>Quinn</span></div>
+            <div class="sp"><span>Rosa</span></div>
+            <div class="sp"><span>Sam</span></div>
+            <div class="sp"><span>Theo</span></div>
+            <div class="sp sp--no"><span>Uma</span></div>
+          </div>
+          <div class="ledge"></div>
+        </div>
+        <div class="legend"><span><i style="background:#FFC93C"></i>15 RECORDED</span><span class="sep">·</span><span><i style="background:#DFD2B8"></i>6 NOT YET</span><span class="sep">·</span><span><i style="background:#8c9bb0"></i>1 BROWSER VOICE</span></div>
+        <p class="klass-note">We show recorded or not yet. Nothing else is measured.</p>
+      </div>
+
+      <div class="card data">
+        <div class="data-head">
+          <div class="card-title">Data &amp; consent</div>
+          <span class="ss-btn ss-btn--ghost"><svg class="ss-i"><use href="#i-send"/></svg>Send consent links home</span>
+        </div>
+        <div class="rows">
+          <div class="row"><svg class="ss-i sh"><use href="#i-shield"/></svg><span>Voice consent from home: 21 of 22 families — the other page reads with the browser voice.</span></div>
+          <div class="row"><svg class="ss-i sh"><use href="#i-shield"/></svg><span>Kept by Maple Street Pre-K · deleted after 12 months under the school's written policy</span></div>
+          <div class="row"><svg class="ss-i"><use href="#i-check"/></svg><span>No third-party trackers</span></div>
+          <div class="row"><svg class="ss-i"><use href="#i-check"/></svg><span>No accounts for children — they open tapes from the QR on the board</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= CALLOUTS ======================= -->
+<div class="ss-callout" style="left:36px;top:632px"><b>Schools, second</b>The same file and the same Reader. A district can say yes because children have no accounts, nothing is tracked, and the school owns the data and deletes it on its written schedule.</div>
+<div class="ss-callout" style="left:352px;top:632px"><b>Two languages, two tracks</b>Bilingual narration needs more than one narration track per page — an SSYNC v2.x change. Today a page carries one audioUrl.</div>
+<div class="ss-callout" style="left:668px;top:632px"><b>Progress without tracking</b>The class shelf shows only which pages are recorded. No minutes, no scores, no listens: the Reader has no trackers and never will.</div>
+<i class="ss-leader" style="left:904px;top:639px;width:202px;transform:rotate(-35.7deg)"></i>
+
+<!-- ======================= LAYERS ======================= -->
+<div class="layers"><span>LAYERS</span><i class="off"></i><i class="off"></i><i class="off"></i><i class="on" style="--f:#FADFDA"></i><i class="off"></i><i class="on" style="--f:#E6E9EE"></i><i class="sig"></i></div>
+
+<!-- ======================= HORIZON SHELF ======================= -->
+<div class="hz">
+  <div class="hz-sky"></div>
+  <div class="hz-shade"></div>
+  <div class="hz-stars"></div>
+  <div class="hz-ledge"></div>
+
+  <div class="hz-left">
+    <p class="hz-line">One little star, then a whole sky.</p>
+    <p class="hz-label">LATER ON THE SHELF · SEALED UNTIL THEY'RE REAL</p>
+  </div>
+
+  <div class="sealed">
+    <div class="sc"><div class="sc__card"><p class="wrap">Creator app for desktop, iPad and Android</p></div><div class="sc__win"><svg class="ss-reel"><use href="#i-reel"/></svg><svg class="ss-reel"><use href="#i-reel"/></svg></div><span class="ss-stamp">PHASE 3</span></div>
+    <div class="sc"><div class="sc__card"><p>Made voices, only with written consent</p></div><div class="sc__win"><svg class="ss-reel"><use href="#i-reel"/></svg><svg class="ss-reel"><use href="#i-reel"/></svg></div><span class="ss-stamp">PHASE 3</span></div>
+    <div class="sc"><div class="sc__card"><p>Narration in more languages</p></div><div class="sc__win"><svg class="ss-reel"><use href="#i-reel"/></svg><svg class="ss-reel"><use href="#i-reel"/></svg></div><span class="ss-stamp">PHASE 3</span></div>
+    <div class="sc"><div class="sc__card"><p>Bring a book you own (PDF)</p></div><div class="sc__win"><svg class="ss-reel"><use href="#i-reel"/></svg><svg class="ss-reel"><use href="#i-reel"/></svg></div><span class="ss-stamp">LATER</span></div>
+    <div class="sc"><div class="sc__card"><p>Licensed music library</p></div><div class="sc__win"><svg class="ss-reel"><use href="#i-reel"/></svg><svg class="ss-reel"><use href="#i-reel"/></svg></div><span class="ss-stamp">PHASE 3</span></div>
+    <div class="sc"><div class="sc__card"><p>Focus Mode for reading time</p></div><div class="sc__win"><svg class="ss-reel"><use href="#i-reel"/></svg><svg class="ss-reel"><use href="#i-reel"/></svg></div><span class="ss-stamp">LATER</span></div>
+    <div class="sc"><div class="sc__card"><p>Guided story helper</p></div><div class="sc__win"><svg class="ss-reel"><use href="#i-reel"/></svg><svg class="ss-reel"><use href="#i-reel"/></svg></div><span class="ss-stamp">IDEA</span></div>
+    <div class="sc"><div class="sc__card"><p>Embed, print, EPUB3</p></div><div class="sc__win"><svg class="ss-reel"><use href="#i-reel"/></svg><svg class="ss-reel"><use href="#i-reel"/></svg></div><span class="ss-stamp">LATER</span></div>
+    <div class="sc"><div class="sc__card"><p class="tight">storysynchq<wbr>.com and illustrated QR codes</p></div><div class="sc__win"><svg class="ss-reel"><use href="#i-reel"/></svg><svg class="ss-reel"><use href="#i-reel"/></svg></div><span class="ss-stamp">PHASE 3</span></div>
+    <div class="sc"><div class="sc__card"><p>Remix shelf, opt&#8209;in</p></div><div class="sc__win"><svg class="ss-reel"><use href="#i-reel"/></svg><svg class="ss-reel"><use href="#i-reel"/></svg></div><span class="ss-stamp">LATER</span></div>
+    <div class="sc"><div class="sc__card"><p>Choose-what-happens pages</p></div><div class="sc__win"><svg class="ss-reel"><use href="#i-reel"/></svg><svg class="ss-reel"><use href="#i-reel"/></svg></div><span class="ss-stamp">IDEA</span></div>
+  </div>
+
+  <div class="plans">
+    <div class="plans-note">PLANS AS DRAFTED IN MARCH 2026 · NOT ON SALE</div>
+    <div class="plans-row">
+      <div class="pl" style="--pw:80px"><div class="pl__card"><div class="pl__band"></div><div class="pl__name">C-30</div><div class="pl__win" style="--pk:12px"><i></i><i></i><b></b><b></b></div><div class="pl__tier">FREE</div><div class="pl__price">$0 · 5&nbsp;tapes</div></div></div>
+      <div class="pl" style="--pw:94px"><div class="pl__card"><div class="pl__band"></div><div class="pl__name">C-60</div><div class="pl__win" style="--pk:17px"><i></i><i></i><b></b><b></b></div><div class="pl__tier">CREATOR</div><div class="pl__price">$9.99/mo</div></div></div>
+      <div class="pl" style="--pw:108px"><div class="pl__card"><div class="pl__band"></div><div class="pl__name">C-90</div><div class="pl__win" style="--pk:22px"><i></i><i></i><b></b><b></b></div><div class="pl__tier">STUDIO</div><div class="pl__price">$29.99/mo</div></div></div>
+    </div>
+  </div>
+</div>
+</section>
