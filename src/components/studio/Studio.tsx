@@ -13,6 +13,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { FolderOpen } from "lucide-react";
 import { BigButton, GlassPanel, ModeToggle, Reel } from "@/components/studio-kit/kit";
 import { blobToDataUrl, dataUrlToBlob } from "@/lib/audio/recorder";
 import { normalizeNarration } from "@/lib/audio/transcode";
@@ -45,6 +46,18 @@ import Filmstrip from "./Filmstrip";
 import Transport from "./Transport";
 import Inspector from "./Inspector";
 import ParentGate from "./ParentGate";
+import OpenTapeDialog from "./OpenTapeDialog";
+import {
+  HOUSE_TAPE_QUERY,
+  OPEN_TAPE_COPY,
+  TapeOpenError,
+  openTapeFile,
+  openTapeFromQuery,
+  openingLabel,
+  takeOpenTapeQuery,
+  type RevoicedTape,
+  type TapeOpenFailure,
+} from "./open-tape";
 import PublishCard, { type AuthMode, type PublishStep } from "./PublishCard";
 import { MagicPanel, MusicPanel, VoicePanel, type MagicLook } from "./ToolPanels";
 import { useStudioAudio } from "./useStudioAudio";
@@ -53,6 +66,7 @@ import { clearDraft, loadDraft, saveDraft } from "./draft";
 import {
   DEFAULT_AUTO_PAUSE_S,
   DEFAULT_TITLE,
+  blankManifest,
   blankPage,
   blankState,
   estimateStorySeconds,
@@ -69,6 +83,32 @@ import "./studio.css";
 
 type Phase = "edit" | "gate" | "publishing" | "published";
 type Boot = "loading" | "asking" | "ready";
+
+/** A draft found in this browser at boot, as `loadDraft` returns it. */
+type SavedDraft = { state: StudioState; savedAt: string };
+
+/** An opened tape waiting on "Open <title>?" before it replaces the story. */
+interface PendingOpen {
+  tape: RevoicedTape;
+  /** `?mood=`, when the link chose one. */
+  mood: MoodName | null;
+  /**
+   * The saved draft the restore prompt would have offered (`?open=` at boot).
+   * "Keep my story" restores it exactly as "Keep working on it" would.
+   */
+  saved: SavedDraft | null;
+}
+
+/** The line about opening a tape: working on it, or why it did not open. */
+interface OpenNote {
+  tone: "busy" | "error";
+  text: string;
+  /**
+   * A failure stands until it is dismissed or the story next changes: it is
+   * shown while the state is still this one.
+   */
+  during?: StudioState;
+}
 
 const AUTOSAVE_MS = 900;
 const UID_KEY = "ssync-studio-uid";
@@ -135,7 +175,10 @@ export default function Studio() {
   const [tool, setTool] = React.useState<StudioTool | null>(null);
   const [phase, setPhase] = React.useState<Phase>("edit");
   const [boot, setBoot] = React.useState<Boot>("loading");
-  const [restore, setRestore] = React.useState<{ state: StudioState; savedAt: string } | null>(null);
+  const [restore, setRestore] = React.useState<SavedDraft | null>(null);
+  const [pendingOpen, setPendingOpen] = React.useState<PendingOpen | null>(null);
+  const [openNote, setOpenNote] = React.useState<OpenNote | null>(null);
+  const [opening, setOpening] = React.useState(false);
   const [photoBusy, setPhotoBusy] = React.useState(false);
   const [magicBusy, setMagicBusy] = React.useState(false);
   const [draftNote, setDraftNote] = React.useState<string | null>(null);
@@ -157,6 +200,16 @@ export default function Studio() {
   const activeIndexRef = React.useRef(activeIndex);
   activeIndexRef.current = activeIndex;
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+  const tapeInputRef = React.useRef<HTMLInputElement | null>(null);
+  const openButtonRef = React.useRef<HTMLButtonElement | null>(null);
+  /**
+   * The state the stored draft already holds. Autosave writes only when the
+   * state has changed since, so a story kept or restored as it was stays in
+   * localStorage byte for byte.
+   */
+  const savedStateRef = React.useRef<StudioState | null>(null);
+  /** "read by" as last typed on a re-voiced tape; its author is never overwritten. */
+  const readerRef = React.useRef("");
   const publishedRef = React.useRef<SsyncManifest | null>(null);
   const authorRef = React.useRef("");
   /** The voices the grown-up consented to — a retry publishes with the same consent. */
@@ -236,20 +289,134 @@ export default function Studio() {
 
   /* --------------------------------------------------------- draft restore */
 
+  /** "Keep working on it": the saved draft, exactly as it was stored. */
+  const keepSavedDraft = React.useCallback((saved: SavedDraft) => {
+    savedStateRef.current = saved.state;
+    // Restoring is not an edit: a failure note about a tape stays up.
+    setOpenNote((note) => (note?.tone === "error" ? { ...note, during: saved.state } : note));
+    setState(saved.state);
+    activeIndexRef.current = 0;
+    setActiveIndexState(0);
+    setRestore(null);
+    setBoot("ready");
+  }, []);
+
+  /* ------------------------------------------------------------ open a tape */
+
+  /**
+   * An opened tape replaces the story cleanly: its re-voiced manifest, no
+   * recordings, nothing published, a fresh clock, and where it came from.
+   */
+  const applyOpenedTape = React.useCallback(
+    (tape: RevoicedTape, mood: MoodName | null) => {
+      stopAudio();
+      const fresh = blankState();
+      setState({
+        ...fresh,
+        manifest: tape.manifest,
+        // A mood chosen on the link plays; otherwise the tape's own.
+        mood: mood ?? tape.mood,
+        musicOn: mood ? true : tape.musicOn,
+        remix: tape.remix,
+      });
+      publishedRef.current = null;
+      authorRef.current = "";
+      consentRef.current = [];
+      readerRef.current = "";
+      setShareUrl(null);
+      setPublishNote(null);
+      setAuthOffer(false);
+      setAuthReady(false);
+      activeIndexRef.current = 0;
+      setActiveIndexState(0);
+      setTool(null);
+      setPhase("edit");
+      setPendingOpen(null);
+      setRestore(null);
+      setBoot("ready");
+      const n = tape.manifest.pages.length;
+      setAnnouncement(
+        `Opened ${tape.manifest.metadata.title}, ${n} ${n === 1 ? "page" : "pages"}. Record your voice on any page.`,
+      );
+    },
+    [stopAudio],
+  );
+
+  /** Never lose a story by accident: a story on the Stage (or saved) is asked about first. */
+  const offerTape = React.useCallback(
+    (offer: PendingOpen) => {
+      if (offer.saved || storyHasContent(stateRef.current)) setPendingOpen(offer);
+      else applyOpenedTape(offer.tape, offer.mood);
+    },
+    [applyOpenedTape],
+  );
+
+  const openTape = React.useCallback(
+    async (
+      load: () => Promise<RevoicedTape>,
+      label: string,
+      fallback: TapeOpenFailure,
+      options: { mood?: MoodName | null; saved?: SavedDraft | null } = {},
+    ) => {
+      setOpening(true);
+      setOpenNote({ tone: "busy", text: label });
+      try {
+        const tape = await load();
+        setOpenNote(null);
+        offerTape({ tape, mood: options.mood ?? null, saved: options.saved ?? null });
+      } catch (err) {
+        // Nothing was replaced. A saved draft is offered back the usual way.
+        setOpenNote({
+          tone: "error",
+          text: err instanceof TapeOpenError ? err.message : OPEN_TAPE_COPY[fallback],
+          during: stateRef.current,
+        });
+        if (options.saved) setRestore(options.saved);
+      } finally {
+        setOpening(false);
+      }
+    },
+    [offerTape],
+  );
+
+  /* ------------------------------------------------------------------ boot */
+
+  // Boot: the saved draft, and `?open=` / `?mood=` — read after mount from
+  // window.location (the route stays static) and then cleaned off the URL, so
+  // a refresh does not open the tape again. With a saved draft, "Open
+  // <title>?" takes the place of the restore prompt: one question, not two.
+  const bootedRef = React.useRef(false);
   React.useEffect(() => {
+    // Once per mount: the query is taken off the URL the first time it is read.
+    if (bootedRef.current) return;
+    bootedRef.current = true;
     const found = loadDraft();
-    if (found && storyHasContent(found.state)) {
-      setRestore(found);
+    const saved = found && storyHasContent(found.state) ? found : null;
+    const query = takeOpenTapeQuery();
+    if (query.open) {
+      const open = query.open;
+      setBoot(saved ? "asking" : "ready");
+      void openTape(
+        () => openTapeFromQuery(open),
+        openingLabel({ open }),
+        open === HOUSE_TAPE_QUERY ? "houseUnavailable" : "notFound",
+        { mood: query.mood, saved },
+      );
+    } else if (saved) {
+      setRestore(saved);
       setBoot("asking");
     } else {
       setBoot("ready");
     }
-  }, []);
+  }, [openTape]);
 
   React.useEffect(() => {
     if (boot !== "ready") return;
+    // Nothing changed since the draft was written or restored: leave it be.
+    if (state === savedStateRef.current) return;
     const id = window.setTimeout(() => {
       const outcome = saveDraft(stateRef.current);
+      if (outcome === "ok") savedStateRef.current = stateRef.current;
       setDraftNote(
         outcome === "quota"
           ? "Draft too big to autosave — finish the story to keep it."
@@ -429,6 +596,26 @@ export default function Studio() {
     }
   };
 
+  /* ------------------------------------------------- open a tape (a file) */
+
+  const pickTape = () => {
+    if (recording) {
+      setAnnouncement("Finish the recording before opening a tape.");
+      return;
+    }
+    if (opening) return;
+    clearMicError();
+    tapeInputRef.current?.click();
+  };
+
+  /** Read and unpacked on this device by the container loader. Nothing is uploaded. */
+  const onTapeFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    void openTape(() => openTapeFile(file), openingLabel({ file: true }), "badFile");
+  };
+
   /* ----------------------------------------------------------------- magic */
 
   const runMagic = async (prompt: string, pageCountWanted: number, look: MagicLook) => {
@@ -463,9 +650,15 @@ export default function Studio() {
       setState((prev) => ({
         ...prev,
         recordings: {},
+        // Magic replaces every page, so an opened tape is a new story now: it is
+        // no longer a re-voice of anything, and the opened tape's credit and
+        // blurb are not this story's. The byline becomes the author again.
+        remix: null,
         manifest: {
           ...prev.manifest,
-          metadata: { ...prev.manifest.metadata, title: story.title },
+          metadata: prev.remix
+            ? { ...blankManifest().metadata, title: story.title }
+            : { ...prev.manifest.metadata, title: story.title },
           pages: built,
         },
       }));
@@ -636,9 +829,13 @@ export default function Studio() {
       setMadeInLabel(madeIn(stateRef.current.startedAt));
 
       const base = stateRef.current;
-      const source = author
-        ? { ...base.manifest, metadata: { ...base.manifest.metadata, author } }
-        : base.manifest;
+      // A re-voiced tape keeps its author; the gate's byline is the reader,
+      // who becomes the narrator and the consent voice.
+      const remix = base.remix ?? null;
+      const source =
+        author && !remix
+          ? { ...base.manifest, metadata: { ...base.manifest.metadata, author } }
+          : base.manifest;
 
       try {
         /* 1 — narration codec normalization (the load-bearing publish rule) */
@@ -705,11 +902,14 @@ export default function Studio() {
         }
         const hasVoiceInStory = voices.length > 0;
         const now = new Date();
+        const credit = remix ? source.metadata.author?.trim() || remix.author : author;
         const signature: SsyncSignature = {
           ...(source.signature ?? {}),
-          ownership: author ? `© ${now.getFullYear()} ${author}` : `© ${now.getFullYear()}`,
+          ownership: credit ? `© ${now.getFullYear()} ${credit}` : `© ${now.getFullYear()}`,
           rights: "personal use",
         };
+        // Where a re-voiced tape came from travels with it.
+        if (remix) signature.remixOf = remix.of;
         if (hasVoiceInStory) {
           signature.voiceConsent = consentRecords(voices, "parent/guardian", consentDate(now));
         } else {
@@ -851,6 +1051,9 @@ export default function Studio() {
   React.useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (phase !== "edit") return;
+      // Behind an open question (aria-modal) the Stage does not move, even
+      // when focus has dropped to the page.
+      if (pendingOpen || restore) return;
       const target = event.target as HTMLElement | null;
       if (target?.isContentEditable) return;
       // A focused control owns its own keys. Space on "Finish my story" must
@@ -880,11 +1083,15 @@ export default function Studio() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [audio.playing, phase, play, setActive, stopAudio]);
+  }, [audio.playing, pendingOpen, phase, play, restore, setActive, stopAudio]);
 
   /* ----------------------------------------------------------------- derived */
 
   const currentMeta = page ? state.recordings[String(page.id)] : undefined;
+  /** The open note on show: a failure goes with the next change to the story. */
+  const note = openNote && (openNote.tone === "busy" || openNote.during === state) ? openNote : null;
+  /** What the gate's byline starts as: "story by" is the author; "read by" starts empty. */
+  const gateDefault = state.remix ? readerRef.current : (state.manifest.metadata.author ?? "");
   const hasVoice = Boolean(page?.text?.audioUrl);
   const canFinish = storyHasContent(state);
   const codecLabel = React.useMemo(() => {
@@ -916,6 +1123,20 @@ export default function Studio() {
           <span className="hidden sm:inline">Exit</span>
         </Link>
 
+        {/* Any tape, the house tape included, opens here to be re-voiced. */}
+        <button
+          ref={openButtonRef}
+          type="button"
+          onClick={pickTape}
+          aria-label="Open a tape"
+          aria-busy={opening || undefined}
+          data-studio="open-tape"
+          className="sk-focus flex h-11 items-center gap-2 rounded-xl border border-white/12 bg-white/5 px-3 text-sm text-white/75 hover:bg-white/10"
+        >
+          <FolderOpen aria-hidden="true" className="h-[18px] w-[18px] flex-none" strokeWidth={1.8} />
+          <span className="hidden sm:inline">Open a tape</span>
+        </button>
+
         <label className="sr-only" htmlFor="studio-title">
           Story title
         </label>
@@ -938,7 +1159,7 @@ export default function Studio() {
             onClick={() => {
               stopAudio();
               setTool(null);
-              setGateAuthor(state.manifest.metadata.author ?? "");
+              setGateAuthor(gateDefault);
               setPhase("gate");
             }}
             className="rounded-xl px-4 text-[15px]"
@@ -979,6 +1200,47 @@ export default function Studio() {
 
       {/* ------------------------------------------------------------ stage */}
       <main className="studio-area-stage p-3 sm:p-4">
+        {/* Opening a tape: working on it, or why it did not open. It floats
+            over the Stage's top edge so the chrome never moves, and its live
+            region is always mounted so the first message is announced. */}
+        <div
+          data-studio="open-note"
+          data-tone={note?.tone ?? "none"}
+          className={`pointer-events-none absolute inset-x-3 top-3 z-[45] mx-auto max-w-lg transition-opacity duration-300 ease-out motion-reduce:transition-none sm:inset-x-4 sm:top-4 ${
+            note ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          <div
+            className={`flex items-center gap-3 rounded-xl border px-3 py-2 shadow-[0_12px_32px_rgba(0,0,0,0.45)] backdrop-blur-xl ${
+              note ? "pointer-events-auto" : ""
+            } ${
+              note?.tone === "error"
+                ? "border-[#E3452F]/55 bg-[#2a100c]/92 text-[#FFD9D2]"
+                : "border-white/12 bg-[#0b1020]/92 text-white/65"
+            }`}
+          >
+            <p
+              role="status"
+              className={`m-0 min-w-0 flex-1 ${
+                note?.tone === "error" ? "text-[14px] leading-snug" : "text-[11px] tracking-[0.2em] uppercase"
+              }`}
+              style={note?.tone === "error" ? undefined : { fontFamily: "var(--font-plex-mono), monospace" }}
+            >
+              {note?.text ?? ""}
+            </p>
+            {note?.tone === "error" ? (
+              <button
+                type="button"
+                onClick={() => setOpenNote(null)}
+                aria-label="Dismiss this message"
+                className="sk-focus flex h-9 w-9 flex-none items-center justify-center rounded-lg text-lg text-white/60 hover:bg-white/10"
+              >
+                <span aria-hidden="true">×</span>
+              </button>
+            ) : null}
+          </div>
+        </div>
+
         <Stage
           page={page}
           pageNumber={activeIndex + 1}
@@ -1114,6 +1376,16 @@ export default function Studio() {
         tabIndex={-1}
         aria-hidden="true"
       />
+      <input
+        ref={tapeInputRef}
+        type="file"
+        accept=".storysync,.zip"
+        data-studio="open-tape-input"
+        onChange={onTapeFile}
+        className="sr-only"
+        tabIndex={-1}
+        aria-hidden="true"
+      />
       <audio ref={audio.audioRef} preload="auto" className="hidden" />
       <p aria-live="polite" className="sr-only">
         {announcement}
@@ -1146,13 +1418,7 @@ export default function Studio() {
                 label="Keep working on it"
                 variant="gold"
                 className="w-full justify-center"
-                onClick={() => {
-                  setState(restore.state);
-                  activeIndexRef.current = 0;
-                  setActiveIndexState(0);
-                  setRestore(null);
-                  setBoot("ready");
-                }}
+                onClick={() => keepSavedDraft(restore)}
               />
               <BigButton
                 icon="✎"
@@ -1170,14 +1436,30 @@ export default function Studio() {
         </div>
       ) : null}
 
+      {pendingOpen ? (
+        <OpenTapeDialog
+          title={pendingOpen.tape.manifest.metadata.title}
+          returnFocusTo={openButtonRef}
+          onKeep={() => {
+            const { saved } = pendingOpen;
+            setPendingOpen(null);
+            if (saved) keepSavedDraft(saved);
+          }}
+          onOpen={() => applyOpenedTape(pendingOpen.tape, pendingOpen.mood)}
+        />
+      ) : null}
+
       {phase === "gate" ? (
         <ParentGate
-          defaultAuthor={state.manifest.metadata.author ?? ""}
+          defaultAuthor={gateDefault}
+          bylineLabel={state.remix ? "read by" : "story by"}
           voices={recordedVoices(state.manifest.pages, gateAuthor)}
           onAuthorChange={setGateAuthor}
           onCancel={() => setPhase("edit")}
           onPass={(author, consentedVoices) => {
-            setAuthor(author);
+            // A re-voiced tape keeps its author: the byline is the reader.
+            if (state.remix) readerRef.current = author;
+            else setAuthor(author);
             void runPublish(author, consentedVoices);
           }}
         />

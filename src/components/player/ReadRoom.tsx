@@ -20,16 +20,13 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { getSharedBook } from "@/lib/cloud-storage";
 import { loadStorysyncToStory } from "@/lib/storysync/container";
-import type { SsyncManifest, SsyncPage } from "@/lib/storysync/manifest";
+import type { SsyncManifest } from "@/lib/storysync/manifest";
+import { HOUSE_TAPE_URL, loadTapeByCode, normalizeTapeManifest } from "@/lib/storysync/tape-source";
 import { BigButton, GlassPanel, Reel, TapeLabel, TAPE } from "@/components/studio-kit/kit";
 import { Player } from "./Player";
 import "./player.css";
 
-const DEMO_URL = "/demo/brave-little-star.ssync.json";
-/** The localStorage library `@/lib/cloud-storage` writes when there is no cloud. */
-const DEVICE_LIBRARY_KEY = "ssync-library";
 /** A blank tape — the one you record yourself. */
 const BLANK_LABEL = "#FFFDF6";
 /** Kraft/manila — the tape someone handed you on a file. */
@@ -43,40 +40,6 @@ type RoomState =
   | { kind: "missing"; code: string }
   | { kind: "error"; message: string }
   | { kind: "ready"; manifest: SsyncManifest; origin: Origin };
-
-/**
- * Permissive read of anything claiming to be a story: SSYNC v1 documents, v2
- * manifests, and cloud rows written by older builds all have to play. Unknown
- * fields ride along untouched; only the pieces the Player depends on are
- * repaired.
- */
-function normalizeManifest(raw: unknown): SsyncManifest | null {
-  if (!raw || typeof raw !== "object") return null;
-  const src = raw as Record<string, unknown>;
-
-  const rawPages = Array.isArray(src.pages) ? src.pages : [];
-  const pages: SsyncPage[] = rawPages
-    .filter((p): p is Record<string, unknown> => !!p && typeof p === "object")
-    .map((p, i) => ({
-      ...(p as unknown as SsyncPage),
-      id: typeof p.id === "number" ? p.id : i + 1,
-    }));
-  if (pages.length === 0) return null;
-
-  const rawMeta =
-    src.metadata && typeof src.metadata === "object"
-      ? (src.metadata as Record<string, unknown>)
-      : {};
-  const title =
-    typeof rawMeta.title === "string" && rawMeta.title.trim() ? rawMeta.title : "Untitled Story";
-
-  return {
-    ...src,
-    version: typeof src.version === "string" ? src.version : "1.0",
-    metadata: { ...rawMeta, title },
-    pages,
-  } as unknown as SsyncManifest;
-}
 
 function Kicker({ children }: { children: React.ReactNode }) {
   return (
@@ -115,28 +78,6 @@ function Choice({
   );
 }
 
-/**
- * A story saved on this device (the localStorage library used whenever Supabase
- * is not configured) opened by its own link, on the same device. Nothing is
- * fetched and nothing is uploaded — this is the offline half of `?story=`.
- */
-function deviceCopy(code: string): SsyncManifest | null {
-  try {
-    const raw = window.localStorage.getItem(DEVICE_LIBRARY_KEY);
-    if (!raw) return null;
-    const rows: unknown = JSON.parse(raw);
-    if (!Array.isArray(rows)) return null;
-    const hit = rows.find((row) => {
-      if (!row || typeof row !== "object") return false;
-      const r = row as { id?: unknown; shareCode?: unknown };
-      return r.id === code || r.shareCode === code;
-    }) as { ssyncData?: unknown } | undefined;
-    return hit ? normalizeManifest(hit.ssyncData) : null;
-  } catch {
-    return null;
-  }
-}
-
 export function ReadRoom() {
   const router = useRouter();
   const params = useSearchParams();
@@ -166,15 +107,13 @@ export function ReadRoom() {
     if (!code) return;
     let cancelled = false;
     setState({ kind: "loading", what: "Finding that tape" });
-    const land = (manifest: SsyncManifest | null) => {
+    // One resolver for "what tape does this code mean" (the Creator's
+    // ?open=<code> asks the same one): the cloud first, then this device.
+    void loadTapeByCode(code).then((found) => {
       if (cancelled) return;
-      const found = manifest ?? deviceCopy(code);
       if (!found) setState({ kind: "missing", code });
       else setState({ kind: "ready", manifest: found, origin: "share" });
-    };
-    getSharedBook(code)
-      .then((book) => land(book ? normalizeManifest(book.ssyncData) : null))
-      .catch(() => land(null));
+    });
     return () => {
       cancelled = true;
     };
@@ -184,9 +123,9 @@ export function ReadRoom() {
   const openDemo = React.useCallback(async () => {
     setState({ kind: "loading", what: "Threading the demo tape" });
     try {
-      const response = await fetch(DEMO_URL);
+      const response = await fetch(HOUSE_TAPE_URL);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const manifest = normalizeManifest(await response.json());
+      const manifest = normalizeTapeManifest(await response.json());
       if (!manifest) throw new Error("no pages");
       setState({ kind: "ready", manifest, origin: "demo" });
     } catch {

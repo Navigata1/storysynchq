@@ -11,6 +11,7 @@
 
 import type { MoodName } from "@/lib/audio/moods";
 import type { SsyncManifest, SsyncPage } from "@/lib/storysync/manifest";
+import type { RemixRecord } from "@/lib/storysync/revoice";
 
 /* ------------------------------------------------------------------ moods */
 
@@ -23,6 +24,13 @@ import type { SsyncManifest, SsyncPage } from "@/lib/storysync/manifest";
  */
 export { MOOD_NAMES } from "@/lib/audio/moods";
 export type { MoodName } from "@/lib/audio/moods";
+
+/**
+ * Where an opened tape came from (`revoiceManifest`, src/lib/storysync/revoice.ts):
+ * `{ of, title, author }`. Draft-only — the publish writes `of` into
+ * `signature.remixOf` and keeps `author` as the tape's author.
+ */
+export type { RemixRecord } from "@/lib/storysync/revoice";
 
 /* ------------------------------------------------------------------ state */
 
@@ -59,6 +67,14 @@ export interface StudioState {
   publishedIds: string[];
   /** When this tape was started, on this device. Feeds "Made in m:ss". */
   startedAt: string;
+  /**
+   * Set when this draft is a tape opened in the Creator to be re-voiced
+   * (T15); null for a story made here. Never written into a manifest as is.
+   * Optional, and absent means null, so a state written without it (a draft
+   * from an older build, a test fixture) still loads: the draft loader merges
+   * over `blankState`, which sets it to null.
+   */
+  remix?: RemixRecord | null;
 }
 
 export const DEFAULT_TITLE = "My Story";
@@ -107,6 +123,7 @@ export function blankState(): StudioState {
     published: null,
     publishedIds: [],
     startedAt: new Date().toISOString(),
+    remix: null,
   };
 }
 

@@ -10,8 +10,17 @@
 import * as React from "react";
 import { BigButton, GlassPanel } from "@/components/studio-kit/kit";
 
+/** What the byline field credits: the story's maker, or the voice re-reading someone else's tape. */
+export type BylineLabel = "story by" | "read by";
+
 export interface ParentGateProps {
   defaultAuthor: string;
+  /**
+   * "story by" (default) for a story made here. "read by" on a tape opened to
+   * be re-voiced (T15): the original author keeps the credit, and the byline
+   * names the reader — the narrator and the consent voice.
+   */
+  bylineLabel?: BylineLabel;
   /**
    * The recorded voices on this tape, in order (`recordedVoices` in
    * src/lib/storysync/consent.ts), worked out from "story by" as it is typed —
@@ -53,6 +62,7 @@ function renamedInPlace(before: readonly string[], after: readonly string[]): bo
 
 export function ParentGate({
   defaultAuthor,
+  bylineLabel = "story by",
   voices,
   onAuthorChange,
   onPass,
@@ -160,7 +170,7 @@ export function ParentGate({
             className="mt-4 block text-[11px] tracking-[0.18em] text-white/45 uppercase"
             style={{ fontFamily: "var(--font-plex-mono), monospace" }}
           >
-            story by (optional)
+            {bylineLabel} (optional)
           </label>
           <input
             id="studio-gate-author"

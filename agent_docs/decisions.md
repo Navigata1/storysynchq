@@ -274,3 +274,48 @@ those are stored.**
 - **The HC skin.** It is now pure white semibold, spoken words included, to match s02 figure C.
 - **Spec.** `docs/format-spec.md` §4: "Players SHOULD apply `settings.accessibility` as defaults; a viewer's own
   choices override them, and are stored on the device only."
+
+**2026-10-25 · T15 · The Creator opens any tape to re-voice it: pictures, words, pauses and mood carry over; voices,
+voice names and the signature never do.**
+
+- **Re-voice rules** (`src/lib/storysync/revoice.ts`, pure):
+  - Version "2.0", `created` = now, and pages renumbered 1…n.
+  - Kept: title, author, language, genre, ageRange and description; settings; each page's illustration, words (and
+    their other text fields), timing, layout and unknown page fields.
+  - Removed: `narrator`, `coverImage`, the whole signature, and per page `audioUrl`, `audioCodec`, `voice` and `music`.
+    Also every other top-level field: a v1 tape's `voices` and `music` tables describe the source's voices and beds.
+  - The mood is the first page's music through `resolveMood` (else Wonder). Music is on when any page had music.
+  - `remix.of` is the source's `shareUrl`, else the app URL it was loaded from (house:
+    `<origin>/demo/brave-little-star.ssync.json`; a code: `<origin>/read?story=<code>`), else `"<title>" by <author>`.
+- **Pictures** are re-encoded through the shipped pipeline whatever their source. They are fetched only from this
+  app's own `/demo/`, and never for a file. A picture that cannot be read is dropped and its alt kept, so an opened
+  draft is self-contained.
+- **One resolver.** `/read?story=` and `/studio?open=` share `loadTapeByCode` (`src/lib/storysync/tape-source.ts`):
+  the cloud first, then this device.
+- **Publishing a re-voiced tape.** The author is the original. The byline ("read by") is the reader: narrator and
+  consent voice. Ownership is `© <year> <original author>` and `signature.remixOf` = `remix.of`.
+- **Never lose a story.** Opening over a story, or over a saved draft at `?open=`, asks "Open <title>?" first.
+  Autosave writes only on change, so keeping a story leaves its stored draft byte-identical.
+- **Magic ends a re-voice.** Magic replaces every page, so the story is a new one. It drops the remix record, and over
+  an opened tape it also drops the opened tape's metadata (author, description). The gate goes back to "story by", and
+  the byline becomes the author. A publish then writes no `remixOf` and claims nothing of the source's credit.
+- **M3-PRD Open Question 2 (opening your own tape on a new device): voices are always dropped, for now.** A tape's
+  recorded voices and consent records never come along when it is opened, even when it is your own. Telling "mine" from
+  "someone else's" needs an identity the file does not carry. A consent record names a voice and a grantor, not a
+  device or an account, so matching them cannot prove ownership. Offering "Keep the voices on this tape (and their
+  consent records)" is left to Jon; T15 does not build it. Until then, a parent who wants to keep editing her own tape
+  keeps the draft on the device that made it.
+- **M3-PRD Open Question 3 (credit on a re-voiced tape): the original author keeps `metadata.author` and the ownership
+  line. The reader is credited as `metadata.narrator` and in the consent record, not in ownership.** `remixOf` falls
+  back to the title text `"<title>" by <author>` only when the source has no link and no app URL, which in practice
+  means a `.storysync` file that was never shared. That fallback is a readable id, not a URL. The schema's "share URL or
+  id" admits it, and nothing in the app parses `remixOf`. Whether ownership should also name the reader is Jon's
+  call. Today it does not, because the reader owns their recording, not the story.
+  - **For Jon, onward sharing of unlisted links.** For a tape opened by code, `remixOf` (and therefore the re-voiced
+    tape) carries `<origin>/read?story=<code>`. That is the source family's unlisted share code. When it has a
+    `shareUrl`, the `shareUrl` is carried instead, which is the same link. So anyone who receives the re-voice can
+    open the original family's tape, including its recorded voices, for as long as that family keeps it published.
+    This is consistent with the ticket (`remix.of` is the `shareUrl`, else the app URL it was loaded from). However, it
+    passes an unlisted link on beyond the people it was first shared with. The alternatives are to keep the code out
+    and write the readable `"<title>" by <author>` id instead, or to ask at the gate ("Credit the original with its
+    link?"). T15 builds neither. Until Jon rules, the link travels.
