@@ -190,3 +190,11 @@ The protocol rule sentence ("Published narration is always AAC/M4A …") stays: 
   - Should the Creator ask "Whose voice?" explicitly? T14's "Whose voice is on this tape?" is the natural place.
   - If it does, that answer should take precedence over the byline. That is a small change to the order inside
     `resolveNarrator`, and its Node test pins the new order.
+
+**2026-10-25 · T05a · SSYNC tokens live on `:root`; next/font variables sit on `<html>`.** The reference foundation tokens (`--ss-*`, `--mood-*`, `--ss-layer-*`, `--ss-ease`, `--ss-display/-ui/-mono`) are defined once, on `:root` in `src/app/globals.css`, and exposed to Tailwind 4 through `@theme inline` (`bg-ss-navy`, `ease-ss`, `font-ss-display` …). `src/components/studio-kit/tokens.ts` is the typed mirror, for SVG attributes, canvas and tests only. `tests/vision-tokens.spec.ts` fails if the CSS and the mirror resolve differently on `/`, `/read`, `/studio` or `/protocol`.
+
+Because `:root` type tokens reference `var(--font-*)`, the next/font variable classes moved from `<body>` to `<html>`. A custom property is substituted where it is declared, so on `<body>` the type tokens computed empty.
+
+The kit's layout convention: existing primitives stay in `kit.tsx`/`kit.css`, and each new shared component is its own `studio-kit/<Name>.tsx` (plus a scoped `<name>.css` when needed), imported from that file directly.
+
+T05a is the only M0–M5 ticket that edits `globals.css`.

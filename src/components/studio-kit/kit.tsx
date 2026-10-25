@@ -16,28 +16,30 @@
  *                       TapeLabel sets it to tape ink — nested reels adapt)
  *   --sk-big-h          BigButton min-height (default 64px; child mode: 88–104px)
  *   --sk-transport-size TransportButton diameter (default 56px)
+ *
+ * Tokens: colours, moods, layer fills, `--ss-ease` and the type stacks are CSS
+ * custom properties on `:root` (src/app/globals.css), with Tailwind utilities
+ * (`bg-ss-navy`, `text-ss-ink`, `ease-ss`, `font-ss-display` …). kit.css draws
+ * from them; `./tokens` is the typed mirror for SVG attributes and tests.
+ *
+ * Kit layout convention:
+ *   - The primitives above stay here, in kit.tsx + kit.css.
+ *   - Every NEW shared component gets its own file,
+ *     src/components/studio-kit/<Name>.tsx, with a component-scoped <name>.css
+ *     beside it only when it needs custom CSS (complex animation, SVG parts).
+ *   - Consumers import it from that file directly
+ *     (`import { Cassette } from "@/components/studio-kit/Cassette"`), never
+ *     through a barrel, so a page only ships the pieces it uses.
  */
 
 import * as React from "react";
+import { TAPE } from "./tokens";
 import "./kit.css";
 
 /* ------------------------------------------------------------------ tokens */
 
-/** Register B — tape stock palette. */
-export const TAPE = {
-  paper: "#FFFDF6",
-  ink: "#1E1A16",
-  label: "#FFC93C",
-  red: "#E3452F",
-  shell: "#3B3733",
-} as const;
-
-/** Register A — studio chrome palette (convenience; kit styling already uses it). */
-export const STUDIO = {
-  bg: "#0a0e1a",
-  gold: "#F59E0B",
-  violet: "#7C6BFF",
-} as const;
+/** TAPE (Register B) and STUDIO (Register A) palettes, from the token mirror. */
+export { TAPE, STUDIO } from "./tokens";
 
 /* ------------------------------------------------------------------ utils */
 

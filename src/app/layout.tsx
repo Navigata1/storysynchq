@@ -12,18 +12,24 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// Register B — "tape stock" typography (docs/design-direction.md §2)
+// Register B — "tape stock" typography (docs/design-direction.md §2; brief TYPE).
+// Fraunces loads as its variable font (no `weight`: the whole 100–900 axis), upright
+// and italic — titles 700–800, story text 400–500, authors and quotes in italic.
 const fraunces = Fraunces({
   variable: "--font-fraunces",
   subsets: ["latin"],
-  weight: ["500", "700", "900"],
+  style: ["normal", "italic"],
 });
 
+// Mono kickers, meta, readouts and codes: 400 / 500, 600 for emphasis.
 const plexMono = IBM_Plex_Mono({
   variable: "--font-plex-mono",
   subsets: ["latin"],
-  weight: ["400", "500"],
+  weight: ["400", "500", "600"],
 });
+
+// On <html>, so `:root`'s --ss-display / --ss-ui / --ss-mono (globals.css) resolve.
+const fontVariables = `${geistSans.variable} ${geistMono.variable} ${fraunces.variable} ${plexMono.variable}`;
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -66,7 +72,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={fontVariables}>
       <head>
         {/* Service Worker registration */}
         <script
@@ -83,10 +89,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} ${plexMono.variable} antialiased`}
-        style={{ overscrollBehavior: "none" }}
-      >
+      <body className="antialiased" style={{ overscrollBehavior: "none" }}>
         {children}
       </body>
     </html>
