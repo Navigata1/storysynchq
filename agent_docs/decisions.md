@@ -198,3 +198,24 @@ Because `:root` type tokens reference `var(--font-*)`, the next/font variable cl
 The kit's layout convention: existing primitives stay in `kit.tsx`/`kit.css`, and each new shared component is its own `studio-kit/<Name>.tsx` (plus a scoped `<name>.css` when needed), imported from that file directly.
 
 T05a is the only M0–M5 ticket that edits `globals.css`.
+
+**2026-10-25 · T04b · The Creator writes one consent record per recorded voice, dated with the device's local
+calendar day.**
+
+- A recorded voice is keyed per page by `text.voice`, then "story by", then "narrator". `recordedVoices` returns
+  them distinct and in page order (`src/lib/storysync/consent.ts`). The gate asks once per voice and the publish
+  writes `consentRecords(voices, "parent/guardian", consentDate(now))`.
+  - With one voice, the gate is exactly s04's row (`#studio-gate-consent`).
+  - With several, each row carries the voice's name over the same sentence, and Continue (and Enter) waits for
+    every tick.
+  - A tape with no recorded voice carries no `voiceConsent` key.
+- **M0-PRD Open Question 6 (per-voice ticking vs one checkbox listing the voices): per-voice ticking.** Consent to
+  one recording is not consent to another (M0 story 9), and per-voice rows map one-to-one onto the records the
+  file carries. Renaming the "story by" voice keeps its tick (same recordings, new credit). Any change in which
+  recordings a row stands for clears every tick.
+- **M0-PRD Open Question 7 (which day is "the date"): the consenting device's local calendar date.** It is built
+  from `getFullYear` / `getMonth` / `getDate`, never `toISOString`, so 11:30 pm on Oct 19 in Los Angeles writes
+  `2026-10-19` although UTC says Oct 20. It is the day the grown-up would name, and it matches the stamp's "OCT 19
+  2026".
+- The writer enforces the gate: `runPublish` refuses to assemble a tape with a recorded voice missing from the
+  consented list.

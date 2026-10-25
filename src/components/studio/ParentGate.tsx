@@ -13,13 +13,18 @@ import { BigButton, GlassPanel } from "@/components/studio-kit/kit";
 export interface ParentGateProps {
   defaultAuthor: string;
   /**
-   * True when the story carries a recorded human voice. Voice consent is
-   * sacred (design-direction §9.4): the grown-up says so here, in one sentence,
-   * and it is written into `manifest.signature.voiceConsent[]` so it travels
-   * with the tape instead of living in our database.
+   * The recorded voices on this tape, in order (`recordedVoices` in
+   * src/lib/storysync/consent.ts), worked out from "story by" as it is typed —
+   * the Studio recomputes them from `onAuthorChange`. Voice consent is sacred
+   * (design-direction §9.4): the grown-up says so here, once per voice, and
+   * each one is written into `manifest.signature.voiceConsent[]` so it travels
+   * with the tape instead of living in our database. No voices, no consent row.
    */
-  requireConsent: boolean;
-  onPass: (author: string, consented: boolean) => void;
+  voices: string[];
+  /** "story by" as it is typed, so the voice list can follow it. */
+  onAuthorChange?: (author: string) => void;
+  /** Called only when every voice is ticked; `consentedVoices` is that list. */
+  onPass: (author: string, consentedVoices: string[]) => void;
   onCancel: () => void;
 }
 
@@ -34,18 +39,44 @@ function makeChallenge(): Challenge {
   return { a, b };
 }
 
+/**
+ * Typing "story by" renames the voice it credits, in place: the same
+ * recordings under a new name, so the ticks stand. Any other change — the
+ * byline folding into another voice, or splitting back out of one — changes
+ * which recordings a row stands for, so every tick is cleared and the
+ * grown-up is asked again.
+ */
+function renamedInPlace(before: readonly string[], after: readonly string[]): boolean {
+  if (before.length !== after.length) return false;
+  return before.filter((voice, i) => voice !== after[i]).length <= 1;
+}
+
 export function ParentGate({
   defaultAuthor,
-  requireConsent,
+  voices,
+  onAuthorChange,
   onPass,
   onCancel,
 }: ParentGateProps) {
   const [challenge, setChallenge] = React.useState<Challenge | null>(null);
   const [answer, setAnswer] = React.useState("");
   const [author, setAuthor] = React.useState(defaultAuthor);
-  const [consented, setConsented] = React.useState(false);
+  /** One tick per row, by position in `voices`. */
+  const [ticked, setTicked] = React.useState<boolean[]>(() => voices.map(() => false));
+  const [askedFor, setAskedFor] = React.useState<string[]>(voices);
   const [wrong, setWrong] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement | null>(null);
+
+  // The voice list follows "story by" as it is typed. Adjusting state while
+  // rendering (not in an effect) keeps the ticks and the rows in step.
+  if (askedFor.join("\n") !== voices.join("\n")) {
+    setAskedFor(voices);
+    setTicked(renamedInPlace(askedFor, voices) ? ticked : voices.map(() => false));
+  }
+
+  const everyVoiceConsented = voices.every((_, i) => ticked[i] === true);
+  const tick = (index: number, on: boolean) =>
+    setTicked((prev) => voices.map((_, i) => (i === index ? on : prev[i] === true)));
 
   React.useEffect(() => {
     setChallenge(makeChallenge());
@@ -63,9 +94,10 @@ export function ParentGate({
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!challenge) return;
-    if (requireConsent && !consented) return;
+    // Enter in a field submits the form even while Continue is disabled.
+    if (!everyVoiceConsented) return;
     if (Number(answer.trim()) === challenge.a * challenge.b) {
-      onPass(author.trim(), requireConsent ? consented : false);
+      onPass(author.trim(), [...voices]);
       return;
     }
     setWrong(true);
@@ -80,11 +112,13 @@ export function ParentGate({
       className="studio-fade fixed inset-0 z-[70] flex items-end justify-center bg-black/72 p-4 backdrop-blur-sm sm:items-center"
       role="presentation"
     >
+      {/* A row per voice makes the panel taller; on a short phone it scrolls
+          inside itself instead of losing its question off the top. */}
       <GlassPanel
         role="dialog"
         aria-modal="true"
         aria-labelledby="studio-gate-title"
-        className={`studio-rise w-full max-w-md border-white/14 bg-[#0b1020]/95 p-5 ${wrong ? "studio-shake" : ""}`}
+        className={`studio-rise max-h-full w-full max-w-md overflow-y-auto overscroll-contain border-white/14 bg-[#0b1020]/95 p-5 ${wrong ? "studio-shake" : ""}`}
       >
         <h2 id="studio-gate-title" className="text-xl font-semibold text-white">
           A grown-up moment
@@ -132,29 +166,58 @@ export function ParentGate({
             id="studio-gate-author"
             type="text"
             value={author}
-            onChange={(e) => setAuthor(e.target.value)}
+            onChange={(e) => {
+              setAuthor(e.target.value);
+              onAuthorChange?.(e.target.value);
+            }}
             placeholder="Ada, age 4"
             className="sk-focus mt-1 h-12 w-full rounded-xl border border-white/12 bg-black/40 px-3 text-sm text-white placeholder:text-white/25"
           />
 
-          {requireConsent ? (
+          {voices.length > 0 ? (
             <div className="mt-4 rounded-2xl border border-amber-400/30 bg-amber-500/[0.07] p-2">
-              {/* The whole row is the target — a checkbox alone is too small. */}
-              <label
-                htmlFor="studio-gate-consent"
-                className="flex min-h-[44px] cursor-pointer items-center gap-3 rounded-xl p-2"
-              >
-                <input
-                  id="studio-gate-consent"
-                  type="checkbox"
-                  checked={consented}
-                  onChange={(e) => setConsented(e.target.checked)}
-                  className="sk-focus h-7 w-7 flex-none accent-amber-500"
-                />
-                <span className="text-sm leading-relaxed text-white/80">
-                  I am this child&apos;s parent or guardian and I consent to sharing this recording.
-                </span>
-              </label>
+              {voices.map((voice, i) => {
+                // One voice keeps the reference control (and its id) exactly;
+                // several each carry their name over the same sentence.
+                const several = voices.length > 1;
+                const id = several ? `studio-gate-consent-${i + 1}` : "studio-gate-consent";
+                return (
+                  /* The whole row is the target — a checkbox alone is too small. */
+                  <label
+                    key={i}
+                    htmlFor={id}
+                    data-studio="consent-row"
+                    className={`flex min-h-[44px] cursor-pointer items-center gap-3 rounded-xl p-2 ${
+                      i > 0 ? "mt-1 border-t border-amber-400/15 pt-3" : ""
+                    }`}
+                  >
+                    <input
+                      id={id}
+                      type="checkbox"
+                      checked={ticked[i] === true}
+                      onChange={(e) => tick(i, e.target.checked)}
+                      className="sk-focus h-7 w-7 flex-none accent-amber-500"
+                    />
+                    <span className="min-w-0">
+                      {several ? (
+                        <>
+                          <span
+                            data-studio="consent-voice"
+                            className="block text-[11px] tracking-[0.12em] break-words text-amber-300/90"
+                            style={{ fontFamily: "var(--font-plex-mono), monospace" }}
+                          >
+                            {voice}
+                          </span>{" "}
+                        </>
+                      ) : null}
+                      <span className="block text-sm leading-relaxed text-white/80">
+                        I am this child&apos;s parent or guardian and I consent to sharing this
+                        recording.
+                      </span>
+                    </span>
+                  </label>
+                );
+              })}
               <p className="px-2 pb-1 text-xs leading-relaxed text-white/40">
                 This consent is written into the tape itself, so it travels with the story
                 wherever the file goes.
@@ -176,7 +239,7 @@ export function ParentGate({
               label="Continue"
               variant="gold"
               type="submit"
-              disabled={!challenge || !answer.trim() || (requireConsent && !consented)}
+              disabled={!challenge || !answer.trim() || !everyVoiceConsented}
               className="w-full justify-center"
             />
           </div>

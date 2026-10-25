@@ -24,6 +24,7 @@ import {
   type SsyncSignature,
 } from "@/lib/storysync/manifest";
 import { buildStorysyncFromStory } from "@/lib/storysync/container";
+import { consentDate, consentRecords, recordedVoices } from "@/lib/storysync/consent";
 import { resolveNarrator } from "@/lib/storysync/narrator";
 import { generateStory } from "@/lib/story-engine";
 import { generateIllustration } from "@/app/page-improvements";
@@ -59,7 +60,6 @@ import {
   nextPageId,
   pickCoverImage,
   storyHasContent,
-  storyHasNarration,
   updatePage,
   type MoodName,
   type RecordingMeta,
@@ -159,7 +159,10 @@ export default function Studio() {
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const publishedRef = React.useRef<SsyncManifest | null>(null);
   const authorRef = React.useRef("");
-  const consentRef = React.useRef(false);
+  /** The voices the grown-up consented to — a retry publishes with the same consent. */
+  const consentRef = React.useRef<string[]>([]);
+  /** "story by" as it is being typed in the gate; the gate's voice list follows it. */
+  const [gateAuthor, setGateAuthor] = React.useState("");
   const cuesRef = React.useRef<StudioCues | null>(null);
   const recordingRef = React.useRef(false);
 
@@ -619,10 +622,10 @@ export default function Studio() {
   );
 
   const runPublish = React.useCallback(
-    async (author: string, consented: boolean) => {
+    async (author: string, consentedVoices: string[]) => {
       stopAudio();
       authorRef.current = author;
-      consentRef.current = consented;
+      consentRef.current = consentedVoices;
       setPhase("publishing");
       setPublishError(null);
       setPublishNote(null);
@@ -693,21 +696,26 @@ export default function Studio() {
 
         /* 2 — assemble the manifest, signature layer included */
         markStep("assemble", { state: "active" });
-        const hasVoiceInStory = publishedPages.some((p) => p.text?.audioUrl);
+        // One consent record per recorded voice, dated with the grown-up's own
+        // calendar day (docs/format-spec.md §7.1). The gate asks for every
+        // voice; a voice without consent never leaves the device.
+        const voices = recordedVoices(publishedPages, author);
+        if (voices.some((voice) => !consentedVoices.includes(voice))) {
+          throw new Error("Every recorded voice needs a grown-up's consent first.");
+        }
+        const hasVoiceInStory = voices.length > 0;
         const now = new Date();
         const signature: SsyncSignature = {
           ...(source.signature ?? {}),
           ownership: author ? `© ${now.getFullYear()} ${author}` : `© ${now.getFullYear()}`,
           rights: "personal use",
         };
-        if (hasVoiceInStory && consented) {
-          signature.voiceConsent = [
-            {
-              voice: author || "narrator",
-              grantedBy: "parent/guardian",
-              date: now.toISOString(),
-            },
-          ];
+        if (hasVoiceInStory) {
+          signature.voiceConsent = consentRecords(voices, "parent/guardian", consentDate(now));
+        } else {
+          // No recorded voice, no consent record — not even one left from an
+          // earlier publish of this draft.
+          delete signature.voiceConsent;
         }
 
         // Whose voice it is ("VOICE: <narrator>"): the lead name of "story by",
@@ -930,6 +938,7 @@ export default function Studio() {
             onClick={() => {
               stopAudio();
               setTool(null);
+              setGateAuthor(state.manifest.metadata.author ?? "");
               setPhase("gate");
             }}
             className="rounded-xl px-4 text-[15px]"
@@ -1164,11 +1173,12 @@ export default function Studio() {
       {phase === "gate" ? (
         <ParentGate
           defaultAuthor={state.manifest.metadata.author ?? ""}
-          requireConsent={storyHasNarration(state.manifest)}
+          voices={recordedVoices(state.manifest.pages, gateAuthor)}
+          onAuthorChange={setGateAuthor}
           onCancel={() => setPhase("edit")}
-          onPass={(author, consented) => {
+          onPass={(author, consentedVoices) => {
             setAuthor(author);
-            void runPublish(author, consented);
+            void runPublish(author, consentedVoices);
           }}
         />
       ) : null}
