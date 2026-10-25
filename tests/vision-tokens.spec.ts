@@ -358,15 +358,20 @@ test.describe("T05a · tokens in the browser", () => {
       expect(fonts["--font-fraunces"]).not.toBe("");
       expect(fonts["--font-geist-sans"]).not.toBe("");
       expect(fonts["--font-plex-mono"]).not.toBe("");
+      // the production CSS minifier drops the space after each comma in a
+      // font stack, so compare stacks with comma spacing normalised
+      const stack = (s: string) => s.replace(/\s*,\s*/g, ",");
       const resolve = (s: string) =>
-        s
-          .replace("var(--font-fraunces)", fonts["--font-fraunces"])
-          .replace("var(--font-geist-sans)", fonts["--font-geist-sans"])
-          .replace("var(--font-plex-mono)", fonts["--font-plex-mono"])
-          .toLowerCase();
-      expect(fonts["--ss-display"]).toBe(resolve(SS_FONT.display));
-      expect(fonts["--ss-ui"]).toBe(resolve(SS_FONT.ui));
-      expect(fonts["--ss-mono"]).toBe(resolve(SS_FONT.mono));
+        stack(
+          s
+            .replace("var(--font-fraunces)", fonts["--font-fraunces"])
+            .replace("var(--font-geist-sans)", fonts["--font-geist-sans"])
+            .replace("var(--font-plex-mono)", fonts["--font-plex-mono"])
+            .toLowerCase(),
+        );
+      expect(stack(fonts["--ss-display"])).toBe(resolve(SS_FONT.display));
+      expect(stack(fonts["--ss-ui"])).toBe(resolve(SS_FONT.ui));
+      expect(stack(fonts["--ss-mono"])).toBe(resolve(SS_FONT.mono));
     });
   }
 
