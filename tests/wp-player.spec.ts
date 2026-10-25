@@ -411,6 +411,10 @@ async function proseContrast(page: Page, shot: string): Promise<number> {
 /* ──────────────────────────────────── (3) legibility on a "full" layout */
 
 test.describe("WP-P · words over art stay legible", () => {
+  /* T08 (s02): at desktop width an "illustration-full" page opens as a two-page
+     spread — the words sit on a sheer right page, not on a scrim over the art.
+     The 4.5:1 bar is kept at 1440×900 against that page; the full-bleed layout
+     and its gradient scrim are asserted where they still ship, on a phone. */
   test("the full-bleed scrim clears 4.5:1 behind the story text", async ({ page }) => {
     test.setTimeout(90000);
     await page.setViewportSize({ width: 1440, height: 900 });
@@ -418,6 +422,23 @@ test.describe("WP-P · words over art stay legible", () => {
     await backdropReady(page);
 
     // Demo page 2 is layout "illustration-full".
+    await page.keyboard.press("ArrowRight");
+    await expect(page.locator(".pl-root")).toHaveAttribute("data-page", "2");
+    await expect(page.locator(".pl-page.is-spread")).toHaveCount(1);
+    await page.waitForFunction(() => {
+      const img = document.querySelector<HTMLImageElement>(".pl-page.is-spread .pl-picture img");
+      return !!img && img.complete && img.naturalWidth > 0;
+    }, null, { timeout: 20000 });
+    await page.waitForTimeout(700);
+
+    const wide = await proseContrast(page, "wp-player-desktop-full-scrim");
+    expect(wide, `contrast behind the prose was ${wide.toFixed(2)}:1`).toBeGreaterThanOrEqual(4.5);
+
+    // the same page on a phone: full-bleed, words on the measured scrim.
+    // A fresh start, so the tape's own auto-advance cannot have moved on.
+    await page.setViewportSize({ width: 390, height: 844 });
+    await begin(page, "/read?demo=1");
+    await backdropReady(page);
     await page.keyboard.press("ArrowRight");
     await expect(page.locator(".pl-root")).toHaveAttribute("data-page", "2");
     await expect(page.locator(".pl-page.is-full")).toHaveCount(1);
@@ -432,8 +453,8 @@ test.describe("WP-P · words over art stay legible", () => {
       .evaluate((el) => getComputedStyle(el).backgroundImage);
     expect(scrim).toContain("linear-gradient");
 
-    const ratio = await proseContrast(page, "wp-player-desktop-full-scrim");
-    expect(ratio, `contrast behind the prose was ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(4.5);
+    const narrow = await proseContrast(page, "wp-player-mobile-full-scrim");
+    expect(narrow, `contrast behind the prose was ${narrow.toFixed(2)}:1`).toBeGreaterThanOrEqual(4.5);
   });
 
   test("the ordinary text panel clears 4.5:1 too, at 1440 and at 390", async ({ page }) => {
@@ -487,12 +508,15 @@ test.describe("WP-P · the story voice", () => {
     const wide = await readProse();
     console.log("[wp-p] prose @1440:", JSON.stringify(wide));
     expect(wide.fontFamily).toMatch(/Fraunces/i);
-    // clamp(1.1rem, 0.92rem + 1.05vw, 1.9rem)
+    // T08 (s02): at 1440×900 the words sit on a book page of the spread —
+    // spread typography, sized to the page and measured like a book (≈34 ch).
+    expect(wide.fontSize).toBeGreaterThanOrEqual(24);
+    expect(wide.fontSize).toBeLessThanOrEqual(30);
+    expect(wide.maxWidth / wide.ch).toBeGreaterThanOrEqual(28);
+    expect(wide.maxWidth / wide.ch).toBeLessThanOrEqual(40);
+    // the phone keeps clamp(1.1rem, 0.92rem + 1.05vw, 1.9rem) and ~62ch
     const expected = (m: { rem: number; vw: number }) =>
       Math.min(1.9 * m.rem, Math.max(1.1 * m.rem, 0.92 * m.rem + 0.0105 * m.vw));
-    expect(wide.fontSize).toBeCloseTo(expected(wide), 0);
-    expect(wide.maxWidth / wide.ch).toBeGreaterThan(60);
-    expect(wide.maxWidth / wide.ch).toBeLessThan(64);
 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.waitForTimeout(300);

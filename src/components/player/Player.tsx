@@ -14,6 +14,12 @@
  * 21:9 monitor sits in warm light instead of dead black, and the light drifts
  * (Ken-Burns) unless the reader asked for reduced motion.
  *
+ * An open book on a wide screen (s02, T08): at ≥ 1024 px wide and landscape
+ * (./useSpread) a page with a picture and words is a two-page spread — the
+ * picture on the left page at its own aspect, the words on a sheer right page
+ * under a "PAGE n · MOOD" kicker (./spread.css). Phones and portrait tablets
+ * keep the full-bleed / stacked page.
+ *
  * Rules this file exists to honour:
  *   1. The tap on "Tap to Begin" is the iOS audio unlock. Nothing plays before.
  *   2. The manifest is the source of truth. v1 documents play; unknown fields
@@ -27,7 +33,7 @@
 
 import * as React from "react";
 import QRCode from "qrcode";
-import { Lock, Mic } from "lucide-react";
+import { Lock, Mic, Music, Settings, X } from "lucide-react";
 import type { SsyncManifest, SsyncPage } from "@/lib/storysync/manifest";
 import { DualBusAudioEngine } from "@/lib/audio/engine";
 import type { MoodName } from "@/lib/audio/moods";
@@ -46,7 +52,9 @@ import {
   type Speed,
   type ViewerChoices,
 } from "./prefs";
+import { useSpread } from "./useSpread";
 import "./player.css";
+import "./spread.css";
 
 /* ────────────────────────────────────────────────────────────── constants */
 
@@ -58,6 +66,8 @@ const TURN_OUT_MS = 240;
 const TURN_IN_MS = 460;
 const UI_IDLE_MS = 4200;
 const MUSIC_VOLUME = 0.35;
+/** The keys, as the room prints them (s02). Every one of them does what it says. */
+const KEY_HINT = "← → turn · space pause · P music · esc close";
 
 /* ────────────────────────────────────────────────────────────────── utils */
 
@@ -87,18 +97,20 @@ function StoryText({
   content,
   highlight,
   scale,
+  book = false,
 }: {
   content: string;
   highlight: number;
   scale: number;
+  /** On a book page the size follows the page (--pl-spread-h), not the viewport width. */
+  book?: boolean;
 }) {
   const words = React.useMemo(() => splitWords(content), [content]);
+  const size = book
+    ? "clamp(1.25rem, var(--pl-spread-h) * 0.0464, 1.8rem)"
+    : "clamp(1.1rem, 0.92rem + 1.05vw, 1.9rem)";
   return (
-    <p
-      className="pl-prose"
-      data-pl="prose"
-      style={{ fontSize: `calc(clamp(1.1rem, 0.92rem + 1.05vw, 1.9rem) * ${scale})` }}
-    >
+    <p className="pl-prose" data-pl="prose" style={{ fontSize: `calc(${size} * ${scale})` }}>
       {words.map((word, i) => (
         <span
           key={`${i}-${word.start}`}
@@ -231,6 +243,10 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
   const [qr, setQr] = React.useState<string | null>(null);
   /** Backdrop crossfade: the picture coming in, and the one fading out. */
   const [bg, setBg] = React.useState<{ cur?: string; prev?: string; n: number }>({ n: 0 });
+  /** Wide + landscape: pages open as a two-page spread (client-only; SSR is stacked). */
+  const wide = useSpread();
+  /** Natural width / height of each picture, by URL — the left page takes its shape. */
+  const [artRatio, setArtRatio] = React.useState<Record<string, number>>({});
 
   const engineRef = React.useRef<DualBusAudioEngine | null>(null);
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
@@ -546,6 +562,20 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
     setPaused((p) => !p);
   }, [unlockAudio]);
 
+  const toggleMusic = React.useCallback(() => {
+    unlockAudio();
+    setMusicOn((m) => !m);
+    setShowUi(true);
+  }, [unlockAudio]);
+
+  /** A picture told us its shape: the left page of the spread follows it. */
+  const noteArt = React.useCallback((img: HTMLImageElement | null) => {
+    if (!img || !img.complete || !img.naturalWidth || !img.naturalHeight) return;
+    const url = img.getAttribute("src") ?? "";
+    const ratio = img.naturalWidth / img.naturalHeight;
+    setArtRatio((r) => (r[url] === ratio ? r : { ...r, [url]: ratio }));
+  }, []);
+
   /* ── narration: recorded voice first, TTS second, silence last ───────── */
   React.useEffect(() => {
     if (!started || paused || ended) return;
@@ -792,7 +822,7 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
     // `index` is deliberate: a page turn restarts the idle countdown.
   }, [showUi, started, ended, sheetOpen, paused, index]);
 
-  /* ── keyboard: ← → space escape p ────────────────────────────────────── */
+  /* ── keyboard: ← → turn · space pause · P music · esc close ────────────── */
   React.useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -826,14 +856,18 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
       if (control && event.key === " ") return;
       if (isArrow && eatsArrows) return;
 
-      if (event.key === "ArrowRight" || event.key === " ") {
+      if (event.key === "ArrowRight") {
         event.preventDefault();
         goTo("next");
       } else if (event.key === "ArrowLeft") {
         event.preventDefault();
         goTo("prev");
-      } else if (event.key === "p" || event.key === "P") {
+      } else if (event.key === " ") {
+        // the hint says "space pause" (s02), so Space is the tape's pause key
+        event.preventDefault();
         togglePlay();
+      } else if (event.key === "p" || event.key === "P") {
+        toggleMusic();
       } else {
         return;
       }
@@ -841,7 +875,7 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [started, ended, sheetOpen, goTo, togglePlay, onExit]);
+  }, [started, ended, sheetOpen, goTo, togglePlay, toggleMusic, onExit]);
 
   /* ── swipe ──────────────────────────────────────────────────────────── */
   const touchX = React.useRef<number | null>(null);
@@ -874,6 +908,16 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
   const author = manifest.metadata?.author;
   const narrator = manifest.metadata?.narrator;
   const chromeHidden = !showUi && started && !ended;
+  /* The open book (s02): wide + landscape, and not a title/cover page. A page
+     with a picture AND words is a spread; a page with only one of them is a
+     single centred page. Every layout name ("illustration-top",
+     "illustration-full", "full") opens the same way — the book has no
+     full-bleed. */
+  const book = wide && !isTitlePage;
+  const isSpread = book && !!image && !!content;
+  const isSingle = book && !isSpread && (!!image || !!content);
+  const ratio = image ? artRatio[image] : undefined;
+  const kicker = `PAGE ${index + 1}${mood ? ` · ${mood.toUpperCase()}` : ""}`;
 
   return (
     <div
@@ -893,6 +937,7 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
       data-page={index + 1}
       data-pages={total}
       data-view={!started ? "cover" : ended ? "end" : "page"}
+      data-layout={wide ? "spread" : "stacked"}
       onMouseMove={wake}
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
@@ -928,11 +973,14 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
           key={index}
           className={cx(
             "pl-page",
-            isFullBleed && image && "is-full",
+            isSpread && "is-spread",
+            isSingle && "is-single",
+            !book && isFullBleed && image && "is-full",
             !image && "is-textonly",
             turn.phase !== "idle" && `is-${turn.phase}`,
             `is-${turn.dir}`,
           )}
+          style={book && ratio ? ({ "--pl-art-ratio": ratio } as React.CSSProperties) : undefined}
         >
           {isTitlePage ? (
             <div className="pl-title-page">
@@ -950,6 +998,41 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
                 >
                   by {author}
                 </p>
+              ) : null}
+            </div>
+          ) : book ? (
+            /* the open book: art on the left page, words on the sheer right page */
+            <div className="pl-book" data-pl={isSpread ? "spread" : "book"}>
+              {image ? (
+                <div className="pl-picture" data-pl="art">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    ref={noteArt}
+                    src={image}
+                    alt={page?.illustration?.alt || `Picture for page ${index + 1}`}
+                    onLoad={(event) => noteArt(event.currentTarget)}
+                  />
+                </div>
+              ) : null}
+              {content ? (
+                <div className="pl-text" data-pl="text">
+                  <p className="pl-kicker" data-pl="kicker">
+                    {mood ? (
+                      <span
+                        className="pl-kicker-dot"
+                        aria-hidden="true"
+                        style={{ "--pl-mood": `var(--mood-${mood.toLowerCase()})` } as React.CSSProperties}
+                      />
+                    ) : null}
+                    {kicker}
+                  </p>
+                  <StoryText
+                    content={content}
+                    highlight={highlightOn ? highlight : -1}
+                    scale={textScale}
+                    book
+                  />
+                </div>
               ) : null}
             </div>
           ) : (
@@ -1042,18 +1125,12 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
           type="button"
           className={cx("pl-chip sk-focus", musicOn && "is-on")}
           /* The label is hidden below `sm`, so the button needs a name of its
-             own — a chip with only a ♪ glyph has none. */
+             own — a chip with only an icon has none. */
           aria-label={musicOn ? "Music on" : "Music off"}
           aria-pressed={musicOn}
-          onClick={() => {
-            unlockAudio();
-            setMusicOn((m) => !m);
-            setShowUi(true);
-          }}
+          onClick={toggleMusic}
         >
-          <span className="pl-chip-glyph" aria-hidden="true">
-            ♪
-          </span>
+          <Music size={15} strokeWidth={2} aria-hidden="true" className="flex-none" />
           <span className="hidden sm:inline">{musicOn ? "Music on" : "Music off"}</span>
         </button>
         <button
@@ -1066,20 +1143,23 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
             setShowUi(true);
           }}
         >
-          <span className="pl-chip-glyph" aria-hidden="true">
-            ⚙
-          </span>
+          <Settings size={15} strokeWidth={2} aria-hidden="true" className="flex-none" />
           <span className="hidden sm:inline">Reading options</span>
         </button>
         {onExit ? (
           <button type="button" className="pl-chip sk-focus" onClick={onExit} aria-label="Close story">
-            <span className="pl-chip-glyph" aria-hidden="true">
-              ⏏
-            </span>
+            <X size={15} strokeWidth={2} aria-hidden="true" className="flex-none" />
             <span className="hidden sm:inline">Close</span>
           </button>
         ) : null}
       </div>
+
+      {/* ───────────────────────────── the keys, on a screen that has them */}
+      {wide ? (
+        <p className={cx("pl-chrome pl-keys", chromeHidden && "is-hidden")} data-pl="keys">
+          {KEY_HINT}
+        </p>
+      ) : null}
 
       {/* ────────────────────────────────────────────────── bottom chrome */}
       <div className={cx("pl-chrome pl-chrome--bottom", chromeHidden && "is-hidden")}>

@@ -1,0 +1,291 @@
+/* ============================================================================
+   The open book — spread.css (T08, reference s02)
+
+   At ≥ 1024 px wide and landscape (./useSpread → `.pl-root[data-layout=
+   "spread"]`) a page with a picture and words is a two-page spread: the
+   picture on the left page at its own aspect, the words on a sheer right page
+   (Register A) under a mono "PAGE n · MOOD" kicker. Art-dominant: at 1120×700
+   the book is 1000×560 — a 560 left page and a 440 right page, centred, with
+   room above for the chips and below for the transport.
+
+   Everything here is keyed on `.is-spread` / `.is-single` / the root's
+   `data-layout`, so the shipped `player.css` rules for the full-bleed and
+   stacked pages stand untouched on phones and portrait tablets. Same layer as
+   player.css; the extra `.pl-root` in each selector out-ranks its page rules.
+   ========================================================================== */
+
+@layer components {
+  /* ---------------------------------------------------------- geometry --- */
+  .pl-root[data-layout="spread"] {
+    /* clear air above (deck chip, top chips) and below (transport pill) */
+    --pl-spread-reserve-y: 70px;
+    --pl-spread-gutter-x: 60px;
+    /* a sensible maximum: a book, not a billboard, on an ultrawide */
+    --pl-spread-cap: 880px;
+    /* the right page is 440/560 of the left (square) page's height */
+    --pl-leaf-ratio: 0.7857;
+    /* the book's height: what the viewport allows for a square picture */
+    --pl-spread-h: min(
+      calc(100dvh - 2 * var(--pl-spread-reserve-y)),
+      calc((100vw - 2 * var(--pl-spread-gutter-x)) / (1 + var(--pl-leaf-ratio))),
+      var(--pl-spread-cap)
+    );
+    --pl-leaf-w: calc(var(--pl-spread-h) * var(--pl-leaf-ratio));
+    --pl-leaf-pad: clamp(28px, calc(var(--pl-spread-h) * 0.0714), 52px);
+  }
+
+  /* The page (the thing that turns) centres the book in the room. Only a
+     transform hint here: an opacity hint would make the page a backdrop root
+     and the sheer right page would blur nothing at rest. */
+  .pl-root .pl-page.is-spread,
+  .pl-root .pl-page.is-single {
+    align-items: center;
+    justify-content: center;
+    will-change: transform;
+    /* the left page takes the picture's own shape (--pl-art-ratio = w / h,
+       from the loaded image; square until it is known) inside the room left
+       over by the right page — never cropped, never stretched */
+    --pl-art-w: min(
+      calc(var(--pl-spread-h) * var(--pl-art-ratio, 1)),
+      calc(100vw - 2 * var(--pl-spread-gutter-x) - var(--pl-leaf-w))
+    );
+    --pl-art-h: calc(var(--pl-art-w) / var(--pl-art-ratio, 1));
+  }
+  .pl-root .pl-page.is-single {
+    --pl-art-w: min(
+      calc(var(--pl-spread-h) * var(--pl-art-ratio, 1)),
+      calc(100vw - 2 * var(--pl-spread-gutter-x))
+    );
+  }
+
+  .pl-book {
+    position: relative;
+    display: flex;
+    flex: none;
+    border-radius: 14px;
+    box-shadow:
+      0 40px 80px rgba(0, 0, 0, 0.5),
+      0 0 0 1px rgba(255, 255, 255, 0.04);
+  }
+
+  /* the spine: a soft fold where the two pages meet */
+  .pl-page.is-spread .pl-book::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: calc(var(--pl-art-w) - 30px);
+    width: 60px;
+    pointer-events: none;
+    background-image: linear-gradient(
+      90deg,
+      transparent 0,
+      rgba(0, 0, 0, 0.22) 44%,
+      rgba(0, 0, 0, 0.32) 50%,
+      rgba(255, 253, 246, 0.05) 51%,
+      rgba(0, 0, 0, 0.16) 56%,
+      transparent 100%
+    );
+  }
+
+  /* ------------------------------------------------------- left page ---- */
+  .pl-root .pl-page.is-spread .pl-picture,
+  .pl-root .pl-page.is-single .pl-picture {
+    flex: none;
+    width: var(--pl-art-w);
+    height: var(--pl-art-h);
+    padding: 0;
+    overflow: hidden;
+    border-radius: 14px 0 0 14px;
+    background-color: #0f1426;
+  }
+  .pl-root .pl-page.is-single .pl-picture {
+    border-radius: 14px;
+  }
+  /* a 1px paper hairline inside the picture's edge */
+  .pl-root .pl-page.is-spread .pl-picture::after,
+  .pl-root .pl-page.is-single .pl-picture::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: inset 0 0 0 1px rgba(255, 253, 246, 0.16);
+    pointer-events: none;
+  }
+  .pl-root .pl-page.is-spread .pl-picture img,
+  .pl-root .pl-page.is-single .pl-picture img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: none;
+    object-fit: contain;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  /* ------------------------------------------------------ right page ---- */
+  /* Sheer Register A: a dark translucent fill over the room's own light,
+     blurred, a 1px line, radius 14. The fill is measured, not eyeballed:
+     tests/vision-reader-spread.spec.ts samples the pixels behind the prose on
+     the house tape AND on pure white art and requires >= 4.5:1. */
+  .pl-root .pl-page.is-spread .pl-text,
+  .pl-root .pl-page.is-single .pl-text {
+    position: relative;
+    flex: none;
+    width: var(--pl-leaf-w);
+    height: var(--pl-art-h);
+    justify-content: flex-start;
+    padding: var(--pl-leaf-pad);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-left-width: 0;
+    border-radius: 0 14px 14px 0;
+    background-image:
+      radial-gradient(420px 300px at 0% 0%, rgba(255, 186, 92, 0.08), transparent 70%),
+      linear-gradient(180deg, rgba(10, 14, 26, 0.42), rgba(10, 14, 26, 0.58));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+    backdrop-filter: blur(18px) saturate(1.1);
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+  }
+  /* a page with words only: one page, centred, the book's full height */
+  .pl-root .pl-page.is-single .pl-text {
+    height: var(--pl-spread-h);
+    border-left-width: 1px;
+    border-radius: 14px;
+  }
+
+  /* the kicker: PAGE 2 · WONDER, with the mood's own colour as a dot */
+  .pl-kicker {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 18px;
+    font-family: var(--ss-mono);
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: 0.18em;
+    color: var(--ss-fg-3);
+  }
+  .pl-kicker-dot {
+    width: 7px;
+    height: 7px;
+    flex: none;
+    border-radius: 999px;
+    background-color: var(--pl-mood, var(--ss-gold));
+    box-shadow: 0 0 10px color-mix(in srgb, var(--pl-mood, var(--ss-gold)) 70%, transparent);
+  }
+
+  /* The words: sized to the page (Player.tsx StoryText `book`), a book's
+     measure (≈ 34 ch), set in the middle of the page. `margin: auto` rather
+     than flex centring, so "Largest" text that overflows scrolls from its
+     first line instead of being cut off above the top. */
+  .pl-root .pl-book .pl-prose {
+    margin: auto 0;
+    max-width: 34ch;
+    text-shadow: none;
+  }
+  /* the reference's book weight (450); the skins keep their own weights */
+  .pl-root:not(.is-hc):not(.is-dys) .pl-book .pl-prose {
+    font-weight: 450;
+  }
+  .pl-root .pl-page.is-single .pl-prose {
+    margin: auto;
+    width: fit-content;
+  }
+
+  /* high contrast: the right page is pure black, its line plain white */
+  .pl-root.is-hc .pl-page.is-spread .pl-text,
+  .pl-root.is-hc .pl-page.is-single .pl-text {
+    background-image: none;
+    background-color: #000000;
+    backdrop-filter: none;
+    border-color: rgba(255, 255, 255, 0.5);
+  }
+  .pl-root.is-hc .pl-kicker {
+    color: rgba(255, 255, 255, 0.85);
+  }
+
+  /* ----------------------------------------------- the room around it ---- */
+  /* Tap zones live in the gutters beside the book, so the pages themselves
+     (and a scrolling right page) are never a hidden "next" button. */
+  .pl-root[data-layout="spread"] .pl-zone {
+    width: clamp(44px, calc((100vw - var(--pl-spread-h) * (1 + var(--pl-leaf-ratio))) / 2), 104px);
+  }
+
+  /* the transport: the reference's 48px pill, 10px off the bottom edge —
+     prev and next quiet, the pause/play key the one bright paper button */
+  .pl-root[data-layout="spread"] .pl-chrome--bottom {
+    padding-bottom: max(10px, env(safe-area-inset-bottom, 0px));
+  }
+  .pl-root[data-layout="spread"] .pl-transport {
+    gap: 16px;
+    padding: 3px 18px;
+  }
+  .pl-root[data-layout="spread"] .pl-transport .sk-transport {
+    --sk-transport-size: 32px;
+    border-color: transparent;
+    background-color: transparent;
+    background-image: none;
+    box-shadow: none;
+    color: var(--ss-fg-2);
+  }
+  .pl-root[data-layout="spread"] .pl-transport .sk-transport:not(:disabled):hover {
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.08);
+  }
+  .pl-root[data-layout="spread"] .pl-transport .sk-transport--pause,
+  .pl-root[data-layout="spread"] .pl-transport .sk-transport--play {
+    --sk-transport-size: 40px;
+    background-color: #fffdf6;
+    color: #0a0e1a;
+    box-shadow: 0 6px 18px -6px rgba(255, 201, 60, 0.6);
+  }
+  .pl-root[data-layout="spread"] .pl-transport .sk-transport--pause:not(:disabled):hover,
+  .pl-root[data-layout="spread"] .pl-transport .sk-transport--play:not(:disabled):hover {
+    color: #0a0e1a;
+    background-color: #ffffff;
+  }
+  .pl-root[data-layout="spread"] .pl-transport .sk-transport-glyph {
+    width: 18px;
+    height: 18px;
+  }
+  .pl-root[data-layout="spread"] .pl-transport .sk-transport--pause .sk-transport-glyph,
+  .pl-root[data-layout="spread"] .pl-transport .sk-transport--play .sk-transport-glyph {
+    width: 20px;
+    height: 20px;
+  }
+  /* while a voice is speaking the paper key carries the lamp's glow */
+  .pl-root[data-layout="spread"] .pl-transport .sk-transport.is-active {
+    box-shadow:
+      0 0 0 2px rgba(245, 158, 11, 0.55),
+      0 6px 22px -4px rgba(255, 201, 60, 0.7);
+  }
+  /* the strip of tape runs along the bottom edge of the room */
+  .pl-root[data-layout="spread"] .pl-progress {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: auto;
+    border-radius: 0;
+  }
+
+  /* the keyboard hint, bottom-left, centred on the transport pill */
+  .pl-keys {
+    left: 24px;
+    bottom: 27px;
+    margin: 0;
+    font-family: var(--ss-mono);
+    font-size: 11px;
+    line-height: 14px;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+    color: var(--ss-fg-3);
+    pointer-events: none;
+  }
+}

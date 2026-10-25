@@ -299,3 +299,89 @@ export function t11Rows(): ReaderLibraryRow[] {
     libraryRow(authorSlowPauseTape, AUTHOR_SLOW_PAUSE_CODE),
   ];
 }
+
+/* ======================================= T08 · the desktop two-page spread */
+
+/** An SVG picture as a data URL; its width/height attributes are its natural size. */
+function svgDataUrl(svg: string): string {
+  return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
+}
+
+/**
+ * A 4:3 picture (800×600 natural): a kite over a hill. Landscape on purpose,
+ * so a spread that crops or stretches it to a square shows.
+ */
+export const WIDE_ART = svgDataUrl(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">` +
+    `<defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">` +
+    `<stop offset="0" stop-color="#27406b"/><stop offset="1" stop-color="#7d9cc4"/></linearGradient></defs>` +
+    `<rect width="800" height="600" fill="url(#sky)"/>` +
+    `<path d="M0 470 Q220 360 430 440 T800 410 V600 H0 Z" fill="#3d6b4a"/>` +
+    `<path d="M560 120 L620 190 L560 260 L500 190 Z" fill="#f5b544" stroke="#1e1a16" stroke-width="6"/>` +
+    `<path d="M560 260 C540 330 600 380 560 450" fill="none" stroke="#fffdf6" stroke-width="4"/>` +
+    `<rect x="4" y="4" width="792" height="592" fill="none" stroke="#e3452f" stroke-width="8"/>` +
+    `</svg>`,
+);
+
+/** A pure white picture (512×512): the worst art a sheer text page can sit beside. */
+export const WHITE_ART = svgDataUrl(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">` +
+    `<rect width="512" height="512" fill="#ffffff"/></svg>`,
+);
+
+/** Share code of the 4:3-picture tape. */
+export const WIDE_ART_CODE = "a08a08a08a08a08a08a08a08a08a08a0";
+
+/**
+ * Two pages with a landscape (4:3) picture and words, in two layouts. No
+ * voice, no music: nothing turns a page but the test.
+ */
+export const wideArtTape: SsyncManifest = {
+  version: "2.0",
+  metadata: { title: "The Kite Over the Hill", author: "Reader fixture", genre: "children", ageRange: "3-8" },
+  settings: { autoPlay: false, pageTurnSound: false, readAlongHighlight: true },
+  pages: [
+    {
+      id: 1,
+      layout: "illustration-top",
+      illustration: { url: WIDE_ART, alt: "A yellow kite over a green hill" },
+      text: { content: "The kite pulled and pulled until the whole hill seemed to lean after it." },
+    },
+    {
+      id: 2,
+      layout: "illustration-full",
+      illustration: { url: WIDE_ART, alt: "The kite, higher now" },
+      text: { content: "Then the wind let go, and the kite came down to rest on the grass." },
+    },
+  ],
+};
+
+/** Share code of the white-picture tape. */
+export const WHITE_ART_CODE = "a08b08b08b08b08b08b08b08b08b08b0";
+
+/** Two "full" pages whose picture is pure white, the second with music. */
+export const whiteArtTape: SsyncManifest = {
+  version: "2.0",
+  metadata: { title: "A Page of Snow", author: "Reader fixture", genre: "children", ageRange: "3-8" },
+  settings: { autoPlay: false, pageTurnSound: false, readAlongHighlight: true },
+  pages: [
+    {
+      id: 1,
+      layout: "illustration-full",
+      illustration: { url: WHITE_ART, alt: "A white page" },
+      text: { content: "Snow fell all night, and in the morning the garden was a clean white page." },
+    },
+    {
+      id: 2,
+      layout: "full",
+      illustration: { url: WHITE_ART, alt: "Still white" },
+      text: { content: "Nobody had written on it yet." },
+      music: "Hush",
+    },
+  ],
+};
+
+/** Both T08 tapes as library rows. */
+export function t08Rows(): ReaderLibraryRow[] {
+  return [libraryRow(wideArtTape, WIDE_ART_CODE), libraryRow(whiteArtTape, WHITE_ART_CODE)];
+}

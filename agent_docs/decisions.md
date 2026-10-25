@@ -319,3 +319,21 @@ voice names and the signature never do.**
     passes an unlisted link on beyond the people it was first shared with. The alternatives are to keep the code out
     and write the readable `"<title>" by <author>` id instead, or to ask at the gate ("Credit the original with its
     link?"). T15 builds neither. Until Jon rules, the link travels.
+
+
+**2026-10-25 · T08 · The Reader opens a book on wide screens; Space pauses, P is music.**
+At ≥ 1024 px wide and landscape (`useSpread`, a client-only `useSyncExternalStore` whose server snapshot is
+"stacked"), every non-title page with a picture and words renders as a two-page spread. The picture is on the left
+at its natural aspect (the box is sized from the loaded image's ratio; never cropped or stretched). The words are on
+a sheer Register-A right page (440/560 of the left page's height) under a mono "PAGE n · MOOD" kicker. The book's
+height is `min(100dvh − 140px, (100vw − 120px) / 1.7857, 880px)`. Phones and portrait tablets keep the full-bleed
+and stacked pages unchanged. Spread styling lives in `src/components/player/spread.css`; `player.css` is not
+edited.
+
+The s02 keyboard hint "← → turn · space pause · P music · esc close" is printed verbatim. The bindings changed to
+make it true:
+- **Space now toggles pause** (it used to turn the page);
+- **P now toggles the music** (it used to pause).
+
+Arrows and Escape are unchanged, and Space on a focused control still belongs to that control. No existing test
+asserted the old Space or P bindings.

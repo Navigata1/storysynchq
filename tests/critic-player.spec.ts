@@ -569,9 +569,11 @@ test("critic WP-P · prose is Fraunces, clamp()-sized, and capped near 62ch", as
   expect(wide.size).toBeGreaterThan(narrow.size + 4);
   expect(narrow.size).toBeGreaterThanOrEqual(16);
   expect(wide.size).toBeLessThanOrEqual(1.9 * 16 + 0.5);
-  // ~62ch measure: the cap, and the line actually rendered, both respect it
-  expect(wide.maxWidth / wide.chWidth).toBeGreaterThan(55);
-  expect(wide.maxWidth / wide.chWidth).toBeLessThan(70);
+  // the measure: the cap, and the line actually rendered, both respect it.
+  // T08 (s02): at 1440×900 the prose sits on a book page of the spread, whose
+  // measure is a book's (≈34 ch), not the full-bleed ~62ch (kept on phones).
+  expect(wide.maxWidth / wide.chWidth).toBeGreaterThanOrEqual(28);
+  expect(wide.maxWidth / wide.chWidth).toBeLessThanOrEqual(40);
   expect(wide.rendered).toBeLessThanOrEqual(wide.maxWidth + 1);
 });
 
@@ -872,7 +874,9 @@ for (const vp of [
     await page.setViewportSize({ width: vp.width, height: vp.height });
     await seedRound2(page);
     await tapToBegin(page, "/read?story=critic-white");
-    await expect(page.locator(".pl-page.is-full")).toHaveCount(1);
+    // T08 (s02): at desktop width the "full" page opens as a two-page spread
+    // (words on a sheer right page); a phone keeps the full-bleed scrim.
+    await expect(page.locator(vp.width >= 1024 ? ".pl-page.is-spread" : ".pl-page.is-full")).toHaveCount(1);
     await backdropPainted(page);
 
     const prose = page.locator('[data-pl="prose"]');
