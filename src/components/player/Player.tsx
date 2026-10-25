@@ -25,6 +25,7 @@
 
 import * as React from "react";
 import QRCode from "qrcode";
+import { Mic } from "lucide-react";
 import type { SsyncManifest, SsyncPage } from "@/lib/storysync/manifest";
 import { DualBusAudioEngine } from "@/lib/audio/engine";
 import { resolveMood, type MoodName } from "@/lib/audio/moods";
@@ -1052,6 +1053,38 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
         <span className="pl-deck-read">
           {String(index + 1).padStart(2, "0")} / {String(total).padStart(2, "0")}
         </span>
+        {/* Whose voice (s05): a hairline, the mic, the narrator's name — only
+            when the tape names one. The cover meta is the accessible statement.
+            Below md the top chrome's chips sit where the name runs, so while
+            they are up the group folds away — width as well as opacity, and
+            -ml-2.5 cancels the pill's 10px gap — leaving the pill its counter-
+            only size; it opens again when they idle out. */}
+        {narrator ? (
+          <span
+            data-pl="deck-voice"
+            className={cx(
+              "inline-flex min-w-0 max-w-[12rem] items-center gap-2.5 overflow-hidden transition-[max-width,opacity,margin] duration-300 ease-out motion-reduce:transition-none md:max-w-[16rem]",
+              !chromeHidden && "max-md:-ml-2.5 max-md:max-w-0 max-md:opacity-0",
+            )}
+          >
+            <span data-pl="deck-rule" className="h-[18px] w-px flex-none bg-white/[.16]" />
+            <span className="inline-flex min-w-0 items-center gap-1.5">
+              <Mic
+                data-pl="deck-mic"
+                size={12}
+                strokeWidth={2}
+                aria-hidden="true"
+                className="flex-none text-[#fbbf4a]"
+              />
+              <span
+                data-pl="deck-narrator"
+                className="max-w-[7.5rem] truncate text-[13px] leading-tight font-semibold text-white md:max-w-[13rem]"
+              >
+                {narrator}
+              </span>
+            </span>
+          </span>
+        ) : null}
       </div>
 
       {/* ───────────────────────────────────────────────────── top chrome */}

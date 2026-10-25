@@ -24,6 +24,7 @@ import {
   type SsyncSignature,
 } from "@/lib/storysync/manifest";
 import { buildStorysyncFromStory } from "@/lib/storysync/container";
+import { resolveNarrator } from "@/lib/storysync/narrator";
 import { generateStory } from "@/lib/story-engine";
 import { generateIllustration } from "@/app/page-improvements";
 import {
@@ -709,6 +710,14 @@ export default function Studio() {
           ];
         }
 
+        // Whose voice it is ("VOICE: <narrator>"): the lead name of "story by",
+        // and never a person's name on a tape the browser voice reads.
+        const narrator = resolveNarrator({
+          byline: author,
+          existing: source.metadata.narrator,
+          hasRecordedVoice: hasVoiceInStory,
+        });
+
         const manifest: SsyncManifest = {
           ...source,
           version: "2.0",
@@ -719,10 +728,12 @@ export default function Studio() {
             // Only when it is not simply page 1 again — a cover that duplicates
             // the first illustration doubles the size of every copy.
             coverImage: pickCoverImage(publishedPages),
+            narrator,
           },
           signature,
           pages: publishedPages,
         };
+        if (!narrator) delete manifest.metadata.narrator;
         const validation = validateManifest(manifest);
         if (!validation.ok) throw new Error(validation.errors.join("; "));
         publishedRef.current = manifest;

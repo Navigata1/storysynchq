@@ -159,3 +159,34 @@ The protocol rule sentence ("Published narration is always AAC/M4A …") stays: 
   `"self"` (free text allowed; there are schema `examples`, not an enum). A tape with a recorded voice and no
   record warns `a recorded voice is on this tape but signature.voiceConsent is empty; the v2.1 draft says it
   SHOULD carry one`.
+
+**2026-10-25 · T03 · The narrator is the lead name of "story by", and only for a recorded voice.**
+
+- At publish, `metadata.narrator` is derived by `src/lib/storysync/narrator.ts`:
+  - `resolveNarrator({ byline: <gate's story by>, existing: <draft's narrator>, hasRecordedVoice: <any published
+    page has text.audioUrl> })`.
+  - Without a recorded voice it is `undefined`, and the Creator **deletes** the key. A tape read by the browser
+    voice never names a person, even when "story by" is filled in or the draft carried a narrator.
+  - Otherwise the byline's lead name wins, then the draft's existing narrator. A re-publish with a new "story
+    by" replaces the old name; it is not sticky.
+- The lead name is the text before the first `,` · ` - ` · `—` · `–` · ` with ` (any case) · `(`.
+  - Em and en dashes count with or without spaces; a bare hyphen inside a name does not.
+  - Whitespace is collapsed and trimmed, the name is capped at 40 characters (code points), and an empty result
+    is `undefined`.
+  - Example: "Ada, age 4 — with Dad" → "Ada".
+- The Player shows the name in two places:
+  - the cover meta, which already printed `· VOICE: <narrator>`, uppercased by the tape label's CSS;
+  - the deck chip, as a hairline, a lucide `Mic` at 12 px and the name.
+
+  The deck stays `aria-hidden`; the cover meta is the accessible statement.
+- Below 768 px, the deck's narrator part folds away while the top chrome is up: its width, its gap and its
+  opacity. The pill keeps its counter-only size and stays clear of the chips. The part opens again when the
+  controls idle out.
+  - Reduced motion means no transition.
+  - On phones the chrome also stays up on the end card and while paused, so the name is hidden there too. This
+    is accepted: the deck is decorative (`aria-hidden`), and the cover meta carries the name for everyone.
+- **Open Question 5 (Jon):** No reference screen draws a narrator field, so "story by" stands in. If a parent
+  types "story by: Mom" over the child's voice, the cover says "VOICE: MOM".
+  - Should the Creator ask "Whose voice?" explicitly? T14's "Whose voice is on this tape?" is the natural place.
+  - If it does, that answer should take precedence over the byline. That is a small change to the order inside
+    `resolveNarrator`, and its Node test pins the new order.
