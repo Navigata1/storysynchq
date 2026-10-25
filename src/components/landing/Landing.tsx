@@ -19,6 +19,8 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BigButton, GlassPanel, Reel, TapeLabel } from "@/components/studio-kit/kit";
+import { tapeMetaLine } from "@/lib/storysync/tape-meta";
+import houseTape from "../../../public/demo/brave-little-star.ssync.json";
 import "./landing.css";
 
 /* --------------------------------------------------------------- constants */
@@ -35,6 +37,17 @@ const DOORS_ID = "ls-doors";
  * and the whole cassette feeling — begins.
  */
 const DEMO_HREF = "/read?demo=1";
+
+/**
+ * The house tape's label facts, read from the demo manifest in /public — never
+ * hand-typed, so the landing cannot drift from the tape. A static JSON import:
+ * resolved at build time, no runtime request.
+ */
+const HOUSE_TAPE = {
+  title: houseTape.metadata.title,
+  author: houseTape.metadata.author,
+  meta: tapeMetaLine(houseTape),
+} as const;
 
 /**
  * Cassette-into-deck travel before the route change, in ms.
@@ -748,11 +761,7 @@ export default function Landing() {
           </Reveal>
 
           <Reveal delay={140} className="ls-protocol-tape">
-            <TapeLabel
-              title="The Brave Little Star"
-              author="Island Development Crew"
-              meta="SIDE A · 8 PAGES · 4:32 · AAC/M4A"
-            />
+            <TapeLabel title={HOUSE_TAPE.title} author={HOUSE_TAPE.author} meta={HOUSE_TAPE.meta} />
             <p className="ls-protocol-readout sk-font-meta">
               manifest.json · assets/ · zip · ssync v2
             </p>

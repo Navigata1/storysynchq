@@ -128,3 +128,18 @@ TDD, and the result comes back to Claude for a fidelity and taste review before 
 - Page helpers seed the Studio draft and the device library through an init script once per tab. A reload
   keeps what the app did since, so delete and resume flows test truthfully.
 - Share codes in tests are minted as 128-bit hex. The reference's 16-hex code is exported for reference only.
+
+**2026-10-25 · Tape labels are derived, never typed (T01)** — The landing's protocol teaser printed a hand-typed `SIDE A · 8 PAGES · 4:32 · AAC/M4A` for the house tape. That tape has no recorded voice and runs about 1:47. All runtime and label arithmetic now lives in `src/lib/storysync/tape-meta.ts`:
+- `estimateRuntimeSeconds`: words ÷ 2.5 plus the autoPause sum, 3 s default, `ms` honoured.
+- `narrationKind` and `tapeMetaLine`.
+- The Player's `timing.ts` re-exports `estimateSeconds` / `parseDuration` / `formatClock` from it. The Player cover keeps its 20 s floor.
+
+The landing imports `public/demo/brave-little-star.ssync.json` statically, at build time with no runtime fetch. The teaser's title, author and meta all come from it, so the label now reads `SIDE A · 8 PAGES · ~1:47 · READ-ALONG`.
+
+The narration kind is:
+- `READ-ALONG` when no page has `audioUrl`.
+- `AAC/M4A` only when every recorded page is AAC.
+- `WAV` when any recorded page is WAV.
+- `RECORDED` when a recorded page's codec is neither declared nor readable from its URL. A label never claims a codec on a guess.
+
+The protocol rule sentence ("Published narration is always AAC/M4A …") stays: it is a rule about published tapes, not a claim about this one.
