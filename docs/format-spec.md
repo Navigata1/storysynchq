@@ -108,6 +108,16 @@ ladder (implemented in `src/lib/audio/transcode.ts`):
   (scaled by `settings.accessibility.timingMultiplier`), optionally play a
   page-turn cue, then advance. Manual navigation re-syncs narration to the new
   page.
+- **Author-default accessibility**: Players SHOULD apply `settings.accessibility`
+  as defaults; a viewer's own choices override them, and are stored on the
+  device only. `highContrast: true` opens the tape in high contrast and
+  `dyslexiaFont: true` with an easier-to-read font, unless the viewer has chosen
+  otherwise; `false` is the same as absent. The viewer's choice wins field by
+  field: a viewer who turned high contrast off still gets the tape's font.
+  `timingMultiplier` scales every pause as above, and a viewer's own pause
+  setting multiplies on top. The reference player stores only the settings a
+  viewer explicitly changed (under `ssync-reader-prefs`, never sent anywhere),
+  and says "Set by the storyteller" on a switch whose value comes from the tape.
 - **No text-to-speech requirement**: if `text.audioUrl` is absent, a player MAY
   synthesize narration from `text.content` (the reference reader uses the Web
   Speech API) or display text silently.

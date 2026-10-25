@@ -87,7 +87,19 @@ export interface SsyncManifest {
     readAlongHighlight?: boolean;
     orientation?: string;
     pageTurnSound?: boolean;
-    accessibility?: { timingMultiplier?: number; pauseBetweenPages?: string };
+    /**
+     * The storyteller's defaults for every reader of this tape. A viewer's own
+     * choices override them, and are stored on the viewer's device only
+     * (docs/format-spec.md §4).
+     */
+    accessibility?: {
+      timingMultiplier?: number;
+      pauseBetweenPages?: string;
+      /** Open in high contrast unless the viewer chose otherwise. */
+      highContrast?: boolean;
+      /** Open with the easier-to-read font unless the viewer chose otherwise. */
+      dyslexiaFont?: boolean;
+    };
   };
   pages: SsyncPage[];
 }

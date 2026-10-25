@@ -118,12 +118,17 @@ export async function seedReaderTapes(page: Page, rows: readonly ReaderLibraryRo
 
 /* --------------------------------------------------------- page builders */
 
-function voicedPage(id: number, content: string, music: SsyncPage["music"] | undefined): SsyncPage {
+function voicedPage(
+  id: number,
+  content: string,
+  music: SsyncPage["music"] | undefined,
+  clipSeconds = 2,
+): SsyncPage {
   const page: SsyncPage = {
     id,
     layout: "illustration-top",
     illustration: { url: `/demo/images/page${((id - 1) % 7) + 1}.jpg`, alt: `Picture ${id}` },
-    text: { content, audioUrl: silentWavDataUrl(2), audioCodec: "wav" },
+    text: { content, audioUrl: silentWavDataUrl(clipSeconds), audioCodec: "wav" },
   };
   if (music !== undefined) page.music = music;
   return page;
@@ -184,4 +189,113 @@ export const QUIET_MIDDLE_TAPE: SsyncManifest = {
 /** Both T10 tapes as library rows. */
 export function t10Rows(): ReaderLibraryRow[] {
   return [libraryRow(PER_PAGE_MOOD_TAPE, PER_PAGE_MOOD_CODE), libraryRow(QUIET_MIDDLE_TAPE, QUIET_MIDDLE_CODE)];
+}
+
+/* ======================================= T11 · author-default accessibility */
+
+/*
+ * Tapes whose storyteller asked for an accessibility default in
+ * `settings.accessibility` (format-spec §4). A viewer with no stored choice
+ * opens them that way; a viewer's own choice still wins. autoPlay is off on the
+ * first three so nothing turns a page but the test.
+ */
+
+/** Share code of the high-contrast tape. */
+export const AUTHOR_HIGH_CONTRAST_CODE = "a11a11a11a11a11a11a11a11a11a11a1";
+
+/**
+ * The storyteller asks for high contrast. Six-second clips, so a screenshot
+ * catches the read-along sweep mid-sentence.
+ */
+export const authorHighContrastTape: SsyncManifest = {
+  version: "2.0",
+  metadata: { title: "A Lamp in the Window", author: "Reader fixture", genre: "children", ageRange: "3-8" },
+  settings: {
+    autoPlay: false,
+    pageTurnSound: true,
+    readAlongHighlight: true,
+    accessibility: { highContrast: true, timingMultiplier: 1, pauseBetweenPages: "3s" },
+  },
+  signature: { voiceConsent: [FIXTURE_CONSENT] },
+  pages: [
+    voicedPage(1, "The lamp kept watch all night, and the moths came by to say hello.", "Calm", 6),
+    voicedPage(2, "In the morning the lamp went to sleep, and the sun said hello instead.", "Wonder", 6),
+  ],
+};
+
+/** Share code of the easier-to-read tape. */
+export const AUTHOR_EASIER_READ_CODE = "a11b11b11b11b11b11b11b11b11b11b1";
+
+/** The storyteller asks for the easier-to-read font (`dyslexiaFont`). */
+export const authorEasierReadTape: SsyncManifest = {
+  version: "2.0",
+  metadata: { title: "Letters on the Fence", author: "Reader fixture", genre: "children", ageRange: "3-8" },
+  settings: {
+    autoPlay: false,
+    pageTurnSound: true,
+    readAlongHighlight: true,
+    accessibility: { dyslexiaFont: true },
+  },
+  signature: { voiceConsent: [FIXTURE_CONSENT] },
+  pages: [
+    voicedPage(1, "Somebody painted big round letters on the garden fence.", "Joy"),
+    voicedPage(2, "The snail read every one of them, very slowly, all the way home.", "Calm"),
+  ],
+};
+
+/** Share code of the tape that asks for both. */
+export const AUTHOR_BOTH_CODE = "a11c11c11c11c11c11c11c11c11c11c1";
+
+/**
+ * A *different* tape that also asks for high contrast, and for the
+ * easier-to-read font: a viewer who turned high contrast off elsewhere keeps it
+ * off here, and still gets this storyteller's font (field by field).
+ */
+export const authorBothTape: SsyncManifest = {
+  version: "2.0",
+  metadata: { title: "Two Lanterns", author: "Reader fixture", genre: "children", ageRange: "3-8" },
+  settings: {
+    autoPlay: false,
+    pageTurnSound: true,
+    readAlongHighlight: true,
+    accessibility: { highContrast: true, dyslexiaFont: true },
+  },
+  signature: { voiceConsent: [FIXTURE_CONSENT] },
+  pages: [
+    voicedPage(1, "Two lanterns walked down the hill to find the river.", "Hush"),
+    voicedPage(2, "The river was already shining, so they sat down and shone too.", "Calm"),
+  ],
+};
+
+/** Share code of the slow-pause tape. */
+export const AUTHOR_SLOW_PAUSE_CODE = "a11d11d11d11d11d11d11d11d11d11d1";
+
+/**
+ * `timingMultiplier: 3` on a one-second `autoPause` after a one-second clip:
+ * the page turns about 3 s after the voice ends, not 1 s. autoPlay is on.
+ */
+export const authorSlowPauseTape: SsyncManifest = {
+  version: "2.0",
+  metadata: { title: "The Patient Clock", author: "Reader fixture", genre: "children", ageRange: "3-8" },
+  settings: {
+    autoPlay: true,
+    pageTurnSound: true,
+    readAlongHighlight: true,
+    accessibility: { timingMultiplier: 3 },
+  },
+  signature: { voiceConsent: [FIXTURE_CONSENT] },
+  pages: [
+    { ...voicedPage(1, "The clock waited.", "Calm", 1), timing: { autoPause: "1s" } },
+    { ...voicedPage(2, "And waited, and then it chimed.", "Calm", 1), timing: { autoPause: "1s" } },
+  ],
+};
+
+/** The four T11 tapes as library rows. */
+export function t11Rows(): ReaderLibraryRow[] {
+  return [
+    libraryRow(authorHighContrastTape, AUTHOR_HIGH_CONTRAST_CODE),
+    libraryRow(authorEasierReadTape, AUTHOR_EASIER_READ_CODE),
+    libraryRow(authorBothTape, AUTHOR_BOTH_CODE),
+    libraryRow(authorSlowPauseTape, AUTHOR_SLOW_PAUSE_CODE),
+  ];
 }

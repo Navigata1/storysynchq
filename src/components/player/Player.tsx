@@ -27,7 +27,7 @@
 
 import * as React from "react";
 import QRCode from "qrcode";
-import { Mic } from "lucide-react";
+import { Lock, Mic } from "lucide-react";
 import type { SsyncManifest, SsyncPage } from "@/lib/storysync/manifest";
 import { DualBusAudioEngine } from "@/lib/audio/engine";
 import type { MoodName } from "@/lib/audio/moods";
@@ -35,6 +35,17 @@ import { BigButton, GlassPanel, Reel, TapeLabel, TransportButton } from "@/compo
 import { estimateSeconds, formatClock, parseDuration, splitWords, wordIndexAtTime } from "./timing";
 import { openCueContext, playPageTurnCue } from "./sound";
 import { pageCrossfadeSeconds, pageMood } from "./music-plan";
+import {
+  PREFS_KEY,
+  SPEED_RATE,
+  authorDefaults,
+  pauseMultiplier,
+  resolve,
+  sanitize,
+  toStored,
+  type Speed,
+  type ViewerChoices,
+} from "./prefs";
 import "./player.css";
 
 /* ────────────────────────────────────────────────────────────── constants */
@@ -47,51 +58,11 @@ const TURN_OUT_MS = 240;
 const TURN_IN_MS = 460;
 const UI_IDLE_MS = 4200;
 const MUSIC_VOLUME = 0.35;
-const PREFS_KEY = "ssync-reader-prefs";
-
-type Speed = "slow" | "normal" | "fast";
-
-interface Prefs {
-  speed: Speed;
-  /** Multiplier on every between-page pause. */
-  timing: number;
-  /** Multiplier on story text size. */
-  fontScale: number;
-  dyslexia: boolean;
-  contrast: boolean;
-}
-
-const DEFAULT_PREFS: Prefs = {
-  speed: "normal",
-  timing: 1,
-  fontScale: 1,
-  dyslexia: false,
-  contrast: false,
-};
-
-const SPEED_PAUSE: Record<Speed, number> = { slow: 1.5, normal: 1, fast: 0.6 };
-const SPEED_RATE: Record<Speed, number> = { slow: 0.7, normal: 0.85, fast: 1.1 };
 
 /* ────────────────────────────────────────────────────────────────── utils */
 
 function cx(...parts: Array<string | false | null | undefined>): string {
   return parts.filter(Boolean).join(" ");
-}
-
-function sanitizePrefs(raw: unknown): Partial<Prefs> {
-  if (!raw || typeof raw !== "object") return {};
-  const r = raw as Record<string, unknown>;
-  const out: Partial<Prefs> = {};
-  if (r.speed === "slow" || r.speed === "normal" || r.speed === "fast") out.speed = r.speed;
-  if (typeof r.timing === "number" && Number.isFinite(r.timing)) {
-    out.timing = Math.min(3, Math.max(0.5, r.timing));
-  }
-  if (typeof r.fontScale === "number" && Number.isFinite(r.fontScale)) {
-    out.fontScale = Math.min(2, Math.max(0.8, r.fontScale));
-  }
-  if (typeof r.dyslexia === "boolean") out.dyslexia = r.dyslexia;
-  if (typeof r.contrast === "boolean") out.contrast = r.contrast;
-  return out;
 }
 
 /**
@@ -182,11 +153,14 @@ function SwitchRow({
   label,
   hint,
   checked,
+  fromStoryteller = false,
   onChange,
 }: {
   label: string;
   hint?: string;
   checked: boolean;
+  /** The value is the tape's own default (`settings.accessibility`). */
+  fromStoryteller?: boolean;
   onChange: (next: boolean) => void;
 }) {
   return (
@@ -200,6 +174,11 @@ function SwitchRow({
       <span>
         <span className="block font-semibold">{label}</span>
         {hint ? <span className="block text-[12px] text-white/45">{hint}</span> : null}
+        {fromStoryteller ? (
+          <span data-pl="storyteller-default" className="mt-0.5 block text-[12px] font-medium text-[#fbbf4a]">
+            Set by the storyteller
+          </span>
+        ) : null}
       </span>
       <span className="pl-switch-track" aria-hidden="true">
         <span className="pl-switch-knob" />
@@ -245,7 +224,8 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
   const [musicLive, setMusicLive] = React.useState(false);
   /** False once this browser has proved it has no working Web Audio. */
   const [audioOk, setAudioOk] = React.useState(true);
-  const [prefs, setPrefs] = React.useState<Prefs>(DEFAULT_PREFS);
+  /** Only what this viewer explicitly chose; the tape and the product fill the rest. */
+  const [choices, setChoices] = React.useState<ViewerChoices>({});
   const [reduced, setReduced] = React.useState(false);
   const [cuesFired, setCuesFired] = React.useState(0);
   const [qr, setQr] = React.useState<string | null>(null);
@@ -268,6 +248,7 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
   const targetRef = React.useRef(0);
   const timingRef = React.useRef(1);
   const reducedRef = React.useRef(false);
+  const choicesRef = React.useRef<ViewerChoices>({});
 
   const page: SsyncPage | undefined = pages[index];
   /* page.music → the mood (or silence) and the crossfade into it (./music-plan) */
@@ -276,9 +257,12 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
   const highlightOn = manifest.settings?.readAlongHighlight !== false;
   const autoPlay = manifest.settings?.autoPlay !== false;
   const cueOn = manifest.settings?.pageTurnSound !== false;
-  const baseTiming = manifest.settings?.accessibility?.timingMultiplier ?? 1;
-  const defaultPauseMs = parseDuration(manifest.settings?.accessibility?.pauseBetweenPages, 3000);
-  const timingMult = baseTiming * prefs.timing * SPEED_PAUSE[prefs.speed];
+  const accessibility = manifest.settings?.accessibility;
+  /* viewer's choice → the storyteller's default → the product default (./prefs) */
+  const asked = React.useMemo(() => authorDefaults(accessibility), [accessibility]);
+  const { prefs, source } = React.useMemo(() => resolve(asked, choices), [asked, choices]);
+  const defaultPauseMs = parseDuration(accessibility?.pauseBetweenPages, 3000);
+  const timingMult = pauseMultiplier(accessibility?.timingMultiplier, prefs);
   const ttsRate = SPEED_RATE[prefs.speed];
   const runtime = React.useMemo(
     () => formatClock(estimateSeconds(manifest.pages, defaultPauseMs)),
@@ -360,22 +344,28 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
     return () => mq.removeEventListener("change", sync);
   }, []);
 
-  /* ── reading preferences live on the device only (COPPA: no trackers) ── */
+  /* ── reading preferences live on the device only (COPPA: no trackers).
+     Only the viewer's explicit choices are stored, and only when they make
+     one: opening a tape writes nothing. ─────────────────────────────── */
   React.useEffect(() => {
     try {
-      const raw = window.localStorage.getItem(PREFS_KEY);
-      if (raw) setPrefs((p) => ({ ...p, ...sanitizePrefs(JSON.parse(raw)) }));
+      const stored = sanitize(window.localStorage.getItem(PREFS_KEY));
+      choicesRef.current = stored;
+      setChoices(stored);
     } catch {
-      /* private mode / quota — defaults are fine */
+      /* private mode / blocked storage: no choices, the tape's defaults apply */
     }
   }, []);
-  React.useEffect(() => {
+  const choose = React.useCallback((patch: ViewerChoices) => {
+    const next = { ...choicesRef.current, ...patch };
+    choicesRef.current = next;
+    setChoices(next);
     try {
-      window.localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+      window.localStorage.setItem(PREFS_KEY, JSON.stringify(toStored(next)));
     } catch {
-      /* ignore */
+      /* quota / private mode: the choice holds for this visit */
     }
-  }, [prefs]);
+  }, []);
 
   /* ── read-only engine view for tests and the console ────────────────── */
   React.useEffect(() => {
@@ -1151,7 +1141,7 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
               <Segmented<Speed>
                 label="Reading speed"
                 value={prefs.speed}
-                onChange={(speed) => setPrefs((p) => ({ ...p, speed }))}
+                onChange={(speed) => choose({ speed })}
                 options={[
                   { value: "slow", label: "Slow" },
                   { value: "normal", label: "Normal" },
@@ -1162,7 +1152,7 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
               <Segmented<string>
                 label="Pause between pages"
                 value={String(prefs.timing)}
-                onChange={(value) => setPrefs((p) => ({ ...p, timing: Number(value) }))}
+                onChange={(value) => choose({ timing: Number(value) })}
                 options={[
                   { value: "0.5", label: "Short" },
                   { value: "1", label: "Normal" },
@@ -1174,7 +1164,7 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
               <Segmented<string>
                 label="Text size"
                 value={String(prefs.fontScale)}
-                onChange={(value) => setPrefs((p) => ({ ...p, fontScale: Number(value) }))}
+                onChange={(value) => choose({ fontScale: Number(value) })}
                 options={[
                   { value: "0.9", label: "Small" },
                   { value: "1", label: "Normal" },
@@ -1187,14 +1177,25 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
                 label="Easier-to-read text"
                 hint="Sans-serif, wider letter and word spacing"
                 checked={prefs.dyslexia}
-                onChange={(dyslexia) => setPrefs((p) => ({ ...p, dyslexia }))}
+                fromStoryteller={source.dyslexia === "author"}
+                onChange={(dyslexia) => choose({ dyslexia })}
               />
               <SwitchRow
                 label="High contrast"
                 hint="Pure black behind pure white text"
                 checked={prefs.contrast}
-                onChange={(contrast) => setPrefs((p) => ({ ...p, contrast }))}
+                fromStoryteller={source.contrast === "author"}
+                onChange={(contrast) => choose({ contrast })}
               />
+
+              <p
+                data-pl="prefs-local"
+                className="flex items-center justify-center gap-2 pt-1 text-[11px] tracking-[0.08em] text-white/45"
+                style={{ fontFamily: "var(--font-plex-mono), ui-monospace, monospace" }}
+              >
+                <Lock size={12} strokeWidth={2} aria-hidden="true" className="flex-none" />
+                Saved on this device only
+              </p>
             </div>
           </GlassPanel>
         </>

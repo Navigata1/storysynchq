@@ -485,6 +485,11 @@
   }
   .pl-root.is-hc .pl-prose {
     color: #ffffff;
+    font-weight: 600;
+  }
+  /* s02 figure C "High contrast": the words already spoken are pure white */
+  .pl-root.is-hc .pl-word.is-past {
+    color: #ffffff;
   }
   .pl-root.is-hc .pl-word.is-future {
     color: rgba(255, 255, 255, 0.72);

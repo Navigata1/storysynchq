@@ -245,3 +245,32 @@ calendar day.**
   from the real constant (T09a, M5).
 - **Spec and schema.** §4 of the format spec documents the rule, and the v2 schema's `duration` gains a matching
   description with no structural change.
+
+**2026-10-25 · T11 · `settings.accessibility` holds the storyteller's defaults; the viewer's own choices win, and only
+those are stored.**
+
+- **Where the answer lives.** `src/components/player/prefs.ts` is the one place that says how a page reads for this
+  viewer.
+  - It resolves field by field: the viewer's explicit choice, else the tape's default, else the product default.
+  - Pure, relative imports only, so the Node tests import it.
+- **What a tape can ask for.**
+  - `highContrast: true` → high contrast.
+  - `dyslexiaFont: true` → the easier-to-read font.
+  - `false` is the schema default and is treated as absent.
+  - `timingMultiplier` keeps its job: it scales every pause, and the viewer's pause and speed multiply on top. A
+    broken multiplier reads as 1.
+- **What is stored.**
+  - Only choices the viewer actually made, under the unchanged key `ssync-reader-prefs`, in a sparse shape with a
+    version marker: `{ "v": 2, "contrast": false }`.
+  - On this device only, never sent anywhere (COPPA posture).
+  - Opening a tape writes nothing. Before T11 the Player rewrote the whole prefs object on every mount.
+- **Legacy entries.** A full object from before T11 counts as explicit only where a value differs from the product
+  default. So the all-defaults object every old reader wrote means "no choices", and a stored `contrast: true` stays a
+  choice. Legacy entries are not rewritten until the viewer changes a setting.
+- **What the viewer sees.**
+  - A switch whose value comes from the tape says "Set by the storyteller".
+  - Turning it off is a choice that wins on every tape afterwards: "viewer preferences still win", s08 / HANDOFF §4.
+  - The sheet's footer says "Saved on this device only" (s02 figure C).
+- **The HC skin.** It is now pure white semibold, spoken words included, to match s02 figure C.
+- **Spec.** `docs/format-spec.md` §4: "Players SHOULD apply `settings.accessibility` as defaults; a viewer's own
+  choices override them, and are stored on the device only."
