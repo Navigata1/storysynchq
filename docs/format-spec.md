@@ -129,6 +129,39 @@ voices), and `rights`. All fields optional and additive; v2.0 readers ignore
 them. A published story containing a recorded human voice SHOULD carry a
 `voiceConsent` record.
 
+### 7.1 `voiceConsent[]` — consent travels in the tape
+
+The file carries the consent, not a server. There is **one `voiceConsent`
+record per recorded voice** on the tape: a story narrated by a child and
+answered by a grandparent carries two records.
+
+| Field | Required | Meaning |
+|---|---|---|
+| `voice` | yes | Whose voice, as credited on the tape. |
+| `grantedBy` | yes | Who consented. Conventionally `"parent/guardian"` (a child's voice, consented by their grown-up) or `"self"` (an adult's own voice). Free text is allowed. |
+| `date` | no | Calendar date of consent, **`YYYY-MM-DD`**: the consenting device's local date. |
+
+```json
+{ "voice": "Ada, age 4 — with Dad", "grantedBy": "parent/guardian", "date": "2026-10-19" }
+```
+
+`date` is a calendar date, `YYYY-MM-DD`, not a timestamp. Older tapes carry a
+full ISO timestamp (`2026-10-19T18:09:58.123Z`): readers MUST accept it and
+keep opening the tape, and validators SHOULD warn. The schema types `date` as
+`format: "date"` and adds no `pattern`, so the rule stays a warning rather than
+a schema failure.
+
+The reference validator (`validateManifest` in
+[`/src/lib/storysync/manifest.ts`](../src/lib/storysync/manifest.ts)) prints
+these warnings. A warning never fails validation and never blocks packing,
+unpacking or publishing:
+
+```
+WARN  signature.voiceConsent[0].date is a full timestamp; the v2.1 draft asks for a date
+WARN  signature.voiceConsent[0].date "Oct 19 2026" is not a calendar date (YYYY-MM-DD)
+WARN  a recorded voice is on this tape but signature.voiceConsent is empty; the v2.1 draft says it SHOULD carry one
+```
+
 ## 8. Versioning
 
 - `1.0` — bare JSON document (`.ssync.json`), external/data-URL media only.

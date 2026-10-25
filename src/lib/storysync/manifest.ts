@@ -43,13 +43,23 @@ export interface SsyncSignature {
   ownership?: string;
   /** Share URL or id of the story this one was remixed from. */
   remixOf?: string;
-  /** Consent records for recorded/cloned voices in this story. */
+  /**
+   * Consent records for recorded/cloned voices in this story: one record per
+   * recorded voice (docs/format-spec.md §7.1).
+   */
   voiceConsent?: Array<{
-    /** Whose voice, e.g. "narrator", "Mom". */
+    /** Whose voice, as credited on the tape, e.g. "Ada, age 4 — with Dad". */
     voice: string;
-    /** Who consented, e.g. "parent/guardian". */
+    /**
+     * Who consented. Conventionally `"parent/guardian"` (a child's voice) or
+     * `"self"` (an adult's own voice); free text is allowed.
+     */
     grantedBy: string;
-    /** ISO date of consent. */
+    /**
+     * Calendar date of consent, `YYYY-MM-DD`: the consenting device's local
+     * date. Older tapes carry a full ISO timestamp; readers accept it and
+     * {@link validateManifest} warns.
+     */
     date?: string;
   }>;
   /** Rights/license note for bundled media, e.g. "personal use". */
@@ -90,16 +100,25 @@ export const ASSETS_DIR = "assets/";
 const PUBLISHED_AUDIO_EXT = /\.(m4a|mp4|wav)$/i;
 const FORBIDDEN_AUDIO = /\.(webm|ogg|opus)$/i;
 
+/** Consent dates: a calendar date is what v2.1 asks for; older tapes wrote timestamps. */
+const ISO_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T/;
+const CALENDAR_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
 export interface ValidationResult {
+  /** `errors.length === 0`. Warnings never make it false. */
   ok: boolean;
+  /** Spec violations: the tape must not be packed, opened or published. */
   errors: string[];
+  /** Drift from the v2.1 draft that still opens and plays. Never blocks. */
+  warnings: string[];
 }
 
 export function validateManifest(obj: unknown): ValidationResult {
   const errors: string[] = [];
+  const warnings: string[] = [];
   const m = obj as Partial<SsyncManifest> | null;
 
-  if (!m || typeof m !== "object") return { ok: false, errors: ["manifest is not an object"] };
+  if (!m || typeof m !== "object") return { ok: false, errors: ["manifest is not an object"], warnings };
   if (typeof m.version !== "string" || !["1.0", "2.0"].includes(m.version)) {
     errors.push(`version must be "1.0" or "2.0", got ${JSON.stringify(m.version)}`);
   }
@@ -127,7 +146,33 @@ export function validateManifest(obj: unknown): ValidationResult {
       }
     });
   }
-  return { ok: errors.length === 0, errors };
+  warnings.push(...consentWarnings(m));
+  return { ok: errors.length === 0, errors, warnings };
+}
+
+/** Signature-layer consent checks (v2.1 draft, docs/format-spec.md §7.1). Warnings only. */
+function consentWarnings(m: Partial<SsyncManifest>): string[] {
+  const warnings: string[] = [];
+  const consent = m.signature?.voiceConsent;
+  const records = Array.isArray(consent) ? consent : [];
+
+  records.forEach((record, i) => {
+    const date: unknown = record?.date;
+    if (date === undefined) return;
+    if (typeof date === "string" && ISO_TIMESTAMP.test(date)) {
+      warnings.push(`signature.voiceConsent[${i}].date is a full timestamp; the v2.1 draft asks for a date`);
+    } else if (typeof date !== "string" || !CALENDAR_DATE.test(date)) {
+      warnings.push(`signature.voiceConsent[${i}].date "${String(date)}" is not a calendar date (YYYY-MM-DD)`);
+    }
+  });
+
+  const hasRecordedVoice = Array.isArray(m.pages) && m.pages.some((p) => Boolean(p?.text?.audioUrl));
+  if (hasRecordedVoice && records.length === 0) {
+    warnings.push(
+      "a recorded voice is on this tape but signature.voiceConsent is empty; the v2.1 draft says it SHOULD carry one"
+    );
+  }
+  return warnings;
 }
 
 /** Referenced in-container asset paths (for pack/unpack integrity checks). */

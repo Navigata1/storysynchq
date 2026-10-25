@@ -1,0 +1,53 @@
+T04a · validator output (validateManifest, src/lib/storysync/manifest.ts)
+Generated 2026-10-25T20:01Z by running validateManifest on each case below.
+Reference: docs/vision/reference/renders/s08.png, Validator panel (crop: docs/vision/evidence/T04a-validator.png).
+
+== Reference (docs/vision/reference/screens/s08.html, lines 395-398, tags stripped) ==
+PASS version 2.0 · metadata.title · 5 pages 
+PASS every assets/ path in the manifest exists 
+WARN signature.voiceConsent[0].date is a full timestamp; the v2.1 draft asks for a date 
+FAIL a hand-edited copy: pages[2].text.audioUrl 'assets/narration-3.webm' uses a draft-only codec — published narration must be AAC/M4A (or WAV fallback) 
+
+== WARN line, character for character ==
+reference: signature.voiceConsent[0].date is a full timestamp; the v2.1 draft asks for a date
+app:       signature.voiceConsent[0].date is a full timestamp; the v2.1 draft asks for a date
+identical: yes
+
+== App output, per case ==
+# 1. voiceConsent[0].date = "2026-10-19T18:09:58.123Z" (what the Creator writes today), WAV page
+ok: true   errors: 0   warnings: 1
+WARN  signature.voiceConsent[0].date is a full timestamp; the v2.1 draft asks for a date
+
+# 2. voiceConsent[0].date = "Oct 19 2026"
+ok: true   errors: 0   warnings: 1
+WARN  signature.voiceConsent[0].date "Oct 19 2026" is not a calendar date (YYYY-MM-DD)
+
+# 3. voiceConsent[0].date = "2026-10-19"
+ok: true   errors: 0   warnings: 0
+PASS  no errors, no warnings
+
+# 4a. a recorded page, no signature
+ok: true   errors: 0   warnings: 1
+WARN  a recorded voice is on this tape but signature.voiceConsent is empty; the v2.1 draft says it SHOULD carry one
+
+# 4b. the house tape, public/demo/brave-little-star.ssync.json (no recorded voice)
+ok: true   errors: 0   warnings: 0
+PASS  no errors, no warnings
+
+# 6a. tests/fixtures/twinkle.storysync (T00)
+ok: true   errors: 0   warnings: 0
+PASS  no errors, no warnings
+
+# 6b. tests/fixtures/goodnight-mia.storysync (T00)
+ok: true   errors: 0   warnings: 0
+PASS  no errors, no warnings
+
+# s08. Twinkle with the Creator's pre-T04b timestamp
+ok: true   errors: 0   warnings: 1
+WARN  signature.voiceConsent[0].date is a full timestamp; the v2.1 draft asks for a date
+
+# s08. ... and a hand-edited copy with pages[2] as WebM
+ok: false   errors: 1   warnings: 1
+WARN  signature.voiceConsent[0].date is a full timestamp; the v2.1 draft asks for a date
+FAIL  pages[2].text.audioUrl "assets/narration-3.webm" uses a draft-only codec — published narration must be AAC/M4A (or WAV fallback)
+

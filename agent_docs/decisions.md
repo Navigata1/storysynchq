@@ -143,3 +143,19 @@ The narration kind is:
 - `RECORDED` when a recorded page's codec is neither declared nor readable from its URL. A label never claims a codec on a guess.
 
 The protocol rule sentence ("Published narration is always AAC/M4A …") stays: it is a rule about published tapes, not a claim about this one.
+
+**2026-10-25 · T04a · The validator warns; consent dates are calendar dates; one consent record per voice.**
+
+- `validateManifest` returns `warnings: string[]` alongside `errors`. A warning is drift from the v2.1 draft that
+  still opens and plays. It never makes `ok` false, never makes `packStorysync` or `unpackStorysync` throw, and
+  never blocks a publish. Errors keep their exact wording.
+- `signature.voiceConsent[].date` is a calendar date, `YYYY-MM-DD`: the consenting device's local date. Readers
+  MUST accept the full ISO timestamps older tapes carry, and validators SHOULD warn:
+  - `signature.voiceConsent[i].date is a full timestamp; the v2.1 draft asks for a date`
+  - `signature.voiceConsent[i].date "<value>" is not a calendar date (YYYY-MM-DD)`
+
+  The schema keeps `format: "date"` and adds no `pattern`, so the rule never becomes a schema failure.
+- There is one `voiceConsent` record per recorded voice. `grantedBy` is conventionally `"parent/guardian"` or
+  `"self"` (free text allowed; there are schema `examples`, not an enum). A tape with a recorded voice and no
+  record warns `a recorded voice is on this tape but signature.voiceConsent is empty; the v2.1 draft says it
+  SHOULD carry one`.
