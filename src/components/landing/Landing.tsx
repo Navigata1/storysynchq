@@ -19,6 +19,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BigButton, GlassPanel, Reel, TapeLabel } from "@/components/studio-kit/kit";
+import { Cassette } from "@/components/studio-kit/Cassette";
 import { tapeMetaLine } from "@/lib/storysync/tape-meta";
 import houseTape from "../../../public/demo/brave-little-star.ssync.json";
 import "./landing.css";
@@ -257,30 +258,12 @@ function HeroDeck({ inserting }: { inserting: boolean }) {
       {/* the well clips at the deck mouth, so the tape is genuinely swallowed */}
       <div className="ls-tape-well" aria-hidden="true">
         <div className="ls-tape-slide" data-ls="tape-slide">
-          <div className="ls-cassette">
-            <span className="ls-screw ls-screw--tl" />
-            <span className="ls-screw ls-screw--tr" />
-            <span className="ls-screw ls-screw--bl" />
-            <span className="ls-screw ls-screw--br" />
-
-            <TapeLabel
-              className="ls-cassette-label"
-              title="StorySyncHQ"
-              meta="SIDE A · PRESS PLAY"
-            />
-
-            <div className="ls-cassette-window">
-              <span className="ls-cassette-ribbon" />
-              <Reel spinning size={62} />
-              <Reel spinning size={62} />
-            </div>
-
-            <div className="ls-cassette-foot">
-              <span className="ls-cassette-slot" />
-              <span className="ls-cassette-slot ls-cassette-slot--wide" />
-              <span className="ls-cassette-slot" />
-            </div>
-          </div>
+          <Cassette
+            className="ls-cassette"
+            title="StorySyncHQ"
+            meta="SIDE A · PRESS PLAY"
+            spinning
+          />
         </div>
       </div>
 

@@ -219,3 +219,5 @@ calendar day.**
   2026".
 - The writer enforces the gate: `runPublish` refuses to assemble a tape with a recorded voice missing from the
   consented list.
+
+**2026-10-25 · T05b · Tape stock is one implementation: TapeLabel inside Cassette; reels rest at 18°; reel face is contextual.** The kit `Cassette` (`studio-kit/Cassette.tsx` + `cassette.css`) renders the reference `.ss-cassette` and uses the kit `TapeLabel` for its label (class `sk-cassette-label`), so the band, holes, "STORYSYNC", title and meta can never drift between a label and a cassette. The cassette is `aria-hidden` and scales internally with container units. `Reel` draws the reference `#i-reel` geometry. Its spin keyframes start at 18°, so a reel at rest or under reduced motion sits on the reference's static 18° frame. Its face is `--sk-reel-face`: paper in tape-stock contexts (the Cassette window), and a faint ink tint by default so reels on studio chrome keep reading light-on-dark. `Reel.size` accepts a CSS length as well as px.
