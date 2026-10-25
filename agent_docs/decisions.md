@@ -116,3 +116,15 @@ were produced from the full recovered vision and live in `docs/vision/` with the
 foundation and renders. `docs/vision/HANDOFF.md` is the spec for building the app to them: Shipped
 and Next items get built, Idea and Phase 3 items stay out, work runs PRD → vertical-slice tickets →
 TDD, and the result comes back to Claude for a fidelity and taste review before merging.
+
+**2026-10-25 · T00 · Vision fixtures live in `tests/fixtures/`, generated, reproducible, guarded.**
+
+- The Rivera family's tapes ("Twinkle Came to My Window", "Goodnight, Mia") are committed as real
+  `.storysync` files. They are packed by `packStorysync`, with pictures rasterized from the reference SVG
+  symbols and narration synthesized in code (WAV, 16 kHz mono; unequal peaks for T17).
+- A dedicated config (`tests/fixtures/generate.config.ts`) regenerates them byte-identically. ZIP mtimes are
+  pinned to each tape's `created` time in UTC.
+- A guard test fails if any cast string reaches `src/` or `public/`.
+- Page helpers seed the Studio draft and the device library through an init script once per tab. A reload
+  keeps what the app did since, so delete and resume flows test truthfully.
+- Share codes in tests are minted as 128-bit hex. The reference's 16-hex code is exported for reference only.

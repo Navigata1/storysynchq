@@ -62,6 +62,7 @@ public/
   demo/             — demo storybook data + images
 tests/              — Playwright: legacy suites (/classic), builder gates (wp-*), blind-critic
                       gates (critic-*), fable-pass, storysync-roundtrip (Node-side)
+  fixtures/         — Vision Reel tapes (.storysync + sources, facts, page helpers); illustrative, tests only
 ```
 
 ## 2. Locked architecture decisions (v2 — see ARCHITECTURE_REVIEW.md for rationale)
