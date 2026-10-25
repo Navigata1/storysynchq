@@ -93,6 +93,14 @@ ladder (implemented in `src/lib/audio/transcode.ts`):
 - **Two audio buses**: narration (foreground) and music bed (background). While
   narration plays, the music bed ducks approximately −12 dB with smooth gain
   ramps (~0.6 s), restoring afterward — the cassette-book sound.
+- **Per-page mood and crossfade**: each page plays the mood its own `music`
+  names (a mood string, a v1 track id, or `{ "crossfade": "<mood>" }`); a page
+  that names no music is silence. `pages[].music.duration` is the crossfade
+  into this page's mood, written as a duration (`"2s"`, `"450ms"`); default
+  1.6 s; players MAY clamp (the reference player clamps to 0.05–10 s and reads
+  anything that is not a non-negative duration as the default). It belongs to
+  the page being entered, whichever way the reader turns. A bed that starts
+  from silence fades in on its own envelope.
 - **Tap to Begin**: browsers (iOS Safari especially) block audio before a user
   gesture. Players MUST gate playback behind an initial tap and resume the
   audio context inside that gesture.

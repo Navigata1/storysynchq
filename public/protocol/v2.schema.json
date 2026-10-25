@@ -125,7 +125,10 @@
                 "type": "object",
                 "properties": {
                   "crossfade": { "type": "string" },
-                  "duration": { "type": "string" }
+                  "duration": {
+                    "type": "string",
+                    "description": "Crossfade into this page's mood, e.g. \"2s\" or \"450ms\"; default 1.6 s; players MAY clamp"
+                  }
                 }
               }
             ]

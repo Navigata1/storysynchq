@@ -18,8 +18,10 @@
  *   1. The tap on "Tap to Begin" is the iOS audio unlock. Nothing plays before.
  *   2. The manifest is the source of truth. v1 documents play; unknown fields
  *      are ignored; missing pieces degrade instead of throwing.
- *   3. `page.music` decides the melody through @/lib/audio/moods — and when a
- *      page names no music, the room is SILENT. Never a default bed.
+ *   3. `page.music` decides the melody through ./music-plan (and the shared
+ *      @/lib/audio/moods vocabulary) — and when a page names no music, the
+ *      room is SILENT. Never a default bed. A page's own `music.duration` is
+ *      the crossfade into it.
  *   4. Nothing leaves the device. No network, no analytics, no trackers.
  */
 
@@ -28,10 +30,11 @@ import QRCode from "qrcode";
 import { Mic } from "lucide-react";
 import type { SsyncManifest, SsyncPage } from "@/lib/storysync/manifest";
 import { DualBusAudioEngine } from "@/lib/audio/engine";
-import { resolveMood, type MoodName } from "@/lib/audio/moods";
+import type { MoodName } from "@/lib/audio/moods";
 import { BigButton, GlassPanel, Reel, TapeLabel, TransportButton } from "@/components/studio-kit/kit";
 import { estimateSeconds, formatClock, parseDuration, splitWords, wordIndexAtTime } from "./timing";
 import { openCueContext, playPageTurnCue } from "./sound";
+import { pageCrossfadeSeconds, pageMood } from "./music-plan";
 import "./player.css";
 
 /* ────────────────────────────────────────────────────────────── constants */
@@ -75,56 +78,6 @@ function cx(...parts: Array<string | false | null | undefined>): string {
   return parts.filter(Boolean).join(" ");
 }
 
-interface LooseTrack {
-  id?: string;
-  mood?: string;
-  prompt?: string;
-}
-
-/**
- * Every string this page offers as a name for its music, most specific first.
- *
- * SSYNC v2 pages carry `music: "Wonder"`; v1 pages carry a *track id* into a
- * top-level `music.tracks` table (`music: "peaceful"` → that track's mood or
- * prompt); a page may also carry `music: { crossfade: "adventure" }`.
- * An empty list means the page asked for no music at all.
- */
-function moodTokens(manifest: SsyncManifest, page: SsyncPage | undefined): string[] {
-  const raw = page?.music;
-  const tokens: string[] = [];
-  if (typeof raw === "string") {
-    if (raw.trim()) tokens.push(raw);
-  } else if (raw && typeof raw === "object") {
-    const crossfade = (raw as { crossfade?: unknown }).crossfade;
-    if (typeof crossfade === "string" && crossfade.trim()) tokens.push(crossfade);
-  }
-  if (tokens.length === 0) return [];
-
-  const tracks = (manifest as { music?: { tracks?: LooseTrack[] } }).music?.tracks;
-  if (Array.isArray(tracks)) {
-    for (const id of [...tokens]) {
-      const track = tracks.find((t) => t?.id === id);
-      if (track?.mood) tokens.push(track.mood);
-      if (track?.prompt) tokens.push(track.prompt);
-    }
-  }
-  return tokens;
-}
-
-/**
- * The page's mood, or null for silence.
- *
- * One vocabulary for the whole product (@/lib/audio/moods): the Studio writes
- * it, the Player plays it, and neither invents a bed the other does not know.
- */
-function pageMood(manifest: SsyncManifest, page: SsyncPage | undefined): MoodName | null {
-  for (const token of moodTokens(manifest, page)) {
-    const mood = resolveMood(token);
-    if (mood) return mood;
-  }
-  return null;
-}
-
 function sanitizePrefs(raw: unknown): Partial<Prefs> {
   if (!raw || typeof raw !== "object") return {};
   const r = raw as Record<string, unknown>;
@@ -149,6 +102,8 @@ function sanitizePrefs(raw: unknown): Partial<Prefs> {
 interface PlayerHook {
   musicPlaying: () => boolean;
   moodName: () => MoodName | null;
+  /** Seconds of the bed's last mood-to-mood crossfade; null before the first. */
+  crossfadeSeconds: () => number | null;
   narrationDuration: () => number | null;
   narrationTime: () => number | null;
 }
@@ -315,7 +270,9 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
   const reducedRef = React.useRef(false);
 
   const page: SsyncPage | undefined = pages[index];
+  /* page.music → the mood (or silence) and the crossfade into it (./music-plan) */
   const mood = React.useMemo(() => pageMood(manifest, page), [manifest, page]);
+  const crossfadeS = React.useMemo(() => pageCrossfadeSeconds(page), [page]);
   const highlightOn = manifest.settings?.readAlongHighlight !== false;
   const autoPlay = manifest.settings?.autoPlay !== false;
   const cueOn = manifest.settings?.pageTurnSound !== false;
@@ -426,6 +383,7 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
     w.__ssyncPlayer = {
       musicPlaying: () => engineRef.current?.musicPlaying ?? false,
       moodName: () => engineRef.current?.moodName ?? null,
+      crossfadeSeconds: () => engineRef.current?.lastCrossfadeSeconds ?? null,
       narrationDuration: () => {
         const d = audioRef.current?.duration;
         return typeof d === "number" && Number.isFinite(d) ? d : null;
@@ -494,8 +452,9 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
     withEngine((engine) => {
       if (musicOn && mood) {
         engine.setMusicVolume(MUSIC_VOLUME);
-        // startMusic() crossfades when a bed is already running (engine.ts).
-        engine.startMusic(mood);
+        // startMusic() crossfades when a bed is already running (engine.ts),
+        // at the pace the page being entered asks for (its music.duration).
+        engine.startMusic(mood, crossfadeS);
       } else if (engine.musicPlaying) {
         engine.stopMusic();
       }
@@ -503,7 +462,7 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
     // `data-music` is read back off the engine's own getter, never from the
     // UI's intent — so the attribute cannot claim a bed the room isn't playing.
     setMusicLive(engineRef.current?.musicPlaying === true);
-  }, [started, musicOn, mood, withEngine]);
+  }, [started, musicOn, mood, crossfadeS, withEngine]);
 
   /* ── navigation ─────────────────────────────────────────────────────── */
   const stopNarration = React.useCallback(() => {

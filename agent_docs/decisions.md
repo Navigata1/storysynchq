@@ -221,3 +221,27 @@ calendar day.**
   consented list.
 
 **2026-10-25 · T05b · Tape stock is one implementation: TapeLabel inside Cassette; reels rest at 18°; reel face is contextual.** The kit `Cassette` (`studio-kit/Cassette.tsx` + `cassette.css`) renders the reference `.ss-cassette` and uses the kit `TapeLabel` for its label (class `sk-cassette-label`), so the band, holes, "STORYSYNC", title and meta can never drift between a label and a cassette. The cassette is `aria-hidden` and scales internally with container units. `Reel` draws the reference `#i-reel` geometry. Its spin keyframes start at 18°, so a reel at rest or under reduced motion sits on the reference's static 18° frame. Its face is `--sk-reel-face`: paper in tape-stock contexts (the Cassette window), and a faint ink tint by default so reels on studio chrome keep reading light-on-dark. `Reel.size` accepts a CSS length as well as px.
+
+**2026-10-25 · T10 · A page's `music.duration` is the crossfade into that page's mood; the Player reads it through a pure music plan.**
+
+- **Where the answer lives.** `src/components/player/music-plan.ts` is the one place that says which mood a page plays
+  and how long the bed takes to cross into it. The Player's private mood logic moved there unchanged, and a frozen copy
+  in `tests/vision-music-plan.spec.ts` proves it.
+  - Callers: the Player, T12's liner notes and T24's per-page moods.
+  - Relative imports only, so Node tests import it.
+- **The crossfade.**
+  - **Whose duration.** The duration belongs to the page being entered, whichever way the reader turns. Going back
+    6 → 5 on the house tape uses page 5's 1.6 s, not page 6's 3 s.
+  - **Default.** 1.6 s. It has one source: the bed's exported `DEFAULT_CROSSFADE_S`.
+  - **What parses.** A non-negative `"Ns"` / `"Nms"` / bare-seconds string, clamped to 0.05–10 s. Anything else is the
+    default; for example, `"-2s"` is the default, not the floor.
+  - **Starting from silence.** It is not a crossfade. The bed keeps its own pad fade-in, and the duration does not
+    apply.
+- **Engine and bed.**
+  - `startMusic` / `setMood` take an optional crossfade in seconds; when it is omitted, the behaviour is unchanged.
+  - Both expose a read-only `lastCrossfadeSeconds` (null before the first crossfade).
+  - `window.__ssyncPlayer.crossfadeSeconds()` reads it. It is a getter only, and nothing leaves the device.
+- **Duck depth.** The engine exports `DUCK_DEPTH_DB = -20·log10(DUCK_FACTOR)` ≈ 12.04, so the UI can print "12 dB"
+  from the real constant (T09a, M5).
+- **Spec and schema.** §4 of the format spec documents the rule, and the v2 schema's `duration` gains a matching
+  description with no structural change.

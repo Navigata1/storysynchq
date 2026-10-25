@@ -13,13 +13,22 @@
 // carries a `MusicBed`: pad + music-box arpeggio + optional tape hiss, driven
 // by the mood vocabulary in ./moods. The public API is unchanged
 // (startMusic/setMood/stopMusic still take the old `MoodConfig`), and so are
-// ducking, the ramps and the unlock rule.
+// ducking, the ramps and the unlock rule. startMusic/setMood also take an
+// optional crossfade in seconds: a page's own `music.duration`, which the
+// Player reads through its music plan (src/components/player/music-plan.ts).
 
 import { MusicBed, type MoodInput } from "./music";
 import { specForConfig, type MoodName } from "./moods";
 
 const DUCK_FACTOR = 0.25; // ≈ -12 dB
 const RAMP_S = 0.6;
+
+/**
+ * How far the music bed ducks under narration, in dB, as a positive depth
+ * ("12 dB under the voice"). Derived from the duck factor, so a label that
+ * prints it can never disagree with what the engine does: −20·log10(0.25) ≈ 12.04.
+ */
+export const DUCK_DEPTH_DB = -20 * Math.log10(DUCK_FACTOR);
 
 /**
  * Music-bus level per unit of `gainMult` at full musicVolume.
@@ -120,17 +129,26 @@ export class DualBusAudioEngine {
     return this.musicOn ? this.bed?.moodName ?? null : null;
   }
 
+  /** Seconds of the bed's last mood-to-mood crossfade; null before the first. Read-only. */
+  get lastCrossfadeSeconds(): number | null {
+    return this.bed?.lastCrossfadeSeconds ?? null;
+  }
+
   /**
    * Starts the music bed on the music bus.
    *
    * Accepts a canonical mood name, any manifest mood string, or the legacy
    * `{freq1, freq2, gainMult}` config (which is matched back to a mood — see
    * `specForConfig`, and keeps its own level multiplier).
+   *
+   * When a bed is already running this crossfades instead, over
+   * `crossfadeSeconds` (omitted: the bed's 1.6 s default). A bed starting from
+   * silence fades in on its own envelope; there is nothing to cross from.
    */
-  startMusic(mood: MoodInput): void {
+  startMusic(mood: MoodInput, crossfadeSeconds?: number): void {
     const ctx = this.ensureContext();
     if (this.musicOn) {
-      this.setMood(mood);
+      this.setMood(mood, crossfadeSeconds);
       return;
     }
     const spec = specForConfig(mood);
@@ -143,11 +161,14 @@ export class DualBusAudioEngine {
 
   private currentMoodMult = 1;
 
-  /** Crossfade the bed to another mood (page turns). */
-  setMood(mood: MoodInput): void {
+  /**
+   * Crossfade the bed to another mood (page turns), over `crossfadeSeconds`
+   * (omitted: the bed's 1.6 s default).
+   */
+  setMood(mood: MoodInput, crossfadeSeconds?: number): void {
     const spec = specForConfig(mood);
     this.currentMoodMult = spec.gainMult;
-    if (this.musicOn) this.bed?.setMood(spec.name);
+    if (this.musicOn) this.bed?.setMood(spec.name, crossfadeSeconds);
     this.applyMusicGain();
   }
 

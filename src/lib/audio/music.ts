@@ -29,8 +29,13 @@ import { MOODS, MOOD_NAMES, resolveMood, specForConfig, type MoodConfig, type Mo
 const LOOKAHEAD_MS = 100;
 /** How far ahead of the audio clock notes are scheduled, seconds. */
 const SCHEDULE_AHEAD_S = 0.3;
-/** Default mood-to-mood crossfade, seconds. */
-const CROSSFADE_S = 1.6;
+/**
+ * Default mood-to-mood crossfade, seconds — also the SSYNC default for a
+ * page's `music.duration` (docs/format-spec.md §4).
+ */
+export const DEFAULT_CROSSFADE_S = 1.6;
+/** The shortest crossfade the bed will play, seconds (anything shorter clicks). */
+export const MIN_CROSSFADE_S = 0.05;
 /** Pad fade-in so a bed never clicks on, seconds. */
 const PAD_FADE_IN_S = 2.5;
 /** Tape hiss level: −40 dB. */
@@ -131,6 +136,7 @@ export class MusicBed {
   private pausedFlag = false;
   private disposed = false;
   private onsetTotal = 0;
+  private lastCrossfade: number | null = null;
 
   /**
    * @param ctx         the engine's AudioContext (or an OfflineAudioContext)
@@ -171,6 +177,15 @@ export class MusicBed {
     return this.pausedFlag;
   }
 
+  /**
+   * Seconds of the last mood-to-mood crossfade this bed played, as played
+   * (after the 50 ms floor); null before the first one. A start from silence
+   * is a fade-in, not a crossfade, and does not change it. Read-only.
+   */
+  get lastCrossfadeSeconds(): number | null {
+    return this.lastCrossfade;
+  }
+
   /* ---------------------------------------------------------- lifecycle */
 
   /** Start (or switch to) a mood. Safe to call repeatedly. */
@@ -189,7 +204,7 @@ export class MusicBed {
   }
 
   /** Crossfade to another mood, keeping the pulse — page turns use this. */
-  setMood(mood: MoodInput, crossfadeSeconds: number = CROSSFADE_S): void {
+  setMood(mood: MoodInput, crossfadeSeconds: number = DEFAULT_CROSSFADE_S): void {
     if (this.disposed) return;
     const spec = specForConfig(mood);
     const live = this.voices.find((v) => !v.retiring);
@@ -202,7 +217,11 @@ export class MusicBed {
     // Start the new mood on the retiring one's next step so the music box
     // never loses the beat across a page turn.
     const at = Math.max(this.ctx.currentTime, live.nextTime);
-    const cf = Math.max(0.05, crossfadeSeconds);
+    const cf = Math.max(
+      MIN_CROSSFADE_S,
+      Number.isFinite(crossfadeSeconds) ? crossfadeSeconds : DEFAULT_CROSSFADE_S,
+    );
+    this.lastCrossfade = cf;
     this.retireVoice(live, at, cf);
     this.addVoice(spec, at, 0, cf);
   }
