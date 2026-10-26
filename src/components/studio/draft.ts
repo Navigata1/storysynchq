@@ -13,6 +13,7 @@
  */
 
 import { voiceName } from "@/components/player/known-voices";
+import { sanitizePageMoods } from "./page-moods";
 import type { ReplyRecord, StudioState } from "./types";
 import { blankState, pageHasContent } from "./types";
 
@@ -48,6 +49,12 @@ export function loadDraft(): { state: StudioState; savedAt: string } | null {
       manifest: { ...fallback.manifest, ...parsed.state.manifest },
       recordings: parsed.state.recordings ?? {},
     };
+    // Per-page moods (T24a): an older draft has none; an entry for a page
+    // that is not in the story, or a value that is not a mood, is dropped.
+    state.pageMoods = sanitizePageMoods(
+      parsed.state.pageMoods,
+      state.manifest.pages.map((p) => p.id),
+    );
     // A reply's chip comes back with its draft (T18); anything else in its
     // place is dropped rather than shown.
     const reply = replyRecord(parsed.state.reply);

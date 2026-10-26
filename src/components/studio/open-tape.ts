@@ -16,6 +16,12 @@
  * anywhere. Pictures are only ever fetched from this app's own `/demo/`, and
  * never for a file.
  *
+ * The tape keeps its mood arc (T24a): before the source is re-voiced (which
+ * leaves every page's music behind), each page's mood is read off it through
+ * T10's music plan, and the pages whose mood differs from the story's become
+ * the draft's per-page moods. A `?mood=` from the shelf still means one mood
+ * on every page (`openedMoods`).
+ *
  * The query side (`?open=` and `?mood=`) is read once, after mount, from
  * `window.location`, so /studio stays a static route.
  */
@@ -24,14 +30,21 @@ import { resolveMood, type MoodName } from "@/lib/audio/moods";
 import { processImageSafe } from "@/lib/images";
 import { dataUrlToBytes, loadStorysyncToStory } from "@/lib/storysync/container";
 import type { SsyncManifest, SsyncPage } from "@/lib/storysync/manifest";
-import { revoiceManifest, type RevoicedTape } from "@/lib/storysync/revoice";
+import { revoiceManifest, type RevoiceOptions, type RevoicedTape } from "@/lib/storysync/revoice";
 import {
   HOUSE_TAPE_URL,
   loadTapeByCode,
   normalizeTapeManifest,
 } from "@/lib/storysync/tape-source";
+import { sourcePageMoods, type PageMoods } from "./page-moods";
 
 export type { RevoicedTape } from "@/lib/storysync/revoice";
+
+/** A re-voiced tape and the mood arc it came with (T24a). */
+export interface OpenedTape extends RevoicedTape {
+  /** Re-voiced page id → that page's own mood, where it differs from `mood`. */
+  pageMoods: PageMoods;
+}
 
 /** What the Studio says when a tape will not open — the Read Room's own sentences. */
 export const OPEN_TAPE_COPY = {
@@ -51,6 +64,32 @@ export class TapeOpenError extends Error {
 
 /** The value of `?open=` that means the house tape. */
 export const HOUSE_TAPE_QUERY = "house";
+
+/* ------------------------------------------------------------------ re-voice */
+
+/**
+ * `revoiceManifest`, keeping the arc: each source page's mood is read from the
+ * source first, since the re-voiced pages carry no music. `revoice.ts` is
+ * unchanged; its story mood is the arc's baseline.
+ */
+function revoiceKeepingMoods(source: SsyncManifest, options?: RevoiceOptions): OpenedTape {
+  const tape = revoiceManifest(source, options);
+  return { ...tape, pageMoods: tape.musicOn ? sourcePageMoods(source, tape.mood) : {} };
+}
+
+/**
+ * The opened tape's music as the draft takes it. A mood chosen on the link
+ * (`?mood=`, T22a) plays on every page, music on, and drops the arc;
+ * otherwise the tape's own story mood, music and per-page moods.
+ */
+export function openedMoods(
+  tape: OpenedTape,
+  mood: MoodName | null,
+): { mood: MoodName; musicOn: boolean; pageMoods: PageMoods } {
+  return mood
+    ? { mood, musicOn: true, pageMoods: {} }
+    : { mood: tape.mood, musicOn: tape.musicOn, pageMoods: { ...tape.pageMoods } };
+}
 
 /* ---------------------------------------------------------------- pictures */
 
@@ -84,7 +123,7 @@ async function pictureBlob(url: string, fetchFromApp: boolean): Promise<Blob | n
  * here — a remote URL, an asset the container lacked, a /demo/ file that is
  * missing — is left out (its alt text stays), never left pointing elsewhere.
  */
-async function inlinePictures(tape: RevoicedTape, fetchFromApp: boolean): Promise<RevoicedTape> {
+async function inlinePictures(tape: OpenedTape, fetchFromApp: boolean): Promise<OpenedTape> {
   const pages = await Promise.all(
     tape.manifest.pages.map(async (page): Promise<SsyncPage> => {
       const url = page.illustration?.url;
@@ -109,18 +148,18 @@ async function inlinePictures(tape: RevoicedTape, fetchFromApp: boolean): Promis
 /* ------------------------------------------------------------------ openers */
 
 /** A .storysync file from this device. Throws `TapeOpenError("badFile")`. */
-export async function openTapeFile(file: Blob): Promise<RevoicedTape> {
+export async function openTapeFile(file: Blob): Promise<OpenedTape> {
   let story: SsyncManifest;
   try {
     story = loadStorysyncToStory(new Uint8Array(await file.arrayBuffer()));
   } catch {
     throw new TapeOpenError("badFile");
   }
-  return inlinePictures(revoiceManifest(story), false);
+  return inlinePictures(revoiceKeepingMoods(story), false);
 }
 
 /** The house tape. Fetches only this app's own /demo/ files. */
-export async function openHouseTape(): Promise<RevoicedTape> {
+export async function openHouseTape(): Promise<OpenedTape> {
   let source: SsyncManifest | null = null;
   try {
     const response = await fetch(HOUSE_TAPE_URL);
@@ -130,20 +169,20 @@ export async function openHouseTape(): Promise<RevoicedTape> {
   }
   if (!source) throw new TapeOpenError("houseUnavailable");
   const sourceRef = new URL(HOUSE_TAPE_URL, window.location.origin).href;
-  return inlinePictures(revoiceManifest(source, { sourceRef }), true);
+  return inlinePictures(revoiceKeepingMoods(source, { sourceRef }), true);
 }
 
 /** The tape a share code names: the cloud first, then this device. */
-export async function openTapeByCode(code: string): Promise<RevoicedTape> {
+export async function openTapeByCode(code: string): Promise<OpenedTape> {
   const source = await loadTapeByCode(code);
   if (!source) throw new TapeOpenError("notFound");
   // Where it was loaded from, when the tape does not carry its own link.
   const sourceRef = `${window.location.origin}/read?story=${encodeURIComponent(code)}`;
-  return inlinePictures(revoiceManifest(source, { sourceRef }), true);
+  return inlinePictures(revoiceKeepingMoods(source, { sourceRef }), true);
 }
 
 /** `?open=house` or `?open=<code>`. */
-export function openTapeFromQuery(open: string): Promise<RevoicedTape> {
+export function openTapeFromQuery(open: string): Promise<OpenedTape> {
   return open === HOUSE_TAPE_QUERY ? openHouseTape() : openTapeByCode(open);
 }
 

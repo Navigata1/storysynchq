@@ -69,7 +69,17 @@ export interface StudioState {
   manifest: SsyncManifest;
   /** page id → draft recording meta. */
   recordings: Record<string, RecordingMeta>;
+  /** The story mood: every page without its own plays it. */
   mood: MoodName;
+  /**
+   * Per-page moods (T24a): page id → that page's own mood, set in Advanced.
+   * Draft-only — never in the draft's `page.music`; publish writes each
+   * page's effective mood (./page-moods `publishedMusic`). Optional, and
+   * absent means none, so a state written without it (a draft from an older
+   * build, a test fixture) still loads: `blankState` and the draft loader
+   * give `{}`.
+   */
+  pageMoods?: Record<string, MoodName>;
   musicOn: boolean;
   /** 0..1, pre-duck. */
   musicVolume: number;
@@ -158,6 +168,7 @@ export function blankState(): StudioState {
     manifest: blankManifest(),
     recordings: {},
     mood: "Wonder",
+    pageMoods: {},
     musicOn: true,
     musicVolume: 0.3,
     narrationVolume: 0.85,

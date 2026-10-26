@@ -12,6 +12,7 @@
  *   Text      "the words on 5 pages, kept as text — never baked into the pictures"
  *   Voice     "5 recordings · become AAC/M4A when you tap Continue (WAV if …)"
  *   Sound     "Wonder, a music box that dips under every word"
+ *             (pages with their own mood, T24a: "… · Hush on page 3")
  *   Behavior  "2-second pauses · the turn-the-page chime · words light up"
  *   Signature "© 2026 <credit> · personal use"
  *
@@ -42,8 +43,10 @@ export const SHEET_LAYERS: readonly PacketLayer[] = [
 /** What the Studio knows about the draft before the gate opens. */
 export interface TapeSheetSource {
   manifest: Pick<SsyncManifest, "metadata" | "settings" | "pages">;
-  /** The story's mood (the Studio's one mood for every page). */
+  /** The story's mood: every page without its own plays it. */
   mood: string;
+  /** Pages with a mood of their own (T24a): page id → mood. Absent means none. */
+  pageMoods?: Readonly<Record<string, string>>;
   musicOn: boolean;
   /** Set on a tape opened to be re-voiced (T15): its original author keeps the credit. */
   remix?: { author: string } | null;
@@ -153,9 +156,32 @@ function voiceLine(pages: TapeSheetInput["manifest"]["pages"]): string {
   return `${count}${SEP}${become} AAC/M4A when you tap Continue (WAV if this browser can't make AAC)`;
 }
 
+/** Page numbers as runs: [2, 3, 8] → "2–3, 8". */
+function pageRuns(numbers: number[]): string {
+  const runs: string[] = [];
+  for (let i = 0; i < numbers.length; i++) {
+    let j = i;
+    while (j + 1 < numbers.length && numbers[j + 1] === numbers[j] + 1) j++;
+    runs.push(j > i ? `${numbers[i]}–${numbers[j]}` : `${numbers[i]}`);
+    i = j;
+  }
+  return runs.join(", ");
+}
+
 function soundLine(input: TapeSheetInput): string {
   if (!input.musicOn) return "No music · silence under the words";
-  return `${input.mood}, a music box that dips under every word`;
+  const line = `${input.mood}, a music box that dips under every word`;
+  // Pages with their own mood (T24a) publish it, so the sheet names them:
+  // each mood with its pages, in the order they first play.
+  const own = new Map<string, number[]>();
+  input.manifest.pages.forEach((page, index) => {
+    const mood = input.pageMoods?.[String(page.id)];
+    if (mood && mood !== input.mood) own.set(mood, [...(own.get(mood) ?? []), index + 1]);
+  });
+  const clauses = [...own].map(
+    ([mood, pages]) => `${mood} on ${pages.length === 1 ? "page" : "pages"} ${pageRuns(pages)}`,
+  );
+  return [line, ...clauses].join(SEP);
 }
 
 function behaviorLine(manifest: TapeSheetInput["manifest"]): string {

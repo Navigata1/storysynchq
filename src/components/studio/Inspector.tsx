@@ -27,7 +27,10 @@ export interface InspectorProps {
   page: SsyncPage | undefined;
   pageNumber: number;
   recordings: Record<string, RecordingMeta>;
+  /** The story mood: the whole-story select. */
   mood: MoodName;
+  /** The active page's own mood (T24a), or null when it follows the story. */
+  pageMood: MoodName | null;
   musicOn: boolean;
   musicVolume: number;
   narrationVolume: number;
@@ -45,6 +48,8 @@ export interface InspectorProps {
   onAlt: (alt: string) => void;
   onAuthor: (author: string) => void;
   onMood: (mood: MoodName) => void;
+  /** A mood of its own for the active page, or null: "Same as the story". */
+  onPageMood: (mood: MoodName | null) => void;
   onMusicToggle: (on: boolean) => void;
   onMusicVolume: (v: number) => void;
   onNarrationVolume: (v: number) => void;
@@ -173,6 +178,92 @@ function LevelVoicesSwitch({ on, onChange }: { on: boolean; onChange: (on: boole
   );
 }
 
+/** Each mood as the shipped readout reads it: "Hush · D open fourths/fifths · 66 BPM". */
+function MoodOptions() {
+  return (
+    <>
+      {MOOD_NAMES.map((name) => (
+        <option key={name} value={name} className="bg-[#0b1020]">
+          {`${name} · ${moodReadout(name)}`}
+        </option>
+      ))}
+    </>
+  );
+}
+
+/**
+ * MOOD (T24a): this page's mood, then the whole story's. "mood · page N"
+ * offers "Same as the story (<Mood>)" and the eight moods; the shipped
+ * whole-story select keeps its label, and a mono line beside it says whether
+ * it reaches every page or one page has its own (s09: "whole story · …").
+ * The page select comes first so the whole-story select is still the stop
+ * right before T17's switch.
+ */
+function MoodRow({
+  pageNumber,
+  mood,
+  pageMood,
+  onMood,
+  onPageMood,
+}: {
+  pageNumber: number;
+  mood: MoodName;
+  pageMood: MoodName | null;
+  onMood: (mood: MoodName) => void;
+  onPageMood: (mood: MoodName | null) => void;
+}) {
+  const reach = pageMood ? `whole story · page ${pageNumber} has its own mood` : "whole story · every page";
+  return (
+    <div data-studio="mood-row">
+      <label
+        htmlFor="insp-page-mood"
+        className="block text-[11px] tracking-[0.16em] text-white/45 uppercase"
+        style={META_FONT}
+      >
+        {`mood · page ${pageNumber}`}
+      </label>
+      <select
+        id="insp-page-mood"
+        value={pageMood ?? ""}
+        onChange={(e) => onPageMood(e.target.value ? (e.target.value as MoodName) : null)}
+        className="sk-focus mt-1 h-11 w-full rounded-xl border border-white/12 bg-black/40 px-3 text-sm text-white"
+      >
+        <option value="" className="bg-[#0b1020]">
+          {`Same as the story (${mood})`}
+        </option>
+        <MoodOptions />
+      </select>
+
+      <div className="mt-3 flex items-baseline justify-between gap-3">
+        <label
+          htmlFor="insp-mood"
+          className="block flex-none text-[11px] tracking-[0.16em] text-white/45 uppercase"
+          style={META_FONT}
+        >
+          mood
+        </label>
+        <span
+          id="insp-mood-reach"
+          data-studio="mood-reach"
+          className="min-w-0 text-right text-[10.5px] leading-tight text-ss-fg-3"
+          style={META_FONT}
+        >
+          {reach}
+        </span>
+      </div>
+      <select
+        id="insp-mood"
+        value={mood}
+        onChange={(e) => onMood(e.target.value as MoodName)}
+        aria-describedby="insp-mood-reach"
+        className="sk-focus mt-1 h-11 w-full rounded-xl border border-white/12 bg-black/40 px-3 text-sm text-white"
+      >
+        <MoodOptions />
+      </select>
+    </div>
+  );
+}
+
 const BADGE_TONE: Record<string, string> = {
   published: "border-emerald-400/40 bg-emerald-500/10 text-emerald-200",
   draft: "border-amber-400/40 bg-amber-500/10 text-amber-200",
@@ -186,6 +277,7 @@ export function Inspector(props: InspectorProps) {
     pageNumber,
     recordings,
     mood,
+    pageMood,
     musicOn,
     musicVolume,
     narrationVolume,
@@ -197,6 +289,7 @@ export function Inspector(props: InspectorProps) {
     onAlt,
     onAuthor,
     onMood,
+    onPageMood,
     onMusicToggle,
     onMusicVolume,
     onNarrationVolume,
@@ -296,21 +389,13 @@ export function Inspector(props: InspectorProps) {
             className="sk-focus h-6 w-6 accent-amber-500"
           />
         </div>
-        <label htmlFor="insp-mood" className="block text-[11px] tracking-[0.16em] text-white/45 uppercase" style={META_FONT}>
-          mood
-        </label>
-        <select
-          id="insp-mood"
-          value={mood}
-          onChange={(e) => onMood(e.target.value as MoodName)}
-          className="sk-focus mt-1 h-11 w-full rounded-xl border border-white/12 bg-black/40 px-3 text-sm text-white"
-        >
-          {MOOD_NAMES.map((name) => (
-            <option key={name} value={name} className="bg-[#0b1020]">
-              {name} · {moodReadout(name)}
-            </option>
-          ))}
-        </select>
+        <MoodRow
+          pageNumber={pageNumber}
+          mood={mood}
+          pageMood={pageMood}
+          onMood={onMood}
+          onPageMood={onPageMood}
+        />
 
         <ActivityMeter subscribeLevel={subscribeLevel} />
         <LevelVoicesSwitch on={levelVoices} onChange={onLevelVoices} />

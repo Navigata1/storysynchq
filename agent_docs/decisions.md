@@ -665,3 +665,20 @@ deleting the story forgets it everywhere.**
   most four; the consent fallback "narrator" is not a name; the target's own narrator is always in the row.
 - **T22b · kit VoiceCassette** (brief LOCAL 6) built without its locked state; checked = label-yellow ring, reading
   now = slow reels + "READING NOW" caption (static under reduced motion).
+
+**2026-10-25 · T24a · per-page moods (Inspector "whole story · page N", published per page, played per page)**
+- **T24a · per-page moods are draft-only overrides.** `StudioState.pageMoods` (page id → mood) beside the story `mood`;
+  never written to the draft's `page.music` (so stale page data still never wins); at publish every page's `music` is
+  its effective mood (override, else story; absent with music off) and the overrides are re-keyed with the renumbered
+  pages. Pure helpers in `src/components/studio/page-moods.ts`.
+- **T24a · re-voice keeps the arc.** `open-tape.ts` reads each source page's mood through T10's `musicPlan` before
+  re-voicing (house tape: 4–5 Adventure, 6–8 Calm over Wonder); `revoice.ts` unchanged; `?mood=` clears the arc.
+- **T24a · Simple mode's Music card sets every page** (story mood + clears overrides) and says so first (M5-PRD open
+  question 4 answered as the PRD's default).
+- **T24a · Inspector order.** "mood · page N" comes before the whole-story `#insp-mood`, keeping T17's keyboard path
+  (`#insp-mood` → the levelling switch).
+- **T24a · `window.__ssyncStudio`** read-only getters (musicPlaying, moodName, crossfadeSeconds) mirror the Player's
+  T10 hook for tests.
+- **T24a · the gate's sheet names per-page moods.** T14's Sound band keeps its verbatim line for a one-mood tape and
+  appends "· <Mood> on page(s) <runs>" for each other mood a page publishes (`tape-sheet.ts`, optional `pageMoods`),
+  so "the sheet tells the truth" still holds; T14's house-tape test asserts the arc instead of one mood.

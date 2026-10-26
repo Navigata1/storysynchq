@@ -288,6 +288,11 @@ export interface MusicPanelProps {
   mood: MoodName;
   musicOn: boolean;
   musicVolume: number;
+  /**
+   * How many pages have a mood of their own (T24a, set in Advanced). Choosing
+   * here sets the story mood and clears them, so the card says so first.
+   */
+  ownMoodPages?: number;
   onMood: (mood: MoodName) => void;
   onToggle: (on: boolean) => void;
   onVolume: (v: number) => void;
@@ -298,6 +303,7 @@ export function MusicPanel({
   mood,
   musicOn,
   musicVolume,
+  ownMoodPages = 0,
   onMood,
   onToggle,
   onVolume,
@@ -305,7 +311,23 @@ export function MusicPanel({
 }: MusicPanelProps) {
   return (
     <PanelShell title="Music" subtitle="The feeling under your story" onClose={onClose}>
-      <div role="radiogroup" aria-label="Music mood" className="grid grid-cols-2 gap-2">
+      {ownMoodPages > 0 ? (
+        <p
+          id="studio-music-page-moods"
+          data-studio="music-page-moods"
+          className="mb-3 text-[13px] leading-snug text-amber-200/85"
+        >
+          {ownMoodPages === 1
+            ? "1 page has its own mood — choosing here sets every page."
+            : `${ownMoodPages} pages have their own mood — choosing here sets every page.`}
+        </p>
+      ) : null}
+      <div
+        role="radiogroup"
+        aria-label="Music mood"
+        aria-describedby={ownMoodPages > 0 ? "studio-music-page-moods" : undefined}
+        className="grid grid-cols-2 gap-2"
+      >
         {MOOD_NAMES.map((name) => {
           const chrome = MOOD_CHROME[name];
           const selected = name === mood;

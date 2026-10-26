@@ -7,13 +7,18 @@
  * `DualBusAudioEngine` for playback + ducking, `NarrationRecorder` for the
  * mic. Nothing here re-implements them; this hook is the transport logic that
  * drives them and mirrors what the Player does, so the Stage sounds exactly
- * like the receiving room (design-direction §7).
+ * like the receiving room (design-direction §7). The bed plays the active
+ * page's own mood (T24a, ./page-moods `effectiveMood`), and a page turn into
+ * another mood crosses over with the engine's default crossfade, as a page
+ * without its own `music.duration` does in the Player.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DualBusAudioEngine } from "@/lib/audio/engine";
 import { NarrationRecorder, blobToDataUrl, type MicPermissionError } from "@/lib/audio/recorder";
+import type { MoodName } from "@/lib/audio/moods";
 import { StudioCues } from "./cues";
+import { effectiveMood } from "./page-moods";
 import { autoPauseOf, type StudioState } from "./types";
 
 export interface UseStudioAudioArgs {
@@ -57,6 +62,20 @@ export interface StudioAudio {
 }
 
 const LEVEL_FPS_MS = 66;
+
+/**
+ * Read-only view of the Creator's bed for tests and the console, the same
+ * trick as the Player's `__ssyncPlayer`: getters only, no story data, no
+ * writes, nothing that leaves the device (PRIVACY.md §3).
+ */
+interface StudioHook {
+  musicPlaying: () => boolean;
+  moodName: () => MoodName | null;
+  /** Seconds of the bed's last mood-to-mood crossfade; null before the first. */
+  crossfadeSeconds: () => number | null;
+}
+
+type StudioHookWindow = Window & { __ssyncStudio?: StudioHook };
 
 export function useStudioAudio({
   stateRef,
@@ -115,7 +134,7 @@ export function useStudioAudio({
     }
   }, [getEngine]);
 
-  /** Push mood + volumes + on/off into the engine from current state. */
+  /** Push the active page's mood + volumes + on/off into the engine from current state. */
   const syncMix = useCallback(() => {
     const engine = engineRef.current;
     if (!engine) return;
@@ -124,10 +143,13 @@ export function useStudioAudio({
     engine.setMusicVolume(state.musicVolume);
     const wanted = state.musicOn && musicActiveRef.current;
     // The shared mood vocabulary, by name — the same value that gets written to
-    // `page.music` and the same one the Player resolves.
-    if (wanted) engine.startMusic(state.mood);
+    // this page's `page.music` and the same one the Player resolves. A bed
+    // already playing crosses into it (the engine's default crossfade; the
+    // same mood is no change at all).
+    const page = state.manifest.pages[activeIndexRef.current];
+    if (wanted) engine.startMusic(effectiveMood(state, page?.id));
     else if (engine.musicPlaying) engine.stopMusic();
-  }, [stateRef]);
+  }, [activeIndexRef, stateRef]);
 
   const setMusicActive = useCallback(
     (active: boolean) => {
@@ -259,6 +281,8 @@ export function useStudioAudio({
       }
       clearAdvance();
       cancelSpeech();
+      // The page on the Stage now plays its own mood under its words.
+      syncMix();
 
       const audioUrl = page.text?.audioUrl;
       const el = audioRef.current;
@@ -283,7 +307,7 @@ export function useStudioAudio({
       }
       speakPage(index, page.text?.content ?? "");
     },
-    [cancelSpeech, clearAdvance, getEngine, setDucking, speakPage, stateRef, stop],
+    [cancelSpeech, clearAdvance, getEngine, setDucking, speakPage, stateRef, stop, syncMix],
   );
 
   playIndexRef.current = playIndex;
@@ -295,8 +319,10 @@ export function useStudioAudio({
       playingRef.current = true;
       setPlaying(true);
       musicActiveRef.current = true;
-      syncMix();
+      // Turn to the page first, so the bed starts in that page's own mood
+      // (T24a) rather than crossing over from the page that was showing.
       if (fromIndex !== undefined && fromIndex !== activeIndexRef.current) onSelectPage(fromIndex);
+      syncMix();
       await playIndex(index);
     },
     [activeIndexRef, onSelectPage, playIndex, syncMix, unlock],
@@ -436,6 +462,20 @@ export function useStudioAudio({
     raf = window.requestAnimationFrame(tick);
     return () => window.cancelAnimationFrame(raf);
   }, [emitLevel, narrating, recording]);
+
+  /* ------------------------------------------------ read-only engine view */
+
+  useEffect(() => {
+    const w = window as StudioHookWindow;
+    w.__ssyncStudio = {
+      musicPlaying: () => engineRef.current?.musicPlaying ?? false,
+      moodName: () => engineRef.current?.moodName ?? null,
+      crossfadeSeconds: () => engineRef.current?.lastCrossfadeSeconds ?? null,
+    };
+    return () => {
+      delete w.__ssyncStudio;
+    };
+  }, []);
 
   /* ------------------------------------------------------------- cleanup */
 

@@ -438,7 +438,16 @@ test.describe("T14 · the grown-up moment and what goes into the tape", () => {
     expect(`${tape.signature?.ownership} · ${tape.signature?.rights}`).toBe(`© 2026 ${author} · personal use`);
     const pauses = tape.pages.map((p) => Number.parseFloat(p.timing?.autoPause ?? "3"));
     expect(`pauses of ${Math.min(...pauses)}–${Math.max(...pauses)} seconds`).toBe(behavior.split(" · ")[0]);
-    for (const p of tape.pages) expect(p.music).toBe(sound.split(",")[0]);
+    // The re-voiced house tape keeps its mood arc (T24a), and the Sound band names it.
+    expect(sound).toBe("Wonder, a music box that dips under every word · Adventure on pages 4–5 · Calm on pages 6–8");
+    expect(tape.pages.map((p) => p.music)).toEqual([
+      ...Array.from({ length: 3 }, () => sound.split(",")[0]),
+      "Adventure",
+      "Adventure",
+      "Calm",
+      "Calm",
+      "Calm",
+    ]);
     expect(tape.pages.filter((p) => p.illustration?.url).length).toBe(7);
   });
 

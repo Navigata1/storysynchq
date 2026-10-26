@@ -61,11 +61,13 @@ import {
   TapeOpenError,
   openTapeFile,
   openTapeFromQuery,
+  openedMoods,
   openingLabel,
   takeOpenTapeQuery,
-  type RevoicedTape,
+  type OpenedTape,
   type TapeOpenFailure,
 } from "./open-tape";
+import { effectiveMood, moodsForLane, prunePageMoods, publishedMusic, renumberPageMoods } from "./page-moods";
 import PublishCard, { type AuthMode, type PublishCardProps, type PublishStep } from "./PublishCard";
 import { layerPresence } from "./tape-sheet";
 import { tapeBytes } from "@/lib/storysync/tape-size";
@@ -100,7 +102,7 @@ type SavedDraft = { state: StudioState; savedAt: string };
 
 /** An opened tape waiting on "Open <title>?" before it replaces the story. */
 interface PendingOpen {
-  tape: RevoicedTape;
+  tape: OpenedTape;
   /** `?mood=`, when the link chose one. */
   mood: MoodName | null;
   /** Whose voice the shelf chose for this copy (T22b), when it chose one. */
@@ -437,7 +439,7 @@ export default function Studio() {
    * whose voice the shelf chose for it (T22b), when it chose one.
    */
   const applyOpenedTape = React.useCallback(
-    (tape: RevoicedTape, mood: MoodName | null, voice: string | null = null) => {
+    (tape: OpenedTape, mood: MoodName | null, voice: string | null = null) => {
       const fresh = blankState();
       const n = tape.manifest.pages.length;
       const name = voiceName(voice);
@@ -445,9 +447,9 @@ export default function Studio() {
         {
           ...fresh,
           manifest: tape.manifest,
-          // A mood chosen on the link plays; otherwise the tape's own.
-          mood: mood ?? tape.mood,
-          musicOn: mood ? true : tape.musicOn,
+          // A mood chosen on the link plays on every page; otherwise the
+          // tape's own, with its per-page moods (T24a).
+          ...openedMoods(tape, mood),
           remix: tape.remix,
           ...(name ? { voiceName: name } : {}),
         },
@@ -492,7 +494,7 @@ export default function Studio() {
 
   const openTape = React.useCallback(
     async (
-      load: () => Promise<RevoicedTape>,
+      load: () => Promise<OpenedTape>,
       label: string,
       fallback: TapeOpenFailure,
       options: { mood?: MoodName | null; voice?: string | null; saved?: SavedDraft | null } = {},
@@ -585,9 +587,19 @@ export default function Studio() {
     setMusicActive(tool === "music" || audio.playing);
   }, [tool, audio.playing, setMusicActive]);
 
+  // The bed plays the active page's own mood (T24a): a page turn or a
+  // per-page mood changes it, with the engine's default crossfade.
   React.useEffect(() => {
     syncMix();
-  }, [state.mood, state.musicOn, state.musicVolume, state.narrationVolume, syncMix]);
+  }, [
+    activeIndex,
+    state.mood,
+    state.pageMoods,
+    state.musicOn,
+    state.musicVolume,
+    state.narrationVolume,
+    syncMix,
+  ]);
 
   /* --------------------------------------------------------------- editing */
 
@@ -620,6 +632,21 @@ export default function Studio() {
   const setAutoPause = (seconds: number) => {
     if (!page) return;
     patchPage(page.id, (p) => ({ ...p, timing: { ...(p.timing ?? {}), autoPause: `${seconds}s` } }));
+  };
+
+  /**
+   * "mood · page N" (T24a): the active page gets a mood of its own, or (null,
+   * "Same as the story") follows the story again. Draft-only until publish.
+   */
+  const setPageMood = (mood: MoodName | null) => {
+    if (!page) return;
+    const id = String(page.id);
+    setState((prev) => {
+      const pageMoods = { ...(prev.pageMoods ?? {}) };
+      if (mood) pageMoods[id] = mood;
+      else delete pageMoods[id];
+      return { ...prev, pageMoods };
+    });
   };
 
   const applyPauseToAll = () => {
@@ -684,10 +711,13 @@ export default function Studio() {
     setState((prev) => {
       const recordings = { ...prev.recordings };
       delete recordings[String(victim.id)];
+      const kept = prev.manifest.pages.filter((_, i) => i !== index);
       return {
         ...prev,
         recordings,
-        manifest: { ...prev.manifest, pages: prev.manifest.pages.filter((_, i) => i !== index) },
+        // A deleted page's own mood goes with it (T24a).
+        pageMoods: prunePageMoods(prev.pageMoods ?? {}, kept.map((p) => p.id)),
+        manifest: { ...prev.manifest, pages: kept },
       };
     });
     const next = Math.max(0, Math.min(index, pages.length - 2));
@@ -733,12 +763,12 @@ export default function Studio() {
   };
 
   /**
-   * The mood lane, one entry per page. Today every page plays the story's
-   * mood (or none with music off); per-page moods ride the same list.
+   * The mood lane, one entry per page: each page's own mood, else the
+   * story's (T24a), or none with music off.
    */
   const laneMoods = React.useMemo(
-    () => pages.map(() => (state.musicOn ? state.mood : null)),
-    [pages, state.musicOn, state.mood],
+    () => moodsForLane({ manifest: { pages }, mood: state.mood, musicOn: state.musicOn, pageMoods: state.pageMoods }),
+    [pages, state.musicOn, state.mood, state.pageMoods],
   );
 
   const onFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -818,6 +848,8 @@ export default function Studio() {
       setState((prev) => ({
         ...prev,
         recordings: {},
+        // New pages 1…n are not the pages any per-page mood was chosen for.
+        pageMoods: {},
         // Magic replaces every page, so an opened tape is a new story now: it is
         // no longer a re-voice of anything, and the opened tape's credit and
         // blurb are not this story's. The byline becomes the author again, and
@@ -1040,8 +1072,10 @@ export default function Studio() {
 
           // Carry the music choice in the protocol itself: `page.music` present
           // = play this mood's bed, absent = SILENCE. The Player reads exactly
-          // this, so music-off in the studio is music-off on the tape.
-          if (base.musicOn) next.music = base.mood;
+          // this, so music-off in the studio is music-off on the tape. Each
+          // page carries its own mood (T24a), else the story's.
+          const music = publishedMusic(base, original.id);
+          if (music) next.music = music;
           else delete next.music;
 
           const url = next.text?.audioUrl;
@@ -1159,7 +1193,16 @@ export default function Studio() {
 
         /* 3 — save (cloud library or this device), then the share link */
         markStep("save", { state: "active" });
-        setState((prev) => ({ ...prev, recordings: nextRecordings }));
+        // The pages are renumbered 1…n: the recordings and the per-page moods
+        // follow them, so a second publish writes the same tape.
+        setState((prev) => ({
+          ...prev,
+          recordings: nextRecordings,
+          pageMoods: renumberPageMoods(
+            prev.pageMoods ?? {},
+            source.pages.map((p) => p.id),
+          ),
+        }));
         await persist(manifest);
         setPhase("published");
       } catch (err) {
@@ -1305,6 +1348,10 @@ export default function Studio() {
   /* ----------------------------------------------------------------- derived */
 
   const currentMeta = page ? state.recordings[String(page.id)] : undefined;
+  /** The active page's mood: its own, else the story's (T24a). The Stage names it. */
+  const pageMood = effectiveMood(state, page?.id);
+  /** How many pages have their own mood; the Music card says so before it sets every page. */
+  const ownMoodPages = Object.keys(prunePageMoods(state.pageMoods ?? {}, pages.map((p) => p.id))).length;
   /** The open note on show: a failure goes with the next change to the story. */
   const note = openNote && (openNote.tone === "busy" || openNote.during === state) ? openNote : null;
   /**
@@ -1319,11 +1366,13 @@ export default function Studio() {
     () => ({
       manifest: state.manifest,
       mood: state.mood,
+      // Pages with their own mood publish it (T24a), so the Sound band names them.
+      pageMoods: state.pageMoods,
       musicOn: state.musicOn,
       remix: state.remix ?? null,
       defaultTitle: DEFAULT_TITLE,
     }),
-    [state.manifest, state.mood, state.musicOn, state.remix],
+    [state.manifest, state.mood, state.pageMoods, state.musicOn, state.remix],
   );
   const hasVoice = Boolean(page?.text?.audioUrl);
   const canFinish = storyHasContent(state);
@@ -1506,7 +1555,9 @@ export default function Studio() {
             mood={state.mood}
             musicOn={state.musicOn}
             musicVolume={state.musicVolume}
-            onMood={(mood: MoodName) => setState((prev) => ({ ...prev, mood }))}
+            ownMoodPages={ownMoodPages}
+            // The Music card sets every page: the story mood, and no page keeps its own (T24a).
+            onMood={(mood: MoodName) => setState((prev) => ({ ...prev, mood, pageMoods: {} }))}
             onToggle={(on) => setState((prev) => ({ ...prev, musicOn: on }))}
             onVolume={(v) => setState((prev) => ({ ...prev, musicVolume: v }))}
             onClose={() => setTool(null)}
@@ -1577,7 +1628,7 @@ export default function Studio() {
           position={audio.position}
           clipDuration={audio.clipDuration}
           photoBusy={photoBusy}
-          mood={state.mood}
+          mood={pageMood}
           musicOn={state.musicOn}
           storyKey={state.startedAt}
           onTextChange={setText}
@@ -1593,6 +1644,7 @@ export default function Studio() {
           pageNumber={activeIndex + 1}
           recordings={state.recordings}
           mood={state.mood}
+          pageMood={page ? (state.pageMoods?.[String(page.id)] ?? null) : null}
           musicOn={state.musicOn}
           musicVolume={state.musicVolume}
           narrationVolume={state.narrationVolume}
@@ -1604,6 +1656,7 @@ export default function Studio() {
           onAlt={setAlt}
           onAuthor={setAuthor}
           onMood={(mood) => setState((prev) => ({ ...prev, mood }))}
+          onPageMood={setPageMood}
           onMusicToggle={(on) => setState((prev) => ({ ...prev, musicOn: on }))}
           onMusicVolume={(v) => setState((prev) => ({ ...prev, musicVolume: v }))}
           onNarrationVolume={(v) => setState((prev) => ({ ...prev, narrationVolume: v }))}
