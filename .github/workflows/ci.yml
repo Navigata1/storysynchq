@@ -19,7 +19,9 @@ jobs:
   verify:
     name: verify
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # 1340 Playwright tests ran in ~17 min on the runner (Oct 2026); with install,
+    # build and browser setup the old 30-minute cap cut a green run short.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
 
