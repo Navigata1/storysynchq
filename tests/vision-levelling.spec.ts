@@ -575,8 +575,12 @@ test.describe("T17 · evening out each voice (studio)", () => {
     await toggle.scrollIntoViewIfNeeded();
     await page.screenshot({ path: evidencePath("T17-inspector.png"), animations: "disabled" });
 
-    // Keyboard: the switch is the next stop after the mood, and Space toggles it.
+    // Keyboard: the switch is the next stop after the mood and T24b's "Type a feeling"
+    // field (s09 draws that row between them; its buttons are disabled while it is
+    // empty), and Space toggles it.
     await page.locator("#insp-mood").focus();
+    await page.keyboard.press("Tab");
+    await expect(page.locator("#insp-feeling")).toBeFocused();
     await page.keyboard.press("Tab");
     await expect(toggle).toBeFocused();
     await page.keyboard.press("Space");

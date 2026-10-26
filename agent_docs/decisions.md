@@ -682,3 +682,17 @@ deleting the story forgets it everywhere.**
 - **T24a · the gate's sheet names per-page moods.** T14's Sound band keeps its verbatim line for a one-mood tape and
   appends "· <Mood> on page(s) <runs>" for each other mood a page publishes (`tape-sheet.ts`, optional `pageMoods`),
   so "the sheet tells the truth" still holds; T14's house-tape test asserts the arc instead of one mood.
+
+**2026-10-25 · T24b · "Type a feeling" (resolveMood on your own words, this page or every page)**
+- **T24b · `explainMood` is `resolveMood` showing its work.** `src/lib/audio/moods.ts` exports `explainMood(value) →
+  { mood, matched }`; `resolveMood` returns `explainMood(value).mood`, so the two share one decision path. `matched` is
+  the normalised mood name or synonym that decided it, `null` for the house-default Wonder and for silence. Vocabulary
+  lookups read own keys only (`"constructor"` is an unknown word, not `Object`).
+- **T24b · the typed words are never kept.** "Type a feeling" holds the parent's words only in the Inspector field's
+  component state (autocomplete off, spellcheck off); only the resolved mood name reaches the Studio, the draft, the
+  manifest. The field says when Wonder is the house default rather than an understanding.
+- **T24b · two explicit actions.** "Use for page N" (and Enter) sets the active page's own mood through T24a;
+  "Use for every page" sets the story mood and clears every override (the Music card's rule). Each is announced
+  ("Page 3 is Hush now." / "Every page is Hush now.").
+- **T24b · Inspector keyboard order** is now page mood → story mood → `#insp-feeling` → its two buttons (when enabled)
+  → T17's switch, following s09's row order.

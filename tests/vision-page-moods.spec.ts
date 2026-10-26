@@ -363,6 +363,9 @@ test.describe("T24a · the Inspector's MOOD row, the Stage and the lane", () => 
     await expect(page.locator(SEL.pageMood)).toHaveClass(/sk-focus/);
     await page.keyboard.press("Tab");
     await expect(page.locator(SEL.storyMood)).toBeFocused();
+    // T24b's "Type a feeling" field sits between them (s09); empty, its buttons are disabled.
+    await page.keyboard.press("Tab");
+    await expect(page.locator("#insp-feeling")).toBeFocused();
     await page.keyboard.press("Tab");
     await expect(page.locator("#insp-level-voices")).toBeFocused();
   });

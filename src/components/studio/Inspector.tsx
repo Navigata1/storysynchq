@@ -9,7 +9,10 @@
  */
 
 import * as React from "react";
+import { ArrowRight } from "lucide-react";
 import { VUMeter } from "@/components/studio-kit/kit";
+import { MOOD_ICON } from "@/components/studio-kit/MoodTapeChip";
+import { explainMood, type MoodExplanation } from "@/lib/audio/moods";
 import type { SsyncManifest, SsyncPage } from "@/lib/storysync/manifest";
 import { MOOD_NAMES, moodReadout } from "./moods-ui";
 import {
@@ -21,6 +24,7 @@ import {
   type MoodName,
   type RecordingMeta,
 } from "./types";
+import "./feeling.css";
 
 export interface InspectorProps {
   manifest: SsyncManifest;
@@ -50,6 +54,10 @@ export interface InspectorProps {
   onMood: (mood: MoodName) => void;
   /** A mood of its own for the active page, or null: "Same as the story". */
   onPageMood: (mood: MoodName | null) => void;
+  /** "Type a feeling" → "Use for page N" (T24b): only the resolved mood name, never the words. */
+  onFeelingForPage: (mood: MoodName) => void;
+  /** "Type a feeling" → "Use for every page" (T24b): the story mood, every override cleared. */
+  onFeelingForEveryPage: (mood: MoodName) => void;
   onMusicToggle: (on: boolean) => void;
   onMusicVolume: (v: number) => void;
   onNarrationVolume: (v: number) => void;
@@ -264,6 +272,115 @@ function MoodRow({
   );
 }
 
+/** How long the pill waits for the typing to pause before it answers (≤ 200 ms). */
+const FEELING_DEBOUNCE_MS = 150;
+const NO_FEELING: MoodExplanation = { mood: null, matched: null };
+
+/**
+ * TYPE A FEELING (T24b, s09): the parent's own words through the shared
+ * resolver. The pill answers as they type (debounced, a polite live region
+ * that stays mounted so it speaks from the first word); when no word was
+ * understood, a line says Wonder is the house default rather than pretending.
+ * "Use for page N" (or Enter) and "Use for every page" apply the resolved
+ * mood name only: the words live in this field's own state and nowhere else,
+ * so they are never in the draft, the manifest or anything sent (no
+ * autocomplete history, and spellcheck off so no spelling service reads them).
+ */
+function FeelingRow({
+  pageNumber,
+  onForPage,
+  onForEveryPage,
+}: {
+  pageNumber: number;
+  onForPage: (mood: MoodName) => void;
+  onForEveryPage: (mood: MoodName) => void;
+}) {
+  const [words, setWords] = React.useState("");
+  const [shown, setShown] = React.useState<MoodExplanation>(NO_FEELING);
+
+  React.useEffect(() => {
+    const timer = window.setTimeout(() => setShown(explainMood(words)), FEELING_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+  }, [words]);
+
+  // The actions read the words as they are now, so Enter straight after
+  // typing applies what was typed, not what the pill last showed.
+  const current = explainMood(words).mood;
+  const Icon = shown.mood ? MOOD_ICON[shown.mood] : null;
+  const guessed = shown.mood !== null && shown.matched === null;
+
+  return (
+    <div data-studio="feeling-row" className="mt-3">
+      <label htmlFor="insp-feeling" className="feeling-label">
+        Type a feeling
+      </label>
+      <div className="feeling-line">
+        <input
+          id="insp-feeling"
+          type="text"
+          value={words}
+          maxLength={80}
+          autoComplete="off"
+          spellCheck={false}
+          placeholder="a quiet lullaby for bedtime"
+          aria-describedby="insp-feeling-note"
+          onChange={(e) => setWords(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
+            e.preventDefault();
+            if (current) onForPage(current);
+          }}
+          className="feeling-input sk-focus"
+        />
+        {shown.mood ? (
+          <ArrowRight data-studio="feeling-arrow" aria-hidden="true" className="feeling-arrow" />
+        ) : null}
+        <span
+          data-studio="feeling-result"
+          data-mood={shown.mood ?? undefined}
+          aria-live="polite"
+          className="feeling-pill"
+          style={
+            shown.mood
+              ? ({ "--c": `var(--mood-${shown.mood.toLowerCase()})` } as React.CSSProperties)
+              : undefined
+          }
+        >
+          {Icon && shown.mood ? (
+            <>
+              <Icon aria-hidden="true" />
+              {shown.mood}
+            </>
+          ) : null}
+        </span>
+      </div>
+      <p id="insp-feeling-note" data-studio="feeling-note" aria-live="polite" className="feeling-note">
+        {guessed ? "No feeling word we know — Wonder is the house default." : ""}
+      </p>
+      <div className="feeling-actions">
+        <button
+          type="button"
+          data-studio="feeling-page"
+          disabled={!current}
+          onClick={() => current && onForPage(current)}
+          className="sk-focus min-h-11 rounded-xl border border-white/12 bg-white/5 px-2 text-[13px] text-white/75 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white/5"
+        >
+          {`Use for page ${pageNumber}`}
+        </button>
+        <button
+          type="button"
+          data-studio="feeling-every"
+          disabled={!current}
+          onClick={() => current && onForEveryPage(current)}
+          className="sk-focus min-h-11 rounded-xl border border-white/12 bg-white/5 px-2 text-[13px] text-white/75 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white/5"
+        >
+          Use for every page
+        </button>
+      </div>
+    </div>
+  );
+}
+
 const BADGE_TONE: Record<string, string> = {
   published: "border-emerald-400/40 bg-emerald-500/10 text-emerald-200",
   draft: "border-amber-400/40 bg-amber-500/10 text-amber-200",
@@ -290,6 +407,8 @@ export function Inspector(props: InspectorProps) {
     onAuthor,
     onMood,
     onPageMood,
+    onFeelingForPage,
+    onFeelingForEveryPage,
     onMusicToggle,
     onMusicVolume,
     onNarrationVolume,
@@ -395,6 +514,11 @@ export function Inspector(props: InspectorProps) {
           pageMood={pageMood}
           onMood={onMood}
           onPageMood={onPageMood}
+        />
+        <FeelingRow
+          pageNumber={pageNumber}
+          onForPage={onFeelingForPage}
+          onForEveryPage={onFeelingForEveryPage}
         />
 
         <ActivityMeter subscribeLevel={subscribeLevel} />

@@ -7,6 +7,8 @@
 // and (b) a musical specification the generative bed can actually play.
 //
 //   resolveMood(value) → MoodName | null      null means SILENCE, never a bed
+//   explainMood(value) → { mood, matched }    the same answer, and the word
+//                                             that decided it (null: default)
 //   MOODS[name]        → MoodSpec             scale, tempo, pad, arpeggio, hiss
 //
 // Compatibility: `MoodSpec` also carries the legacy `MoodConfig` fields
@@ -423,6 +425,63 @@ export function isMoodName(value: unknown): value is MoodName {
 }
 
 /**
+ * One normalised word in the vocabulary: a mood name or a synonym. Own keys
+ * only, so Object.prototype's names ("constructor") are unknown words, never
+ * a function posing as a mood.
+ */
+function lookupWord(word: string): MoodName | undefined {
+  if (Object.prototype.hasOwnProperty.call(BY_LOWER_NAME, word)) return BY_LOWER_NAME[word];
+  if (Object.prototype.hasOwnProperty.call(SYNONYMS, word)) return SYNONYMS[word];
+  return undefined;
+}
+
+/** What `explainMood` answers: the mood, and the word that decided it. */
+export interface MoodExplanation {
+  /** Always exactly `resolveMood(value)`. */
+  mood: MoodName | null;
+  /**
+   * The normalised mood name or synonym that decided `mood` ("lullaby" for
+   * "a quiet lullaby for bedtime"), or null when nothing known did: the
+   * house-default Wonder for words it does not know, or silence for empty input.
+   */
+  matched: string | null;
+}
+
+/**
+ * `resolveMood`, showing its work — for a person typing their own words
+ * (the Studio's "Type a feeling"), who should be told when Wonder is the house
+ * default rather than an understanding.
+ *
+ *   "a quiet lullaby for bedtime" → { Hush, "lullaby" }
+ *   "a bit scary"                 → { Suspense, "scary" }
+ *   "Calm"                        → { Calm, "calm" }
+ *   "xyzzy"                       → { Wonder, null }   (the house default)
+ *   "" / "!!" / not a string      → { null, null }     (silence)
+ */
+export function explainMood(value: unknown): MoodExplanation {
+  if (typeof value !== "string") return { mood: null, matched: null };
+  const key = normalise(value);
+  if (!key) return { mood: null, matched: null };
+
+  const direct = lookupWord(key);
+  if (direct) return { mood: direct, matched: key };
+
+  // A phrase: take the most specific word that matches. "Specific" = longest,
+  // so "soft lullaby music" is a lullaby (Hush) rather than merely soft (Calm),
+  // and ties go to the first one written.
+  let found: MoodName | null = null;
+  let word: string | null = null;
+  for (const token of key.split(" ")) {
+    const hit = lookupWord(token);
+    if (hit && token.length > (word?.length ?? 0)) {
+      found = hit;
+      word = token;
+    }
+  }
+  return found ? { mood: found, matched: word } : { mood: "Wonder", matched: null };
+}
+
+/**
  * The one function everything else asks.
  *
  *   undefined | null | ""      → null   (silence — do NOT start a bed)
@@ -435,26 +494,7 @@ export function isMoodName(value: unknown): value is MoodName {
  * at all ("!!", "🎵") is treated as empty and resolves to silence, not Wonder.
  */
 export function resolveMood(value: string | null | undefined): MoodName | null {
-  if (typeof value !== "string") return null;
-  const key = normalise(value);
-  if (!key) return null;
-
-  const direct = BY_LOWER_NAME[key] ?? SYNONYMS[key];
-  if (direct) return direct;
-
-  // A phrase: take the most specific word that matches. "Specific" = longest,
-  // so "soft lullaby music" is a lullaby (Hush) rather than merely soft (Calm),
-  // and ties go to the first one written.
-  let found: MoodName | null = null;
-  let foundLength = 0;
-  for (const token of key.split(" ")) {
-    const hit = BY_LOWER_NAME[token] ?? SYNONYMS[token];
-    if (hit && token.length > foundLength) {
-      found = hit;
-      foundLength = token.length;
-    }
-  }
-  return found ?? "Wonder";
+  return explainMood(value).mood;
 }
 
 /** `resolveMood`, but never silent — for callers that already decided to play. */

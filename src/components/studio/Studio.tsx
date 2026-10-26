@@ -649,6 +649,23 @@ export default function Studio() {
     });
   };
 
+  /**
+   * "Type a feeling" (T24b). Only the resolved mood name arrives here — the
+   * words stay in the Inspector's field — and both say what changed.
+   * "Use for page N" goes through T24a's page mood; "Use for every page" is
+   * the Music card's choice: the story mood, and no page keeps its own.
+   */
+  const applyFeelingToPage = (mood: MoodName) => {
+    if (!page) return;
+    setPageMood(mood);
+    setAnnouncement(`Page ${activeIndex + 1} is ${mood} now.`);
+  };
+
+  const applyFeelingToEveryPage = (mood: MoodName) => {
+    setState((prev) => ({ ...prev, mood, pageMoods: {} }));
+    setAnnouncement(`Every page is ${mood} now.`);
+  };
+
   const applyPauseToAll = () => {
     if (!page) return;
     const value = page.timing?.autoPause ?? `${DEFAULT_AUTO_PAUSE_S}s`;
@@ -1657,6 +1674,8 @@ export default function Studio() {
           onAuthor={setAuthor}
           onMood={(mood) => setState((prev) => ({ ...prev, mood }))}
           onPageMood={setPageMood}
+          onFeelingForPage={applyFeelingToPage}
+          onFeelingForEveryPage={applyFeelingToEveryPage}
           onMusicToggle={(on) => setState((prev) => ({ ...prev, musicOn: on }))}
           onMusicVolume={(v) => setState((prev) => ({ ...prev, musicVolume: v }))}
           onNarrationVolume={(v) => setState((prev) => ({ ...prev, narrationVolume: v }))}
@@ -1731,7 +1750,7 @@ export default function Studio() {
         aria-hidden="true"
       />
       <audio ref={audio.audioRef} preload="auto" className="hidden" />
-      <p aria-live="polite" className="sr-only">
+      <p aria-live="polite" data-studio="announcement" className="sr-only">
         {announcement}
       </p>
 
