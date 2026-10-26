@@ -41,6 +41,8 @@ import { TWINKLE, loadTape } from "./fixtures/tapes";
 const READY = "Your tape is ready";
 const LAYERS = ["Metadata", "Visual", "Text", "Voice", "Sound", "Behavior", "Signature"];
 const STEPS = [
+  // T17 adds the real step, first because it happens first ("planned · Next" in s05).
+  "Evening out each voice · 5/5",
   "Converting voices to AAC · 5/5",
   "Assembling the SSYNC manifest · 5 pages",
   "Saving your tape · this device",
@@ -235,9 +237,20 @@ test.describe("T16 · the printed tape, landscape", () => {
       ["Back", card.getByRole("button", { name: BACK })],
       ["delete", card.getByRole("button", { name: PULL, exact: true })],
     ];
+    // read the column once it has stopped moving: after the resize the card can
+    // still be settling, and boxes read one by one across that would disagree
+    const snapshot = () => Promise.all(order.map(([, locator]) => box(locator)));
+    let boxes = await snapshot();
+    for (let i = 0; i < 20; i++) {
+      await page.waitForTimeout(100);
+      const next = await snapshot();
+      const still = JSON.stringify(next) === JSON.stringify(boxes);
+      boxes = next;
+      if (still) break;
+    }
     let previous = -Infinity;
-    for (const [name, locator] of order) {
-      const b = await box(locator);
+    for (const [i, [name]] of order.entries()) {
+      const b = boxes[i];
       expect(b.y, `${name} comes next, further down`).toBeGreaterThan(previous);
       expect(b.x, `${name} stays inside a phone`).toBeGreaterThanOrEqual(0);
       expect(b.x + b.width, `${name} stays inside a phone`).toBeLessThanOrEqual(PHONE.width);
@@ -437,14 +450,15 @@ test.describe("T16 · the printed tape, landscape", () => {
     await publish(page);
     const steps = page.locator(SEL.card).locator(SEL.steps);
     const items = steps.locator("li");
-    await expect(items).toHaveCount(3);
+    await expect(items).toHaveCount(4);
     expect((await items.allInnerTexts()).map((t) => t.replace(/\s+/g, " ").trim())).toEqual(STEPS);
     expect(await items.evaluateAll((els) => els.map((el) => el.getAttribute("data-state")))).toEqual([
       "done",
       "done",
       "done",
+      "done",
     ]);
-    await expect(items.locator("svg.lucide-check")).toHaveCount(3);
+    await expect(items.locator("svg.lucide-check")).toHaveCount(4);
     expect(await items.first().evaluate((el) => getComputedStyle(el).fontSize)).toBe("13px");
 
     /* the left column's own pieces */
@@ -610,7 +624,8 @@ test.describe("T16 · the printed tape, landscape", () => {
     );
     // Never "Saved on this device" when nothing was saved.
     await expect(page.getByText(/Saved on this device/)).toHaveCount(0);
-    const save = page.locator(SEL.steps).locator("li").nth(2);
+    // The save step is the last of four since T17 put "Evening out each voice" first.
+    const save = page.locator(SEL.steps).locator("li").nth(3);
     await expect(save).toHaveAttribute("data-state", "error");
     await expect(save).toHaveText("Saving your tape · not saved");
     await expect(save.locator("svg.lucide-x")).toHaveCount(1);
