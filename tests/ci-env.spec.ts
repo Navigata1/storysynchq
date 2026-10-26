@@ -27,16 +27,26 @@ test("ci env probe", async ({ page }, info) => {
     document.body.appendChild(box);
     const scrollbar = box.offsetWidth - box.clientWidth;
     box.remove();
-    const plex = [...document.fonts].filter((f) => /plex/i.test(f.family)).map((f) => `${f.family}/${f.weight}/${f.status}`);
-    await document.fonts.load(`600 11px ${family.split(",")[0]}`);
+    const loaded = await document.fonts.load(`600 11px ${family.split(",")[0]}`).catch((e) => String(e));
+    document.body.appendChild(span);
+    const spanAfter = span.getBoundingClientRect().width;
+    span.remove();
+    const plex = [...document.fonts]
+      .filter((f) => /plex/i.test(f.family))
+      .map((f) => `${f.weight}/${f.style}/${f.status}`);
+    const links = [...document.querySelectorAll('link[rel="preload"][as="font"]')].length;
     return {
+      afterLoad: Math.round(spanAfter * 10) / 10,
+      loadedFaces: Array.isArray(loaded) ? loaded.map((f) => `${f.weight}/${f.status}`) : loaded,
+      check600: document.fonts.check(`600 11px ${family.split(",")[0]}`),
+      fontPreloads: links,
       ua: navigator.userAgent.replace(/.*(HeadlessChrome\/[\d.]+|Chrome\/[\d.]+).*/, "$1"),
       dpr: window.devicePixelRatio,
       scrollbar,
       pageGutter: window.innerWidth - document.documentElement.clientWidth,
       family: family.slice(0, 60),
       monoLine: Math.round(spanW * 10) / 10,
-      plex: plex.slice(0, 6),
+      plex,
     };
   });
   console.log(`::notice title=ci-env::${JSON.stringify(env)}`);
