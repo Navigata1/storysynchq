@@ -10,7 +10,7 @@
  *                              tapes and the references of tapes sent to you)
  *                            · every `signature.voiceConsent[].voice` of your own
  *                              tapes, reduced to its lead name by T03's
- *                              `narratorFromByline` ("Mia, age 4 — with Mom" → "Mia")
+ *                              `narratorFromByline` ("Sam, age 5 — with Dad" → "Sam")
  *                          A tape's time is when it was saved (own) or reached
  *                          this shelf (sent). Names that differ only in case are
  *                          one voice (the most recent spelling stays). The consent
