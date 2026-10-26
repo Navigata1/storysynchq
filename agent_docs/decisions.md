@@ -403,3 +403,15 @@ asserted the old Space or P bindings.
 - **Snap the next drawing** replaces "+": add a page, then open the shipped camera input in the same gesture.
 - **Frame size:** 112×84 at ≥ 1024px wide and ≥ 700px tall; 84×62 otherwise. A short laptop keeps the small frames so the docked Voice card's body fits (T13a's 700px line). From 1024 to 1179px wide the same frames are packed tighter: 10px gap, 12px inset, a 104px Snap tile and a slimmer housing. Five pages, the Snap tile and the move controls then fit an iPad held sideways, and the Snap tile is never under the controls on load.
 - **`addPage` returns whether it added a page.** The Snap tile reuses its mid-take guard instead of repeating it.
+
+**2026-10-25 · T12 · The end card is a modal dialog with liner notes from the tape alone.** The end card moved out of
+`Player.tsx` into `src/components/player/EndCard.tsx`; it prints a J-card (`src/components/studio-kit/JCard.tsx`, the
+brief's shared piece 10) from `src/components/player/liner-notes.ts`, a pure mapping that uses only manifest fields
+and omits any row without data (no credits, no MADE IN, no device, no counts). Consent dates print from their own
+calendar parts (UTC check), never the local clock. The J-card's rows set its height; the spine's printed line is
+laid out of flow and cut to fit, so a child's long title can never stretch the card. The card is `aria-modal`, takes focus when it opens and keeps Tab
+on its controls; Escape still exits; "Read it again" hands focus to the stage, so Space and the arrows keep their tape
+meanings. The CONSENT row carries its lines as fields (`voice?`, `granted`, `date?`, `tail`), so no renderer parses the
+printed text. The `/protocol` link is not prefetched, so nothing is fetched until a listener
+follows it. Three brief colours were raised for AA contrast (J-card keys 62% ink, "PASS IT ON" in `--ss-red-ink`, the
+privacy line in `--ss-fg-3`). From 880px the card lays out in two columns so a laptop sees all of it.

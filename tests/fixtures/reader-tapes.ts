@@ -490,3 +490,72 @@ export const longClipTape: SsyncManifest = {
 export function t09bRows(): ReaderLibraryRow[] {
   return [libraryRow(longClipTape, LONG_CLIP_CODE)];
 }
+
+/* ============================================ T12 · the end card's liner notes */
+
+/*
+ * Tapes for the J-card's VOICE and CONSENT rows (src/components/player/
+ * liner-notes.ts). Twinkle (T00) is the one-voice, parent-consented tape; these
+ * add the two shapes it cannot show. autoPlay is off: nothing turns a page but
+ * the test.
+ */
+
+/** Share code of the two-voice consent tape. */
+export const TWO_VOICE_CONSENT_CODE = "a12a12a12a12a12a12a12a12a12a12a1";
+
+/**
+ * Two recorded voices and one consent record each: a child's, given by a
+ * parent or guardian, and a grown-up's own, given by the speaker ("self").
+ * The J-card prints one CONSENT line per record, each led by the voice's name.
+ */
+export const twoVoiceConsentTape: SsyncManifest = {
+  version: "2.0",
+  metadata: {
+    title: "The Two of Us",
+    author: "Ada, age 5 — with Grandpa Joe",
+    narrator: "Ada",
+    genre: "children",
+    ageRange: "3-8",
+  },
+  settings: { autoPlay: false, pageTurnSound: true, readAlongHighlight: true },
+  signature: {
+    ownership: "© 2026 Ada and Grandpa Joe",
+    rights: "personal use",
+    voiceConsent: [
+      { voice: "Ada, age 5", grantedBy: "parent/guardian", date: "2026-10-20" },
+      { voice: "Grandpa Joe", grantedBy: "self", date: "2026-10-21" },
+    ],
+  },
+  pages: [
+    creditedTo(voicedPage(1, "I read the first page.", "Joy", 1), "Ada, age 5"),
+    creditedTo(voicedPage(2, "And I read the second one.", "Calm", 1), "Grandpa Joe"),
+  ],
+};
+
+/** The page with its recorded voice credited to `voice` (`text.voice`). */
+function creditedTo(page: SsyncPage, voice: string): SsyncPage {
+  return page.text ? { ...page, text: { ...page.text, voice } } : page;
+}
+
+/** Share code of the recorded tape that carries no consent record. */
+export const NO_CONSENT_CODE = "a12b12b12b12b12b12b12b12b12b12b1";
+
+/**
+ * A recorded voice and no Signature at all — an older or hand-made tape. The
+ * J-card says so ("No consent record in this tape") instead of inventing one,
+ * and with no narrator named, VOICE reads "A recorded voice".
+ */
+export const recordedNoConsentTape: SsyncManifest = {
+  version: "2.0",
+  metadata: { title: "A Voice in the Hall", author: "Reader fixture", genre: "children", ageRange: "3-8" },
+  settings: { autoPlay: false, pageTurnSound: true, readAlongHighlight: true },
+  pages: [voicedPage(1, "Somebody hummed in the hall.", undefined, 1)],
+};
+
+/** Both T12 tapes as library rows. */
+export function t12Rows(): ReaderLibraryRow[] {
+  return [
+    libraryRow(twoVoiceConsentTape, TWO_VOICE_CONSENT_CODE),
+    libraryRow(recordedNoConsentTape, NO_CONSENT_CODE),
+  ];
+}

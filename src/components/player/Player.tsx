@@ -25,6 +25,11 @@
  * one segment per page — both from ./tape-position, fed by how far the voice
  * is through the page on screen. No scrubber, no timecode.
  *
+ * Side A complete (s06, T12): the end card is ./EndCard — the label with a
+ * sticker of the last picture, the J-card liner notes (./liner-notes) ending
+ * in "What's inside this tape? →", the loop back into making, and the QR of
+ * the share link when there is one.
+ *
  * Rules this file exists to honour:
  *   1. The tap on "Tap to Begin" is the iOS audio unlock. Nothing plays before.
  *   2. The manifest is the source of truth. v1 documents play; unknown fields
@@ -37,7 +42,6 @@
  */
 
 import * as React from "react";
-import QRCode from "qrcode";
 import { Lock, Music, Settings, X } from "lucide-react";
 import type { SsyncManifest, SsyncPage } from "@/lib/storysync/manifest";
 import { DUCK_DEPTH_DB, DualBusAudioEngine } from "@/lib/audio/engine";
@@ -61,6 +65,7 @@ import {
   type ViewerChoices,
 } from "./prefs";
 import { useSpread } from "./useSpread";
+import { EndCard } from "./EndCard";
 import "./player.css";
 import "./spread.css";
 import "./deck.css";
@@ -319,7 +324,6 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
   const [choices, setChoices] = React.useState<ViewerChoices>({});
   const [reduced, setReduced] = React.useState(false);
   const [cuesFired, setCuesFired] = React.useState(0);
-  const [qr, setQr] = React.useState<string | null>(null);
   /** Backdrop crossfade: the picture coming in, and the one fading out. */
   const [bg, setBg] = React.useState<{ cur?: string; prev?: string; n: number }>({ n: 0 });
   /** Wide + landscape: pages open as a two-page spread (client-only; SSR is stacked). */
@@ -641,6 +645,11 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
     targetRef.current = index;
   }, [index]);
 
+  /* "Read it again" unmounts the end card that held focus; the stage takes
+     it once page 1 is back, so the keyboard keeps its place and its tape
+     meanings (Space pauses, the arrows turn) instead of falling to <body>. */
+  const stageRef = React.useRef<HTMLDivElement | null>(null);
+  const focusStageRef = React.useRef(false);
   const replay = React.useCallback(() => {
     stopNarration();
     setEnded(false);
@@ -648,7 +657,13 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
     enterPage(0);
     setTurn({ phase: "idle", dir: "next" });
     setShowUi(true);
+    focusStageRef.current = true;
   }, [stopNarration, enterPage]);
+  React.useEffect(() => {
+    if (ended || !focusStageRef.current) return;
+    focusStageRef.current = false;
+    stageRef.current?.focus({ preventScroll: true });
+  }, [ended]);
 
   const togglePlay = React.useCallback(() => {
     unlockAudio();
@@ -926,30 +941,6 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
     };
   }, [started, ended, index, pages, highlightOn]);
 
-  /* ── the QR that carries the tape to a phone ────────────────────────── */
-  React.useEffect(() => {
-    if (!ended || !shareUrl) {
-      setQr(null);
-      return;
-    }
-    let cancelled = false;
-    QRCode.toDataURL(shareUrl, {
-      margin: 1,
-      width: 320,
-      errorCorrectionLevel: "M",
-      color: { dark: "#1E1A16", light: "#FFFDF6" },
-    })
-      .then((url) => {
-        if (!cancelled) setQr(url);
-      })
-      .catch(() => {
-        if (!cancelled) setQr(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [ended, shareUrl]);
-
   /* ── auto-hiding chrome ─────────────────────────────────────────────── */
   const wake = React.useCallback(() => setShowUi(true), []);
 
@@ -1140,7 +1131,7 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
       </p>
 
       {/* ───────────────────────────────────────────────────────── stage */}
-      <div className="pl-stage">
+      <div ref={stageRef} className="pl-stage outline-none" tabIndex={-1}>
         <div
           key={index}
           className={cx(
@@ -1499,59 +1490,14 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
 
       {/* ────────────────────────────────────────────────────── end card */}
       {ended ? (
-        <div className="pl-end" data-pl="end" role="dialog" aria-label="The end">
-          <div className="pl-end-inner">
-            <TapeLabel
-              title={title}
-              author={author}
-              meta={
-                <>
-                  SIDE A COMPLETE · {total} {total === 1 ? "PAGE" : "PAGES"} · ~{runtime}
-                </>
-              }
-            />
-            {qr && shareUrl ? (
-              <div className="pl-qr" data-pl="qr-card">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={qr}
-                  data-pl="qr"
-                  alt={`QR code linking to this story at ${shareUrl}`}
-                  width={132}
-                  height={132}
-                />
-                <div className="pl-qr-copy">
-                  <p className="pl-qr-title">Point a phone at this</p>
-                  <p className="pl-qr-url">{shareUrl}</p>
-                </div>
-              </div>
-            ) : null}
-            <BigButton
-              icon="⟲"
-              label="Read it again"
-              variant="ghost"
-              onClick={replay}
-              className="w-full justify-center"
-            />
-            {onMakeYourOwn ? (
-              <BigButton
-                icon="☆"
-                label="Make your own story"
-                variant="gold"
-                onClick={onMakeYourOwn}
-                className="w-full justify-center"
-              />
-            ) : null}
-            {onExit ? (
-              <button type="button" className="pl-chip sk-focus mx-auto" onClick={onExit}>
-                <span className="pl-chip-glyph" aria-hidden="true">
-                  ⏏
-                </span>
-                Close
-              </button>
-            ) : null}
-          </div>
-        </div>
+        <EndCard
+          manifest={manifest}
+          runtime={runtime}
+          shareUrl={shareUrl}
+          onReplay={replay}
+          onMakeYourOwn={onMakeYourOwn}
+          onExit={onExit}
+        />
       ) : null}
     </div>
   );
