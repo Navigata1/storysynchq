@@ -342,8 +342,10 @@ test.describe("WP-P · the player is a room, not a rectangle", () => {
     await backdropReady(page);
 
     const root = page.locator(".pl-root");
-    // The demo's page 8 is text-only ("The End ⭐").
-    for (let i = 0; i < 7; i++) {
+    // The demo's page 8 is text-only ("The End ⭐"). Press until it is reached:
+    // a press that lands mid-turn on a slow runner can be absorbed, so a fixed
+    // count of seven is not a reliable way to arrive.
+    for (let i = 0; i < 12 && (await root.getAttribute("data-page")) !== "8"; i++) {
       await page.keyboard.press("ArrowRight");
       await page.waitForTimeout(320);
     }

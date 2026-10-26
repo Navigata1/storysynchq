@@ -15,7 +15,9 @@ export default defineConfig({
   // the timing-sensitive audio suites (a test that needs it is reported as flaky).
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
-  reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
+  // CI also emits the `github` reporter so each failing test surfaces as a
+  // check-run annotation (file:line + message) without opening the job log.
+  reporter: process.env.CI ? [['list'], ['github'], ['html', { open: 'never' }]] : 'list',
   use: {
     baseURL: 'http://localhost:3000',
     screenshot: 'on',
