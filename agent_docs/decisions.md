@@ -503,3 +503,10 @@ privacy line in `--ss-fg-3`). From 880px the card lays out in two columns so a l
 - **Migration 003 is HITL and pending.** Jon applies `supabase/migrations/003_share_lookup_by_code.sql` to
   production. Until he does, the database still allows the enumeration that M0-PRD Open Question 1 describes, although
   nothing in `src/` performs it. Once he has, the fallback can be deleted.
+
+**2026-10-25 · T07 · The landing's top nav overlays the hero's top padding.**
+
+- **Overlay, not sticky.** `LandingNav` is absolutely positioned at the top of `.ls-hero`, as in s01 (bar y0–52, kicker y58). It is not a separate sticky header, so the hero fold measured by T06 is unchanged at 1080×675 and above.
+- **Padding clamp.** To keep the bar off the kicker at every size, `landing-bands.css` sets `.ls-root .ls-hero { padding-top: clamp(3.625rem, 8.6svh, 4.5rem) }`. This only changes screens under 675px tall.
+- **Phone menu is a disclosure.** A native button with `aria-expanded`/`aria-controls`, closed by Escape (focus back on the button), an outside pointer press, tabbing out of the nav, or following a link. There is no focus trap, because it is not a modal.
+- **640–719px.** The row tightens (1rem edges, 12px gaps) so it holds with ≥12px of slack.

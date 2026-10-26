@@ -3,12 +3,15 @@
 /**
  * Landing — the immersive cassette-memory front door (docs/design-direction.md §4).
  *
- * Five beats, one scroll:
- *   1. HERO      the memory  — a Register-B cassette in the deep-navy room
+ * Six beats, one scroll:
+ *   1. HERO      the memory  — the s01 top nav, then a Register-B cassette in
+ *                              the deep-navy room
  *   2. DOORS     the truth   — ▶ PLAY A STORY (/read)  ●  MAKE A STORY (/studio)
- *   3. HOW       the craft   — snap · record · share, CSS-only vignettes
- *   4. PROTOCOL  the promise — .storysync, like PDF for story experiences
- *   5. FOOTER    quiet exits — privacy, source, classic site
+ *   3. MAGIC     the why     — tape-stripe seam, "Remember the magic?", and the
+ *                              three surfaces · one file (T07)
+ *   4. HOW       the craft   — snap · record · share, CSS-only vignettes
+ *   5. PROTOCOL  the promise — .storysync, like PDF for story experiences
+ *   6. FOOTER    quiet exits — privacy, source, classic site; the company line
  *
  * No audio here. Nothing leaves the device. Every animation gates on
  * prefers-reduced-motion; reveals are IntersectionObserver-driven and skipped
@@ -23,7 +26,11 @@ import { Cassette } from "@/components/studio-kit/Cassette";
 import { tapeMetaLine } from "@/lib/storysync/tape-meta";
 import houseTape from "../../../public/demo/brave-little-star.ssync.json";
 import "./landing.css";
+import "./landing-bands.css";
 import { HeroSky } from "./HeroSky";
+import { LandingNav } from "./LandingNav";
+import { MagicBand, MAGIC_TITLE_ID } from "./MagicBand";
+import { SurfacesRow } from "./SurfacesRow";
 
 /* --------------------------------------------------------------- constants */
 
@@ -349,6 +356,8 @@ function Hero() {
   return (
     <section className="ls-hero" aria-labelledby="ls-hero-title">
       <Starfield />
+
+      <LandingNav privacyHref={PRIVACY_URL} />
 
       <div className="ls-wrap ls-hero-inner">
         <p className="ls-eyebrow ls-hero-kicker sk-font-meta" data-ls="hero-kicker">
@@ -687,6 +696,21 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* ------------------------------------------- remember the magic? */}
+      <section className="ls-band" aria-labelledby={MAGIC_TITLE_ID}>
+        <div className="ls-wrap">
+          <span className="ls-seam" data-ls="seam" aria-hidden="true" />
+          <div className="ls-band-grid">
+            <Reveal>
+              <MagicBand />
+            </Reveal>
+            <Reveal delay={120}>
+              <SurfacesRow />
+            </Reveal>
+          </div>
+        </div>
+      </section>
+
       {/* --------------------------------------------------- how it works */}
       <section className="ls-section" aria-labelledby="ls-how-title">
         <div className="ls-wrap">
@@ -772,7 +796,12 @@ export default function Landing() {
           <div>
             <p className="ls-footer-mark sk-font-tape">StorySyncHQ</p>
             <p className="ls-footer-note">
-              Nothing leaves this device until a grown-up taps through the gate. No trackers, ever.
+              Nothing leaves this device until a <span className="ls-nw">grown-up</span> taps
+              through the gate. No trackers, ever.
+            </p>
+            <p className="ls-company sk-font-meta" data-ls="company">
+              A product of Island Development Crew LLC ·{" "}
+              <span className="ls-nw">Part of the SyncHQ Suite</span>
             </p>
           </div>
           <nav className="ls-footer-links sk-font-meta" aria-label="Footer">

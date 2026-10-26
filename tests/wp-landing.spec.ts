@@ -275,8 +275,11 @@ test.describe("WP-L · the hero plays the tape", () => {
   test("the landing points at the protocol page", async ({ page }) => {
     await page.goto("/");
     const links = page.locator('a[href="/protocol"]');
-    await expect(links).toHaveCount(2); // protocol section + footer
-    await links.first().click();
+    // T07: the s01 top nav adds "The SSYNC Protocol" — nav + protocol section + footer.
+    // The first *visible* one is clicked: the nav link on desktop; on phones the nav
+    // links sit behind the Menu button, so it is the protocol section's link, as before.
+    await expect(links).toHaveCount(3);
+    await links.filter({ visible: true }).first().click();
     await page.waitForURL(/\/protocol$/, { timeout: 5000 });
     await expect(
       page.getByRole("heading", { level: 1, name: /one file holds the whole storybook/i }),

@@ -171,9 +171,11 @@ test.describe("CRITIC · WP-L hero: press play inserts the tape", () => {
     await page.goto("/");
     const inFooter = page.locator('footer a[href="/protocol"]');
     await expect(inFooter).toHaveCount(1);
+    // T07: the s01 top nav adds "The SSYNC Protocol" — nav + protocol section.
     const outsideFooter = page.locator('a[href="/protocol"]:not(footer a)');
-    await expect(outsideFooter).toHaveCount(1);
-    await outsideFooter.first().click();
+    await expect(outsideFooter).toHaveCount(2);
+    // Desktop: the nav link; phones: the nav links sit behind Menu, so the section's.
+    await outsideFooter.filter({ visible: true }).first().click();
     await page.waitForURL(/\/protocol$/, { timeout: 4000 });
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });

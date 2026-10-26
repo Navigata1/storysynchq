@@ -1,0 +1,345 @@
+/* ============================================================================
+   Landing bands (T07, reference s01) — the top nav, the tape-stripe seam, the
+   "Remember the magic?" band, the "Three surfaces · one file" rows and the
+   footer's company line.
+
+   UNLAYERED, like landing.css, so it wins over studio-kit's @layer rules.
+   Register A (studio chrome) throughout. Nothing in this file animates: the
+   bands arrive with the landing's existing scroll Reveal (landing.css, gated on
+   prefers-reduced-motion: no-preference), and the phone menu simply appears.
+   ========================================================================== */
+
+/* -------------------------------------------------------------------- nav */
+
+/* s01: a 52 px row across the top of the hero (left/right 32), laid over the
+   room the hero's top padding keeps for it. Wordmark left, links right. */
+.ls-nav {
+  position: absolute;
+  top: 0;
+  inset-inline: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  height: 52px;
+  padding-inline: clamp(1rem, 3vw, 2rem);
+}
+
+/* the wordmark: Fraunces 700 18px beside the 22 px cassette icon */
+.ls-nav-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  flex: none;
+  /* room for the hugging focus ring, without moving the mark */
+  padding-inline: 0.375rem;
+  margin-inline-start: -0.375rem;
+  border-radius: 8px;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 18px;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.ls-nav-icon {
+  display: block;
+  width: 22px;
+  height: 22px;
+  flex: none;
+  border-radius: 5px;
+}
+
+.ls-nav-links {
+  display: flex;
+  align-items: center;
+  gap: clamp(0.75rem, 2.6vw, 1.75rem);
+  min-width: 0;
+}
+
+/* s01: Geist 400 13px in fg-3 — the chrome recedes */
+.ls-nav-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  /* room for the hugging focus ring, without moving the words */
+  padding-inline: 0.375rem;
+  margin-inline: -0.375rem;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--ss-fg-3);
+  white-space: nowrap;
+}
+
+.ls-nav-link:hover {
+  color: var(--ss-fg);
+}
+
+/* the disclosure button only exists on phones */
+.ls-nav-menu {
+  display: none;
+}
+
+/* 640–719 px: the row only just fits at the s01 spacing (at 640 it is overfull
+   by a few px), so it sits closer to the edges and the links close up to 12 px:
+   ≥ 12 px stays free in the row and past "Privacy". */
+@media (min-width: 640px) and (max-width: 719.98px) {
+  .ls-nav {
+    padding-inline: 1rem;
+  }
+
+  .ls-nav-links {
+    gap: 0.75rem;
+  }
+}
+
+/* The kit ring (3px gold) hugs the 44 px targets here: with the kit's 3px
+   offset it would run off the top of the page, the bar is that tight. */
+.ls-nav .sk-focus:focus-visible {
+  outline-offset: 0;
+}
+
+/* Phones: wordmark + Menu on a quiet bar; the links drop down beneath it. */
+@media (max-width: 639.98px) {
+  .ls-nav {
+    height: 50px;
+    padding-inline: 1.25rem 0.375rem;
+    background-color: rgba(10, 14, 26, 0.86);
+    border-bottom: 1px solid var(--ss-line);
+  }
+
+  .ls-nav-mark {
+    gap: 8px;
+    font-size: 17px;
+  }
+
+  .ls-nav-menu {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--ss-fg-2);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .ls-nav-menu svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .ls-nav-links {
+    display: none;
+  }
+
+  .ls-nav[data-open="true"] .ls-nav-links {
+    position: absolute;
+    top: 100%;
+    inset-inline: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    padding: 0.25rem 1.25rem 0.75rem;
+    background-color: rgba(10, 14, 26, 0.96);
+    border-bottom: 1px solid var(--ss-line);
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+    box-shadow: 0 24px 40px -24px rgba(0, 0, 0, 0.8);
+  }
+
+  .ls-nav[data-open="true"] .ls-nav-links > li + li {
+    border-top: 1px solid var(--ss-line);
+  }
+
+  .ls-nav[data-open="true"] .ls-nav-link {
+    display: flex;
+    min-height: 48px;
+    font-size: 15px;
+    color: var(--ss-fg-2);
+  }
+}
+
+/* ------------------------------------------------------------------- seam */
+
+/* The chapter seam (docs/design-direction.md §10; reference .ss-seam): the
+   tape stripe — red, label-yellow, ink — between the doors and the band. */
+.ls-seam {
+  display: block;
+  height: 6px;
+  border-radius: 3px;
+  background-image: linear-gradient(
+    90deg,
+    var(--ss-red) 0 33%,
+    var(--ss-label) 33% 66%,
+    var(--ss-ink) 66% 100%
+  );
+}
+
+/* ------------------------------------------------------------------- band */
+
+/* The doors' bottom padding sits above the seam; "How the magic works" keeps
+   its own top padding below — the band adds none, so the gaps match. */
+.ls-band {
+  position: relative;
+  z-index: 1;
+}
+
+.ls-band-grid {
+  display: grid;
+  gap: clamp(1.5rem, 5vw, 2.5rem);
+  margin-top: clamp(1.5rem, 5vw, 3.25rem);
+}
+
+@media (min-width: 960px) {
+  .ls-band-grid {
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    align-items: end;
+    column-gap: clamp(2.5rem, 6vw, 5rem);
+  }
+}
+
+.ls-magic {
+  display: flex;
+  flex-direction: column;
+}
+
+/* .ss-kicker: mono 500, 0.18em, gold */
+.ls-magic-kicker {
+  font-weight: 500;
+  font-size: clamp(11px, 2.8vw, 12px);
+  line-height: 1.2;
+  letter-spacing: 0.18em;
+  color: var(--ss-gold);
+}
+
+/* s01: Fraunces italic 700 28px/1.1 on the phone */
+.ls-magic-title {
+  margin-top: 0.45rem;
+  font-style: italic;
+  font-weight: 700;
+  font-size: clamp(1.75rem, 5.4vw, 3rem);
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  color: #ffffff;
+  text-wrap: balance;
+}
+
+.ls-magic-quote {
+  margin: clamp(0.5rem, 1.6vw, 0.9rem) 0 0;
+  max-width: 46ch;
+  padding-left: clamp(0.75rem, 1.6vw, 1rem);
+  border-left: 2px solid rgba(245, 158, 11, 0.45);
+  font-size: clamp(0.875rem, 2.4vw, 1.0625rem);
+  line-height: 1.5;
+  color: var(--ss-fg-2);
+}
+
+/* the wedge: Fraunces 500 in label-yellow */
+.ls-magic-wedge {
+  margin-top: clamp(0.55rem, 1.6vw, 1rem);
+  max-width: 34ch;
+  font-weight: 500;
+  font-size: clamp(1.0625rem, 2.7vw, 1.4rem);
+  line-height: 1.3;
+  color: var(--ss-label);
+  text-wrap: pretty;
+}
+
+/* --------------------------------------------------------------- surfaces */
+
+.ls-surfaces {
+  display: flex;
+  flex-direction: column;
+}
+
+/* .ss-meta: mono 500, 0.14em, uppercase, fg-3 */
+.ls-surfaces-label {
+  font-weight: 500;
+  font-size: clamp(11px, 2.8vw, 11.5px);
+  line-height: 1.2;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ss-fg-3);
+}
+
+.ls-surfaces-list {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.25rem, 1vw, 0.6rem);
+  margin-top: clamp(0.35rem, 1vw, 0.75rem);
+}
+
+.ls-surface {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 36px;
+}
+
+/* the 28 px glass circle (s01 .s01-row > span) */
+.ls-surface-dot {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  color: var(--ss-gold-2);
+}
+
+.ls-surface-icon {
+  display: block;
+  width: 14px;
+  height: 14px;
+}
+
+.ls-surface-line {
+  min-width: 0;
+  font-size: clamp(0.84375rem, 2.3vw, 0.96875rem);
+  line-height: 1.4;
+  color: var(--ss-fg-2);
+}
+
+.ls-surface-name {
+  font-weight: 600;
+  color: #ffffff;
+}
+
+/* ---------------------------------------------------------- company line */
+
+.ls-company {
+  margin-top: 0.55rem;
+  font-size: 11px;
+  line-height: 1.45;
+  letter-spacing: 0.02em;
+  color: var(--ss-fg-3);
+}
+
+.ls-nw {
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------- hero room for the bar */
+
+/* The hero's top padding is the room the nav overlays (landing.css): s01 has
+   the bar at y0–52 and the kicker at y58. On short screens (under 675 px tall —
+   a landscape phone, a short laptop window) 8.6svh is less than that, so the
+   bar would lie over the kicker: keep at least 3.625rem (58 px) there. At
+   675 px and taller the clamp is unchanged. Scoped under .ls-root so it wins
+   over landing.css's .ls-hero by specificity, not by stylesheet order. */
+.ls-root .ls-hero {
+  padding-top: clamp(3.625rem, 8.6vh, 4.5rem);
+  padding-top: clamp(3.625rem, 8.6svh, 4.5rem);
+}
