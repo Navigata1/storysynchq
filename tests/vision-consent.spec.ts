@@ -134,9 +134,15 @@ test.describe("consent · one record per recorded voice", () => {
     /* the promise sits beneath the row */
     const subline = dialog.getByText(CONSENT_SUBLINE, { exact: true });
     await expect(subline).toBeVisible();
-    const rowBox = (await row.boundingBox())!;
-    const subBox = (await subline.boundingBox())!;
-    expect(subBox.y).toBeGreaterThanOrEqual(rowBox.y + rowBox.height - 1);
+    // One frame for both edges (the sheet may still be rising; see below).
+    const [rowBottom, subTop] = await dialog.evaluate((el, text) => {
+      const rowEl = el.querySelector('label[for="studio-gate-consent"]')!;
+      const sub = [...el.querySelectorAll("p")].find(
+        (p) => p.textContent?.replace(/\s+/g, " ").trim() === text,
+      )!;
+      return [rowEl.getBoundingClientRect().bottom, sub.getBoundingClientRect().top];
+    }, CONSENT_SUBLINE);
+    expect(subTop).toBeGreaterThanOrEqual(rowBottom - 1);
 
     await page.locator("#studio-gate-author").fill(TWINKLE.byline);
     await expect(dialog.getByRole("button", { name: "Continue" })).toBeDisabled();
