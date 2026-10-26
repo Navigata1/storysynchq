@@ -568,3 +568,14 @@ privacy line in `--ss-fg-3`). From 880px the card lays out in two columns so a l
     and `TapeRibbon variant="loop"`. The two-column room waits for an `.rr-aside` (T22a).
   - **Test.** The blank tape is no longer a TapeLabel, so T05b's tape-stock tests count two labels on `/read` and
     check the blank as the dashed shelf face.
+
+**2026-10-25 · T19 · READ THIS teleprompter in the Voice card.** While a take records a page with words, the Voice
+card shows the page's `text.content` verbatim on a Register-B paper card above Stop: `role="note"` "Read this", no
+highlight, no Tab stop (the scroller has `tabindex=-1`). It is a teleprompter, not a read-along (s03); the Stage stays
+the Player's.
+- Fit rule: while the card shows, the Voice body is two rows. The card is no taller than its words or 40 % of the
+  screen, and gives way and scrolls first. The take never gets less than its own height.
+- At ≥ 768 px the take uses T13a's compact arrangement (64 px disc beside its name), so Grandma's words fit whole at
+  1180×820 and the room never scrolls.
+- A docked column under 700 px tall shows no card: the take alone needs nearly all of it, and the Stage beside it
+  already shows the same words.

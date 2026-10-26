@@ -1435,6 +1435,7 @@ export default function Studio() {
         {tool === "voice" ? (
           <VoicePanel
             recording={recording}
+            pageWords={page?.text?.content ?? ""}
             hasVoice={hasVoice}
             voiceSeconds={currentMeta?.duration ?? audio.clipDuration}
             recordSeconds={audio.recordSeconds}

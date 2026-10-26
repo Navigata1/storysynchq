@@ -14,6 +14,7 @@ import { BigButton, GlassPanel } from "@/components/studio-kit/kit";
 import type { MicPermissionError } from "@/lib/audio/recorder";
 import { MOOD_CHROME, MOOD_NAMES, moodBlurb, type MoodName } from "./moods-ui";
 import { formatClock } from "./types";
+import "./read-this.css";
 
 /* ---------------------------------------------------------------- shell */
 
@@ -74,8 +75,40 @@ const MIC_HELP: Record<MicPermissionError, { title: string; body: string }> = {
   },
 };
 
+/**
+ * READ THIS (s06 phone 2): a teleprompter for whoever is reading the page
+ * aloud. On a phone the Voice sheet covers the Stage's words the moment a take
+ * starts, so the words come with it, on paper, above Stop. It is not a
+ * read-along: no word lights or moves during a take (s03 — that would need
+ * on-device speech alignment), so the card is the words and nothing else.
+ * Memoised on the words alone: the take's ticking clock never touches it.
+ */
+const ReadThis = React.memo(function ReadThis({ words }: { words: string }) {
+  return (
+    <div role="note" aria-label="Read this" data-studio="read-this" className="read-this">
+      {/* The note's name already says it; the printed label is for the eye. */}
+      <p data-studio="read-this-label" className="read-this-label" aria-hidden="true">
+        <span data-studio="read-this-dot" className="read-this-dot" />
+        READ THIS
+      </p>
+      {/* Long words scroll here. A browser would put a scroller with nothing
+          focusable inside into the Tab order on its own; -1 keeps Tab going
+          from Close Voice straight to Stop. The same words stay in the
+          Stage's own box, which the keyboard reaches. */}
+      <p data-studio="read-this-words" className="read-this-words" tabIndex={-1}>
+        {words}
+      </p>
+    </div>
+  );
+});
+
 export interface VoicePanelProps {
   recording: boolean;
+  /**
+   * The active page's words, exactly as its `text.content` holds them. While a
+   * take records they stand on a paper READ THIS card above Stop (T19).
+   */
+  pageWords: string;
   hasVoice: boolean;
   voiceSeconds: number;
   recordSeconds: number;
@@ -90,6 +123,7 @@ export interface VoicePanelProps {
 
 export function VoicePanel({
   recording,
+  pageWords,
   hasVoice,
   voiceSeconds,
   recordSeconds,
@@ -140,6 +174,8 @@ export function VoicePanel({
     );
   }
 
+  /** A page with no words has nothing to read: no card, no placeholder. */
+  const reading = recording && pageWords.trim() !== "";
   const label = recording
     ? `Stop — ${formatClock(recordSeconds)}`
     : hasVoice
@@ -155,7 +191,9 @@ export function VoicePanel({
       {/* The take and "your voice" share one body. Docked, the body is the part
           that scrolls on a short screen, so the privacy footnote under it
           stays in sight (studio.css `.studio-voice-body`). */}
-      <div className="studio-voice-body studio-scroll">
+      <div className="studio-voice-body studio-scroll" data-reading={reading ? "true" : undefined}>
+        {reading ? <ReadThis words={pageWords} /> : null}
+
         {/* The big red button: tap to start, tap to stop. A frozen frame of the
             live ring, never a pulse — nothing loops in the Creator. */}
         <div className="studio-voice-take">
