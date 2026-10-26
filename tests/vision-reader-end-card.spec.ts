@@ -53,6 +53,8 @@ async function walkToEnd(page: Page, url: string): Promise<Locator> {
   await expect(root).toHaveAttribute("data-view", "end");
   const end = page.locator('[data-pl="end"]');
   await expect(end).toBeVisible();
+  // measure the card as it is set, not mid font swap (the fallback mono is wider)
+  await page.evaluate(() => document.fonts.ready.then(() => true));
   return end;
 }
 

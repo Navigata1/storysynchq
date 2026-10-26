@@ -172,7 +172,9 @@
     background-color: var(--ss-paper);
   }
   /* s06 `.s06-qrrow__t`: mono 600 11px on one line (224px of text; the row
-     gives it 227px from a 385px viewport, 232px at 390) */
+     gives it 227px from a 385px viewport, 232px at 390). It may wrap, balanced,
+     rather than run past the row: while the web font is still loading, the
+     wider fallback mono would otherwise push the card 6px sideways at 390. */
   [data-pl="end"] .pl-qr-title {
     margin: 0;
     font-family: var(--ss-mono);
@@ -182,16 +184,14 @@
     line-height: 1.35;
     letter-spacing: 0;
     text-transform: uppercase;
-    white-space: nowrap;
+    text-wrap: balance;
     color: var(--ss-ink);
   }
   /* narrower phones: 10.5px still holds one line down to 373px; below
-     that it balances onto two lines rather than run past the row */
+     that it balances onto two lines */
   @media (max-width: 384.98px) {
     [data-pl="end"] .pl-qr-title {
       font-size: 10.5px;
-      white-space: normal;
-      text-wrap: balance;
     }
   }
   /* "PASS IT ON" in the Signature tag's red ink (tape-red itself is 3.9:1 on paper) */
