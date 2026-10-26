@@ -113,23 +113,89 @@ export async function deleteStorybook(id: string) {
   if (error) throw error;
 }
 
+// ── A shared story, by its code ──
+//
 // The app never lists other people's stories; it reaches a shared one by its
-// code (PRIVACY.md rule 4). Exact match, no length check: 64-bit codes made
-// before codes were 128-bit keep resolving until their story is deleted.
-export async function getStorybookByShareCode(code: string) {
-  if (!supabase) return null;
-  const { data: link } = await supabase
+// code and by nothing else (PRIVACY.md rule 4). Exact match, no length check:
+// 64-bit codes made before codes were 128-bit keep resolving until their story
+// is deleted.
+
+/** The calls a share-code lookup makes — the live client, or a stub in Node tests. */
+export type ShareLookupClient = Pick<NonNullable<typeof supabase>, "rpc" | "from">;
+
+/**
+ * What a share link opens: the columns the Reader needs and nothing more — no
+ * owner, no flags, no counters. Migration 003's `storybook_by_share_code`
+ * returns exactly these.
+ */
+export interface SharedStorybookRow {
+  id: string;
+  title: string;
+  author: string;
+  genre: string;
+  age_range: string;
+  page_count: number;
+  description: string;
+  cover_image_url: string | null;
+  created_at: string;
+  ssync_data: object;
+}
+
+const SHARED_STORYBOOK_COLUMNS =
+  "id,title,author,genre,age_range,page_count,description,cover_image_url,created_at,ssync_data";
+
+/**
+ * "There is no such function": PostgREST's schema cache has no
+ * `storybook_by_share_code` (PGRST202), or Postgres itself says so (42883).
+ * Read as one thing only: migration 003 is not applied yet.
+ */
+function isFunctionNotFound(error: { code?: string } | null): boolean {
+  return error?.code === "PGRST202" || error?.code === "42883";
+}
+
+/**
+ * The one story a share code names, or `null`. Asks migration 003's by-code
+ * function first. Until Jon applies 003 the function is not there, and only
+ * then does this fall back to the exact-match two-step select the app used
+ * before. Any other failure is thrown, untouched, for the caller to name.
+ */
+export async function getStorybookByShareCode(
+  code: string,
+  client: ShareLookupClient | null = supabase,
+): Promise<SharedStorybookRow | null> {
+  if (!client) return null;
+  const { data, error } = await client.rpc("storybook_by_share_code", { code });
+  if (error) {
+    if (!isFunctionNotFound(error)) throw error;
+    return storybookByShareCodeBefore003(client, code);
+  }
+  const row: unknown = Array.isArray(data) ? data[0] : data;
+  return (row as SharedStorybookRow | undefined) ?? null;
+}
+
+/**
+ * Pre-003 only: the link by its exact code, then the one story it names. It
+ * leans on 001's broad read policies, which 003 drops along with any need for
+ * this path.
+ */
+async function storybookByShareCodeBefore003(
+  client: ShareLookupClient,
+  code: string,
+): Promise<SharedStorybookRow | null> {
+  const { data: link, error: linkError } = await client
     .from("shared_links")
     .select("storybook_id")
     .eq("share_code", code)
-    .single();
+    .maybeSingle();
+  if (linkError) throw linkError;
   if (!link) return null;
-  const { data } = await supabase
+  const { data, error } = await client
     .from("storybooks")
-    .select("*")
-    .eq("id", link.storybook_id)
-    .single();
-  return data;
+    .select(SHARED_STORYBOOK_COLUMNS)
+    .eq("id", (link as { storybook_id: string }).storybook_id)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as SharedStorybookRow | null) ?? null;
 }
 
 /**

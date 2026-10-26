@@ -485,3 +485,21 @@ privacy line in `--ss-fg-3`). From 880px the card lays out in two columns so a l
 - **Inspector.** Mix ends with the switch `#insp-level-voices`, on by default. Its setting, `StudioState.levelVoices`, is draft-only and never written to a manifest.
 - **Label.** "Evening out each voice", not s09's "Voice clean-up (level, rumble)": no rumble filter is built (M3-PRD OQ 4).
 - **Open for Jon.** OQ 4 (rumble high-pass and the s09 label), OQ 5 (the AAC passthrough policy), and OQ 6 (the −20 dBFS target, and now the +18 dB boost ceiling).
+
+**2026-10-25 · T02b · A shared tape is read by its code only; migration 003 is HITL and pending Jon's apply.**
+
+- **One way in.** A link holder reads a story only through `public.storybook_by_share_code(code text)`. It is
+  SECURITY DEFINER, STABLE and STRICT, with `search_path = public`, and executable by `anon` and `authenticated`. It
+  returns the one published storybook whose share code equals `code` exactly, with only the Reader's columns: no
+  `user_id`, flags or counters.
+- **Broad reads dropped.** Migration 003 drops "Anyone reads shared links", "Anyone reads public storybooks" and
+  "Public media readable". Every owner policy stays. Media is not read separately, because pictures and narration
+  live in `ssync_data`.
+- **`is_public` still gates a link.** The function keeps today's rule that only published stories open by link, so the
+  migration narrows access and never widens it.
+- **The app does not wait for Jon.** `getStorybookByShareCode` calls the RPC first. Only on PGRST202/42883 ("function
+  not found") does it fall back to the exact-match two-step select. Any other RPC error is reported as a `CloudError`.
+  A code that is not lowercase hex never reaches the network.
+- **Migration 003 is HITL and pending.** Jon applies `supabase/migrations/003_share_lookup_by_code.sql` to
+  production. Until he does, the database still allows the enumeration that M0-PRD Open Question 1 describes, although
+  nothing in `src/` performs it. Once he has, the fallback can be deleted.

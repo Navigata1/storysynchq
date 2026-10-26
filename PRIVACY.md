@@ -22,14 +22,16 @@ That fact shapes the product, not just this document.
    never be on by default.
 
 4. **Unlisted, unguessable share links.** Share codes are random and unlisted. A shared
-   story is reachable only by someone holding the link. Share links can be revoked by
-   deleting the story. Cloud links made before share codes became 128-bit used 64-bit
+   story is reachable only by someone holding the link. The app opens a shared story only
+   by looking up its exact share code, which returns that one story and nothing else, and
+   it never asks the cloud for a list of share codes or stories. Share links can be revoked
+   by deleting the story. Cloud links made before share codes became 128-bit used 64-bit
    codes; they keep working until the story is deleted, and every new link is 128-bit.
 
    **What "public" means on a published story.** A story you finish is stored with
    `is_public: true`, and that flag is easy to misread. It does not mean listed,
-   browsable, indexed, or offered to anyone. It is the single condition the storage
-   read policy checks, so it is what allows the person holding your link — a
+   browsable, indexed, or offered to anyone. It is what the cloud checks before it lets
+   anyone but you open the story, so it is what allows the person holding your link — a
    grandparent on a phone, with no account and no app — to open the tape at all;
    without it the link resolves to nothing and the whole point of publishing is lost.
    The story is not shown in any public gallery, is not linked from anywhere, is not

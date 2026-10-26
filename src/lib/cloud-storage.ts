@@ -27,6 +27,8 @@ import {
   getStorybookByShareCode,
   createShareLink,
   getSession,
+  type ShareLookupClient,
+  type SharedStorybookRow,
 } from "./supabase";
 import { mintShareCode, ShareCodeError } from "./share-code";
 
@@ -332,16 +334,41 @@ export async function getBooks(userId: string): Promise<StoredBook[]> {
 }
 
 /**
- * Resolve a share code. The cloud path reads `shared_links`; the local path
+ * Every share code ever minted is lowercase hex: 32 characters since T02, 16
+ * before. Anything else cannot match one, so it is never sent to the cloud.
+ */
+const SHARE_CODE_SHAPE = /^[0-9a-f]+$/;
+
+/**
+ * The cloud half of a share link: the one story whose code matches exactly,
+ * through the by-code lookup (`getStorybookByShareCode`). A string that cannot
+ * be a code resolves to nothing without a request. A cloud failure is a
+ * `CloudError`. Pass `client` only to stub the cloud in a test.
+ */
+export async function resolveShareCode(
+  code: string,
+  client: ShareLookupClient | null = supabase,
+): Promise<StoredBook | null> {
+  if (!client || !SHARE_CODE_SHAPE.test(code)) return null;
+  let row: SharedStorybookRow | null;
+  try {
+    row = await getStorybookByShareCode(code, client);
+  } catch (err) {
+    throw fromSupabase(err, "Opening the tape");
+  }
+  // A link opens only a published story (migration 003 checks `is_public`;
+  // before it, the read policy did), so the row need not carry the flag.
+  return row ? fromRow({ ...row, is_public: true }) : null;
+}
+
+/**
+ * Resolve a share code. The cloud path is `resolveShareCode`; the local path
  * matches the code minted by `shareBook` (and accepts a raw story id, because
  * older builds handed the id out as the code).
  */
 export async function getSharedBook(code: string): Promise<StoredBook | null> {
   if (!code) return null;
-  if (isSupabaseConfigured()) {
-    const result = (await getStorybookByShareCode(code)) as StorybookRow | null;
-    return result ? fromRow(result) : null;
-  }
+  if (isSupabaseConfigured()) return resolveShareCode(code);
   const library = readLibrary();
   return library.find((b) => b.shareCode === code) ?? library.find((b) => b.id === code) ?? null;
 }
