@@ -12,13 +12,11 @@
  */
 
 import { expect, test, type Page } from "@playwright/test";
-import fs from "fs";
-import path from "path";
 import { PREFS_KEY } from "../src/components/player/prefs";
 import { splitWords } from "../src/components/player/timing";
 import { WHITE_ART_CODE, WIDE_ART_CODE, seedReaderTapes, t08Rows } from "./fixtures/reader-tapes";
+import { evidencePath } from "./fixtures/evidence";
 
-const SHOTS = path.join(process.cwd(), "tests", "screenshots");
 const KEY_HINT = "← → turn · space pause · P music · esc close";
 /** House tape page 2, as the reference prints it (s02). */
 const PAGE_2_WORDS =
@@ -165,8 +163,7 @@ test.describe("T08 · the open book (desktop)", () => {
     expect(sheer.radius).toBe("14px");
 
     await expectBookGeometry(page, "1120x700 page 2");
-    fs.mkdirSync(SHOTS, { recursive: true });
-    await page.screenshot({ path: path.join(SHOTS, "vision-reader-spread-1120x700.png") });
+    await page.screenshot({ path: evidencePath("vision-reader-spread-1120x700.png", { dir: "tests/screenshots" }) });
   });
 
   for (const vp of [
@@ -342,8 +339,7 @@ async function proseContrast(page: Page, shot: string): Promise<number> {
   const color = await prose.evaluate((el) => getComputedStyle(el).color);
   const rgb = (color.match(/\d+(\.\d+)?/g) ?? []).map(Number);
   const textL = lum(rgb[0], rgb[1], rgb[2]);
-  fs.mkdirSync(SHOTS, { recursive: true });
-  const buffer = await page.screenshot({ path: path.join(SHOTS, `${shot}.png`) });
+  const buffer = await page.screenshot({ path: evidencePath(`${shot}.png`, { dir: "tests/screenshots" }) });
   const px = await page.evaluate(
     async ({ dataUrl, rect }) => {
       const img = new Image();

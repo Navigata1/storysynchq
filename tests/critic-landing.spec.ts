@@ -16,7 +16,8 @@
  *   · both /protocol and the hero are checked for horizontal overflow at the
  *     project viewport (375px on mobile).
  *
- * Screenshots for a human: tests/screenshots/critic-landing-*.png
+ * Screenshots for a human: tests/screenshots/critic-landing-*.png with
+ * UPDATE_SCREENSHOTS=1, else the test's output folder (tests/fixtures/evidence.ts)
  */
 
 import { expect, test, type Page } from "@playwright/test";
@@ -24,8 +25,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import { unzipSync, strFromU8 } from "fflate";
-
-const SHOTS = path.join(process.cwd(), "tests", "screenshots");
+import { evidencePath } from "./fixtures/evidence";
 
 /** docs/design-direction.md §9.4 — hard-coded here so the test can fail. */
 const SEVEN_LAYERS = ["Metadata", "Visual", "Text", "Voice", "Sound", "Behavior", "Signature"];
@@ -34,9 +34,8 @@ const SEVEN_LAYERS = ["Metadata", "Visual", "Text", "Voice", "Sound", "Behavior"
 const INSERT_BUDGET_MS = 900;
 
 function shot(page: Page, name: string, fullPage = false) {
-  fs.mkdirSync(SHOTS, { recursive: true });
   return page.screenshot({
-    path: path.join(SHOTS, `${name}-${test.info().project.name}.png`),
+    path: evidencePath(`${name}-${test.info().project.name}.png`, { dir: "tests/screenshots" }),
     fullPage,
   });
 }

@@ -43,6 +43,7 @@ import { runtimeLabel } from "../src/lib/storysync/tape-meta";
 import { GOODNIGHT_MIA, loadTape, TWINKLE } from "./fixtures/tapes";
 import { restoreDraft } from "./fixtures/helpers";
 import { pictureLessTape, publishedDraft, resumeAt, seedShelf, sentRow, shelfRow } from "./fixtures/shelf-seed";
+import { watchSends } from "./fixtures/sends";
 
 /** Codes the shape a minted code has (32 lowercase hex). */
 const TWINKLE_CODE = "7c21a7c21a7c21a7c21a7c21a7c21a71";
@@ -309,18 +310,8 @@ test.describe("T21 · resume on /read", () => {
     expect(await readStore(page), "nothing is recorded before Tap to Begin").toBeNull();
 
     // from here on, reading sends nothing anywhere
-    const asked: string[] = [];
-    page.on("request", (req) => {
-      const type = req.resourceType();
-      if (type !== "fetch" && type !== "xhr" && type !== "ping" && type !== "beacon") return;
-      const url = new URL(req.url());
-      if (url.protocol !== "http:" && url.protocol !== "https:") return;
-      if (url.pathname.startsWith("/_next/") || url.pathname.startsWith("/__nextjs")) return;
-      // Next's own route prefetch (production prefetches a visible <Link href="/">
-      // as ?_rsc=…): page payload for a link, not anything reading sends
-      if (url.searchParams.has("_rsc")) return;
-      asked.push(req.url());
-    });
+    // (fetch / XHR / ping / beacon; Next's own code and route prefetch are not reading sending)
+    const asked = watchSends(page);
 
     await page.getByRole("button", { name: /Tap to Begin/i }).click();
     await expect(root(page)).toHaveAttribute("data-view", "page");
@@ -332,7 +323,7 @@ test.describe("T21 · resume on /read", () => {
       tapes: { [TWINKLE_KEY]: { page: 3, of: 5, at: NOW } },
     });
     expect(await storedKeys(), "reading adds one key: the place").toEqual([...before, RESUME_KEY].sort());
-    expect(asked, "nothing is sent").toEqual([]);
+    expect(asked.urls(), "nothing is sent").toEqual([]);
 
     await page.keyboard.press("Escape");
     await expect(page).not.toHaveURL(/story=/, { timeout: 20000 });

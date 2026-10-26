@@ -102,3 +102,59 @@ await seedDeviceLibrary(page, "goodnight-mia", { shareCode }); // then /read?sto
   Goodnight's peak level (−15 dBFS), its `created` time (6:31 pm, written
   `2026-10-19T18:31:00Z` in the same form as Twinkle's), and its mood (Wonder,
   the Creator's default).
+
+## Pictures and text a test keeps (`evidence.ts`)
+
+An ordinary run never writes or creates a tracked file. Every screenshot or
+text file a spec keeps for a human goes through `evidence.ts`, which writes it
+into the test's own output folder (`test.info().outputPath()`, under
+`test-results/`) unless an opt-in is set:
+
+| Opt-in | Destination | Used for |
+|---|---|---|
+| `VISION_EVIDENCE=1` | `docs/vision/evidence/<name>` | the vision hand-back packet (`T16.png`, `T17-levels.txt`, `s10-…png`) |
+| `VISION_EVIDENCE=<dir>` | `<dir>/<name>`, created if missing | the same files, anywhere else |
+| `UPDATE_SCREENSHOTS=1` | `tests/screenshots/<name>` | the legacy critic / builder pictures (`{ dir: "tests/screenshots" }`) |
+
+```ts
+import { evidencePath, evidenceShot, evidenceText } from "./fixtures/evidence";
+
+await evidenceShot(page, "s05-publish-1180x820.png");                    // settled shot
+await page.screenshot({ path: evidencePath("T16.png") });                 // a spec's own shot
+await page.screenshot({ path: evidencePath("wp-player-endcard-qr.png", { dir: "tests/screenshots" }) });
+evidenceText("T17-levels.txt", lines.join("\n"));                         // text evidence
+```
+
+File names are the ones the files always had, so an opted-in run rewrites
+today's files and nothing else:
+
+```sh
+VISION_EVIDENCE=1 npx playwright test tests/vision-fidelity.spec.ts   # docs/vision/evidence/
+UPDATE_SCREENSHOTS=1 npx playwright test tests/wp-player.spec.ts      # tests/screenshots/
+```
+
+## No-network checks (`sends.ts`)
+
+`watchSends(page, opts?)` records what a page sends while a test watches, so
+every "nothing is sent" check counts the same things in `next dev` (local) and
+`next start` (CI):
+
+```ts
+import { watchSends } from "./fixtures/sends";
+
+const sends = watchSends(page);                     // fetch, xhr, ping, beacon
+… drive the page …
+expect(sends.urls(), "nothing is sent").toEqual([]);
+```
+
+- `types`: the resource types recorded (default fetch / xhr / ping / beacon;
+  `"all"` for every type).
+- `origin`: the app's origin (default the project's `baseURL`).
+- `foreignTo: origin`: record only requests to any other origin.
+- `ignore(url, request)`: a spec's own extra filter.
+- `stop()` ends recording; `sent()` gives URL, method and resource type.
+
+Never recorded: non-http(s) URLs (`data:`, `blob:`), same-origin `/_next/…` and
+`/__nextjs…` (the framework's code, dev tooling, hot reload), and same-origin
+`?_rsc=…` (production prefetches every visible `<Link>` that way; `next dev`
+does not, so a check that counts it is green locally and red in CI).

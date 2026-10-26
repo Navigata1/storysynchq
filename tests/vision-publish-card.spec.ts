@@ -38,6 +38,7 @@ import {
 } from "../src/lib/storysync/tape-size";
 import { LIBRARY_KEY, DRAFT_KEY, restoreDraft, seedStudioDraft } from "./fixtures/helpers";
 import { TWINKLE, loadTape } from "./fixtures/tapes";
+import { evidencePath } from "./fixtures/evidence";
 
 /* ------------------------------------------------------------ reference copy */
 
@@ -448,7 +449,7 @@ test.describe("T16 · the printed tape, landscape", () => {
     await expect(page.locator('[data-sk="layer-chips-note"]')).toHaveCount(0);
     await expect(page.getByText("consent written")).toHaveCount(0);
 
-    await page.screenshot({ path: "docs/vision/evidence/T16-no-voice.png", animations: "disabled" });
+    await page.screenshot({ path: evidencePath("T16-no-voice.png"), animations: "disabled" });
   });
 
   /* -------------------------------------------------------------- 4 · steps */
@@ -602,7 +603,7 @@ test.describe("T16 · the printed tape, landscape", () => {
     await expect(share.locator("svg.lucide-share")).toHaveCount(1);
     await expect(right.getByText(DEVICE_NOTE, { exact: true })).toBeVisible();
 
-    await page.screenshot({ path: "docs/vision/evidence/T16.png", animations: "disabled" });
+    await page.screenshot({ path: evidencePath("T16.png"), animations: "disabled" });
   });
 
   test("7b · no Web Share, no Share button", async ({ page }) => {
@@ -663,17 +664,17 @@ test.describe("T16 · the printed tape, landscape", () => {
     await expect(card.getByText(/^Next$/)).toHaveCount(0);
     await expect(card.getByText(/planned/)).toHaveCount(0);
     await card.evaluate((el) => (el.scrollTop = 0));
-    await page.screenshot({ path: "docs/vision/evidence/T16-375.png", animations: "disabled", fullPage: false });
+    await page.screenshot({ path: evidencePath("T16-375.png"), animations: "disabled", fullPage: false });
     // The column scrolls inside the overlay; the link, then the meter, the file and the delete.
     const middle = page.getByRole("button", { name: SHARE });
     await middle.scrollIntoViewIfNeeded();
     await expect(middle).toBeInViewport();
-    await page.screenshot({ path: "docs/vision/evidence/T16-375-link.png", animations: "disabled" });
+    await page.screenshot({ path: evidencePath("T16-375-link.png"), animations: "disabled" });
     const pull = page.getByRole("button", { name: PULL, exact: true });
     await card.evaluate((el) => (el.scrollTop = el.scrollHeight));
     await expect(pull).toBeInViewport();
     await expect(page.getByText(FINE, { exact: true })).toBeInViewport();
-    await page.screenshot({ path: "docs/vision/evidence/T16-375-end.png", animations: "disabled" });
+    await page.screenshot({ path: evidencePath("T16-375-end.png"), animations: "disabled" });
   });
 
   /* ----------------------------------------------------------- 10 · M6 craft */

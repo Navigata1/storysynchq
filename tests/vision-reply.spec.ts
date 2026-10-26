@@ -35,6 +35,7 @@ import {
 } from "./fixtures/helpers";
 import { FIXTURE_PATHS, GOODNIGHT_MIA, TWINKLE, loadTape } from "./fixtures/tapes";
 import { stubMicrophone } from "./fixtures/mic";
+import { watchSends } from "./fixtures/sends";
 
 /* ------------------------------------------------------------------ facts */
 
@@ -397,8 +398,7 @@ test.describe("T18 · the reply opens in the Creator", () => {
     const { code, link } = await seedTwinkle(page, baseURL);
     const end = await walkToEnd(page, `/read?story=${code}`);
 
-    const requests: string[] = [];
-    page.on("request", (req) => requests.push(req.url()));
+    const foreign = watchSends(page, { types: "all", foreignTo: origin });
     const before = await page.evaluate(() => Object.keys(window.localStorage).sort());
 
     // Hold the Creator's route for a moment, so the room can be heard falling silent first.
@@ -453,7 +453,7 @@ test.describe("T18 · the reply opens in the Creator", () => {
     expect(draft.state.remix ?? null).toBeNull();
 
     // nothing fetched from anywhere else; nothing stored but the draft
-    expect(requests.filter((url) => !url.startsWith("data:") && new URL(url).origin !== origin)).toEqual([]);
+    expect(foreign.urls()).toEqual([]);
     const after = await page.evaluate(() => Object.keys(window.localStorage).sort());
     expect(after.filter((k) => !before.includes(k))).toEqual([DRAFT_KEY]);
 

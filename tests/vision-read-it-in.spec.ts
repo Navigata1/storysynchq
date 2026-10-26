@@ -36,6 +36,7 @@ import {
 import { loadTape, TWINKLE, GOODNIGHT_MIA } from "./fixtures/tapes";
 import { pictureLessTape, resumeAt, seedShelf, sentRow, shelfRow } from "./fixtures/shelf-seed";
 import { evidenceShot } from "./fixtures/evidence";
+import { watchSends } from "./fixtures/sends";
 
 /** The house tape exactly as /public serves it. */
 const HOUSE: SsyncManifest = JSON.parse(
@@ -506,34 +507,23 @@ test.describe("T22a · the panel on /read", () => {
   }) => {
     test.setTimeout(90000);
     const origin = new URL(baseURL!).origin;
+    const lines = (sends: ReturnType<typeof watchSends>) => sends.sent().map((r) => `${r.type} ${r.method} ${r.url}`);
     /** While /read loads: any data request (fetch / XHR) the room or the panel makes. */
-    const loading: string[] = [];
-    /** From the loaded room to the press: any request at all, but Next's own assets and the house pictures. */
-    const asked: string[] = [];
-    let phase: "load" | "room" | "pressed" = "load";
-    page.on("request", (req) => {
-      const url = new URL(req.url());
-      const type = req.resourceType();
-      const same = url.origin === origin;
-      if (same && (url.pathname.startsWith("/_next/") || url.pathname.startsWith("/__nextjs"))) return;
-      // Next's own route prefetch (production prefetches a visible <Link>): page payload, not the panel's
-      if (same && url.searchParams.has("_rsc")) return;
-      const line = `${type} ${req.method()} ${req.url()}`;
-      if (phase === "load") {
-        if (type === "fetch" || type === "xhr") loading.push(line);
-        return;
-      }
-      // the header picture of the house tape: this app's own static file, named by the house manifest
-      if (same && type === "image" && HOUSE_PICTURES.has(url.pathname)) return;
-      if (phase === "room") asked.push(line);
-    });
+    const loading = watchSends(page, { origin, types: ["fetch", "xhr"] });
     await seedShelf(page, { library: [twinkleRow()] });
     await openRoom(page);
     await expect(face(page, TWINKLE_CODE)).toHaveAttribute("aria-checked", "true");
     await page.waitForLoadState("load");
-    expect(loading, "loading the room fetches nothing for the panel").toEqual([]);
+    loading.stop();
+    expect(lines(loading), "loading the room fetches nothing for the panel").toEqual([]);
 
-    phase = "room";
+    /** From the loaded room to the press: any request at all, but Next's own assets and the house pictures. */
+    const asked = watchSends(page, {
+      origin,
+      types: "all",
+      // the header picture of the house tape: this app's own static file, named by the house manifest
+      ignore: (url, req) => url.origin === origin && req.resourceType() === "image" && HOUSE_PICTURES.has(url.pathname),
+    });
     await moodRadio(page, "Calm").check();
     await moodRadio(page, "Joy").focus();
     await page.keyboard.press("ArrowDown");
@@ -544,10 +534,10 @@ test.describe("T22a · the panel on /read", () => {
     await house(page).getByRole("button", { name: "Read it in…" }).click();
     await moodRadio(page, "Rain").check();
     await page.waitForTimeout(500);
-    expect(asked, "the panel fetched nothing").toEqual([]);
+    expect(lines(asked), "the panel fetched nothing").toEqual([]);
 
     // the only network activity after the press is T15's entry: the house tape's JSON
-    phase = "pressed";
+    asked.stop();
     const houseJson = page.waitForRequest((req) => new URL(req.url()).pathname === "/demo/brave-little-star.ssync.json", {
       timeout: 30000,
     });

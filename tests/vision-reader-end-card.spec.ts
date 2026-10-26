@@ -18,6 +18,7 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 import { randomBytes } from "node:crypto";
 import { seedDeviceLibrary } from "./fixtures/helpers";
 import { TWINKLE } from "./fixtures/tapes";
+import { watchSends } from "./fixtures/sends";
 import {
   libraryRow,
   NO_CONSENT_CODE,
@@ -766,21 +767,15 @@ test("T12 · end card · nothing new is fetched, counted or stored", async ({ pa
       cookie: document.cookie,
     }));
   const before = await snapshot();
-  const requests: string[] = [];
-  page.on("request", (req) => {
-    const url = req.url();
-    if (url.startsWith("data:") || url.startsWith("blob:")) return;
-    // the dev server's own hot-reload traffic is not the page fetching anything
-    if (/\/_next\/|__nextjs|webpack-hmr|turbopack|[?&]_rsc=/.test(url)) return;
-    requests.push(url);
-  });
+  // any request at all; the dev server's own hot-reload traffic is not the page fetching anything
+  const requests = watchSends(page, { types: "all", ignore: (url) => /webpack-hmr|turbopack/.test(url.href) });
 
   await page.keyboard.press("ArrowRight");
   await expect(root).toHaveAttribute("data-view", "end");
   await expect(page.locator('[data-pl="qr"]')).toBeVisible({ timeout: 10000 });
   await page.waitForTimeout(1500);
 
-  expect(requests, `the end card fetched: ${requests.join(", ")}`).toEqual([]);
+  expect(requests.urls(), `the end card fetched: ${requests.urls().join(", ")}`).toEqual([]);
   // T21: finishing the tape forgets where you stopped (`ssync-resume`, the last
   // page). The end card removes that one place and stores nothing new.
   const { ["ssync-resume"]: place, ...rest } = before.local;

@@ -30,6 +30,7 @@ import {
 } from "../src/lib/storysync/container";
 import { validateManifest, type SsyncManifest } from "../src/lib/storysync/manifest";
 import { loadTape } from "./fixtures/tapes";
+import { watchSends } from "./fixtures/sends";
 
 const REPO = path.join(__dirname, "..");
 const HOUSE_JSON = path.join(REPO, "public", "demo", "brave-little-star.ssync.json");
@@ -403,8 +404,7 @@ test.describe("T23b · /protocol hero (E2E)", () => {
   });
 
   test("the download still packs on this device, from the hero, by mouse and by keyboard", async ({ page }) => {
-    const requests: Array<{ url: string; method: string }> = [];
-    page.on("request", (r) => requests.push({ url: r.url(), method: r.method() }));
+    const requests = watchSends(page, { types: "all" });
     await openProtocol(page);
     const button = page.locator('section.pr-hero [data-protocol="download-demo"]');
 
@@ -421,7 +421,7 @@ test.describe("T23b · /protocol hero (E2E)", () => {
 
     // Nothing leaves the device: every request is a same-origin GET.
     const origin = new URL(page.url()).origin;
-    for (const r of requests) {
+    for (const r of requests.sent()) {
       expect(r.method, r.url).toBe("GET");
       expect(new URL(r.url).origin, r.url).toBe(origin);
     }

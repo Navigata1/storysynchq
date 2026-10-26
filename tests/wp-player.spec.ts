@@ -6,18 +6,16 @@
  * inside the page, contrast is computed from those pixels, and the audio claims
  * are read off the live DualBusAudioEngine through the read-only
  * `window.__ssyncPlayer` view. Screenshots the critic can open are written to
- * tests/screenshots/wp-player-*.png.
+ * tests/screenshots/wp-player-*.png with UPDATE_SCREENSHOTS=1, else the test's
+ * output folder (tests/fixtures/evidence.ts).
  */
 
 import { expect, test, type Page } from "@playwright/test";
-import fs from "fs";
-import path from "path";
 import { splitWords, wordIndexAtTime } from "../src/components/player/timing";
 import { CUE_LENGTH_S } from "../src/components/player/sound";
+import { evidencePath } from "./fixtures/evidence";
 
 /* ─────────────────────────────────────────────────────────────── helpers */
-
-const SHOTS = path.join(process.cwd(), "tests", "screenshots");
 
 /** The base room colour. A sample equal to this means "nothing reached here". */
 const BASE_NAVY = { r: 0x0a, g: 0x0e, b: 0x1a };
@@ -55,8 +53,7 @@ async function shootAndSample(
   name: string,
   points: Array<{ x: number; y: number }>,
 ): Promise<Sample[]> {
-  fs.mkdirSync(SHOTS, { recursive: true });
-  const file = path.join(SHOTS, `${name}.png`);
+  const file = evidencePath(`${name}.png`, { dir: "tests/screenshots" });
   const buffer = await page.screenshot({ path: file });
   const dataUrl = `data:image/png;base64,${buffer.toString("base64")}`;
   return page.evaluate(
@@ -87,8 +84,7 @@ async function shootAndScanRect(
   name: string,
   rect: { x: number; y: number; width: number; height: number },
 ): Promise<number[]> {
-  fs.mkdirSync(SHOTS, { recursive: true });
-  const file = path.join(SHOTS, `${name}.png`);
+  const file = evidencePath(`${name}.png`, { dir: "tests/screenshots" });
   const buffer = await page.screenshot({ path: file });
   const dataUrl = `data:image/png;base64,${buffer.toString("base64")}`;
   const pixels = await page.evaluate(
@@ -672,7 +668,7 @@ test.describe("WP-P · the recorded voice lights the words", () => {
     console.log("[wp-p] read-along @95%:", JSON.stringify(late));
     expect(late.now).toBe(11);
 
-    await page.screenshot({ path: path.join(SHOTS, "wp-player-readalong.png") });
+    await page.screenshot({ path: evidencePath("wp-player-readalong.png", { dir: "tests/screenshots" }) });
   });
 });
 
@@ -700,8 +696,7 @@ test.describe("WP-P · the end card", () => {
     // No ?story= → nothing to encode, so no QR is drawn.
     await expect(end.locator('[data-pl="qr"]')).toHaveCount(0);
 
-    fs.mkdirSync(SHOTS, { recursive: true });
-    await page.screenshot({ path: path.join(SHOTS, "wp-player-endcard-demo.png") });
+    await page.screenshot({ path: evidencePath("wp-player-endcard-demo.png", { dir: "tests/screenshots" }) });
 
     // Replay puts the tape back to page 1.
     await end.getByRole("button", { name: /Read it again/i }).click();
@@ -733,8 +728,7 @@ test.describe("WP-P · the end card", () => {
     expect(size.w).toBeGreaterThan(80);
     expect(size.h).toBeGreaterThan(80);
 
-    fs.mkdirSync(SHOTS, { recursive: true });
-    await page.screenshot({ path: path.join(SHOTS, "wp-player-endcard-qr.png") });
+    await page.screenshot({ path: evidencePath("wp-player-endcard-qr.png", { dir: "tests/screenshots" }) });
   });
 });
 
@@ -849,8 +843,7 @@ for (const shape of ["absent", "throws"] as const) {
       expect(errors, `uncaught page errors: ${JSON.stringify(errors)}`).toEqual([]);
       expect(rejections, `unhandled rejections: ${JSON.stringify(rejections)}`).toEqual([]);
 
-      fs.mkdirSync(SHOTS, { recursive: true });
-      await page.screenshot({ path: path.join(SHOTS, `wp-player-noaudio-${shape}-end.png`) });
+      await page.screenshot({ path: evidencePath(`wp-player-noaudio-${shape}-end.png`, { dir: "tests/screenshots" }) });
     });
   });
 }

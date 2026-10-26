@@ -36,6 +36,7 @@ import {
 } from "../src/components/studio-kit/tokens";
 import { MOOD_NAMES } from "../src/lib/audio/moods";
 import { PACKET_LAYERS } from "../src/components/protocol/layers";
+import { watchSends } from "./fixtures/sends";
 
 const ROOT = path.resolve(__dirname, "..");
 const read = (rel: string) => fs.readFileSync(path.join(ROOT, rel), "utf8");
@@ -389,10 +390,9 @@ test.describe("T05a · tokens in the browser", () => {
   });
 
   test("/: italic 800 Fraunces and Plex Mono 600 are self-hosted", async ({ page }) => {
-    const thirdParty: string[] = [];
-    page.on("request", (r) => {
-      const host = new URL(r.url()).hostname;
-      if (host !== "localhost" && host !== "127.0.0.1") thirdParty.push(r.url());
+    const thirdParty = watchSends(page, {
+      types: "all",
+      ignore: (url) => url.hostname === "localhost" || url.hostname === "127.0.0.1",
     });
     await page.goto("/");
     const r = await page.evaluate(async () => {
@@ -430,7 +430,7 @@ test.describe("T05a · tokens in the browser", () => {
     expect(upright && covers(upright.weight, 800), JSON.stringify(r.upright)).toBe(true);
     expect(r.check).toBe(true);
     expect(r.mono.some((f) => covers(f.weight, 600)), JSON.stringify(r.mono)).toBe(true);
-    expect(thirdParty).toEqual([]);
+    expect(thirdParty.urls()).toEqual([]);
   });
 
   for (const route of ["/", "/read"] as const) {

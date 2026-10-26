@@ -44,6 +44,7 @@ import { normalizeNarration } from "../src/lib/audio/transcode";
 import { validateManifest, type SsyncManifest } from "../src/lib/storysync/manifest";
 import { LIBRARY_KEY, restoreDraft, seedStudioDraft, studioDraftState } from "./fixtures/helpers";
 import { stubMicrophone } from "./fixtures/mic";
+import { evidencePath, evidenceText } from "./fixtures/evidence";
 import { FIXTURE_PATHS, REPO_ROOT, TWINKLE } from "./fixtures/tapes";
 
 /* ------------------------------------------------------------ reference copy */
@@ -405,7 +406,7 @@ test.describe("T17 · evening out each voice (studio)", () => {
     await expect(steps.first().locator("svg.lucide-check")).toHaveCount(1);
 
     await settle(page);
-    await page.screenshot({ path: "docs/vision/evidence/T17-steps.png", animations: "disabled" });
+    await page.screenshot({ path: evidencePath("T17-steps.png"), animations: "disabled" });
 
     const rows = await readLibrary(page);
     expect(rows).toHaveLength(1);
@@ -463,7 +464,7 @@ test.describe("T17 · evening out each voice (studio)", () => {
         "",
         `Spread (whole-clip RMS, loudest − quietest): before ${db(Math.max(...beforeWholes) - Math.min(...beforeWholes))} dB, after ${db(spread)} dB.`,
       );
-      fs.writeFileSync("docs/vision/evidence/T17-levels.txt", `${lines.join("\n")}\n`);
+      evidenceText("T17-levels.txt", `${lines.join("\n")}\n`);
     }
   });
 
@@ -487,7 +488,7 @@ test.describe("T17 · evening out each voice (studio)", () => {
     // Each item is a status glyph, then "label · detail".
     await expect(items.first()).toContainText(new RegExp(`${STEP} · [1-4]/5$`), { timeout: 15000 });
     await expect(items.nth(1)).toContainText("Converting voices to AAC");
-    await page.screenshot({ path: "docs/vision/evidence/T17-publishing.png", animations: "disabled" });
+    await page.screenshot({ path: evidencePath("T17-publishing.png"), animations: "disabled" });
 
     await expect(page.getByRole("heading", { name: READY })).toBeVisible({ timeout: 60000 });
     expect((await stepTexts(page))[0]).toBe(`${STEP} · 5/5`);
@@ -572,7 +573,7 @@ test.describe("T17 · evening out each voice (studio)", () => {
     const mix = page.locator("section", { has: page.getByRole("heading", { name: "Mix" }) });
     await expect(mix.locator("#insp-level-voices")).toHaveCount(1);
     await toggle.scrollIntoViewIfNeeded();
-    await page.screenshot({ path: "docs/vision/evidence/T17-inspector.png", animations: "disabled" });
+    await page.screenshot({ path: evidencePath("T17-inspector.png"), animations: "disabled" });
 
     // Keyboard: the switch is the next stop after the mood, and Space toggles it.
     await page.locator("#insp-mood").focus();

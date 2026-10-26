@@ -25,6 +25,8 @@ import { runtimeLabel } from "../src/lib/storysync/tape-meta";
 import { loadTape, TWINKLE, GOODNIGHT_MIA } from "./fixtures/tapes";
 import { DRAFT_KEY, LIBRARY_KEY } from "./fixtures/helpers";
 import { pictureLessTape, publishedDraft, seedShelf, shelfRow } from "./fixtures/shelf-seed";
+import { evidencePath } from "./fixtures/evidence";
+import { watchSends } from "./fixtures/sends";
 
 const NOTE = "Unlisted. Only people you send a link to can open them.";
 const PULLED = "Pulled out. Pictures, voices, the saved copy and the link are gone.";
@@ -543,22 +545,13 @@ test.describe("T20a · the shelf on /read", () => {
   });
 
   test("nothing is fetched for the shelf", async ({ page }) => {
-    const asked: string[] = [];
-    page.on("request", (req) => {
-      const type = req.resourceType();
-      if (type !== "fetch" && type !== "xhr") return;
-      const url = new URL(req.url());
-      if (url.pathname.startsWith("/_next/") || url.pathname.startsWith("/__nextjs")) return;
-      // Next's own route prefetch (production prefetches a visible <Link href="/">
-      // as ?_rsc=…): page payload for a link, not anything the shelf asks for
-      if (url.searchParams.has("_rsc")) return;
-      asked.push(req.url());
-    });
+    // fetch / XHR only; Next's own code and route prefetch are not the shelf asking
+    const asked = watchSends(page, { types: ["fetch", "xhr"] });
     await seedShelf(page, { library: twoTapes() });
     await openShelf(page);
     await face(page, BATH_CODE).click();
     await page.waitForTimeout(500);
-    expect(asked).toEqual([]);
+    expect(asked.urls()).toEqual([]);
   });
 });
 
@@ -587,11 +580,11 @@ test.describe("T20a · fidelity captures (s07)", () => {
     await face(page, TWINKLE_CODE).click();
     await page.mouse.move(1, 1);
     await settle(page);
-    await page.screenshot({ path: "docs/vision/evidence/T20a-1140.png" });
+    await page.screenshot({ path: evidencePath("T20a-1140.png") });
 
     await page.setViewportSize({ width: 375, height: 812 });
     await settle(page);
-    await page.screenshot({ path: "docs/vision/evidence/T20a-375.png" });
+    await page.screenshot({ path: evidencePath("T20a-375.png") });
   });
 
   test("1140×712: Bath Time Song mid pull-out (the clock paused)", async ({ page }) => {
@@ -610,6 +603,6 @@ test.describe("T20a · fidelity captures (s07)", () => {
     await expect(face(page, BATH_CODE)).toHaveCount(1);
     await page.waitForTimeout(900); // real time: the CSS motion runs to its end pose
     await page.evaluate(() => window.scrollTo(0, 0));
-    await page.screenshot({ path: "docs/vision/evidence/T20a-pullout-1140.png" });
+    await page.screenshot({ path: evidencePath("T20a-pullout-1140.png") });
   });
 });

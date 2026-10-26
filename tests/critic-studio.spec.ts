@@ -26,6 +26,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { unzipSync, strFromU8 } from "fflate";
 import { MOOD_NAMES } from "../src/lib/audio/moods";
+import { evidencePath } from "./fixtures/evidence";
 
 const DRAFT_KEY = "ssync-studio-draft";
 const LIBRARY_KEY = "ssync-library";
@@ -281,13 +282,13 @@ test.describe("CRITIC · WP-S share loop", () => {
     // capture is the finished card, then prove the label really is there.
     await expect(page.getByText(/SIDE A · 2 PAGES/)).toBeVisible();
     await page.screenshot({
-      path: "tests/screenshots/critic-studio-publish-desktop.png",
+      path: evidencePath("critic-studio-publish-desktop.png", { dir: "tests/screenshots" }),
       animations: "disabled",
     });
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(page.locator('[data-studio="share-qr"]')).toBeVisible();
     await page.screenshot({
-      path: "tests/screenshots/critic-studio-publish-mobile.png",
+      path: evidencePath("critic-studio-publish-mobile.png", { dir: "tests/screenshots" }),
       animations: "disabled",
     });
 

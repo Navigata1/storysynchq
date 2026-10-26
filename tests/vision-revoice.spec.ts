@@ -23,6 +23,7 @@ import type { SsyncManifest } from "../src/lib/storysync/manifest";
 import { DRAFT_KEY, LIBRARY_KEY, restoreDraft, seedDeviceLibrary, seedStudioDraft } from "./fixtures/helpers";
 import { FIXTURE_PATHS, GOODNIGHT_MIA, REPO_ROOT, TWINKLE, loadTape } from "./fixtures/tapes";
 import { stubMicrophone } from "./fixtures/mic";
+import { watchSends } from "./fixtures/sends";
 
 /* ------------------------------------------------------------------ facts */
 
@@ -224,6 +225,7 @@ test.describe("the Creator opens a tape", () => {
     const origin = new URL(baseURL!).origin;
     const requests: string[] = [];
     page.on("request", (request) => requests.push(request.url()));
+    const foreign = watchSends(page, { types: "all", foreignTo: origin });
 
     await page.goto("/studio?open=house");
     await expectHouseOpened(page);
@@ -254,8 +256,7 @@ test.describe("the Creator opens a tape", () => {
     expect(draft.state.remix).toEqual({ of: `${origin}${HOUSE_URL_PATH}`, title: HOUSE_TITLE, author: HOUSE_AUTHOR });
 
     // COPPA: nothing but this app's own pages, code and /demo/ files.
-    const foreign = requests.filter((url) => new URL(url).origin !== origin && !url.startsWith("data:"));
-    expect(foreign).toEqual([]);
+    expect(foreign.urls()).toEqual([]);
     const fetchedDemo = requests.filter((url) => new URL(url).pathname.startsWith("/demo/"));
     expect(fetchedDemo.length).toBeGreaterThanOrEqual(8); // the JSON and seven pictures
   });
@@ -462,8 +463,7 @@ test.describe("the Creator opens a tape", () => {
     await expect(input).toHaveAttribute("type", "file");
     await expect(input).toHaveAttribute("accept", ".storysync,.zip");
 
-    const requests: string[] = [];
-    page.on("request", (request) => requests.push(request.url()));
+    const offDevice = watchSends(page, { origin, types: "all" });
     await openTapeFile(page, FIXTURE_PATHS.twinkle.tape);
 
     await expect(frames(page)).toHaveCount(5, { timeout: 20000 });
@@ -474,12 +474,7 @@ test.describe("the Creator opens a tape", () => {
       "I was scared of the dark. Twinkle came to my window.",
     );
 
-    const offDevice = requests.filter((url) => {
-      if (url.startsWith("data:") || url.startsWith("blob:")) return false;
-      const u = new URL(url);
-      return !(u.origin === origin && u.pathname.startsWith("/_next/"));
-    });
-    expect(offDevice, "opening a file is read on this device only").toEqual([]);
+    expect(offDevice.urls(), "opening a file is read on this device only").toEqual([]);
   });
 
   test("?open=<code> resolves through this device's library, as /read?story= does", async ({ page }) => {

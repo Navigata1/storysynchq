@@ -33,6 +33,7 @@
 
 import { test, expect, type Locator, type Page } from "@playwright/test";
 import { evidenceShot } from "./fixtures/evidence";
+import { watchSends } from "./fixtures/sends";
 import { restoreDraft, seedDeviceLibrary, seedStudioDraft, LIBRARY_KEY } from "./fixtures/helpers";
 import { stubMicrophone } from "./fixtures/mic";
 import { pictureLessTape, seedShelf, sentRow, shelfRow } from "./fixtures/shelf-seed";
@@ -748,12 +749,7 @@ test.describe("T25 · vision fidelity sweep", () => {
     test.setTimeout(60000);
     const errors = watchErrors(page);
     const origin = new URL(baseURL!).origin;
-    const foreign: string[] = [];
-    page.on("request", (request) => {
-      const url = request.url();
-      if (url.startsWith("data:") || url.startsWith("blob:")) return;
-      if (new URL(url).origin !== origin) foreign.push(url);
-    });
+    const foreign = watchSends(page, { types: "all", foreignTo: origin });
     await prepare(page, IPHONE);
     const shareCode = LINK_CODE;
     await seedDeviceLibrary(page, "twinkle", { shareCode });
@@ -766,7 +762,7 @@ test.describe("T25 · vision fidelity sweep", () => {
     // no account: nothing asks anyone to sign in or sign up
     await expect(page.getByText(/sign in|log in|sign up|create an account/i)).toHaveCount(0);
     await expect(page.locator('input[type="password"], input[type="email"]')).toHaveCount(0);
-    expect(foreign, `${where}: nothing fetched from anywhere else`).toEqual([]);
+    expect(foreign.urls(), `${where}: nothing fetched from anywhere else`).toEqual([]);
     await settle(page);
     await expectClean(page, errors, where);
     await evidenceShot(page, "s10-read-from-qr-390x844.png");

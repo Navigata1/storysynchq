@@ -18,10 +18,8 @@
  */
 
 import { expect, test, type Page } from "@playwright/test";
-import fs from "fs";
-import path from "path";
+import { evidencePath } from "./fixtures/evidence";
 
-const SHOTS = path.join(process.cwd(), "tests", "screenshots");
 const BASE_NAVY = { r: 0x0a, g: 0x0e, b: 0x1a };
 
 interface Rgb {
@@ -53,9 +51,8 @@ async function samplePixels(
   shot: string | null,
   points: Array<{ x: number; y: number }>,
 ): Promise<Array<Rgb & { x: number; y: number }>> {
-  fs.mkdirSync(SHOTS, { recursive: true });
   const buffer = await page.screenshot(
-    shot ? { path: path.join(SHOTS, `${shot}.png`) } : {},
+    shot ? { path: evidencePath(`${shot}.png`, { dir: "tests/screenshots" }) } : {},
   );
   const dataUrl = `data:image/png;base64,${buffer.toString("base64")}`;
   return page.evaluate(
@@ -86,9 +83,8 @@ async function scanRect(
   shot: string | null,
   rect: { x: number; y: number; width: number; height: number },
 ): Promise<number[]> {
-  fs.mkdirSync(SHOTS, { recursive: true });
   const buffer = await page.screenshot(
-    shot ? { path: path.join(SHOTS, `${shot}.png`) } : {},
+    shot ? { path: evidencePath(`${shot}.png`, { dir: "tests/screenshots" }) } : {},
   );
   const dataUrl = `data:image/png;base64,${buffer.toString("base64")}`;
   return page.evaluate(
@@ -489,7 +485,7 @@ for (const shape of ["absent", "throws"] as const) {
     await expect(end.getByRole("button", { name: /Read it again/i })).toBeVisible();
     await expect(end.getByRole("button", { name: /Make your own story/i })).toBeVisible();
     await page.screenshot({
-      path: path.join(SHOTS, `critic-player-endcard-noaudio-${shape}.png`),
+      path: evidencePath(`critic-player-endcard-noaudio-${shape}.png`, { dir: "tests/screenshots" }),
     });
   });
 }
@@ -1044,7 +1040,7 @@ test("critic WP-P · the end-card QR encodes the exact share URL", async ({ page
   const other = encode("http://localhost:3000/read?story=some-other-tape");
   const diff = read.bits.reduce((n, bit, i) => n + (bit === (other.bits[i] ? 1 : 0) ? 0 : 1), 0);
   expect(diff, "the module comparison cannot tell two URLs apart").toBeGreaterThan(0);
-  await page.screenshot({ path: path.join(SHOTS, "critic-player-endcard-qr.png") });
+  await page.screenshot({ path: evidencePath("critic-player-endcard-qr.png", { dir: "tests/screenshots" }) });
 
   // and a tape opened with no ?story= gets no QR at all
   await tapToBegin(page, "/read?demo=1");

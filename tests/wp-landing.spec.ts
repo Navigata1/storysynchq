@@ -21,16 +21,15 @@
  *   · The .storysync download is caught as a real download event, saved, and
  *     unzipped: ZIP magic, manifest.json, v2.0, and every referenced asset.
  *
- * Screenshots a critic can open: tests/screenshots/wp-landing-*.png
+ * Screenshots a critic can open: tests/screenshots/wp-landing-*.png with
+ * UPDATE_SCREENSHOTS=1, else the test's output folder (tests/fixtures/evidence.ts)
  */
 
 import { expect, test, type Page } from "@playwright/test";
 import fs from "fs";
-import path from "path";
 import { unzipSync, strFromU8 } from "fflate";
 import { validateManifest, type SsyncManifest } from "../src/lib/storysync/manifest";
-
-const SHOTS = path.join(process.cwd(), "tests", "screenshots");
+import { evidencePath } from "./fixtures/evidence";
 
 /** The seven layers of the packet model, in order (docs/design-direction.md §9.4). */
 const SEVEN_LAYERS = [
@@ -45,9 +44,8 @@ const SEVEN_LAYERS = [
 
 /** Screenshots carry the project name, so desktop and mobile runs never clobber. */
 function shot(page: Page, name: string, fullPage = false) {
-  fs.mkdirSync(SHOTS, { recursive: true });
   return page.screenshot({
-    path: path.join(SHOTS, `${name}-${test.info().project.name}.png`),
+    path: evidencePath(`${name}-${test.info().project.name}.png`, { dir: "tests/screenshots" }),
     fullPage,
   });
 }

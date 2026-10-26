@@ -42,6 +42,8 @@ import {
 import { runtimeLabel } from "../src/lib/storysync/tape-meta";
 import { GOODNIGHT_MIA, loadTape, TWINKLE } from "./fixtures/tapes";
 import { pictureLessTape, seedShelf, sentRow, shelfRow } from "./fixtures/shelf-seed";
+import { evidencePath } from "./fixtures/evidence";
+import { watchSends } from "./fixtures/sends";
 
 /** Codes the shape a minted code has (32 lowercase hex). */
 const GRANDMA_CODE = "60d01a6060d01a6060d01a6060d01a60";
@@ -507,24 +509,15 @@ test.describe("T20b · Sent to you and NEW on /read", () => {
   });
 
   test("nothing is sent anywhere for Sent to you or NEW", async ({ page }) => {
-    const asked: string[] = [];
-    page.on("request", (req) => {
-      const type = req.resourceType();
-      if (type !== "fetch" && type !== "xhr" && type !== "ping" && type !== "beacon") return;
-      const url = new URL(req.url());
-      if (url.pathname.startsWith("/_next/") || url.pathname.startsWith("/__nextjs")) return;
-      // Next's own route prefetch (production prefetches a visible <Link href="/">
-      // as ?_rsc=…): page payload for a link, not anything the shelf sends
-      if (url.searchParams.has("_rsc")) return;
-      asked.push(req.url());
-    });
+    // fetch / XHR / ping / beacon; Next's own code and route prefetch are not the shelf sending
+    const asked = watchSends(page);
     await seedShelf(page, { library: library(), sent: [grandmaSent()], previousVisit: PREVIOUS_VISIT });
     await openShelf(page);
     await expect(face(page, GRANDMA_CODE).locator('[data-stamp="new"]')).toHaveCount(1);
     await band(page).getByRole("button", { name: "Take it off this shelf" }).click();
     await expect(page.getByRole("status").filter({ hasText: "Taken off this shelf." })).toHaveText(TAKEN_OFF);
     await page.waitForTimeout(500);
-    expect(asked).toEqual([]);
+    expect(asked.urls()).toEqual([]);
   });
 });
 
@@ -547,7 +540,7 @@ test.describe("T20b · fidelity capture (s07 row A)", () => {
     await expect
       .poll(() => face(page, TWINKLE_CODE).evaluate((el) => new DOMMatrixReadOnly(getComputedStyle(el).transform).m42))
       .toBe(-10);
-    await page.screenshot({ path: "docs/vision/evidence/T20b-1140.png" });
+    await page.screenshot({ path: evidencePath("T20b-1140.png") });
   });
 
   test("the sent tape's band (1140×712 and 375×812) and a dead remembered link (375×812)", async ({ page }, info) => {
@@ -563,17 +556,17 @@ test.describe("T20b · fidelity capture (s07 row A)", () => {
     await expect
       .poll(() => face(page, GRANDMA_CODE).evaluate((el) => new DOMMatrixReadOnly(getComputedStyle(el).transform).m42))
       .toBe(-10);
-    await page.screenshot({ path: "docs/vision/evidence/T20b-band-1140.png" });
+    await page.screenshot({ path: evidencePath("T20b-band-1140.png") });
 
     await page.setViewportSize({ width: 375, height: 812 });
     await page.evaluate(() => document.fonts.ready);
     await expect(band(page).getByRole("button", { name: "Take it off this shelf" })).toBeVisible();
     await page.waitForTimeout(400);
-    await page.screenshot({ path: "docs/vision/evidence/T20b-375.png" });
+    await page.screenshot({ path: evidencePath("T20b-375.png") });
 
     await page.goto(`/read?story=${GRANDMA_CODE}`);
     await expect(page.getByRole("button", { name: "Take it off this shelf" })).toBeVisible({ timeout: 20000 });
     await page.evaluate(() => document.fonts.ready);
-    await page.screenshot({ path: "docs/vision/evidence/T20b-missing-375.png" });
+    await page.screenshot({ path: evidencePath("T20b-missing-375.png") });
   });
 });
