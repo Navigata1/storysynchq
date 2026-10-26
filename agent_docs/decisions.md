@@ -510,3 +510,23 @@ privacy line in `--ss-fg-3`). From 880px the card lays out in two columns so a l
 - **Padding clamp.** To keep the bar off the kicker at every size, `landing-bands.css` sets `.ls-root .ls-hero { padding-top: clamp(3.625rem, 8.6svh, 4.5rem) }`. This only changes screens under 675px tall.
 - **Phone menu is a disclosure.** A native button with `aria-expanded`/`aria-controls`, closed by Escape (focus back on the button), an outside pointer press, tabbing out of the nav, or following a link. There is no focus trap, because it is not a modal.
 - **640–719px.** The row tightens (1rem edges, 12px gaps) so it holds with ≥12px of slack.
+
+**2026-10-25 · T18 · A reply is a new tape that names what it answers: `signature.replyTo`, distinct from `remixOf`.**
+
+- **Protocol.** `signature.replyTo` (optional string) is the share URL or id of the tape this one answers. A reply is
+  a new tape, not a derivative, so it never uses `remixOf` and carries nothing of the answered tape: no pictures,
+  words, voices, consent or title. It is in spec §7, the v2 schema (additive) and `SsyncSignature`. The validator says
+  nothing about it.
+- **The seed** (`src/lib/storysync/reply.ts`, pure) has the name to thank (the narrator, else the byline's lead name,
+  else none), the title ("Thank you, <name>" / "Thank you"), the chip title, and `replyTo` (the tape's own `shareUrl`,
+  else the link it was opened from in the form a publish writes it, else nothing; nothing is invented). It travels as
+  a one-shot `sessionStorage` entry (`ssync-reply-seed`, strings only), written just before `/studio?reply=1` and
+  removed by the Creator as it reads it, along with the URL flag. A refresh or a pasted URL gives the plain Creator.
+- **Where the button shows.** Every tape the Read Room opens except the house tape (a link or a file). On it, the
+  reply is the one filled gold action and "Make your own story" steps down to the gold outline. Pressing it silences
+  narration and music before the Creator opens.
+- **The Creator** opens one blank page with the default music and `signature.replyTo`, and keeps the chip title as
+  draft-only state (`StudioState.reply`), never in a manifest. Over a saved story it asks "Reply to <title>?" (T15's
+  dialog) in place of the restore prompt. Keep my story leaves the draft byte-identical. "Start a new story" and
+  "delete everything" clear the reply. Publishing needs no change: the draft's signature is spread into the published
+  one, `remixOf` stays tied to a re-voice, and an adult replying for herself consents with T14's `grantedBy: "self"`.

@@ -302,19 +302,20 @@ test.describe("T12 · end card · Twinkle's liner notes", () => {
     expect(st.cy).toBeLessThan(st.tape!.bottom);
     expect(st.img, "the sticker shows the last picture").toBeGreaterThan(0);
 
-    // actions: Read it again + Make your own story; the one filled gold action
+    // actions: Read it again + Make your own story. On a tape someone sent,
+    // T18's "Send a thank-you back" is now the one filled gold action (s06
+    // phone 1); the house tape keeps Make your own story gold (vision-reply).
     const again = end.getByRole("button", { name: "Read it again" });
     const make = end.getByRole("button", { name: "Make your own story" });
     await expect(again).toBeVisible();
     await expect(make).toBeVisible();
     const gold = end.locator('[data-sk="big"][data-variant="gold"]');
     await expect(gold).toHaveCount(1);
-    await expect(gold).toHaveText("Make your own story");
+    await expect(gold).toHaveText("Send a thank-you back");
     // side by side at 390
     expect(Math.abs((await top(again)) - (await top(make)))).toBeLessThan(2);
 
     // nothing that belongs to other tickets or is an Idea
-    await expect(end.getByText(/Send a thank-you back/i)).toHaveCount(0);
     await expect(end.getByText(/Keep it on this phone/i)).toHaveCount(0);
     await expect(end.getByText("Idea", { exact: true })).toHaveCount(0);
     await expect(end.getByText("Next", { exact: true })).toHaveCount(0);
@@ -616,14 +617,14 @@ test.describe("T12 · end card · What's inside this tape? → /protocol", () =>
 /* ───────────────────────────────────────────────────────── keyboard */
 
 test.describe("T12 · end card · keyboard", () => {
-  test("Tab: the link, Read it again, Make your own story, Close — each with the kit ring; Escape still exits", async ({
+  test("Tab: the link, Send a thank-you back, Read it again, Make your own story, Close — each with the kit ring; Escape still exits", async ({
     page,
   }) => {
     test.setTimeout(90000);
     await twinkleEnd(page);
 
     const seen: Array<{ name: string; outline: string; inEnd: boolean }> = [];
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 5; i++) {
       await page.keyboard.press("Tab");
       seen.push(
         await page.evaluate(() => {
@@ -639,6 +640,7 @@ test.describe("T12 · end card · keyboard", () => {
     }
     expect(seen.map((s) => s.name)).toEqual([
       "What’s inside this tape?",
+      "Send a thank-you back", // T18: a tape someone sent (s06 phone 1)
       "Read it again",
       "Make your own story",
       "Close",

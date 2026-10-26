@@ -12,7 +12,7 @@
  * itself is always downloadable.
  */
 
-import type { StudioState } from "./types";
+import type { ReplyRecord, StudioState } from "./types";
 import { blankState, pageHasContent } from "./types";
 
 export const DRAFT_KEY = "ssync-studio-draft";
@@ -47,10 +47,22 @@ export function loadDraft(): { state: StudioState; savedAt: string } | null {
       manifest: { ...fallback.manifest, ...parsed.state.manifest },
       recordings: parsed.state.recordings ?? {},
     };
+    // A reply's chip comes back with its draft (T18); anything else in its
+    // place is dropped rather than shown.
+    const reply = replyRecord(parsed.state.reply);
+    if (reply) state.reply = reply;
+    else delete state.reply;
     return { state, savedAt: parsed.savedAt };
   } catch {
     return null;
   }
+}
+
+/** A stored reply record, if it is one: `{ title }` with a non-empty string. */
+function replyRecord(value: unknown): ReplyRecord | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const title = (value as { title?: unknown }).title;
+  return typeof title === "string" && title.trim() ? { title } : undefined;
 }
 
 /** True when nothing a child made is in the state — no pictures, words, voice. */

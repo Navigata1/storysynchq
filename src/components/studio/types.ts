@@ -48,6 +48,16 @@ export interface RecordingMeta {
   levelled?: boolean;
 }
 
+/**
+ * The tape a reply answers (T18), as the Creator's "Reply to · <title>" chip
+ * names it. Draft-only: the reply's link travels in `signature.replyTo`; the
+ * title never enters a manifest.
+ */
+export interface ReplyRecord {
+  /** The answered tape's title. */
+  title: string;
+}
+
 export interface PublishRecord {
   id: string;
   shareCode: string | null;
@@ -88,6 +98,13 @@ export interface StudioState {
    * over `blankState`, which sets it to null.
    */
   remix?: RemixRecord | null;
+  /**
+   * Set when this draft is a thank-you to another tape (T18): the chip under
+   * the top bar. Draft-only, never written into a manifest. Absent for a
+   * story made here; `blankState` leaves it out, so "Start a new story" and
+   * "delete everything" clear it.
+   */
+  reply?: ReplyRecord;
 }
 
 export const DEFAULT_TITLE = "My Story";

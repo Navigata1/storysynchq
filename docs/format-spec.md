@@ -141,11 +141,14 @@ At AAC 96 kbps, 5 minutes of narration is ≈ 3.6 MB.
 The seven-layer packet model from the protocol vision (Metadata / Visual / Text /
 Voice / Sound / Behavior / **Signature**) reserves a top-level `signature` block
 for what must travel WITH a story to make it ownable and remixable outside any
-one app: `shareUrl`, `ownership`, `remixOf` (remix ancestry), `voiceConsent[]`
-(who consented to which recorded voice — sacred for children's and family
-voices), and `rights`. All fields optional and additive; v2.0 readers ignore
-them. A published story containing a recorded human voice SHOULD carry a
+one app: `shareUrl`, `ownership`, `remixOf` (remix ancestry), `replyTo`,
+`voiceConsent[]` (who consented to which recorded voice — sacred for children's
+and family voices), and `rights`. All fields optional and additive; v2.0 readers
+ignore them. A published story containing a recorded human voice SHOULD carry a
 `voiceConsent` record.
+
+`replyTo` is the share URL or id of the tape this one answers; a reply is a new
+tape, not a derivative, so it is distinct from `remixOf`.
 
 ### 7.1 `voiceConsent[]` — consent travels in the tape
 
@@ -185,5 +188,5 @@ WARN  a recorded voice is on this tape but signature.voiceConsent is empty; the 
 - `1.0` — bare JSON document (`.ssync.json`), external/data-URL media only.
   Readers keep accepting v1 documents.
 - `2.0` — this spec: ZIP container, bundled assets, codec rule, `audioCodec`.
-- `2.1` (draft) — the Signature layer (§7): ownership, remix ancestry, consent.
+- `2.1` (draft) — the Signature layer (§7): ownership, remix ancestry, replies, consent.
 - Future versions bump `version` and migrate in `src/lib/storysync/`.

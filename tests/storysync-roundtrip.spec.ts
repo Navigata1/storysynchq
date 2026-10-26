@@ -256,3 +256,49 @@ test.describe("consent (v2.1 draft)", () => {
     expect(items.properties.date.pattern).toBeUndefined();
   });
 });
+
+/* ── reply (v2.1 draft) — T18 ─────────────────────────────────────────────
+ * `signature.replyTo` names the tape this one answers: a reply is a new tape,
+ * not a derivative, so it is its own field beside `remixOf`. Names here are
+ * original, not the reference cast.
+ */
+test.describe("reply (v2.1 draft)", () => {
+  test("signature.replyTo survives pack → unpack, and the validator says nothing about it", () => {
+    const reply: SsyncManifest = {
+      version: "2.0",
+      metadata: { title: "Thank you, Ada", author: "Grandpa Theo", narrator: "Grandpa Theo" },
+      signature: {
+        replyTo: "https://storysynchq.vercel.app/read?story=0f1e2d3c4b5a69788796a5b4c3d2e1f0",
+        ownership: "© 2026 Grandpa Theo",
+        rights: "personal use",
+        voiceConsent: [{ voice: "Grandpa Theo", grantedBy: "self", date: "2026-10-19" }],
+      },
+      pages: [
+        {
+          id: 1,
+          illustration: { url: "assets/page-1.jpg", alt: "A kite over the hill" },
+          text: { content: "Thank you for the kite story.", audioUrl: "assets/narration-1.wav", audioCodec: "wav" },
+        },
+      ],
+    };
+    const assets = new Map<string, Uint8Array>([
+      ["assets/page-1.jpg", dataUrlToBytes(`data:image/jpeg;base64,${TINY_JPEG_B64}`).bytes],
+      ["assets/narration-1.wav", dataUrlToBytes(`data:audio/wav;base64,${TINY_WAV_B64}`).bytes],
+    ]);
+
+    const { manifest } = unpackStorysync(packStorysync(reply, assets));
+    expect(manifest).toEqual(reply);
+    expect(manifest.signature?.replyTo).toBe(reply.signature!.replyTo);
+    expect(manifest.signature).not.toHaveProperty("remixOf");
+    // additive: no new error and no new warning for it
+    expect(validateManifest(manifest)).toEqual({ ok: true, errors: [], warnings: [] });
+
+    // the schema documents it beside remixOf, as a plain string
+    const schemaPath = path.join(__dirname, "..", "public", "protocol", "v2.schema.json");
+    const signature = JSON.parse(fs.readFileSync(schemaPath, "utf8")).properties.signature.properties;
+    expect(signature.replyTo.type).toBe("string");
+    expect(signature.replyTo.description).toMatch(/share URL or id of the tape this one answers/i);
+    expect(signature.replyTo.description).toMatch(/distinct from remixOf/i);
+    expect(signature.remixOf.type).toBe("string");
+  });
+});

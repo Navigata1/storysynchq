@@ -27,8 +27,9 @@
  *
  * Side A complete (s06, T12): the end card is ./EndCard — the label with a
  * sticker of the last picture, the J-card liner notes (./liner-notes) ending
- * in "What's inside this tape? →", the loop back into making, and the QR of
- * the share link when there is one.
+ * in "What's inside this tape? →", the loop back into making ("Send a
+ * thank-you back" on a tape someone sent, T18), and the QR of the share link
+ * when there is one.
  *
  * Rules this file exists to honour:
  *   1. The tap on "Tap to Begin" is the iOS audio unlock. Nothing plays before.
@@ -292,6 +293,14 @@ export interface PlayerProps {
   /** The loop that justifies the protocol: receive → create. */
   onMakeYourOwn?: () => void;
   /**
+   * "Send a thank-you back" on the end card (T18): the Read Room passes it
+   * for a tape someone sent, never for the house tape. The Player silences
+   * the room (narration and music) before handing over.
+   */
+  onReply?: () => void;
+  /** Whom a reply goes back to, for the end card's line. */
+  replyName?: string;
+  /**
    * The link this story lives at, when it has one (`/read?story=…`). Drawn as
    * a QR on the end card so the tape can jump from a laptop to a grandparent's
    * phone without anyone typing a code.
@@ -299,7 +308,7 @@ export interface PlayerProps {
   shareUrl?: string;
 }
 
-export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProps) {
+export function Player({ manifest, onExit, onMakeYourOwn, onReply, replyName, shareUrl }: PlayerProps) {
   const pages = manifest.pages;
   const total = pages.length;
 
@@ -664,6 +673,21 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
     focusStageRef.current = false;
     stageRef.current?.focus({ preventScroll: true });
   }, [ended]);
+
+  /* "Send a thank-you back": the room falls silent, then the Creator opens. */
+  const reply = React.useMemo(
+    () =>
+      onReply
+        ? () => {
+            stopNarration();
+            const engine = engineRef.current;
+            if (engine?.musicPlaying) engine.stopMusic();
+            setMusicLive(false);
+            onReply();
+          }
+        : undefined,
+    [onReply, stopNarration],
+  );
 
   const togglePlay = React.useCallback(() => {
     unlockAudio();
@@ -1496,6 +1520,8 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
           shareUrl={shareUrl}
           onReplay={replay}
           onMakeYourOwn={onMakeYourOwn}
+          onReply={reply}
+          replyName={replyName}
           onExit={onExit}
         />
       ) : null}

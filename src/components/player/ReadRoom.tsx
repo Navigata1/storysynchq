@@ -13,6 +13,11 @@
  * Everything here is Register B on a dark stage: the room is a shelf, and the
  * things on it are cassettes. Once one is chosen, the Player takes the screen.
  *
+ * A tape someone sent (a link or a file, never the house tape) ends with
+ * "Send a thank-you back" (T18): the reply seed (src/lib/storysync/reply.ts)
+ * is handed to the Creator as a one-shot sessionStorage entry, and the room
+ * moves to /studio?reply=1.
+ *
  * useSearchParams() means this component must render under a <Suspense>
  * boundary — src/app/read/page.tsx provides it.
  */
@@ -23,6 +28,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { loadStorysyncToStory } from "@/lib/storysync/container";
 import type { SsyncManifest } from "@/lib/storysync/manifest";
 import { HOUSE_TAPE_URL, loadTapeByCode, normalizeTapeManifest } from "@/lib/storysync/tape-source";
+import { REPLY_QUERY, REPLY_SEED_KEY, replySeed, serializeReplySeed } from "@/lib/storysync/reply";
 import { BigButton, GlassPanel, Reel, TapeLabel, TAPE } from "@/components/studio-kit/kit";
 import { Player } from "./Player";
 import "./player.css";
@@ -174,6 +180,27 @@ export function ReadRoom() {
 
   const makeYourOwn = React.useCallback(() => router.push("/studio"), [router]);
 
+  /* ── "Send a thank-you back" — every tape but the house tape ──────────── */
+  const answered = state.kind === "ready" && state.origin !== "demo" ? state : null;
+  const replyName = React.useMemo(
+    () => (answered ? replySeed(answered.manifest).name : undefined),
+    [answered],
+  );
+  const sendReply = React.useCallback(() => {
+    if (!answered) return;
+    // The link this tape was opened from, in the form a publish writes it.
+    const link =
+      answered.origin === "share" && code
+        ? `${window.location.origin}/read?story=${encodeURIComponent(code)}`
+        : undefined;
+    try {
+      window.sessionStorage.setItem(REPLY_SEED_KEY, serializeReplySeed(replySeed(answered.manifest, link)));
+    } catch {
+      /* no session storage: the Creator opens as it always does */
+    }
+    router.push(`/studio?${REPLY_QUERY}=1`);
+  }, [answered, code, router]);
+
   if (state.kind === "ready") {
     return (
       <Player
@@ -181,6 +208,8 @@ export function ReadRoom() {
         manifest={state.manifest}
         onExit={exitPlayer}
         onMakeYourOwn={makeYourOwn}
+        onReply={answered ? sendReply : undefined}
+        replyName={replyName}
         shareUrl={state.origin === "share" ? shareUrl : undefined}
       />
     );

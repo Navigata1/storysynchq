@@ -44,6 +44,11 @@ export interface SsyncSignature {
   /** Share URL or id of the story this one was remixed from. */
   remixOf?: string;
   /**
+   * Share URL or id of the tape this one answers. A reply is a new tape, not a
+   * derivative, so it is distinct from {@link remixOf} (docs/format-spec.md §7).
+   */
+  replyTo?: string;
+  /**
    * Consent records for recorded/cloned voices in this story: one record per
    * recorded voice (docs/format-spec.md §7.1).
    */

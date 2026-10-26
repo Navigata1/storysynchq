@@ -32,6 +32,10 @@
         "shareUrl": { "type": "string" },
         "ownership": { "type": "string" },
         "remixOf": { "type": "string", "description": "Share URL or id of the story this one was remixed from" },
+        "replyTo": {
+          "type": "string",
+          "description": "Share URL or id of the tape this one answers. A reply is a new tape, not a derivative, so it is distinct from remixOf."
+        },
         "voiceConsent": {
           "type": "array",
           "description": "One record per recorded voice on the tape.",

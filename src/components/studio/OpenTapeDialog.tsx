@@ -9,6 +9,9 @@
  *                  exactly as it was. Escape does the same.
  *   Open it        replaces the story with the opened tape.
  *
+ * A reply (T18) asks the same question in its own words: "Reply to <title>?"
+ * with "Start the reply" (the `heading` and `confirmLabel` props).
+ *
  * Focus moves to "Keep my story", the safe answer, stays inside the dialog
  * while it is open (a click on the backdrop or the panel keeps it there), and
  * goes back to where it was when the dialog appeared: the opener after a click
@@ -23,6 +26,10 @@ import { BigButton, GlassPanel } from "@/components/studio-kit/kit";
 export interface OpenTapeDialogProps {
   /** The opened tape's title. */
   title: string;
+  /** The question the dialog asks (its name). Default "Open <title>?". */
+  heading?: string;
+  /** The label of the answer that replaces the story. Default "Open it". */
+  confirmLabel?: string;
   onKeep: () => void;
   onOpen: () => void;
   /**
@@ -32,7 +39,14 @@ export interface OpenTapeDialogProps {
   returnFocusTo?: React.RefObject<HTMLElement | null>;
 }
 
-export function OpenTapeDialog({ title, onKeep, onOpen, returnFocusTo }: OpenTapeDialogProps) {
+export function OpenTapeDialog({
+  title,
+  heading,
+  confirmLabel = "Open it",
+  onKeep,
+  onOpen,
+  returnFocusTo,
+}: OpenTapeDialogProps) {
   const rootRef = React.useRef<HTMLDivElement | null>(null);
 
   React.useEffect(() => {
@@ -101,7 +115,7 @@ export function OpenTapeDialog({ title, onKeep, onOpen, returnFocusTo }: OpenTap
             <FolderOpen className="h-5 w-5" strokeWidth={1.8} />
           </span>
           <h2 id="studio-open-title" className="text-lg leading-snug font-semibold text-white">
-            Open {title}?
+            {heading ?? `Open ${title}?`}
           </h2>
         </div>
         <p id="studio-open-body" className="mt-2 text-sm leading-relaxed text-white/60">
@@ -119,7 +133,7 @@ export function OpenTapeDialog({ title, onKeep, onOpen, returnFocusTo }: OpenTap
           />
           <BigButton
             icon={<FolderOpen className="h-[18px] w-[18px]" strokeWidth={1.8} />}
-            label="Open it"
+            label={confirmLabel}
             variant="ghost"
             className="w-full justify-center"
             onClick={onOpen}

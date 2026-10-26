@@ -9,7 +9,11 @@
  *   2. the J-card liner notes (./liner-notes → the kit JCard): what is on the
  *      tape, whose voice, the music, who owns it, and the consent that travels
  *      inside the file — ending in "What's inside this tape? →" (/protocol);
- *   3. Read it again · Make your own story (the loop: receive → create);
+ *   3. on a tape someone sent (a link or a file, never the house tape), the
+ *      gold "Send a thank-you back" and its line (T18): one page recorded
+ *      back, as its own little tape; then Read it again · Make your own story
+ *      (the loop: receive → create), Make your own story in gold outline
+ *      whenever the reply is the filled gold action;
  *   4. the QR of the exact share URL, when the tape was opened from a link;
  *   5. Close, and the line a parent most needs: nobody is counting plays.
  *
@@ -31,6 +35,7 @@ import {
   Compass,
   Eye,
   Leaf,
+  Mic,
   Moon,
   Repeat,
   Star,
@@ -40,6 +45,7 @@ import {
 } from "lucide-react";
 import type { MoodName } from "@/lib/audio/moods";
 import type { SsyncManifest } from "@/lib/storysync/manifest";
+import { replyLine } from "@/lib/storysync/reply";
 import { BigButton, TapeLabel } from "@/components/studio-kit/kit";
 import { JCard, type JCardRow } from "@/components/studio-kit/JCard";
 import {
@@ -174,12 +180,30 @@ export interface EndCardProps {
   onReplay: () => void;
   /** The loop that justifies the protocol: receive → create. */
   onMakeYourOwn?: () => void;
+  /**
+   * "Send a thank-you back" (T18): record one page in reply. Passed for a
+   * tape someone sent (a link or a file), never for the house tape; without
+   * it the card is T12's.
+   */
+  onReply?: () => void;
+  /** Whom the reply goes back to, for its line ("…back to <name> as…"). */
+  replyName?: string;
   /** Leave the story. */
   onExit?: () => void;
 }
 
-export function EndCard({ manifest, runtime, shareUrl, onReplay, onMakeYourOwn, onExit }: EndCardProps) {
+export function EndCard({
+  manifest,
+  runtime,
+  shareUrl,
+  onReplay,
+  onMakeYourOwn,
+  onReply,
+  replyName,
+  onExit,
+}: EndCardProps) {
   const rootRef = React.useRef<HTMLDivElement | null>(null);
+  const replyNoteId = React.useId();
   const [qr, setQr] = React.useState<{ url: string; src: string } | null>(null);
 
   const title = manifest.metadata?.title || "Untitled Story";
@@ -303,6 +327,22 @@ export function EndCard({ manifest, runtime, shareUrl, onReplay, onMakeYourOwn, 
 
         {/* what to do next */}
         <div className="pl-end-next">
+          {onReply ? (
+            <div className="pl-end-reply" data-pl="end-reply">
+              <BigButton
+                icon={<Mic aria-hidden="true" focusable="false" strokeWidth={2.2} />}
+                label="Send a thank-you back"
+                variant="gold"
+                onClick={onReply}
+                aria-describedby={replyNoteId}
+                className="pl-end-send"
+              />
+              <p id={replyNoteId} className="pl-end-sendnote">
+                {replyLine(replyName)}
+              </p>
+            </div>
+          ) : null}
+
           <div className="pl-end-pair">
             <BigButton
               icon={<Repeat aria-hidden="true" focusable="false" strokeWidth={2.2} />}
@@ -312,12 +352,14 @@ export function EndCard({ manifest, runtime, shareUrl, onReplay, onMakeYourOwn, 
               className="pl-end-again"
             />
             {onMakeYourOwn ? (
+              /* the reply, when there is one, is the one filled gold action:
+                 this steps down to the reference's gold outline */
               <BigButton
                 icon={<Star aria-hidden="true" focusable="false" strokeWidth={2.2} />}
                 label="Make your own story"
-                variant="gold"
+                variant={onReply ? "ghost" : "gold"}
                 onClick={onMakeYourOwn}
-                className="pl-end-make"
+                className={onReply ? "pl-end-make pl-end-make--outline" : "pl-end-make"}
               />
             ) : null}
           </div>

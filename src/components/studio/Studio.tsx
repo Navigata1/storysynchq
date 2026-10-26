@@ -13,7 +13,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ArrowLeft, Circle, FolderOpen, Pen } from "lucide-react";
+import { ArrowLeft, Circle, FolderOpen, Heart, Pen } from "lucide-react";
 import { BigButton, GlassPanel, ModeToggle, Reel } from "@/components/studio-kit/kit";
 import { blobToDataUrl, dataUrlToBlob } from "@/lib/audio/recorder";
 import { normalizeNarration } from "@/lib/audio/transcode";
@@ -32,6 +32,7 @@ import {
   type ConsentChoice,
 } from "@/lib/storysync/consent";
 import { resolveNarrator } from "@/lib/storysync/narrator";
+import { REPLY_QUERY, REPLY_SEED_KEY, parseReplySeed, type ReplySeed } from "@/lib/storysync/reply";
 import { generateStory } from "@/lib/story-engine";
 import { generateIllustration } from "@/app/page-improvements";
 import {
@@ -87,6 +88,7 @@ import {
   type StudioState,
 } from "./types";
 import "./studio.css";
+import "./reply-chip.css";
 
 type Phase = "edit" | "gate" | "publishing" | "published";
 type Boot = "loading" | "asking" | "ready";
@@ -104,6 +106,36 @@ interface PendingOpen {
    * "Keep my story" restores it exactly as "Keep working on it" would.
    */
   saved: SavedDraft | null;
+}
+
+/** A thank-you waiting on "Reply to <title>?" before it replaces a saved story (T18). */
+interface PendingReply {
+  seed: ReplySeed;
+  /** The saved draft the restore prompt would have offered; "Keep my story" restores it. */
+  saved: SavedDraft;
+}
+
+/**
+ * `/studio?reply=1`: the reply seed the Read Room handed over (T18), or null.
+ * The flag is cleaned off the URL and the one-shot sessionStorage entry is
+ * removed as it is read (a seed left behind by a navigation that never
+ * arrived goes too), so a refresh or a pasted link opens the plain Creator.
+ */
+function takeReplySeed(): ReplySeed | null {
+  const url = new URL(window.location.href);
+  const flagged = url.searchParams.get(REPLY_QUERY) === "1";
+  if (url.searchParams.has(REPLY_QUERY)) {
+    url.searchParams.delete(REPLY_QUERY);
+    window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+  }
+  let raw: string | null = null;
+  try {
+    raw = window.sessionStorage.getItem(REPLY_SEED_KEY);
+    if (raw !== null) window.sessionStorage.removeItem(REPLY_SEED_KEY);
+  } catch {
+    raw = null;
+  }
+  return flagged ? parseReplySeed(raw) : null;
 }
 
 /** The line about opening a tape: working on it, or why it did not open. */
@@ -215,6 +247,7 @@ export default function Studio() {
   const [boot, setBoot] = React.useState<Boot>("loading");
   const [restore, setRestore] = React.useState<SavedDraft | null>(null);
   const [pendingOpen, setPendingOpen] = React.useState<PendingOpen | null>(null);
+  const [pendingReply, setPendingReply] = React.useState<PendingReply | null>(null);
   const [openNote, setOpenNote] = React.useState<OpenNote | null>(null);
   const [opening, setOpening] = React.useState(false);
   const [photoBusy, setPhotoBusy] = React.useState(false);
@@ -342,21 +375,13 @@ export default function Studio() {
   /* ------------------------------------------------------------ open a tape */
 
   /**
-   * An opened tape replaces the story cleanly: its re-voiced manifest, no
-   * recordings, nothing published, a fresh clock, and where it came from.
+   * A new story replaces the one on the Stage cleanly (an opened tape, a
+   * reply): nothing published, no question left open, page 1 on the Stage.
    */
-  const applyOpenedTape = React.useCallback(
-    (tape: RevoicedTape, mood: MoodName | null) => {
+  const replaceStory = React.useCallback(
+    (next: StudioState, announcement: string) => {
       stopAudio();
-      const fresh = blankState();
-      setState({
-        ...fresh,
-        manifest: tape.manifest,
-        // A mood chosen on the link plays; otherwise the tape's own.
-        mood: mood ?? tape.mood,
-        musicOn: mood ? true : tape.musicOn,
-        remix: tape.remix,
-      });
+      setState(next);
       publishedRef.current = null;
       authorRef.current = "";
       consentRef.current = [];
@@ -370,14 +395,59 @@ export default function Studio() {
       setTool(null);
       setPhase("edit");
       setPendingOpen(null);
+      setPendingReply(null);
       setRestore(null);
       setBoot("ready");
+      setAnnouncement(announcement);
+    },
+    [stopAudio],
+  );
+
+  /**
+   * An opened tape replaces the story cleanly: its re-voiced manifest, no
+   * recordings, nothing published, a fresh clock, and where it came from.
+   */
+  const applyOpenedTape = React.useCallback(
+    (tape: RevoicedTape, mood: MoodName | null) => {
+      const fresh = blankState();
       const n = tape.manifest.pages.length;
-      setAnnouncement(
+      replaceStory(
+        {
+          ...fresh,
+          manifest: tape.manifest,
+          // A mood chosen on the link plays; otherwise the tape's own.
+          mood: mood ?? tape.mood,
+          musicOn: mood ? true : tape.musicOn,
+          remix: tape.remix,
+        },
         `Opened ${tape.manifest.metadata.title}, ${n} ${n === 1 ? "page" : "pages"}. Record your voice on any page.`,
       );
     },
-    [stopAudio],
+    [replaceStory],
+  );
+
+  /**
+   * A thank-you (T18): one blank page, the seed's title, the Creator's
+   * default music, `signature.replyTo` when there is a link to answer, and
+   * the chip's title beside the manifest (never in it).
+   */
+  const applyReply = React.useCallback(
+    (seed: ReplySeed) => {
+      const fresh = blankState();
+      replaceStory(
+        {
+          ...fresh,
+          manifest: {
+            ...fresh.manifest,
+            metadata: { ...fresh.manifest.metadata, title: seed.title },
+            ...(seed.replyTo ? { signature: { replyTo: seed.replyTo } } : {}),
+          },
+          reply: { title: seed.chipTitle },
+        },
+        `Reply to ${seed.chipTitle}: one page for your picture, your words and your voice.`,
+      );
+    },
+    [replaceStory],
   );
 
   /** Never lose a story by accident: a story on the Stage (or saved) is asked about first. */
@@ -431,6 +501,7 @@ export default function Studio() {
     const found = loadDraft();
     const saved = found && storyHasContent(found.state) ? found : null;
     const query = takeOpenTapeQuery();
+    const reply = takeReplySeed();
     if (query.open) {
       const open = query.open;
       setBoot(saved ? "asking" : "ready");
@@ -440,13 +511,21 @@ export default function Studio() {
         open === HOUSE_TAPE_QUERY ? "houseUnavailable" : "notFound",
         { mood: query.mood, saved },
       );
+    } else if (reply) {
+      // A saved story is asked about first, in place of the restore prompt.
+      if (saved) {
+        setPendingReply({ seed: reply, saved });
+        setBoot("asking");
+      } else {
+        applyReply(reply);
+      }
     } else if (saved) {
       setRestore(saved);
       setBoot("asking");
     } else {
       setBoot("ready");
     }
-  }, [openTape]);
+  }, [openTape, applyReply]);
 
   React.useEffect(() => {
     if (boot !== "ready") return;
@@ -1148,7 +1227,7 @@ export default function Studio() {
       if (phase !== "edit") return;
       // Behind an open question (aria-modal) the Stage does not move, even
       // when focus has dropped to the page.
-      if (pendingOpen || restore) return;
+      if (pendingOpen || pendingReply || restore) return;
       const target = event.target as HTMLElement | null;
       if (target?.isContentEditable) return;
       // A focused control owns its own keys. Space on "Finish my story" must
@@ -1178,7 +1257,7 @@ export default function Studio() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [audio.playing, pendingOpen, phase, play, restore, setActive, stopAudio]);
+  }, [audio.playing, pendingOpen, pendingReply, phase, play, restore, setActive, stopAudio]);
 
   /* ----------------------------------------------------------------- derived */
 
@@ -1226,92 +1305,106 @@ export default function Studio() {
   return (
     <div className="studio" data-recording={recording ? "true" : "false"}>
       {/* ------------------------------------------------------------ top bar */}
-      <header
-        className="studio-area-top studio-topbar relative flex flex-wrap items-center gap-2 border-b border-white/8 bg-[#060912]/55 px-3 py-2 backdrop-blur-xl md:min-h-[68px] md:flex-nowrap"
-        style={{ "--sk-big-h": "48px" } as React.CSSProperties}
-      >
-        <Link
-          href="/"
-          aria-label="Leave the studio"
-          className="sk-focus flex h-11 items-center gap-2 rounded-xl border border-white/12 bg-white/5 px-3 text-sm text-white/75 hover:bg-white/10"
+      {/* The top row of the room: the bar, and under it, on a reply, its chip. */}
+      <div className="studio-area-top min-w-0">
+        <header
+          className="studio-topbar relative flex flex-wrap items-center gap-2 border-b border-white/8 bg-[#060912]/55 px-3 py-2 backdrop-blur-xl md:min-h-[68px] md:flex-nowrap"
+          style={{ "--sk-big-h": "48px" } as React.CSSProperties}
         >
-          <ArrowLeft aria-hidden="true" className="h-[18px] w-[18px] flex-none" strokeWidth={2} />
-          <span className="hidden sm:inline">Exit</span>
-        </Link>
-
-        {/* Any tape, the house tape included, opens here to be re-voiced. */}
-        <button
-          ref={openButtonRef}
-          type="button"
-          onClick={pickTape}
-          aria-label="Open a tape"
-          aria-busy={opening || undefined}
-          data-studio="open-tape"
-          className="sk-focus flex h-11 items-center gap-2 rounded-xl border border-white/12 bg-white/5 px-3 text-sm text-white/75 hover:bg-white/10"
-        >
-          <FolderOpen aria-hidden="true" className="h-[18px] w-[18px] flex-none" strokeWidth={1.8} />
-          <span className="hidden sm:inline">Open a tape</span>
-        </button>
-
-        <label className="sr-only" htmlFor="studio-title">
-          Story title
-        </label>
-        {/* The title, centred on the bar (from 1180px), with a faint pen. From
-            768px the bar stays one row and the title is what gives way (its
-            ellipsis): the row has ~10px to spare at 768, so a font that renders
-            a hair wider must not push SIMPLE and Finish onto a second row. */}
-        <div data-studio="title" className="studio-title md:min-w-0">
-          <input
-            id="studio-title"
-            value={state.manifest.metadata.title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder={DEFAULT_TITLE}
-            // Sizes the input where `field-sizing: content` is not supported.
-            size={Math.max(12, (state.manifest.metadata.title || DEFAULT_TITLE).length)}
-            className="studio-title-input sk-focus h-11 min-w-0 px-2 font-ss-display text-base font-semibold tracking-[-0.01em] text-white sm:text-lg min-[1180px]:text-[22px] min-[1180px]:font-bold"
-          />
-          <Pen aria-hidden="true" className="size-4 flex-none text-ss-fg-4" strokeWidth={2} />
-        </div>
-
-        <div className="ml-auto flex items-center gap-2">
-          <ModeToggle advanced={advanced} onChange={setAdvanced} />
-          {/* While the mic is live the story cannot be finished: it waits
-              "after this take". */}
-          <div className="studio-finish" data-recording={recording ? "true" : "false"}>
-            <BigButton
-              icon={<Circle className="size-4 text-[#E3452F]" fill="currentColor" strokeWidth={0} />}
-              label="Finish my story"
-              variant="gold"
-              disabled={!canFinish || recording}
-              onClick={() => {
-                stopAudio();
-                setTool(null);
-                setGateAuthor(gateDefault);
-                setPhase("gate");
-              }}
-              className="rounded-xl px-4 text-[15px] md:min-h-10 md:py-2"
-            />
-            {recording ? (
-              <span data-studio="finish-note" className="studio-finish-note font-ss-mono">
-                after this take
-              </span>
-            ) : null}
-          </div>
-        </div>
-
-        {/* An autosave that is failing is news at every width — a parent on a
-            phone is exactly who needs to hear it (G5). */}
-        {draftNote ? (
-          <p
-            role="status"
-            data-studio="draft-note"
-            className="order-last w-full text-[11px] leading-snug tracking-[0.12em] text-amber-300/80 uppercase"
-            style={{ fontFamily: "var(--font-plex-mono), monospace" }}
+          <Link
+            href="/"
+            aria-label="Leave the studio"
+            className="sk-focus flex h-11 items-center gap-2 rounded-xl border border-white/12 bg-white/5 px-3 text-sm text-white/75 hover:bg-white/10"
           >
-            {draftNote}
-          </p>
+            <ArrowLeft aria-hidden="true" className="h-[18px] w-[18px] flex-none" strokeWidth={2} />
+            <span className="hidden sm:inline">Exit</span>
+          </Link>
+
+          {/* Any tape, the house tape included, opens here to be re-voiced. */}
+          <button
+            ref={openButtonRef}
+            type="button"
+            onClick={pickTape}
+            aria-label="Open a tape"
+            aria-busy={opening || undefined}
+            data-studio="open-tape"
+            className="sk-focus flex h-11 items-center gap-2 rounded-xl border border-white/12 bg-white/5 px-3 text-sm text-white/75 hover:bg-white/10"
+          >
+            <FolderOpen aria-hidden="true" className="h-[18px] w-[18px] flex-none" strokeWidth={1.8} />
+            <span className="hidden sm:inline">Open a tape</span>
+          </button>
+
+          <label className="sr-only" htmlFor="studio-title">
+            Story title
+          </label>
+          {/* The title, centred on the bar (from 1180px), with a faint pen. From
+              768px the bar stays one row and the title is what gives way (its
+              ellipsis): the row has ~10px to spare at 768, so a font that renders
+              a hair wider must not push SIMPLE and Finish onto a second row. */}
+          <div data-studio="title" className="studio-title md:min-w-0">
+            <input
+              id="studio-title"
+              value={state.manifest.metadata.title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder={DEFAULT_TITLE}
+              // Sizes the input where `field-sizing: content` is not supported.
+              size={Math.max(12, (state.manifest.metadata.title || DEFAULT_TITLE).length)}
+              className="studio-title-input sk-focus h-11 min-w-0 px-2 font-ss-display text-base font-semibold tracking-[-0.01em] text-white sm:text-lg min-[1180px]:text-[22px] min-[1180px]:font-bold"
+            />
+            <Pen aria-hidden="true" className="size-4 flex-none text-ss-fg-4" strokeWidth={2} />
+          </div>
+
+          <div className="ml-auto flex items-center gap-2">
+            <ModeToggle advanced={advanced} onChange={setAdvanced} />
+            {/* While the mic is live the story cannot be finished: it waits
+                "after this take". */}
+            <div className="studio-finish" data-recording={recording ? "true" : "false"}>
+              <BigButton
+                icon={<Circle className="size-4 text-[#E3452F]" fill="currentColor" strokeWidth={0} />}
+                label="Finish my story"
+                variant="gold"
+                disabled={!canFinish || recording}
+                onClick={() => {
+                  stopAudio();
+                  setTool(null);
+                  setGateAuthor(gateDefault);
+                  setPhase("gate");
+                }}
+                className="rounded-xl px-4 text-[15px] md:min-h-10 md:py-2"
+              />
+              {recording ? (
+                <span data-studio="finish-note" className="studio-finish-note font-ss-mono">
+                  after this take
+                </span>
+              ) : null}
+            </div>
+          </div>
+
+          {/* An autosave that is failing is news at every width — a parent on a
+              phone is exactly who needs to hear it (G5). */}
+          {draftNote ? (
+            <p
+              role="status"
+              data-studio="draft-note"
+              className="order-last w-full text-[11px] leading-snug tracking-[0.12em] text-amber-300/80 uppercase"
+              style={{ fontFamily: "var(--font-plex-mono), monospace" }}
+            >
+              {draftNote}
+            </p>
+          ) : null}
+        </header>
+
+        {/* A thank-you says what it answers, right under the bar, at every width
+            (s06 phone 2). Draft-only: the title is never in the manifest. */}
+        {state.reply ? (
+          <div className="studio-reply" data-studio="reply-row">
+            <p className="studio-reply-chip" data-studio="reply-to">
+              <Heart aria-hidden="true" focusable="false" strokeWidth={2.2} />
+              <span className="studio-reply-text">Reply to · {state.reply.title}</span>
+            </p>
+          </div>
         ) : null}
-      </header>
+      </div>
 
       {/* ------------------------------------------------------------ rail */}
       <div className="studio-area-rail">
@@ -1594,6 +1687,20 @@ export default function Studio() {
             if (saved) keepSavedDraft(saved);
           }}
           onOpen={() => applyOpenedTape(pendingOpen.tape, pendingOpen.mood)}
+        />
+      ) : null}
+
+      {pendingReply ? (
+        <OpenTapeDialog
+          title={pendingReply.seed.chipTitle}
+          heading={`Reply to ${pendingReply.seed.chipTitle}?`}
+          confirmLabel="Start the reply"
+          returnFocusTo={openButtonRef}
+          onKeep={() => {
+            setPendingReply(null);
+            keepSavedDraft(pendingReply.saved);
+          }}
+          onOpen={() => applyReply(pendingReply.seed)}
         />
       ) : null}
 
