@@ -1,0 +1,143 @@
+/* ============================================================================
+   HeroSky — the landing's one light (T06; reference s01, "One light").
+   Page 1's swirl and single bright star hang faintly behind the hero, and the
+   star lands exactly behind the deck's play key: "the brand's gold and the
+   story's light are the same point". Owned by HeroSky.tsx; the deck, the well
+   and the tape themselves live in landing.css.
+
+   UNLAYERED, like landing.css, so it wins over studio-kit's @layer rules.
+   Nothing here moves: the sky, the core, the glow and the key are still.
+   ========================================================================== */
+
+/* ---------------------------------------------------------- the anchor */
+
+/* The play key's place on the deck, shared by the key (a child of the deck)
+   and the sky (a child of the stage). The deck is the stage's last child and
+   has no border, so the deck's bottom edge is the stage's: one pair of
+   numbers puts both on the same point, at every width. */
+.ls-tape-stage {
+  --ls-key-size: 30px;
+  --ls-key-lift: 19px; /* the key's bottom edge above the deck's bottom edge */
+}
+
+/* ------------------------------------------------------------- the key */
+
+/* Decoration on the deck face, not a control: the deck is aria-hidden and
+   "Press play" below is the button. */
+.ls-deck-key {
+  position: absolute;
+  left: 50%;
+  bottom: var(--ls-key-lift);
+  display: grid;
+  place-items: center;
+  width: var(--ls-key-size);
+  height: var(--ls-key-size);
+  margin-left: calc(var(--ls-key-size) / -2);
+  border-radius: 50%;
+  color: #fff1c9;
+  background-image: radial-gradient(
+    circle at 50% 35%,
+    rgba(40, 34, 30, 0.72),
+    rgba(12, 12, 20, 0.82) 75%
+  );
+  box-shadow:
+    inset 0 0 0 2px var(--ss-gold-2),
+    0 0 0 1px rgba(255, 236, 190, 0.5),
+    0 0 18px 2px rgba(245, 158, 11, 0.55);
+  pointer-events: none;
+}
+
+.ls-deck-key .ls-glyph {
+  width: 13px;
+  height: 13px;
+  margin-left: 2px;
+  filter: drop-shadow(0 0 4px rgba(255, 210, 120, 0.9));
+}
+
+/* ------------------------------------------------------------- the sky */
+
+/* A 0×0 anchor on the key's centre. z-index -1 inside the hero's stacking
+   context: above the starfield, under the headline, the tape and the deck. */
+.ls-sky {
+  /* the reference sky is 1300px across at a 1080px viewport */
+  --ls-sky-size: clamp(720px, 120.4vw, 1700px);
+  /* where page 1's star sits in its square picture */
+  --ls-star-x: 0.641;
+  --ls-star-y: 0.462;
+
+  position: absolute;
+  z-index: -1;
+  left: 50%;
+  bottom: calc(var(--ls-key-lift) + var(--ls-key-size) / 2);
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+/* the picture box, offset so its star lands on the anchor */
+.ls-sky-art,
+.ls-sky-core {
+  position: absolute;
+  left: calc(var(--ls-sky-size) * var(--ls-star-x) * -1);
+  top: calc(var(--ls-sky-size) * var(--ls-star-y) * -1);
+  width: var(--ls-sky-size);
+  height: var(--ls-sky-size);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+/* Faint, masked down to the swirl around the star. The swirl's ellipse runs
+   past the picture's right edge, so a second layer fades that edge out —
+   otherwise the picture would end in a hard vertical line. */
+.ls-sky-art {
+  opacity: 0.16;
+  -webkit-mask-image:
+    radial-gradient(46.2% 30.8% at 64.1% 40%, #000 30%, transparent 100%),
+    linear-gradient(90deg, #000 84%, transparent 99%);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    radial-gradient(46.2% 30.8% at 64.1% 40%, #000 30%, transparent 100%),
+    linear-gradient(90deg, #000 84%, transparent 99%);
+  mask-composite: intersect;
+}
+
+/* the same picture at full strength, masked to the star alone */
+.ls-sky-core {
+  -webkit-mask-image: radial-gradient(
+    9.2% 9.2% at 64.1% 46.2%,
+    #000 22%,
+    rgba(0, 0, 0, 0.45) 52%,
+    transparent 100%
+  );
+  mask-image: radial-gradient(
+    9.2% 9.2% at 64.1% 46.2%,
+    #000 22%,
+    rgba(0, 0, 0, 0.45) 52%,
+    transparent 100%
+  );
+}
+
+/* the one gold glow (radial 600×300, #F59E0B at 12%) with a warm core, on
+   the key — the only light the hero has */
+.ls-sky-glow {
+  position: absolute;
+  left: -300px;
+  top: -150px;
+  width: 600px;
+  height: 300px;
+  background-image:
+    radial-gradient(70px 70px at 50% 50%, rgba(255, 236, 190, 0.22), transparent 100%),
+    radial-gradient(300px 150px at 50% 50%, rgba(245, 158, 11, 0.12), transparent 100%);
+}
+
+/* ------------------------------------------------- reduced motion: seated */
+
+/* "With reduced motion the tape is simply already in": only the label band
+   shows above the mouth. The depth is the well's height (landing.css), so
+   nothing is transformed and nothing travels. */
+@media (prefers-reduced-motion: reduce) {
+  .ls-hero .ls-tape-stage {
+    --ls-tape-depth: 0.27;
+  }
+}

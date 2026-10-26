@@ -23,6 +23,7 @@ import { Cassette } from "@/components/studio-kit/Cassette";
 import { tapeMetaLine } from "@/lib/storysync/tape-meta";
 import houseTape from "../../../public/demo/brave-little-star.ssync.json";
 import "./landing.css";
+import { HeroSky } from "./HeroSky";
 
 /* --------------------------------------------------------------- constants */
 
@@ -48,6 +49,8 @@ const HOUSE_TAPE = {
   title: houseTape.metadata.title,
   author: houseTape.metadata.author,
   meta: tapeMetaLine(houseTape),
+  /** Page 1's picture: its single bright star is the hero's one light. */
+  sky: houseTape.pages[0]?.illustration?.url,
 } as const;
 
 /**
@@ -247,6 +250,13 @@ function Glyph({ kind, className }: { kind: GlyphKind; className?: string }) {
  * animation state: CSS moves the cassette down behind the deck face and lights
  * the transport lamp, and every one of those rules lives behind
  * `prefers-reduced-motion: no-preference` in landing.css.
+ *
+ * At rest the tape is poised in the deck mouth with its lower third swallowed
+ * (the depth is the well's height, never a transform on the slide); under
+ * reduced motion it is already seated, only its label band above the mouth.
+ * The house tape's title is read from the demo manifest. The play key on the
+ * deck face is decoration (the deck is aria-hidden; "Press play" is the
+ * control), and page 1's star sits right behind it (HeroSky).
  */
 function HeroDeck({ inserting }: { inserting: boolean }) {
   return (
@@ -255,12 +265,14 @@ function HeroDeck({ inserting }: { inserting: boolean }) {
       data-ls="tape-stage"
       data-inserting={inserting ? "true" : "false"}
     >
+      {HOUSE_TAPE.sky ? <HeroSky src={HOUSE_TAPE.sky} /> : null}
+
       {/* the well clips at the deck mouth, so the tape is genuinely swallowed */}
       <div className="ls-tape-well" aria-hidden="true">
         <div className="ls-tape-slide" data-ls="tape-slide">
           <Cassette
             className="ls-cassette"
-            title="StorySyncHQ"
+            title={HOUSE_TAPE.title}
             meta="SIDE A · PRESS PLAY"
             spinning
           />
@@ -268,18 +280,22 @@ function HeroDeck({ inserting }: { inserting: boolean }) {
       </div>
 
       <div className="ls-deck" data-ls="deck" aria-hidden="true">
+        <span className="ls-deck-top" />
         <span className="ls-deck-mouth" />
-        <span className="ls-deck-face">
-          <span className="ls-deck-lamp" />
-          <span className="ls-deck-readout sk-font-meta">
-            {inserting ? "▶ PLAY · SIDE A" : "DECK · READY"}
-          </span>
-          <span className="ls-deck-vents">
-            <span />
-            <span />
-            <span />
-            <span />
-          </span>
+        <span className="ls-deck-lamp" />
+        <span className="ls-deck-readout sk-font-meta">
+          {inserting ? "▶ PLAY · SIDE A" : "DECK · READY"}
+        </span>
+        <span className="ls-deck-vents">
+          <span />
+          <span />
+          <span />
+          <span />
+          <span />
+          <span />
+        </span>
+        <span className="ls-deck-key" data-ls="play-key" aria-hidden="true">
+          <Glyph kind="play" />
         </span>
       </div>
     </div>
@@ -333,10 +349,11 @@ function Hero() {
   return (
     <section className="ls-hero" aria-labelledby="ls-hero-title">
       <Starfield />
-      <div className="ls-hero-glow" aria-hidden="true" />
 
       <div className="ls-wrap ls-hero-inner">
-        <p className="ls-eyebrow sk-font-meta">The library cassette · rebuilt for the web</p>
+        <p className="ls-eyebrow ls-hero-kicker sk-font-meta" data-ls="hero-kicker">
+          The library cassette · rebuilt for the web
+        </p>
 
         <h1 id="ls-hero-title" className="sr-only">
           StorySyncHQ
@@ -353,7 +370,7 @@ function Hero() {
           One link that plays anywhere.
         </p>
 
-        <div className="ls-hero-cta" style={styleVars({ "--sk-big-h": "76px" })}>
+        <div className="ls-hero-cta" style={styleVars({ "--sk-big-h": "84px" })}>
           <BigButton
             data-ls="press-play"
             icon={<Glyph kind="play" />}
@@ -372,12 +389,9 @@ function Hero() {
             onClick={goToDoors}
           >
             or scroll to the two doors
+            <Glyph kind="chevron" />
           </button>
         </div>
-
-        <span className="ls-scroll-cue" aria-hidden="true">
-          <Glyph kind="chevron" />
-        </span>
       </div>
     </section>
   );

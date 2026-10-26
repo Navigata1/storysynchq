@@ -541,13 +541,18 @@ test.describe("tape stock · the hero is the kit Cassette", () => {
     await expect(cassette.locator(".sk-cassette-foot")).toHaveCount(1);
 
     // the label: stripe, band with holes and STORYSYNC, title and meta —
-    // still today's hero text until T06
+    // since T06 the title is the demo manifest's metadata.title (read from disk)
+    const demoTitle = (
+      JSON.parse(
+        fs.readFileSync(path.join(process.cwd(), "public/demo/brave-little-star.ssync.json"), "utf8"),
+      ) as { metadata: { title: string } }
+    ).metadata.title;
     const label = cassette.locator(".sk-cassette-label");
     await expect(label).toHaveCount(1);
     await expect(label.locator(".sk-tape-stripe")).toHaveCount(1);
     await expect(label.locator(".sk-tape-band")).toContainText(/storysync/i);
     await expect(label.locator(".sk-tape-band .sk-tape-hole")).toHaveCount(2);
-    await expect(label.locator(".sk-tape-title")).toHaveText("StorySyncHQ");
+    await expect(label.locator(".sk-tape-title")).toHaveText(demoTitle);
     await expect(label.locator(".sk-tape-meta")).toHaveText("SIDE A · PRESS PLAY");
 
     // the hand-built markup is gone
