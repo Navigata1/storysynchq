@@ -513,6 +513,9 @@ test.describe("T20b · Sent to you and NEW on /read", () => {
       if (type !== "fetch" && type !== "xhr" && type !== "ping" && type !== "beacon") return;
       const url = new URL(req.url());
       if (url.pathname.startsWith("/_next/") || url.pathname.startsWith("/__nextjs")) return;
+      // Next's own route prefetch (production prefetches a visible <Link href="/">
+      // as ?_rsc=…): page payload for a link, not anything the shelf sends
+      if (url.searchParams.has("_rsc")) return;
       asked.push(req.url());
     });
     await seedShelf(page, { library: library(), sent: [grandmaSent()], previousVisit: PREVIOUS_VISIT });
