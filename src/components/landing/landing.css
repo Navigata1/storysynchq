@@ -149,6 +149,7 @@
   line-height: 1.2;
   letter-spacing: 0.18em;
   color: var(--ls-gold);
+  text-wrap: balance;
 }
 
 .ls-hero-line {
@@ -290,6 +291,34 @@
   top: 49%;
   height: 21.6%;
   transform: translate(-50%, 0);
+  /* s01's smoked window: brown glass, lit a little from below (the deck's
+     light), never the kit's near-black */
+  background-image: linear-gradient(
+    180deg,
+    rgba(38, 29, 22, 0.96) 0%,
+    rgba(72, 54, 38, 0.94) 55%,
+    rgba(112, 86, 58, 0.92) 100%
+  );
+}
+
+/* s01's tape pack: the start of the tape, wound on the LEFT reel — a
+   tape-brown disc ringed like wound tape, ~1.4× the reel (inside the window), behind its spokes
+   (the reel's svg turns, the pack holds still). The right reel is bare.
+   Decorative: a pseudo-element inside the aria-hidden cassette. */
+.ls-cassette .sk-cassette-ribbon + .sk-reel::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  left: 50%;
+  top: 50%;
+  width: 138%;
+  height: 138%;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background-image:
+    radial-gradient(circle, transparent 0 58%, rgba(0, 0, 0, 0.22) 100%),
+    repeating-radial-gradient(circle, #7a4e2c 0 1px, #69421f 1px 2px);
+  box-shadow: inset 0 0 0 1px rgba(255, 236, 200, 0.1);
 }
 
 /* On a narrow phone the label's fixed parts crowd the window: tighten them.
@@ -450,8 +479,12 @@
   padding-block: clamp(3.75rem, 11vw, 7rem);
 }
 
+/* s01: the doors start right under the hero, so the tops of both cards peek
+   in at the fold (the hero stops ~2.25rem short of the viewport). No visible
+   section head; the h2 is sr-only. The bottom padding stays the section's. */
 .ls-section--doors {
   scroll-margin-top: 0;
+  padding-top: clamp(0.5rem, 1.2vw, 0.75rem);
 }
 
 .ls-section--protocol {
@@ -1111,7 +1144,8 @@
   max-width: 44ch;
   font-size: 0.85rem;
   line-height: 1.55;
-  color: rgba(148, 163, 184, 0.72);
+  /* the privacy promise is body text: fg-3 holds WCAG AA (≈6.5:1) here */
+  color: var(--ss-fg-3);
 }
 
 .ls-footer-links {

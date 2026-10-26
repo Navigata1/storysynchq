@@ -283,6 +283,14 @@
     animation: sk-ring-pulse 1.8s ease-out infinite;
   }
 
+  /* The reference .ss-btn pill (foundation.css: radius 999px), opt-in via
+     shape="pill". Only the outline changes — variant, height, pressed and
+     reduced-motion behaviour stay the BigButton's. The red ring follows. */
+  .sk-big[data-shape="pill"],
+  .sk-big[data-shape="pill"] .sk-big-ring {
+    border-radius: 999px;
+  }
+
   /* ---------- TransportButton ------------------------------------------- */
   .sk-transport {
     position: relative;

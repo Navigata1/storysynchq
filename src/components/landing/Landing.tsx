@@ -39,6 +39,8 @@ const PRIVACY_URL = "https://github.com/Navigata1/storysynchq/blob/main/PRIVACY.
 const SCHEMA_URL = "/protocol/v2.schema.json";
 const PROTOCOL_HREF = "/protocol";
 const DOORS_ID = "ls-doors";
+/** The doors reveal while still below the fold, so their peeking tops show at rest. */
+const DOORS_REVEAL_MARGIN = "0px 0px 96px 0px";
 
 /**
  * "Press play" plays the demo tape: the Read Room opens `?demo=1` straight on
@@ -155,6 +157,13 @@ interface RevealProps {
   className?: string;
   /** Stagger, in ms. */
   delay?: number;
+  /**
+   * IntersectionObserver rootMargin. The default trims the bottom 10% so a
+   * section reveals once it is properly on screen; content that must show at
+   * the fold (the doors peeking in, s01) widens it instead, so the hidden
+   * state's 24px drop cannot hold it below the viewport edge.
+   */
+  rootMargin?: string;
 }
 
 /**
@@ -162,7 +171,7 @@ interface RevealProps {
  * IntersectionObserver) the content is shown immediately and the CSS
  * transition never applies.
  */
-function Reveal({ children, className, delay = 0 }: RevealProps) {
+function Reveal({ children, className, delay = 0, rootMargin = "0px 0px -10% 0px" }: RevealProps) {
   const ref = React.useRef<HTMLDivElement | null>(null);
   const [shown, setShown] = React.useState(false);
 
@@ -183,11 +192,11 @@ function Reveal({ children, className, delay = 0 }: RevealProps) {
           }
         }
       },
-      { threshold: 0, rootMargin: "0px 0px -10% 0px" },
+      { threshold: 0, rootMargin },
     );
     io.observe(el);
     return () => io.disconnect();
-  }, [shown]);
+  }, [shown, rootMargin]);
 
   return (
     <div
@@ -360,19 +369,23 @@ function Hero() {
       <LandingNav privacyHref={PRIVACY_URL} />
 
       <div className="ls-wrap ls-hero-inner">
+        {/* two unbreakable halves: on a phone the only break is after the · */}
         <p className="ls-eyebrow ls-hero-kicker sk-font-meta" data-ls="hero-kicker">
-          The library cassette · rebuilt for the web
+          <span className="ls-nw">The library cassette ·</span>{" "}
+          <span className="ls-nw">rebuilt for the web</span>
         </p>
-
-        <h1 id="ls-hero-title" className="sr-only">
-          StorySyncHQ
-        </h1>
 
         <HeroDeck inserting={inserting} />
 
-        <p className="ls-hero-line sk-font-tape">
+        {/* The visible line is the page's one h1. aria-label adds the brand to
+            its name (and to the hero region's) without changing its text. */}
+        <h1
+          id="ls-hero-title"
+          className="ls-hero-line sk-font-tape"
+          aria-label="StorySyncHQ: Press play on the stories you make together."
+        >
           Press play on the stories you make together.
-        </p>
+        </h1>
 
         <p className="ls-hero-sub">
           Photos of their drawings. Their voice on every page. A little music underneath.
@@ -385,6 +398,7 @@ function Hero() {
             icon={<Glyph kind="play" />}
             label="Press play"
             variant="gold"
+            shape="pill"
             aria-busy={inserting}
             onClick={pressPlay}
           />
@@ -426,9 +440,8 @@ function PlayDoor() {
         </span>
         <div className="ls-door-title sk-font-tape">Play a story</div>
         <p className="ls-door-copy">
-          Open a shared link, a <code className="sk-font-meta">.storysync</code> file, or the
-          demo tape. Tap to begin — the voice, the pages and the music arrive exactly as they
-          were made.
+          Open a tape someone made for you: a shared link, a{" "}
+          <code className="sk-font-meta">.storysync</code> file, or our demo tape.
         </p>
         <div className="ls-door-spacer" />
         {/* visual affordance only — the link is already named by its title */}
@@ -621,7 +634,8 @@ function RecordVignette() {
 function ShareVignette() {
   return (
     <span className="ls-vig ls-vig--share" aria-hidden="true">
-      <span className="ls-chip sk-font-meta">storysynchq/s/7f3q2</span>
+      {/* the real link's shape (/read?story=<128-bit code>), code truncated */}
+      <span className="ls-chip sk-font-meta">/read?story=3f9c…a71e</span>
       <span className="ls-devices">
         <span className="ls-dev ls-dev--phone ls-anim" />
         <span className="ls-dev ls-dev--tablet ls-anim" />
@@ -674,22 +688,17 @@ export default function Landing() {
       {/* ------------------------------------------------------- two doors */}
       <section id={DOORS_ID} className="ls-section ls-section--doors" aria-labelledby="ls-doors-title">
         <div className="ls-wrap">
-          <Reveal className="ls-section-head">
-            <p className="ls-eyebrow sk-font-meta">Two doors · one loop</p>
-            <h2 id="ls-doors-title" className="ls-h2 sk-font-tape">
-              Someone makes it. Someone plays it.
-            </h2>
-            <p className="ls-lede">
-              Then they want to make one back. That loop — receive, then create — is the whole
-              reason the format exists.
-            </p>
-          </Reveal>
+          {/* s01 draws no head here: the doors start right under the hero, so
+              their tops peek in at the fold. The h2 still names the section. */}
+          <h2 id="ls-doors-title" className="sr-only">
+            Someone makes it. Someone plays it.
+          </h2>
 
           <div className="ls-doors-grid">
-            <Reveal className="ls-doors-cell" delay={80}>
+            <Reveal className="ls-doors-cell" delay={80} rootMargin={DOORS_REVEAL_MARGIN}>
               <PlayDoor />
             </Reveal>
-            <Reveal className="ls-doors-cell" delay={180}>
+            <Reveal className="ls-doors-cell" delay={180} rootMargin={DOORS_REVEAL_MARGIN}>
               <MakeDoor />
             </Reveal>
           </div>
@@ -715,7 +724,7 @@ export default function Landing() {
       <section className="ls-section" aria-labelledby="ls-how-title">
         <div className="ls-wrap">
           <Reveal className="ls-section-head">
-            <p className="ls-eyebrow sk-font-meta">Three steps · about ten minutes</p>
+            <p className="ls-eyebrow sk-font-meta">Three steps · one tape</p>
             <h2 id="ls-how-title" className="ls-h2 sk-font-tape">
               How the magic works
             </h2>

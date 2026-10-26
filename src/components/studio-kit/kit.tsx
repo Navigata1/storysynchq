@@ -203,12 +203,21 @@ export function TapeLabel({ title, author, meta, accent, inset, className }: Tap
 
 export type BigButtonVariant = "gold" | "violet" | "red" | "ghost";
 
+/**
+ * Outline: "rounded" (default) is the kit's 16px child-scale key; "pill" is
+ * the reference `.ss-btn` (radius 999px), for a page's one primary action
+ * where the reference draws a pill (s01's hero "Press play").
+ */
+export type BigButtonShape = "rounded" | "pill";
+
 export interface BigButtonProps
   extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "children"> {
   /** Emoji, SVG, or any node. Decorative — the label names the button. */
   icon?: React.ReactNode;
   label: string;
   variant?: BigButtonVariant;
+  /** Outline (default "rounded"). See BigButtonShape. */
+  shape?: BigButtonShape;
 }
 
 /**
@@ -220,6 +229,7 @@ export function BigButton({
   icon,
   label,
   variant = "gold",
+  shape = "rounded",
   disabled = false,
   className,
   type = "button",
@@ -229,6 +239,7 @@ export function BigButton({
     <button
       data-sk="big"
       data-variant={variant}
+      data-shape={shape === "pill" ? "pill" : undefined}
       {...rest}
       type={type}
       disabled={disabled}
