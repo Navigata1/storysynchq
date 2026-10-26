@@ -548,3 +548,23 @@ privacy line in `--ss-fg-3`). From 880px the card lays out in two columns so a l
   sentence. The house tape passes cleanly, so the WARN (timestamp consent date) and the FAIL (a `.webm` narration) come
   from two hand-edited copies, each prefixed "a hand-edited copy:", in the validator's own words (double quotes kept).
   This is M5-PRD OQ 3, pending Jon.
+
+- **2026-10-25 · T20a · The Read Room is a shelf: your tapes are radios on a ledge; pulling one out is the shipped
+  delete.**
+  
+  - **What stands on the shelf.** Every row of this device's `ssync-library` and, when Supabase is configured and a
+    grown-up is signed in, every row of their cloud library. They are merged by id (the cloud copy wins), newest first.
+    The model is pure (`src/components/player/shelf.ts`). Nothing else is fetched and nothing is counted.
+  - **Selecting is not opening.** Shelf tapes are `role=radio` in a "Your tapes" radio group (roving tabindex,
+    arrows). The band's gold "Play this tape" opens the cover gate. The blank "Make your own" tape stays the shipped
+    door (`.pl-choice-3`, a button), last on the same ledge. The house tape and the file door keep their own row.
+  - **Pulling a tape out = delete everything.** It takes two presses ("Pull the tape out", then "Tap again to delete
+    everything"); Escape or a new selection disarms. It runs `deleteBook(id)` (device copy, cloud row, share link) and
+    clears the Studio draft only when that draft is this tape (`published.id` or `publishedIds`). The line "Pulled
+    out. Pictures, voices, the saved copy and the link are gone." shows only after the delete has finished.
+  - **Shelf tapes are yours**, so the Player does not offer "Send a thank-you back" on them (T18's rule: a link or a
+    file, never the house tape).
+  - **Kit.** `Shelf` + `ShelfTape` (LOCAL 8, with `selected`, `pulling`, `leaving`, `stamp` and the blank variant)
+    and `TapeRibbon variant="loop"`. The two-column room waits for an `.rr-aside` (T22a).
+  - **Test.** The blank tape is no longer a TapeLabel, so T05b's tape-stock tests count two labels on `/read` and
+    check the blank as the dashed shelf face.

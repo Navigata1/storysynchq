@@ -3,20 +3,36 @@
 /**
  * ReadRoom — the /read entry surface (docs/design-direction.md §4).
  *
- * Four ways a story reaches a listener, in resolution order:
+ * Five ways a story reaches a listener, in resolution order:
  *   ?story=<shareCode>  → the cloud copy, then this device's own library
  *   ?demo=1             → straight onto the demo tape's cover gate (the
  *                         landing's "Press play" lands here)
+ *   your tapes          → the shelf (T20a): this device's library and, when a
+ *                         grown-up is signed in, their cloud library
  *   a .storysync file   → unpacked on this device, never uploaded
  *   the demo tape       → /demo/brave-little-star.ssync.json
  *
  * Everything here is Register B on a dark stage: the room is a shelf, and the
- * things on it are cassettes. Once one is chosen, the Player takes the screen.
+ * things on it are cassettes (s07). "YOUR TAPES" stands every tape this family
+ * keeps on one ledge (kit Shelf/ShelfTape), the blank "Make your own" tape
+ * last; selecting a tape lifts it and shows its band ("Play this tape", "Pull
+ * the tape out"). Pulling a tape out is the shipped delete (`deleteBook`: the
+ * device copy, the cloud row and its link) plus the Studio draft when the
+ * draft is that tape. "THE HOUSE TAPE" keeps the demo and the file door. Once
+ * a tape is chosen, the Player takes the screen.
  *
- * A tape someone sent (a link or a file, never the house tape) ends with
- * "Send a thank-you back" (T18): the reply seed (src/lib/storysync/reply.ts)
- * is handed to the Creator as a one-shot sessionStorage entry, and the room
- * moves to /studio?reply=1.
+ * The shelf is read after mount (the first paint is the chooser without
+ * tapes) and again whenever the room comes back to the chooser. Nothing is
+ * fetched for it except, when signed in, the grown-up's own cloud library.
+ *
+ * At ≥ 1024 px the chooser is a two-column room: `.rr-columns` turns into
+ * shelves (≈ 60 %) + a right column as soon as it holds an `.rr-aside` (the
+ * "Read it in…" panel, T22a). Until then the shelves span the room.
+ *
+ * A tape someone sent (a link or a file, never the house tape and never one
+ * of your own shelf tapes) ends with "Send a thank-you back" (T18): the reply
+ * seed (src/lib/storysync/reply.ts) is handed to the Creator as a one-shot
+ * sessionStorage entry, and the room moves to /studio?reply=1.
  *
  * useSearchParams() means this component must render under a <Suspense>
  * boundary — src/app/read/page.tsx provides it.
@@ -25,37 +41,51 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Lock, Play } from "lucide-react";
 import { loadStorysyncToStory } from "@/lib/storysync/container";
 import type { SsyncManifest } from "@/lib/storysync/manifest";
 import { HOUSE_TAPE_URL, loadTapeByCode, normalizeTapeManifest } from "@/lib/storysync/tape-source";
 import { REPLY_QUERY, REPLY_SEED_KEY, replySeed, serializeReplySeed } from "@/lib/storysync/reply";
+import { deleteBook, getBooks, isCloudEnabled } from "@/lib/cloud-storage";
+import { getUser } from "@/lib/supabase";
+import { clearDraft, DRAFT_KEY } from "@/components/studio/draft";
 import { BigButton, GlassPanel, Reel, TapeLabel, TAPE } from "@/components/studio-kit/kit";
+import { Shelf, ShelfTape } from "@/components/studio-kit/Shelf";
+import { PullTapeIcon } from "@/components/studio-kit/PrintSlot";
 import { Player } from "./Player";
+import {
+  bandLine,
+  draftBelongsTo,
+  mergeShelf,
+  nextAfter,
+  parseLibrary,
+  SHELF_LIBRARY_KEY,
+  type ShelfEntry,
+} from "./shelf";
 import "./player.css";
+import "./read-room.css";
 
-/** A blank tape — the one you record yourself. */
-const BLANK_LABEL = "#FFFDF6";
 /** Kraft/manila — the tape someone handed you on a file. */
 const KRAFT_LABEL = "#DFD2B8";
 
-type Origin = "share" | "demo" | "file";
+/** The pull-out: tilt and rise, a held beat, then the tape fades off the shelf. */
+const PULL_MS = 420;
+const PULL_HOLD_MS = 260;
+const PULL_LEAVE_MS = 220;
+
+type Origin = "share" | "demo" | "file" | "shelf";
 
 type RoomState =
   | { kind: "chooser" }
   | { kind: "loading"; what: string }
   | { kind: "missing"; code: string }
   | { kind: "error"; message: string }
-  | { kind: "ready"; manifest: SsyncManifest; origin: Origin };
+  | { kind: "ready"; manifest: SsyncManifest; origin: Origin; shelfId?: string; tapeUrl?: string };
+
+type ShelfStatus = { kind: "none" } | { kind: "pulled"; n: number } | { kind: "kept"; message: string };
 
 function Kicker({ children }: { children: React.ReactNode }) {
-  return (
-    <p
-      className="m-0 text-[10px] tracking-[0.32em] text-white/40 uppercase"
-      style={{ fontFamily: "var(--font-plex-mono), monospace" }}
-    >
-      {children}
-    </p>
-  );
+  return <p className="rr-kicker m-0">{children}</p>;
 }
 
 function Choice({
@@ -67,7 +97,7 @@ function Choice({
 }: {
   onClick: () => void;
   disabled?: boolean;
-  order: 1 | 2 | 3;
+  order: 1 | 2;
   children: React.ReactNode;
   ariaLabel: string;
 }) {
@@ -84,6 +114,44 @@ function Choice({
   );
 }
 
+/** This device's library and, with a signed-in grown-up, their cloud library. */
+async function readShelf(): Promise<ShelfEntry[]> {
+  let raw: string | null = null;
+  try {
+    raw = window.localStorage.getItem(SHELF_LIBRARY_KEY);
+  } catch {
+    raw = null;
+  }
+  let cloud: unknown[] = [];
+  if (isCloudEnabled()) {
+    try {
+      const user = await getUser();
+      if (user) cloud = await getBooks(user.id);
+    } catch {
+      cloud = [];
+    }
+  }
+  return mergeShelf(parseLibrary(raw), cloud);
+}
+
+/** Wipe the Studio's saved draft when it is this tape; any other draft stays. */
+function forgetDraftOf(id: string): void {
+  try {
+    const raw = window.localStorage.getItem(DRAFT_KEY);
+    if (raw && draftBelongsTo(JSON.parse(raw), id)) clearDraft();
+  } catch {
+    /* an unreadable draft is not this tape's */
+  }
+}
+
+function prefersReducedMotion(): boolean {
+  try {
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  } catch {
+    return false;
+  }
+}
+
 export function ReadRoom() {
   const router = useRouter();
   const params = useSearchParams();
@@ -94,6 +162,25 @@ export function ReadRoom() {
   const [state, setState] = React.useState<RoomState>({ kind: "chooser" });
   const [shareUrl, setShareUrl] = React.useState<string | undefined>(undefined);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+
+  /* ── the shelf ─────────────────────────────────────────────────────────── */
+  const [shelf, setShelf] = React.useState<ShelfEntry[]>([]);
+  const [selectedId, setSelectedId] = React.useState<string | null>(null);
+  /** "Pull the tape out" pressed once, for this tape: the next press deletes. */
+  const [armedId, setArmedId] = React.useState<string | null>(null);
+  const [pulling, setPulling] = React.useState<{ id: string; leaving: boolean } | null>(null);
+  const [status, setStatus] = React.useState<ShelfStatus>({ kind: "none" });
+  const faceRefs = React.useRef(new Map<string, HTMLButtonElement>());
+  const timers = React.useRef<number[]>([]);
+  /** The shelf as last rendered, for the pull-out's "who is next". */
+  const shelfRef = React.useRef<ShelfEntry[]>([]);
+  React.useEffect(() => {
+    shelfRef.current = shelf;
+  }, [shelf]);
+
+  const inChooser = state.kind === "chooser" || state.kind === "error";
+  const selected = shelf.find((entry) => entry.id === selectedId) ?? null;
+  const armed = selected !== null && armedId === selected.id;
 
   /* ── the link this tape lives at (SSR-safe: read after mount) ─────────── */
   React.useEffect(() => {
@@ -124,6 +211,125 @@ export function ReadRoom() {
       cancelled = true;
     };
   }, [code]);
+
+  /* ── your tapes: read after mount, and again each time the room returns ── */
+  React.useEffect(() => {
+    if (!inChooser || code || wantsDemo) return;
+    let cancelled = false;
+    void readShelf().then((entries) => {
+      if (cancelled) return;
+      // a pull-out's line belongs to the visit it happened in
+      setStatus({ kind: "none" });
+      setShelf(entries);
+      setSelectedId((current) =>
+        current && entries.some((entry) => entry.id === current) ? current : (entries[0]?.id ?? null),
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [inChooser, code, wantsDemo]);
+
+  React.useEffect(() => {
+    const pending = timers.current;
+    return () => {
+      for (const t of pending) window.clearTimeout(t);
+    };
+  }, []);
+
+  /* Escape disarms the pull-out. */
+  React.useEffect(() => {
+    if (!armed) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setArmedId(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [armed]);
+
+  const select = React.useCallback((id: string) => {
+    setSelectedId(id);
+    setArmedId(null);
+  }, []);
+
+  /** ← → (and ↑ ↓, Home, End) move the selection; the focus follows it. */
+  const onTapeKey = React.useCallback(
+    (event: React.KeyboardEvent<HTMLButtonElement>, id: string) => {
+      const ids = shelf.map((entry) => entry.id).filter((x) => x !== pulling?.id);
+      const at = ids.indexOf(id);
+      if (at < 0 || ids.length === 0) return;
+      let next: string | undefined;
+      if (event.key === "ArrowRight" || event.key === "ArrowDown") next = ids[(at + 1) % ids.length];
+      else if (event.key === "ArrowLeft" || event.key === "ArrowUp") next = ids[(at - 1 + ids.length) % ids.length];
+      else if (event.key === "Home") next = ids[0];
+      else if (event.key === "End") next = ids[ids.length - 1];
+      if (!next) return;
+      event.preventDefault();
+      select(next);
+      faceRefs.current.get(next)?.focus();
+    },
+    [shelf, pulling, select],
+  );
+
+  /* ── pull the tape out: every copy, the link, and its draft ───────────── */
+  const pullOut = React.useCallback(
+    async (entry: ShelfEntry) => {
+      const reduce = prefersReducedMotion();
+      setArmedId(null);
+      if (!reduce) setPulling({ id: entry.id, leaving: false });
+      try {
+        await deleteBook(entry.id);
+      } catch (error) {
+        setPulling(null);
+        setStatus({
+          kind: "kept",
+          message:
+            error instanceof Error && error.message
+              ? `That tape is still on the shelf. ${error.message}`
+              : "That tape is still on the shelf. Try again.",
+        });
+        void readShelf().then(setShelf);
+        return;
+      }
+      forgetDraftOf(entry.id);
+      setStatus((current) => ({ kind: "pulled", n: current.kind === "pulled" ? current.n + 1 : 1 }));
+
+      const leave = () => {
+        const ids = shelfRef.current.map((x) => x.id);
+        setSelectedId((sel) => (sel === entry.id ? nextAfter(ids, entry.id) : sel));
+        setShelf((current) => current.filter((x) => x.id !== entry.id));
+        setPulling((current) => (current?.id === entry.id ? null : current));
+      };
+      if (reduce) {
+        leave();
+        return;
+      }
+      timers.current.push(
+        window.setTimeout(() => setPulling({ id: entry.id, leaving: true }), PULL_MS + PULL_HOLD_MS),
+        window.setTimeout(leave, PULL_MS + PULL_HOLD_MS + PULL_LEAVE_MS),
+      );
+    },
+    [],
+  );
+
+  const onPull = React.useCallback(() => {
+    if (!selected || pulling?.id === selected.id) return;
+    if (armed) void pullOut(selected);
+    else setArmedId(selected.id);
+  }, [selected, pulling, armed, pullOut]);
+
+  const playSelected = React.useCallback(() => {
+    if (!selected || pulling?.id === selected.id) return;
+    const manifest = normalizeTapeManifest(selected.manifest) ?? selected.manifest;
+    setArmedId(null);
+    setState({
+      kind: "ready",
+      manifest,
+      origin: "shelf",
+      shelfId: selected.id,
+      tapeUrl: selected.label.shareUrl,
+    });
+  }, [selected, pulling]);
 
   /* ── the demo tape ────────────────────────────────────────────────────── */
   const openDemo = React.useCallback(async () => {
@@ -180,8 +386,9 @@ export function ReadRoom() {
 
   const makeYourOwn = React.useCallback(() => router.push("/studio"), [router]);
 
-  /* ── "Send a thank-you back" — every tape but the house tape ──────────── */
-  const answered = state.kind === "ready" && state.origin !== "demo" ? state : null;
+  /* ── "Send a thank-you back" — a tape someone sent: a link or a file ──── */
+  const answered =
+    state.kind === "ready" && (state.origin === "share" || state.origin === "file") ? state : null;
   const replyName = React.useMemo(
     () => (answered ? replySeed(answered.manifest).name : undefined),
     [answered],
@@ -204,13 +411,13 @@ export function ReadRoom() {
   if (state.kind === "ready") {
     return (
       <Player
-        key={state.origin + (code ?? "")}
+        key={`${state.origin}:${code ?? state.shelfId ?? ""}`}
         manifest={state.manifest}
         onExit={exitPlayer}
         onMakeYourOwn={makeYourOwn}
         onReply={answered ? sendReply : undefined}
         replyName={replyName}
-        shareUrl={state.origin === "share" ? shareUrl : undefined}
+        shareUrl={state.origin === "share" ? shareUrl : state.origin === "shelf" ? state.tapeUrl : undefined}
       />
     );
   }
@@ -218,7 +425,7 @@ export function ReadRoom() {
   return (
     <div className="pl-room">
       <div className="pl-room-light" aria-hidden="true" />
-      <div className="pl-room-inner">
+      <div className={inChooser ? "pl-room-inner rr-inner" : "pl-room-inner"}>
         <div className="flex items-center justify-between gap-4">
           <Kicker>StorySync Reader</Kicker>
           <Link href="/" className="pl-chip sk-focus">
@@ -278,25 +485,14 @@ export function ReadRoom() {
         ) : null}
 
         {/* ─────────────────────────────────────────────────────── chooser */}
-        {state.kind === "chooser" || state.kind === "error" ? (
+        {inChooser ? (
           <>
-            <div className="flex flex-col gap-3">
-              <h1
-                className="m-0 text-[clamp(2rem,7vw,3.25rem)] leading-[1.05] font-black tracking-[-0.02em] text-white"
-                style={{ fontFamily: "var(--font-fraunces), Georgia, serif" }}
-              >
-                Pick a tape.
-              </h1>
-              <p className="m-0 max-w-[46ch] text-[16px] leading-relaxed text-white/55">
-                Press begin and the story reads itself — a voice, a melody underneath, and
-                pages that turn when they are ready.
-              </p>
-            </div>
+            <h1 className="rr-title m-0">Pick a tape.</h1>
 
             {state.kind === "error" ? (
               <div
                 role="alert"
-                className="rounded-xl border px-4 py-3 text-[14px]"
+                className="mt-5 rounded-xl border px-4 py-3 text-[14px]"
                 style={{
                   borderColor: "rgba(227,69,47,0.45)",
                   backgroundColor: "rgba(227,69,47,0.12)",
@@ -307,61 +503,158 @@ export function ReadRoom() {
               </div>
             ) : null}
 
-            <div className="flex flex-col gap-4">
-              <Choice order={1} onClick={openDemo} ariaLabel="Play the demo tape, The Brave Little Star">
-                <TapeLabel
-                  title="The Brave Little Star"
-                  author="Island Development Crew"
-                  meta={<>▶ DEMO TAPE · SIDE A · READ ALONG</>}
-                />
-              </Choice>
+            <div className="rr-columns">
+              <div className="rr-main">
+                {/* ────────────────────────────────────────── YOUR TAPES */}
+                <section data-shelf="yours" aria-labelledby="rr-yours-label" className="rr-section">
+                  <h2 id="rr-yours-label" className="rr-label">
+                    Your tapes
+                  </h2>
+                  <p className="rr-note">
+                    <Lock aria-hidden="true" focusable="false" strokeWidth={2} />
+                    Unlisted. Only people you send a link to can open them.
+                  </p>
 
-              <Choice
-                order={2}
-                onClick={() => fileInputRef.current?.click()}
-                ariaLabel="Open a .storysync file from this device"
-              >
-                <TapeLabel
-                  title="Open a tape from this device"
-                  meta={<>⏏ .STORYSYNC FILE · NOTHING IS UPLOADED</>}
-                  accent={KRAFT_LABEL}
-                />
-              </Choice>
+                  <Shelf label="Your tapes shelf" className="rr-shelf">
+                    {shelf.length > 0 ? (
+                      <div role="radiogroup" aria-label="Your tapes" className="rr-shelf-group">
+                        {shelf.map((entry) => {
+                          const isSelected = entry.id === selectedId;
+                          const metaId = `rr-meta-${entry.id}`;
+                          return (
+                            <ShelfTape
+                              key={entry.id}
+                              ref={(el) => {
+                                if (el) faceRefs.current.set(entry.id, el);
+                                else faceRefs.current.delete(entry.id);
+                              }}
+                              tapeId={entry.id}
+                              role="radio"
+                              aria-checked={isSelected}
+                              aria-label={entry.label.title}
+                              aria-describedby={metaId}
+                              tabIndex={isSelected ? 0 : -1}
+                              title={entry.label.title}
+                              metaId={metaId}
+                              meta={
+                                <>
+                                  {entry.label.author ? (
+                                    <>
+                                      <span className="sk-shelf-meta-line">{entry.label.author}</span>
+                                      <span className="sk-shelf-meta-sep"> · </span>
+                                    </>
+                                  ) : null}
+                                  <span className="sk-shelf-meta-line">{entry.label.runtime}</span>
+                                </>
+                              }
+                              inset={entry.label.inset}
+                              selected={isSelected}
+                              pulling={pulling?.id === entry.id}
+                              leaving={pulling?.id === entry.id && pulling.leaving}
+                              onClick={() => select(entry.id)}
+                              onKeyDown={(event) => onTapeKey(event, entry.id)}
+                            />
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                    <ShelfTape
+                      variant="blank"
+                      title="Make your own"
+                      onClick={makeYourOwn}
+                      aria-label="Make your own story in the studio"
+                      className="pl-choice pl-choice-3"
+                    />
+                  </Shelf>
 
-              <Choice order={3} onClick={makeYourOwn} ariaLabel="Make your own story in the studio">
-                <TapeLabel
-                  title="Make your own"
-                  meta={<>☆ BLANK TAPE · YOUR VOICE · YOUR PICTURES</>}
-                  accent={BLANK_LABEL}
-                />
-              </Choice>
+                  <p role="status" data-shelf="status" className="rr-status">
+                    {status.kind === "pulled" ? (
+                      <span key={status.n} className="rr-status-line">
+                        <PullTapeIcon className="rr-status-icon" />
+                        <span>
+                          <b>Pulled out.</b> Pictures, voices, the saved copy and the link are gone.
+                        </span>
+                      </span>
+                    ) : status.kind === "kept" ? (
+                      <span className="rr-status-line">{status.message}</span>
+                    ) : null}
+                  </p>
+
+                  {selected ? (
+                    <div data-shelf="band" className="rr-band">
+                      <p className="rr-band-line">{bandLine(selected.label)}</p>
+                      <div className="rr-band-actions">
+                        <BigButton
+                          variant="gold"
+                          icon={<Play className="size-[16px]" strokeWidth={2.4} fill="currentColor" />}
+                          label="Play this tape"
+                          onClick={playSelected}
+                          className="rr-band-btn"
+                        />
+                        <BigButton
+                          variant={armed ? "red" : "ghost"}
+                          icon={<PullTapeIcon className="h-[21px] w-[24px]" />}
+                          label={armed ? "Tap again to delete everything" : "Pull the tape out"}
+                          onClick={onPull}
+                          className={armed ? "rr-band-btn" : "rr-band-btn rr-pull"}
+                        />
+                      </div>
+                    </div>
+                  ) : null}
+                </section>
+
+                {/* ────────────────────────────────────── THE HOUSE TAPE */}
+                <section data-shelf="house" aria-labelledby="rr-house-label" className="rr-section">
+                  <h2 id="rr-house-label" className="rr-label">
+                    The house tape
+                  </h2>
+                  <div className="rr-house-doors">
+                    <Choice order={1} onClick={openDemo} ariaLabel="Play the demo tape, The Brave Little Star">
+                      <TapeLabel
+                        title="The Brave Little Star"
+                        author="Island Development Crew"
+                        meta={<>▶ DEMO TAPE · SIDE A · READ ALONG</>}
+                      />
+                    </Choice>
+
+                    <Choice
+                      order={2}
+                      onClick={() => fileInputRef.current?.click()}
+                      ariaLabel="Open a .storysync file from this device"
+                    >
+                      <TapeLabel
+                        title="Open a tape from this device"
+                        meta={<>⏏ .STORYSYNC FILE · NOTHING IS UPLOADED</>}
+                        accent={KRAFT_LABEL}
+                      />
+                    </Choice>
+                  </div>
+
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".storysync,.zip"
+                    className="sr-only"
+                    tabIndex={-1}
+                    aria-hidden="true"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      event.target.value = "";
+                      if (file) void openFile(file);
+                    }}
+                  />
+
+                  <p className="rr-foot m-0">
+                    A tape you open here is read on this device only. No accounts, no trackers,
+                    nothing sent anywhere.
+                  </p>
+                </section>
+              </div>
             </div>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".storysync,.zip"
-              className="sr-only"
-              tabIndex={-1}
-              aria-hidden="true"
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                event.target.value = "";
-                if (file) void openFile(file);
-              }}
-            />
-
-            <p
-              className="m-0 text-[10px] leading-[1.7] tracking-[0.2em] text-white/30 uppercase"
-              style={{ fontFamily: "var(--font-plex-mono), monospace" }}
-            >
-              A tape you open here is read on this device only. No accounts, no trackers,
-              nothing sent anywhere.
-            </p>
 
             <div
               aria-hidden="true"
-              className="h-[6px] w-full rounded-full"
+              className="mt-8 h-[6px] w-full rounded-full"
               style={{ backgroundColor: TAPE.red, opacity: 0.5 }}
             />
           </>
