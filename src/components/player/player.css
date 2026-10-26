@@ -601,23 +601,9 @@
     line-height: 1;
   }
 
-  /* progress: a strip of tape filling up */
-  .pl-progress {
-    position: relative;
-    height: 3px;
-    width: min(560px, 100%);
-    overflow: hidden;
-    border-radius: 999px;
-    background-color: rgba(255, 255, 255, 0.1);
-  }
-  .pl-progress-fill {
-    height: 100%;
-    width: 100%;
-    transform-origin: 0 50%;
-    border-radius: 999px;
-    background-image: linear-gradient(90deg, #f59e0b, #fcd34d);
-    transition: transform 480ms cubic-bezier(0.2, 0.7, 0.3, 1);
-  }
+  /* progress — the strip of tape filling up (`.pl-progress*`) lives in
+     ./deck.css with the tape packs (T09b): one segment per page, on the
+     room's floor, never hidden with the chrome. */
 
   .pl-transport {
     display: flex;
@@ -890,9 +876,6 @@
       animation-duration: 1ms !important;
     }
     .pl-word {
-      transition-duration: 1ms;
-    }
-    .pl-progress-fill {
       transition-duration: 1ms;
     }
     .pl-choice:hover {

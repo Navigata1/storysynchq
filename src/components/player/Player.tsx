@@ -20,6 +20,11 @@
  * under a "PAGE n · MOOD" kicker (./spread.css). Phones and portrait tablets
  * keep the full-bleed / stacked page.
  *
+ * Where the tape is (s02/s05, T09b): the deck chip's reels sit on tape packs
+ * (left big early, right big late) and a strip of tape fills along the floor,
+ * one segment per page — both from ./tape-position, fed by how far the voice
+ * is through the page on screen. No scrubber, no timecode.
+ *
  * Rules this file exists to honour:
  *   1. The tap on "Tap to Begin" is the iOS audio unlock. Nothing plays before.
  *   2. The manifest is the source of truth. v1 documents play; unknown fields
@@ -38,11 +43,12 @@ import type { SsyncManifest, SsyncPage } from "@/lib/storysync/manifest";
 import { DUCK_DEPTH_DB, DualBusAudioEngine } from "@/lib/audio/engine";
 import type { MoodName } from "@/lib/audio/moods";
 import { BigButton, GlassPanel, Reel, TapeLabel, TransportButton } from "@/components/studio-kit/kit";
-import { DeckChip } from "@/components/studio-kit/DeckChip";
+import { DECK_REEL_PX, DeckChip } from "@/components/studio-kit/DeckChip";
 import { estimateSeconds, formatClock, parseDuration, splitWords, wordIndexAtTime } from "./timing";
 import { openCueContext, playPageTurnCue } from "./sound";
 import { pageCrossfadeSeconds, pageMood } from "./music-plan";
 import { deckStatus } from "./deck-status";
+import { clipFraction, packDiameters, segmentFill, speechFraction, storyPosition } from "./tape-position";
 import {
   PREFS_KEY,
   SPEED_RATE,
@@ -325,6 +331,10 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
   const [hold, setHold] = React.useState<{ page: number; until: number; totalMs: number } | null>(null);
   /** The clock the countdown reads — moved once a second, only while a hold runs. */
   const [clock, setClock] = React.useState(0);
+  /** How far the voice is through a page, 0–1 (./tape-position): the clip's
+   *  clock, the lit word, 1 once the voice or a wordless page's beat is done.
+   *  It belongs to its page — a value for any other page reads as 0. */
+  const [inPage, setInPage] = React.useState<{ page: number; f: number }>({ page: 0, f: 0 });
   const speechAvailable = React.useSyncExternalStore(noSubscribe, speechOnDevice, speechOnServer);
 
   const engineRef = React.useRef<DualBusAudioEngine | null>(null);
@@ -572,6 +582,12 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
     if (playPageTurnCue(cueCtxRef.current)) setCuesFired((n) => n + 1);
   }, [cueOn]);
 
+  /** A page comes on screen at its own beginning: the tape's place in it is 0. */
+  const enterPage = React.useCallback((next: number) => {
+    setIndex(next);
+    setInPage({ page: next, f: 0 });
+  }, []);
+
   const goTo = React.useCallback(
     (dir: "next" | "prev") => {
       // The last page turns into the end card — never into nothing. This is the
@@ -599,14 +615,14 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
       turnTimersRef.current = [];
 
       if (reducedRef.current) {
-        setIndex(next);
+        enterPage(next);
         setTurn({ phase: "idle", dir });
         return;
       }
       setTurn({ phase: "out", dir });
       turnTimersRef.current.push(
         setTimeout(() => {
-          setIndex(next);
+          enterPage(next);
           setTurn({ phase: "in", dir });
         }, TURN_OUT_MS),
         setTimeout(
@@ -615,7 +631,7 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
         ),
       );
     },
-    [total, fireCue, stopNarration, unlockAudio],
+    [total, fireCue, stopNarration, unlockAudio, enterPage],
   );
 
   React.useEffect(() => {
@@ -629,10 +645,10 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
     stopNarration();
     setEnded(false);
     setPaused(false);
-    setIndex(0);
+    enterPage(0);
     setTurn({ phase: "idle", dir: "next" });
     setShowUi(true);
-  }, [stopNarration]);
+  }, [stopNarration, enterPage]);
 
   const togglePlay = React.useCallback(() => {
     unlockAudio();
@@ -679,6 +695,8 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
       setNarrating(false);
       setHighlight(-1);
       engine?.setNarrating(false);
+      // the voice (or a wordless page's beat) is done: the tape is at the page's end
+      setInPage({ page: index, f: 1 });
       if (!autoPlay) return;
       const holdMs = pageHoldMs(current, defaultPauseMs, timingRef.current);
       clearAuto();
@@ -743,15 +761,15 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
       utterance.rate = ttsRate;
       utterance.pitch = 1.05;
       let cursor = 0;
-      if (highlightOn) {
-        utterance.onboundary = (event) => {
-          if (cancelled) return;
-          if (event.name && event.name !== "word") return;
-          const at = event.charIndex ?? 0;
-          while (cursor + 1 < words.length && words[cursor + 1].start <= at) cursor++;
-          setHighlight(cursor);
-        };
-      }
+      // Each spoken word moves the tape; with the read-along on, it also lights.
+      utterance.onboundary = (event) => {
+        if (cancelled) return;
+        if (event.name && event.name !== "word") return;
+        const at = event.charIndex ?? 0;
+        while (cursor + 1 < words.length && words[cursor + 1].start <= at) cursor++;
+        setInPage({ page: index, f: speechFraction(cursor, words.length) });
+        if (highlightOn) setHighlight(cursor);
+      };
       utterance.onstart = () => {
         if (cancelled) return;
         setNarrating(true);
@@ -821,6 +839,26 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
     schedule();
     return () => clearTimeout(timer);
   }, [hold]);
+
+  /* ── where a RECORDED voice is in its clip (the tape's place in the page) ─
+     The element's own clock, sampled on its timeupdate (a few times a second
+     — the strip and the packs ease between samples). Only this page's clip
+     counts: while the element still holds another page's (a turn made while
+     paused), the page stays at its start. */
+  React.useEffect(() => {
+    const el = audioRef.current;
+    const audioUrl = pages[index]?.text?.audioUrl;
+    if (!el || !audioUrl) return;
+    const key = `${index}:${audioUrl}`;
+    const sample = () => {
+      if (loadedKeyRef.current !== key) return;
+      const f = clipFraction(el.currentTime, el.duration);
+      setInPage((prev) => (prev.page === index && Math.abs(prev.f - f) < 0.002 ? prev : { page: index, f }));
+    };
+    const events = ["timeupdate", "seeked", "durationchange", "ended"] as const;
+    events.forEach((name) => el.addEventListener(name, sample));
+    return () => events.forEach((name) => el.removeEventListener(name, sample));
+  }, [index, pages]);
 
   /* ── read-along for a RECORDED voice ─────────────────────────────────
      A recorded clip carries no word boundaries, so words light on a linear
@@ -1045,6 +1083,14 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
     DUCK_DEPTH_DB,
   );
 
+  /* Where the tape is (./tape-position): the page on screen plus how far its
+     voice has got; the end card is the end of the tape. */
+  const tapeP = storyPosition(index, total, ended ? 1 : inPage.page === index ? inPage.f : 0);
+  const packs = {
+    pill: packDiameters(tapeP, DECK_REEL_PX.pill),
+    expanded: packDiameters(tapeP, DECK_REEL_PX.expanded),
+  };
+
   return (
     <div
       className={cx(
@@ -1233,6 +1279,7 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
         rows={{ voice: status.voice, melody: status.melody, chime: status.chime }}
         narrator={narrator}
         idle={chromeHidden}
+        packs={packs}
       />
 
       {/* ───────────────────────────────────────────────────── top chrome */}
@@ -1277,22 +1324,40 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
         </p>
       ) : null}
 
+      {/* ─────────────────────────────────────────── the strip of tape */}
+      {/* "No scrubber, no timecode, only a strip of tape filling up" (s02):
+          one segment per page, each holding its page's share of p. A
+          progressbar, never a slider; it stays when the chrome idles out. */}
+      <div
+        className="pl-progress"
+        role="progressbar"
+        aria-label="Story progress"
+        aria-valuemin={1}
+        aria-valuemax={total}
+        aria-valuenow={index + 1}
+        aria-valuetext={`Page ${index + 1} of ${total}`}
+        data-pl="strip"
+        style={{ "--pl-tape-n": Math.max(1, total) } as React.CSSProperties}
+      >
+        {pages.map((_, i) => (
+          <span
+            key={i}
+            className="pl-progress-seg"
+            data-pl="strip-seg"
+            data-state={i < index ? "done" : i === index ? "now" : "ahead"}
+          >
+            <span
+              className="pl-progress-fill"
+              data-pl="strip-fill"
+              style={{ transform: `scaleX(${segmentFill(tapeP, total, i)})` }}
+            />
+          </span>
+        ))}
+        <span className="pl-progress-glow" aria-hidden="true" style={{ width: `${tapeP * 100}%` }} />
+      </div>
+
       {/* ────────────────────────────────────────────────── bottom chrome */}
       <div className={cx("pl-chrome pl-chrome--bottom", chromeHidden && "is-hidden")}>
-        <div
-          className="pl-progress"
-          role="progressbar"
-          aria-label="Story progress"
-          aria-valuemin={1}
-          aria-valuemax={total}
-          aria-valuenow={index + 1}
-          aria-valuetext={`Page ${index + 1} of ${total}`}
-        >
-          <div
-            className="pl-progress-fill"
-            style={{ transform: `scaleX(${total > 0 ? (index + 1) / total : 0})` }}
-          />
-        </div>
         <GlassPanel className="pl-transport rounded-full" data-pl-nav="">
           <TransportButton kind="prev" onClick={() => goTo("prev")} disabled={index === 0} />
           <TransportButton

@@ -5,6 +5,10 @@
    this file places it in the Player's room and draws the text page's foot
    line: a 24px turn ring and "next page in N s · turn cue ready".
 
+   T09b adds where the tape is: the tape-brown packs under the chip's reels
+   and the strip of tape along the bottom of the room (`.pl-progress*`, moved
+   here from player.css), both sized by ./tape-position.
+
    Moved here from player.css (the `.pl-deck*` block) so the chip's placement
    has one owner. Same @layer as player.css and spread.css; imported after
    spread.css, so the clearance rule below follows the book's own geometry.
@@ -107,6 +111,150 @@
     .pl-turn-arc.is-running {
       animation: none !important;
       transition: none !important;
+    }
+  }
+
+  /* ============================================ where the tape is (T09b) */
+  /* "Sound carries the motion: no scrubber, no timecode, only a strip of
+     tape filling up" (s02). Sizes come from ./tape-position as the voice
+     moves (the clip's clock, the lit word); each change eases out over
+     600 ms, and under reduced motion it lands at once. */
+  .pl-root {
+    --pl-tape-ease: var(--ss-ease, cubic-bezier(0.22, 0.8, 0.24, 1));
+    --pl-tape-ms: 600ms;
+  }
+
+  /* ------------------------------------------- the packs under the reels */
+  /* s02/s05: each reel sits on the tape wound on its side — a tape-brown
+     disc ringed like wound tape, centred on the reel's hub (it shares the
+     reel's position class in the chip). The left pack is big early in the
+     tape, the right one late. The pill's 18px reels and the expanded chip's
+     20px reels each get their own diameters (DeckChip's DECK_REEL_PX). */
+  .pl-deck .sk-deck-pack {
+    position: absolute;
+    top: 50%;
+    display: block;
+    width: var(--sk-pack-pill);
+    height: var(--sk-pack-pill);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    background-image:
+      radial-gradient(circle, transparent 0 52%, rgba(0, 0, 0, 0.25) 100%),
+      repeating-radial-gradient(circle, #5b3a24 0 1.2px, #4a2e1b 1.2px 2.4px);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+    transition:
+      width var(--pl-tape-ms) var(--pl-tape-ease),
+      height var(--pl-tape-ms) var(--pl-tape-ease);
+  }
+  @media (min-width: 768px) {
+    .pl-deck .sk-deck-pack {
+      width: var(--sk-pack-expanded);
+      height: var(--sk-pack-expanded);
+    }
+  }
+
+  /* ------------------------------------------------ the strip of tape --- */
+  /* One segment per page, each filling with its page's share, on the room's
+     floor. It is the tape's place, not a control: no handle, no timecode,
+     nothing to drag or focus, and pointer events fall through. Like the
+     reels it never hides with the chrome (s05: the strip shows while only
+     the deck chip is up).
+
+     Phones and other stacked rooms (s05): 3px gold segments with small gaps,
+     16px in from the sides, standing above the home indicator. */
+  .pl-progress {
+    position: absolute;
+    right: 16px;
+    bottom: max(19px, env(safe-area-inset-bottom, 0px));
+    left: 16px;
+    z-index: 20;
+    display: flex;
+    height: 3px;
+    gap: min(4px, calc(10% / var(--pl-tape-n, 8)));
+    pointer-events: none;
+  }
+  .pl-progress-seg {
+    position: relative;
+    display: block;
+    flex: 1 1 0;
+    min-width: 0;
+    overflow: hidden;
+    border-radius: 2px;
+    background-color: rgba(255, 255, 255, 0.18);
+  }
+  .pl-progress-fill {
+    position: absolute;
+    inset: 0;
+    display: block;
+    transform-origin: 0 50%;
+    background-color: var(--ss-gold);
+    transition: transform var(--pl-tape-ms) var(--pl-tape-ease);
+  }
+  /* the filled tape glows a little (s02, s05); decorative, never measured */
+  .pl-progress-glow {
+    position: absolute;
+    top: -2px;
+    bottom: -2px;
+    left: 0;
+    display: block;
+    border-radius: 3px;
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.45);
+    transition: width var(--pl-tape-ms) var(--pl-tape-ease);
+  }
+  .pl-root.is-hc .pl-progress-seg {
+    background-color: rgba(255, 255, 255, 0.4);
+  }
+  /* the transport stands clear above the strip (it used to carry it) */
+  .pl-root[data-layout="stacked"] .pl-chrome--bottom {
+    padding-bottom: calc(max(19px, env(safe-area-inset-bottom, 0px)) + 3px + 12px);
+  }
+
+  /* The open book (s02): a tape-brown strip across the whole bottom edge,
+     the gold running along it, and a 6px tick rising at the start of each
+     page — the first one gold. The page being read is a lighter gold. */
+  .pl-root[data-layout="spread"] .pl-progress {
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: auto;
+    gap: 0;
+    border-radius: 0;
+    background-image: linear-gradient(180deg, rgba(91, 58, 36, 0.9), rgba(61, 38, 22, 0.9));
+    box-shadow: 0 -1px 0 rgba(255, 255, 255, 0.08);
+  }
+  .pl-root[data-layout="spread"] .pl-progress-seg {
+    overflow: visible;
+    border-radius: 0;
+    background-color: transparent;
+  }
+  .pl-root[data-layout="spread"] .pl-progress-seg::before {
+    content: "";
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    width: 1px;
+    height: 6px;
+    background-color: rgba(255, 255, 255, 0.28);
+  }
+  .pl-root[data-layout="spread"] .pl-progress-seg:first-child::before {
+    background-color: var(--ss-gold);
+  }
+  .pl-root[data-layout="spread"] .pl-progress-seg[data-state="now"] .pl-progress-fill {
+    background-color: rgba(251, 191, 74, 0.95);
+  }
+  .pl-root[data-layout="spread"] .pl-progress-glow {
+    top: 0;
+    bottom: 0;
+    border-radius: 0;
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.55);
+  }
+
+  /* reduced motion: the packs and the tape land where they are, no easing */
+  @media (prefers-reduced-motion: reduce) {
+    .pl-deck .sk-deck-pack,
+    .pl-progress-fill,
+    .pl-progress-glow {
+      transition-duration: 0s;
     }
   }
 }

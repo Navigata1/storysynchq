@@ -452,3 +452,41 @@ export function t09aRows(): ReaderLibraryRow[] {
     libraryRow(manualTape, MANUAL_CODE),
   ];
 }
+
+/* ================================================ T09b · tape-pack progress */
+
+/*
+ * A tape for the strip of tape filling up while a recorded voice plays. Page 1
+ * carries a six-second (silent) clip under its words, so the strip and the
+ * right pack can be sampled about 1 s and about 4 s into the clip; page 2 is a
+ * picture with no words and no voice, so its beat passes and the tape stands
+ * at its end. autoPlay is off: nothing turns a page but the test.
+ */
+
+/** Share code of the six-second-clip tape. */
+export const LONG_CLIP_CODE = "a09d09d09d09d09d09d09d09d09d09d0";
+
+/** Length of page 1's clip, seconds. */
+export const LONG_CLIP_SECONDS = 6;
+
+/** autoPlay off; a 6 s recorded voice on page 1, a wordless picture on page 2. */
+export const longClipTape: SsyncManifest = {
+  version: "2.0",
+  metadata: { title: "The Slow Tide", author: "Reader fixture", genre: "children", ageRange: "3-8" },
+  settings: { autoPlay: false, pageTurnSound: true, readAlongHighlight: true },
+  signature: { voiceConsent: [FIXTURE_CONSENT] },
+  pages: [
+    voicedPage(1, "The tide went out slowly, one small wave at a time.", "Calm", LONG_CLIP_SECONDS),
+    {
+      id: 2,
+      layout: "illustration-top",
+      illustration: { url: "/demo/images/page2.jpg", alt: "Picture 2" },
+      music: "Calm",
+    },
+  ],
+};
+
+/** The T09b tape as a library row. */
+export function t09bRows(): ReaderLibraryRow[] {
+  return [libraryRow(longClipTape, LONG_CLIP_CODE)];
+}

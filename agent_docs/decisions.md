@@ -374,3 +374,21 @@ asserted the old Space or P bindings.
   the eye reads (WCAG 2.4.3).
 - Round 1: the docked Voice card's take stands at the card's foot (s03). On screens under 700 px tall, the card's body
   scrolls and the privacy footnote stays pinned at its foot. Nothing in the card clips the live ring during a take.
+
+**2026-10-25 · T09b · Where the tape is: tape packs on the reels and a segmented strip that never hides.**
+- **One module:** the reader shows its place as a cassette does, from one pure module,
+  `src/components/player/tape-position.ts`.
+  - `p = (page index + in-page fraction) / page count`.
+  - Pack diameters `left = big − (big − small)·p`, `right = small + (big − small)·p`, with big = 1.55 × and
+    small = 1.05 × the chip's reel (18 px pill, 20 px expanded; `DECK_REEL_PX`).
+  - The strip has one segment per page, each holding its page's share of p.
+- **In-page fraction:** the recorded clip's `currentTime / duration` (on `timeupdate`), or the browser voice's
+  `(spoken word + 1) / words` (boundary events, whether or not the read-along lights words), then 1 once the voice or
+  a wordless page's beat is done.
+  - It is reset only when a page comes on screen (`enterPage`), so a forward turn never moves the tape back.
+- **Motion:** sizes and fills ease out over 600 ms (`--ss-ease`); under reduced motion they snap (0 s).
+- **The strip:**
+  - It is a `role="progressbar"` (never a slider, no timecode) and stays on screen when the chrome idles out, as in
+    s05.
+  - Phones: 16 px gutters at `bottom: max(19px, safe-area)`, with the transport moved above it.
+  - The open book: a tape-brown strip on the bottom edge with a 6 px tick per page.

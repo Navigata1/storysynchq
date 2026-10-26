@@ -26,9 +26,17 @@
  * other element states (the mood, the time to the turn). It is not a live
  * region — the countdown is never announced second by second.
  *
+ * Tape packs (T09b): each reel sits on a tape-brown pack disc — the tape wound
+ * on that side, "the left pack big early in a tape, the right pack big late".
+ * The consumer hands in the diameters (`packs`, from the Player's
+ * ./tape-position for the reel sizes in DECK_REEL_PX) and draws the discs'
+ * look and ease (the Player's deck.css); here they only take their place under
+ * the reels, decorative like the reels themselves.
+ *
  * Hooks kept from T03 (the Player's deck): the consumer's `className` (the
  * Player passes `pl-deck`), `countClassName` (`pl-deck-read`), and
- * `data-pl="deck-voice" | "deck-rule" | "deck-mic" | "deck-narrator"`.
+ * `data-pl="deck-voice" | "deck-rule" | "deck-mic" | "deck-narrator"`; T09b
+ * adds `data-pl="pack-left" | "pack-right"`.
  * Nothing here counts, stores or sends anything: it draws what it is handed.
  */
 
@@ -46,6 +54,24 @@ export interface DeckChipRows {
   chime: string;
 }
 
+/**
+ * The reels' diameters in px (./deck-chip.css): the phone pill's, and the
+ * expanded chip's from 768 px wide. Pack sizes are worked out for these.
+ */
+export const DECK_REEL_PX = { pill: 18, expanded: 20 } as const;
+
+/** Diameters, in px, of the tape wound under the left and the right reel. */
+export interface DeckPackSizes {
+  left: number;
+  right: number;
+}
+
+/** Pack diameters for each chip size (the reels differ: DECK_REEL_PX). */
+export interface DeckPacks {
+  pill: DeckPackSizes;
+  expanded: DeckPackSizes;
+}
+
 export interface DeckChipProps {
   /** 1-based page on screen. */
   page: number;
@@ -61,6 +87,8 @@ export interface DeckChipProps {
   narrator?: string;
   /** The room's chrome has idled out: rows fold, the narrator opens. */
   idle?: boolean;
+  /** Tape-pack discs under the reels. Omit for bare reels. */
+  packs?: DeckPacks | null;
   /** Extra classes on the root (the Player passes `pl-deck`). */
   className?: string;
   /** Extra classes on the counter (the Player passes `pl-deck-read`). */
@@ -108,6 +136,25 @@ function Glyph({ kind, speaking }: { kind: "wave" | "notes" | "ring"; speaking?:
   );
 }
 
+/**
+ * One side's tape pack: a disc centred on its reel's hub (it shares the
+ * reel's position class), sized for the pill and for the expanded chip.
+ */
+function Pack({ side, pill, expanded }: { side: "left" | "right"; pill: number; expanded: number }) {
+  return (
+    <span
+      className={cx("sk-deck-pack", side === "left" ? "sk-deck-reel--a" : "sk-deck-reel--b")}
+      data-pl={side === "left" ? "pack-left" : "pack-right"}
+      style={
+        {
+          "--sk-pack-pill": `${pill.toFixed(2)}px`,
+          "--sk-pack-expanded": `${expanded.toFixed(2)}px`,
+        } as React.CSSProperties
+      }
+    />
+  );
+}
+
 /** "VOICE · <name>" → <b>VOICE</b> · <name> — the key quieter than its value. */
 function Row({ name, text, speaking }: { name: "voice" | "melody" | "chime"; text: string; speaking?: boolean }) {
   const cut = text.indexOf(" · ");
@@ -132,6 +179,7 @@ export function DeckChip({
   rows,
   narrator,
   idle = false,
+  packs,
   className,
   countClassName,
 }: DeckChipProps) {
@@ -147,6 +195,12 @@ export function DeckChip({
     >
       <span className="sk-deck-left">
         <span className="sk-deck-win" aria-hidden="true">
+          {packs ? (
+            <>
+              <Pack side="left" pill={packs.pill.left} expanded={packs.expanded.left} />
+              <Pack side="right" pill={packs.pill.right} expanded={packs.expanded.right} />
+            </>
+          ) : null}
           <Reel spinning={spinning} size={20} className="sk-deck-reel sk-deck-reel--a" />
           <Reel spinning={spinning} size={20} className="sk-deck-reel sk-deck-reel--b" />
         </span>
