@@ -239,18 +239,21 @@ test.describe("T16 · the printed tape, landscape", () => {
     ];
     // read the column once it has stopped moving: after the resize the card can
     // still be settling, and boxes read one by one across that would disagree
-    const snapshot = () => Promise.all(order.map(([, locator]) => box(locator)));
+    // (a box can also be briefly absent while the card re-renders: keep reading)
+    const snapshot = () => Promise.all(order.map(([, locator]) => locator.boundingBox()));
     let boxes = await snapshot();
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < 30; i++) {
       await page.waitForTimeout(100);
       const next = await snapshot();
-      const still = JSON.stringify(next) === JSON.stringify(boxes);
+      const still = !next.includes(null) && JSON.stringify(next) === JSON.stringify(boxes);
       boxes = next;
       if (still) break;
     }
     let previous = -Infinity;
     for (const [i, [name]] of order.entries()) {
       const b = boxes[i];
+      expect(b, `${name} is on the card`).not.toBeNull();
+      if (!b) continue;
       expect(b.y, `${name} comes next, further down`).toBeGreaterThan(previous);
       expect(b.x, `${name} stays inside a phone`).toBeGreaterThanOrEqual(0);
       expect(b.x + b.width, `${name} stays inside a phone`).toBeLessThanOrEqual(PHONE.width);
