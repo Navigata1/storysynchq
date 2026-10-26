@@ -455,3 +455,15 @@ privacy line in `--ss-fg-3`). From 880px the card lays out in two columns so a l
 - **No "Saved on this device" when nothing was saved.** When the save step fails, the ready card drops that sentence; the sign-in offer stays.
 
 **2026-10-25 · T06 · The hero's one light is anchored in CSS, and insertion depth is the well's height.** The play key and HeroSky's 0×0 anchor read the same custom properties (`--ls-key-size`, `--ls-key-lift`) from `.ls-tape-stage`. The deck is the stage's last child and has no border, so the key and page 1's star are one point at every width, with no layout script. The sky box is offset by the star's fixed position in the house tape's page-1 picture (64.1% × 46.2%). How deep the tape sits in the deck is `--ls-tape-depth` (0.68 poised; 0.27 seated under reduced motion), applied as the well's `aspect-ratio: 1.6 / depth` on its content box. `[data-ls="tape-slide"]` therefore stays untransformed at rest, and `ls-insert` travels from whatever depth the well shows. The hero's title is the demo manifest's `metadata.title`, never typed into a component.
+
+**2026-10-25 · T23a · `/protocol` FIG. 1 explodes the house tape's real page 3, and empty layers say so.**
+- The exploded packet is computed, not drawn. `packetPlates()` (pure, `src/components/protocol/plates.ts`) reads the
+  manifest through the Player's own music plan, `MOODS` and the engine's duck constant.
+- The kit's `PacketExploded` renders the result and holds no story content.
+- The Visual plate prints the path the download really writes. To guarantee that, the container's data-URL naming rule is
+  now an exported pure helper, `packedAssetPath()`, which `buildStorysyncFromStory` uses itself.
+- A layer the tape does not use prints a plain-words empty value in ink-3 italic.
+- The Signature seal is drawn unsealed (a dashed outline) until a consent record exists, so the figure never implies
+  consent the tape does not carry.
+- The legacy v1 `signature.qrCode` is never surfaced.
+- The figure is static at every width and motion preference, and is flat below 768 px.

@@ -14,7 +14,12 @@
 import * as React from "react";
 import Link from "next/link";
 import { GlassPanel } from "@/components/studio-kit/kit";
+import { PacketExploded, type ExplodedPlate } from "@/components/studio-kit/PacketExploded";
+import { mimeForAssetPath, packedAssetPath } from "@/lib/storysync/container";
+import { pageMood } from "@/components/player/music-plan";
+import houseTape from "../../../public/demo/brave-little-star.ssync.json";
 import { PACKET_LAYERS } from "./layers";
+import { packetPlates, type PlateAssetKind, type PlateManifest } from "./plates";
 import { PacketDiagram } from "./PacketDiagram";
 import { DownloadDemo } from "./DownloadDemo";
 import "./protocol.css";
@@ -67,6 +72,38 @@ const PAGE_EXAMPLE = `{
   "music": "Calm",
   "timing": { "autoPause": "3s" }
 }`;
+
+/* ------------------------------------------------- FIG. 1, taken apart */
+
+/**
+ * The house tape, read at build time (a static JSON import, as the landing
+ * does): the figure needs no request. Its third page is the one exploded.
+ */
+const HOUSE_TAPE: PlateManifest = houseTape;
+const FIG_PAGE_INDEX = 2;
+const FIG_PAGE = HOUSE_TAPE.pages[FIG_PAGE_INDEX];
+
+/**
+ * Where "Download the demo as .storysync" puts a page's file: the download
+ * fetches the same-origin picture, reads it as a data URL of its served type
+ * and lets `buildStorysyncFromStory` name it — so the figure asks the
+ * container's own naming rule, with the type that file is served as.
+ */
+function packedLikeTheDownload(url: string, asset: { pageId: number; kind: PlateAssetKind }): string {
+  if (url.startsWith("assets/")) return url;
+  const base = asset.kind === "picture" ? `page-${asset.pageId}` : `narration-${asset.pageId}`;
+  return packedAssetPath(url.startsWith("data:") ? url : mimeForAssetPath(url), base);
+}
+
+const FIG_PLATES: ExplodedPlate[] = packetPlates(HOUSE_TAPE, FIG_PAGE_INDEX, {
+  assetPath: packedLikeTheDownload,
+});
+
+const FIG_ART = {
+  title: HOUSE_TAPE.metadata.title,
+  picture: FIG_PAGE.illustration?.url,
+  mood: pageMood(HOUSE_TAPE, FIG_PAGE),
+};
 
 const LADDER: Array<{ source: string; action: string }> = [
   { source: "AAC/MP4 — Safari, iOS", action: "Passes through. Already compliant." },
@@ -141,6 +178,27 @@ export function ProtocolPage() {
                 Full specification
                 <Arrow />
               </a>
+            </div>
+          </div>
+        </section>
+
+        {/* ------------------------------------------- FIG. 1, taken apart */}
+        <section className="pr-figs" aria-labelledby="pr-figs-h">
+          <div className="pr-wrap">
+            <h2 id="pr-figs-h" className="sr-only">
+              Taken apart
+            </h2>
+            <div className="pr-fig-grid">
+              <figure className="pr-fig" data-protocol="fig-packet">
+                <figcaption className="pr-fig-cap sk-font-meta">
+                  Fig. 1 — page {FIG_PAGE_INDEX + 1} of {HOUSE_TAPE.metadata.title}, taken apart
+                </figcaption>
+                <PacketExploded className="pr-fig-stack" plates={FIG_PLATES} art={FIG_ART} />
+                <p className="pr-fig-note">
+                  A reader that understands only layers 1–3 still shows the story; each layer above
+                  adds a sense.
+                </p>
+              </figure>
             </div>
           </div>
         </section>

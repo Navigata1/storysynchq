@@ -80,16 +80,22 @@ export function unpackStorysync(bytes: Uint8Array): StorysyncArchive {
 
 /* ── data URL ↔ bytes (node-safe: atob/btoa are global in Node ≥16) ── */
 
-export function dataUrlToBytes(dataUrl: string): { bytes: Uint8Array; mime: string } {
-  // Header may carry parameters (e.g. data:audio/mp4;codecs=mp4a.40.2;base64,)
-  // — Safari's recordings do. Parse the whole header, not just mime;base64.
+/**
+ * A data URL's header, read without decoding the body. The header may carry
+ * parameters (e.g. data:audio/mp4;codecs=mp4a.40.2;base64,) — Safari's
+ * recordings do — so the whole header is parsed, not just mime;base64.
+ */
+function dataUrlHeader(dataUrl: string): { mime: string; base64: boolean; comma: number } {
   const comma = dataUrl.indexOf(",");
   if (!dataUrl.startsWith("data:") || comma === -1) throw new StorysyncError("Not a data URL");
-  const header = dataUrl.slice(5, comma);
+  const parts = dataUrl.slice(5, comma).split(";");
+  return { mime: parts[0] || "application/octet-stream", base64: parts.includes("base64"), comma };
+}
+
+export function dataUrlToBytes(dataUrl: string): { bytes: Uint8Array; mime: string } {
+  const { mime, base64, comma } = dataUrlHeader(dataUrl);
   const body = dataUrl.slice(comma + 1);
-  const parts = header.split(";");
-  const mime = parts[0] || "application/octet-stream";
-  if (parts.includes("base64")) {
+  if (base64) {
     const bin = atob(body);
     const bytes = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
@@ -131,6 +137,20 @@ export function mimeForAssetPath(path: string): string {
 }
 
 /**
+ * Where a file is packed: `assets/<baseName>.<ext>`, the extension read from
+ * the MIME type (`bin` for a type the format does not name).
+ *
+ * `source` is the file as a data URL (its declared type is used; the body is
+ * never decoded) or a bare MIME type. `buildStorysyncFromStory` names every
+ * asset it extracts with this, so anything that prints a packed path — the
+ * /protocol figure — prints the path the container really writes.
+ */
+export function packedAssetPath(source: string, baseName: string): string {
+  const mime = source.startsWith("data:") ? dataUrlHeader(source).mime : source;
+  return `${ASSETS_DIR}${baseName}.${MIME_TO_EXT[mime] || "bin"}`;
+}
+
+/**
  * App story (data-URL images/audio) → packed container. Extracts every data
  * URL into assets/ and rewrites references to container-relative paths.
  */
@@ -141,10 +161,8 @@ export function buildStorysyncFromStory(story: SsyncManifest): Uint8Array {
 
   const extract = (url: string | undefined, baseName: string): string | undefined => {
     if (!url || !url.startsWith("data:")) return url;
-    const { bytes, mime } = dataUrlToBytes(url);
-    const ext = MIME_TO_EXT[mime] || "bin";
-    const path = `${ASSETS_DIR}${baseName}.${ext}`;
-    assets.set(path, bytes);
+    const path = packedAssetPath(url, baseName);
+    assets.set(path, dataUrlToBytes(url).bytes);
     return path;
   };
 
