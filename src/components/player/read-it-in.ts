@@ -23,9 +23,16 @@
  *                            the resume page's picture (T21), else the first pictured
  *                            page, with its 1-based page number; null for a sent tape
  *                            or a tape with no picture
- *   creatorUrl(target, mood) T15's entry: `/studio?open=house&mood=<Mood>` for the house
+ *   readerOf(target)         who reads it today (T22b): the browser voice when no page
+ *                            carries a recorded voice (a sent tape: when its reference
+ *                            names no narrator), else `metadata.narrator`, else a voice
+ *                            nobody named
+ *   creatorUrl(target, mood, voice?)
+ *                            T15's entry: `/studio?open=house&mood=<Mood>` for the house
  *                            tape, `?open=<share code>` for a tape with a code (yours or
- *                            sent), `?open=<library id>` for a device tape without one
+ *                            sent), `?open=<library id>` for a device tape without one;
+ *                            a chosen voice (T22b) rides in the fragment, `#voice=<name>`,
+ *                            which no request carries
  *
  * Pure: nothing here reads storage, fetches or counts anything. Relative
  * imports only, so the Node-side tests import it directly.
@@ -34,6 +41,7 @@
 import type { MoodName } from "../../lib/audio/moods";
 import type { SsyncManifest } from "../../lib/storysync/manifest";
 import { pageMood } from "./music-plan";
+import { VOICE_PARAM, voiceName } from "./known-voices";
 import { bandLine, UNTITLED, type ShelfEntry } from "./shelf";
 import type { SentTape } from "./sent-to-you";
 
@@ -164,6 +172,19 @@ export function readYouLine(target: ReadItInTarget): string {
   return readBy(text(record(target.manifest.metadata)?.narrator) || SOMEONE);
 }
 
+/* --------------------------------------------------------------- reader */
+
+/** Who reads a tape today: the browser voice, a named voice, or a recorded voice nobody named. */
+export type TodaysReader = { kind: "browser" } | { kind: "voice"; name: string } | { kind: "unnamed" };
+
+/** Who reads this tape today (its READING NOW cassette). */
+export function readerOf(target: ReadItInTarget): TodaysReader {
+  if (target.kind === "sent") return target.narrator ? { kind: "voice", name: target.narrator } : { kind: "browser" };
+  if (!hasRecordedVoice(target.manifest)) return { kind: "browser" };
+  const name = text(record(target.manifest.metadata)?.narrator);
+  return name ? { kind: "voice", name } : { kind: "unnamed" };
+}
+
 /* ----------------------------------------------------------------- mood */
 
 /** The feeling preselected for a target: its first page's mood, else Wonder. */
@@ -196,9 +217,16 @@ export function headerPicture(target: ReadItInTarget, resumePage?: number | null
 
 /* ----------------------------------------------------------------- door */
 
-/** T15's entry for this target, in this mood. */
-export function creatorUrl(target: ReadItInTarget, mood: MoodName): string {
+/**
+ * T15's entry for this target, in this mood, and (T22b) read by this voice.
+ * The name rides in the fragment, never the query: a client navigation fetches
+ * the route with its query, so a name there would reach the server; a fragment
+ * stays in this browser. The Creator reads it after mount and cleans it off.
+ */
+export function creatorUrl(target: ReadItInTarget, mood: MoodName, voice?: string | null): string {
   const open =
     target.kind === "house" ? HOUSE_OPEN : target.kind === "sent" ? target.code : target.code ?? target.id;
-  return `/studio?open=${encodeURIComponent(open)}&mood=${encodeURIComponent(mood)}`;
+  const url = `/studio?open=${encodeURIComponent(open)}&mood=${encodeURIComponent(mood)}`;
+  const name = voiceName(voice);
+  return name ? `${url}#${VOICE_PARAM}=${encodeURIComponent(name)}` : url;
 }

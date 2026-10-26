@@ -109,6 +109,11 @@ export interface VoicePanelProps {
    * take records they stand on a paper READ THIS card above Stop (T19).
    */
   pageWords: string;
+  /**
+   * Whose voice the shelf chose for this copy (T22b): while no take runs the
+   * card's subtitle says "Reading as <name>". Absent: the card's own line.
+   */
+  readingAs?: string;
   hasVoice: boolean;
   voiceSeconds: number;
   recordSeconds: number;
@@ -124,6 +129,7 @@ export interface VoicePanelProps {
 export function VoicePanel({
   recording,
   pageWords,
+  readingAs,
   hasVoice,
   voiceSeconds,
   recordSeconds,
@@ -185,7 +191,13 @@ export function VoicePanel({
   return (
     <PanelShell
       title="Voice"
-      subtitle={recording ? "Listening… tap again when you are done" : "Tap the red button and tell this page"}
+      subtitle={
+        recording
+          ? "Listening… tap again when you are done"
+          : readingAs
+            ? `Reading as ${readingAs}`
+            : "Tap the red button and tell this page"
+      }
       onClose={onClose}
     >
       {/* The take and "your voice" share one body. Docked, the body is the part

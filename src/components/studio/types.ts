@@ -105,6 +105,17 @@ export interface StudioState {
    * "delete everything" clear it.
    */
   reply?: ReplyRecord;
+  /**
+   * Whose voice the family chose on the shelf for this copy (T22b, "Read it
+   * in…" → "WHOSE VOICE?"): the Voice card says "Reading as <name>" and the
+   * gate's "read by" starts as it, so T03 names the narrator and T04b asks
+   * consent for that voice. Draft-only, never written into a manifest; the
+   * name reaches a tape only through the byline the grown-up passes at the
+   * gate. Set with the opened tape it came with (alongside `remix`) and gone
+   * wherever `remix` is replaced: another tape, Magic, "Start a new story"
+   * and "delete everything" (`blankState` leaves it out).
+   */
+  voiceName?: string;
 }
 
 export const DEFAULT_TITLE = "My Story";

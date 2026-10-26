@@ -14,21 +14,32 @@
  *            art. A sent tape (no pictures on this device) has none.
  *   heading  "Read it in…", the mono "<TITLE> · <AUTHOR>", and who read it
  *            ("A computer read you this one. Now read it in yours.")
+ *   voice    (T22b) "WHOSE VOICE?" over a row of kit VoiceCassettes, one radio
+ *            group named "Whose voice?": "Browser voice" (checked by default),
+ *            up to four names this device knows (known-voices.ts: narrators
+ *            on the shelf, consent voices of your own tapes, most recent
+ *            first) and "Someone new", which reveals a field (also "Whose
+ *            voice?", at most 40 characters) and takes focus there. The
+ *            cassette of whoever reads the target today carries READING NOW:
+ *            the browser voice for a tape nobody recorded, else its narrator.
  *   feeling  "WHAT SHOULD IT FEEL LIKE?" over the eight kit MoodTapeChips, one
  *            radio group; the target's first-page mood preselected (Wonder
  *            when it has none). A new target starts from its own mood.
  *   door     "Make our own copy" (gold, lucide Mic) → T15's
- *            `/studio?open=<house | code | id>&mood=<Mood>`. Everything after
- *            that is T15's: its replace dialog, its re-voice rules, the mood.
+ *            `/studio?open=<house | code | id>&mood=<Mood>`, with the chosen
+ *            name (not the browser voice) as `#voice=<name>`. Everything
+ *            after that is T15's: its replace dialog, its re-voice rules, the
+ *            mood; the Creator prefills its "read by" with the name.
  *
  * The panel fetches nothing: the house tape's facts are read at build time
  * from /public (a static JSON import, as the landing reads them) and a shelf
  * tape's from the shelf. Its one picture is lazy: beside the shelves (≥ 1024
  * px) it is in the first screen and loads at once; on a phone, where the panel
  * stands below the fold, it waits until the panel comes near. Choosing a
- * feeling is local state. Nothing animates here under reduced motion.
- *
- * T22b adds "WHOSE VOICE?" above the feeling.
+ * voice and a feeling is local state; the names come from the shelf the Read
+ * Room already read, and the chosen one travels in the URL fragment, which no
+ * request carries. Under reduced motion nothing animates here (the READING
+ * NOW reels stand on their static frame).
  */
 
 import * as React from "react";
@@ -40,16 +51,28 @@ import type { SsyncManifest } from "@/lib/storysync/manifest";
 import { normalizeTapeManifest } from "@/lib/storysync/tape-source";
 import { BigButton } from "@/components/studio-kit/kit";
 import { MoodTapeChipGroup } from "@/components/studio-kit/MoodTapeChip";
+import { VoiceCassette } from "@/components/studio-kit/VoiceCassette";
 import {
   creatorUrl,
   defaultMood,
   headerPicture,
   houseTarget,
+  readerOf,
   readYouLine,
   targetKey,
   targetLine,
   type ReadItInTarget,
 } from "./read-it-in";
+import {
+  BROWSER_VOICE,
+  knownVoices,
+  sameVoice,
+  SOMEONE_NEW,
+  VOICE_NAME_MAX,
+  voiceName,
+  voiceRow,
+  type VoiceSource,
+} from "./known-voices";
 import "./read-it-in.css";
 
 /**
@@ -62,8 +85,18 @@ export const HOUSE_TAPE: SsyncManifest = normalizeTapeManifest(houseTape) ?? (ho
 /** The panel's target when it is about the house tape. */
 export const HOUSE_READ_IT_IN = houseTarget(HOUSE_TAPE);
 
+/** The voice chosen: the browser voice, a known name ("name:<name>"), or one typed here. */
+type VoiceChoice = "browser" | "new" | `name:${string}`;
+
+const nameChoice = (name: string): VoiceChoice => `name:${name}`;
+
 export interface ReadItInProps {
   target: ReadItInTarget;
+  /**
+   * The tapes on this device's shelf (own and sent), as the Read Room read
+   * them: where the names on the voice row come from. Nothing is read here.
+   */
+  shelf?: readonly VoiceSource[];
   /** The page this tape was left at (T21), for the header picture. */
   resumePage?: number | null;
   /** The panel (the Read Room scrolls it into view). */
@@ -72,11 +105,14 @@ export interface ReadItInProps {
   headingRef?: React.Ref<HTMLHeadingElement>;
 }
 
-export function ReadItIn({ target, resumePage, panelRef, headingRef }: ReadItInProps) {
+const NO_SHELF: readonly VoiceSource[] = [];
+
+export function ReadItIn({ target, shelf = NO_SHELF, resumePage, panelRef, headingRef }: ReadItInProps) {
   const router = useRouter();
   const id = React.useId();
   const headingId = `${id}-heading`;
   const targetId = `${id}-target`;
+  const voiceId = `${id}-voice`;
   const feelId = `${id}-feel`;
 
   const key = targetKey(target);
@@ -85,8 +121,38 @@ export function ReadItIn({ target, resumePage, panelRef, headingRef }: ReadItInP
   const mood = choice?.key === key ? choice.mood : defaultMood(target);
   const picture = headerPicture(target, resumePage);
 
+  /* ── whose voice (T22b) ─────────────────────────────────────────────── */
+  const reader = readerOf(target);
+  const readerName = reader.kind === "voice" ? reader.name : null;
+  const names = React.useMemo(() => voiceRow(knownVoices(shelf), readerName), [shelf, readerName]);
+  const [voicePick, setVoicePick] = React.useState<VoiceChoice>("browser");
+  /** "Someone new", as typed. */
+  const [typed, setTyped] = React.useState("");
+  /** A name that left the row (its tape left the shelf) falls back to the browser voice. */
+  const voice: VoiceChoice =
+    voicePick === "browser" || voicePick === "new" || names.some((name) => nameChoice(name) === voicePick)
+      ? voicePick
+      : "browser";
+  const fieldRef = React.useRef<HTMLInputElement | null>(null);
+  /** Choosing "Someone new" moves focus to its field once it is there. */
+  const focusField = React.useRef(false);
+  React.useEffect(() => {
+    if (voice !== "new" || !focusField.current) return;
+    focusField.current = false;
+    fieldRef.current?.focus();
+  }, [voice]);
+  const pickVoice = React.useCallback((next: string) => {
+    if (next === "new") focusField.current = true;
+    setVoicePick(next as VoiceChoice);
+  }, []);
+  /** The name the copy is read by, or none (the browser voice; an empty field). */
+  const chosenName = voice === "browser" ? undefined : voice === "new" ? voiceName(typed) : voice.slice("name:".length);
+
   const choose = React.useCallback((next: MoodName) => setChoice({ key, mood: next }), [key]);
-  const makeCopy = React.useCallback(() => router.push(creatorUrl(target, mood)), [router, target, mood]);
+  const makeCopy = React.useCallback(
+    () => router.push(creatorUrl(target, mood, chosenName)),
+    [router, target, mood, chosenName],
+  );
 
   return (
     <aside ref={panelRef} data-panel="read-it-in" aria-labelledby={headingId} className="rr-aside rin-panel">
@@ -117,6 +183,57 @@ export function ReadItIn({ target, resumePage, panelRef, headingRef }: ReadItInP
       <p data-rin="line" className="rin-line">
         {readYouLine(target)}
       </p>
+
+      <p id={voiceId} data-rin="voice-label" className="rin-label">
+        Whose voice?
+      </p>
+      <div role="radiogroup" aria-labelledby={voiceId} data-rin="voices" className="rin-voices">
+        <VoiceCassette
+          kind="browser"
+          name={`${id}-voices`}
+          label={BROWSER_VOICE}
+          value="browser"
+          checked={voice === "browser"}
+          readingNow={reader.kind === "browser"}
+          onSelect={pickVoice}
+        />
+        {names.map((name) => (
+          <VoiceCassette
+            key={name}
+            name={`${id}-voices`}
+            label={name}
+            value={nameChoice(name)}
+            checked={voice === nameChoice(name)}
+            readingNow={sameVoice(name, readerName)}
+            onSelect={pickVoice}
+          />
+        ))}
+        <VoiceCassette
+          kind="new"
+          name={`${id}-voices`}
+          label={SOMEONE_NEW}
+          value="new"
+          checked={voice === "new"}
+          onSelect={pickVoice}
+        />
+      </div>
+      {voice === "new" ? (
+        <input
+          ref={fieldRef}
+          type="text"
+          data-rin="voice-field"
+          aria-labelledby={voiceId}
+          className="rin-voice-field"
+          value={typed}
+          maxLength={VOICE_NAME_MAX}
+          autoComplete="off"
+          autoCapitalize="words"
+          spellCheck={false}
+          enterKeyHint="done"
+          placeholder="Their name"
+          onChange={(event) => setTyped(event.target.value)}
+        />
+      ) : null}
 
       <p id={feelId} data-rin="feel-label" className="rin-label">
         What should it feel like?

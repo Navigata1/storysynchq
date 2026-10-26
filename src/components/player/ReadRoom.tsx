@@ -64,7 +64,8 @@
  * "Read it in…" and are described by the tape they are about (the band's line,
  * a visually hidden "<title> · <author>" for the house tape). "Make our own
  * copy" goes to the Creator (T15's `/studio?open=…&mood=…`); the panel itself
- * fetches nothing.
+ * fetches nothing. Its "WHOSE VOICE?" row (T22b) is built from the same shelf
+ * this room read (own tapes and sent references), passed down as is.
  *
  * A tape someone sent (a link or a file, never the house tape and never one
  * of your own shelf tapes) ends with "Send a thank-you back" (T18): the reply
@@ -1152,6 +1153,7 @@ export function ReadRoom() {
               {offersReadItIn ? (
                 <ReadItIn
                   target={readTarget}
+                  shelf={shelf}
                   resumePage={readResumePage}
                   panelRef={readPanelRef}
                   headingRef={readHeadingRef}

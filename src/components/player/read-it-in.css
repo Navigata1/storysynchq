@@ -12,7 +12,10 @@
      .rin-heading      Geist 600 17px
      .rin-target       mono, upper case: the tape it is about
      .rin-line         Fraunces 500 16px, fg-2: who read it
-     .rin-label        mono 10.5px: "WHAT SHOULD IT FEEL LIKE?"
+     .rin-label        mono 10.5px: "WHOSE VOICE?", "WHAT SHOULD IT FEEL LIKE?"
+     .rin-voices       (T22b) the row of kit VoiceCassettes (68px columns, at
+                       least 5px apart, sharing the row; it wraps past a row)
+     .rin-voice-field  (T22b) "Someone new": a paper label to write the name on
      .rin-make         the full-width gold pill, "Make our own copy"
      .rin-house-row    the house row's ghost "Read it in…", under the demo
                        tape card (the band's door uses the band's own style)
@@ -150,6 +153,48 @@
 
   .rin-moods {
     margin-top: 8px;
+  }
+
+  /* ---------- whose voice (T22b): s07 .s7-voices ----------
+     68px cassettes, left to right, in as many columns as the row holds (at
+     least 5px apart), the columns sharing what is left over, so a full row
+     spreads across the panel as s07's does: five in the brief's 370px panel
+     (about 7px apart), six in the 438px one (≥ 1280px), four on a phone; a
+     longer row wraps. The READING NOW caption runs a little past its 68px, as
+     in s07, never into the next cassette. */
+  .rin-voices {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(68px, 1fr));
+    align-items: start;
+    justify-items: start;
+    gap: 10px 5px;
+    margin-top: 8px;
+  }
+
+  /* "Someone new": the name written on a paper label, Fraunces italic (16px,
+     so a phone does not zoom into it) */
+  .rin-voice-field {
+    display: block;
+    width: 100%;
+    height: 44px;
+    margin-top: 10px;
+    padding: 0 12px;
+    border: 2px solid var(--ss-ink);
+    border-radius: 8px;
+    background-color: var(--ss-paper);
+    color: var(--ss-ink);
+    font-family: var(--ss-display);
+    font-size: 16px;
+    font-style: italic;
+    font-weight: 500;
+  }
+  .rin-voice-field::placeholder {
+    color: var(--ss-ink-2);
+    opacity: 0.7;
+  }
+  .rin-voice-field:focus-visible {
+    outline: 3px solid var(--ss-gold);
+    outline-offset: 3px;
   }
 
   /* ---------- the door into the Creator: s07 .s7-make, a full-width pill ---------- */

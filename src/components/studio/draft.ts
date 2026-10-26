@@ -12,6 +12,7 @@
  * itself is always downloadable.
  */
 
+import { voiceName } from "@/components/player/known-voices";
 import type { ReplyRecord, StudioState } from "./types";
 import { blankState, pageHasContent } from "./types";
 
@@ -52,6 +53,11 @@ export function loadDraft(): { state: StudioState; savedAt: string } | null {
     const reply = replyRecord(parsed.state.reply);
     if (reply) state.reply = reply;
     else delete state.reply;
+    // So does the voice chosen on the shelf (T22b), tidied as the Creator
+    // takes it; anything else in its place is dropped.
+    const voice = voiceName(parsed.state.voiceName);
+    if (voice) state.voiceName = voice;
+    else delete state.voiceName;
     return { state, savedAt: parsed.savedAt };
   } catch {
     return null;

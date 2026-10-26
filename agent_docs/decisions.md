@@ -652,3 +652,16 @@ deleting the story forgets it everywhere.**
 - **When it shows**: the panel and its doors are not rendered while a `?story=` or `?demo=1` is opening.
 - **"Who read it"**: the computer when no page carries a recorded voice; otherwise `metadata.narrator`, else
   "Someone". A sent tape's reference decides by its narrator.
+
+**2026-10-25 · T22b "Read it in…" (whose voice).**
+- **T22b · the chosen voice rides in the URL fragment.** "Read it in…" → "Make our own copy" appends the chosen name as
+  `#voice=<name>` (not `&voice=`): a Next client navigation fetches the route with its query (`/studio?…&voice=Mom&_rsc=…`
+  observed), and the ticket requires that names never leave the device; a fragment is never sent. The Creator reads
+  `#voice=` (and a hand-typed `?voice=`) in T15's after-mount effect and cleans it off. Draft-only
+  `StudioState.voiceName` prefills the gate's "read by"; the name reaches a manifest only as T03's narrator and T04b's
+  consent voice.
+- **T22b · known voices.** Narrators of every shelf tape (own and sent) and the lead names of your own tapes' consent
+  voices, most recent first (own: saved; sent: arrived), case-insensitive dedupe keeping the most recent spelling, at
+  most four; the consent fallback "narrator" is not a name; the target's own narrator is always in the row.
+- **T22b · kit VoiceCassette** (brief LOCAL 6) built without its locked state; checked = label-yellow ring, reading
+  now = slow reels + "READING NOW" caption (static under reduced motion).

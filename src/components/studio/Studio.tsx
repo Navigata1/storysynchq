@@ -46,6 +46,7 @@ import {
 } from "@/lib/cloud-storage";
 import { getUser, signIn, signUp } from "@/lib/supabase";
 import { forgetPlaces, placeKeysOfStories, placeKeysOfTape } from "@/components/player/resume-store";
+import { VOICE_PARAM, voiceFromHash, voiceName } from "@/components/player/known-voices";
 
 import Stage from "./Stage";
 import ToolRail, { type StudioTool } from "./ToolRail";
@@ -102,6 +103,8 @@ interface PendingOpen {
   tape: RevoicedTape;
   /** `?mood=`, when the link chose one. */
   mood: MoodName | null;
+  /** Whose voice the shelf chose for this copy (T22b), when it chose one. */
+  voice: string | null;
   /**
    * The saved draft the restore prompt would have offered (`?open=` at boot).
    * "Keep my story" restores it exactly as "Keep working on it" would.
@@ -137,6 +140,26 @@ function takeReplySeed(): ReplySeed | null {
     raw = null;
   }
   return flagged ? parseReplySeed(raw) : null;
+}
+
+/**
+ * Whose voice the Read Room chose for this copy (T22b): `#voice=<name>` on
+ * T22a's door, read once after mount with T15's query and cleaned off the
+ * address the same way. The door keeps the name in the fragment, so no
+ * request ever carried it; a hand-typed `?voice=` is read and cleaned too.
+ */
+function takeVoiceName(): string | null {
+  const url = new URL(window.location.href);
+  const fromHash = voiceFromHash(url.hash);
+  const fromQuery = voiceName(url.searchParams.get(VOICE_PARAM));
+  const hash = new URLSearchParams(url.hash.replace(/^#/, ""));
+  if (hash.has(VOICE_PARAM) || url.searchParams.has(VOICE_PARAM)) {
+    hash.delete(VOICE_PARAM);
+    url.searchParams.delete(VOICE_PARAM);
+    const rest = hash.toString();
+    window.history.replaceState(null, "", `${url.pathname}${url.search}${rest ? `#${rest}` : ""}`);
+  }
+  return fromHash ?? fromQuery ?? null;
 }
 
 /** The line about opening a tape: working on it, or why it did not open. */
@@ -280,8 +303,12 @@ export default function Studio() {
    * localStorage byte for byte.
    */
   const savedStateRef = React.useRef<StudioState | null>(null);
-  /** "read by" as last typed on a re-voiced tape; its author is never overwritten. */
-  const readerRef = React.useRef("");
+  /**
+   * "read by" as last typed on a re-voiced tape (its author is never
+   * overwritten); null until the gate is passed for this story, when the gate
+   * starts from the voice the shelf chose (T22b), else empty.
+   */
+  const readerRef = React.useRef<string | null>(null);
   const publishedRef = React.useRef<SsyncManifest | null>(null);
   const authorRef = React.useRef("");
   /** Each voice and who consented to it — a retry publishes with the same consent. */
@@ -386,7 +413,7 @@ export default function Studio() {
       publishedRef.current = null;
       authorRef.current = "";
       consentRef.current = [];
-      readerRef.current = "";
+      readerRef.current = null;
       setShareUrl(null);
       setPublishNote(null);
       setAuthOffer(false);
@@ -406,12 +433,14 @@ export default function Studio() {
 
   /**
    * An opened tape replaces the story cleanly: its re-voiced manifest, no
-   * recordings, nothing published, a fresh clock, and where it came from.
+   * recordings, nothing published, a fresh clock, where it came from, and
+   * whose voice the shelf chose for it (T22b), when it chose one.
    */
   const applyOpenedTape = React.useCallback(
-    (tape: RevoicedTape, mood: MoodName | null) => {
+    (tape: RevoicedTape, mood: MoodName | null, voice: string | null = null) => {
       const fresh = blankState();
       const n = tape.manifest.pages.length;
+      const name = voiceName(voice);
       replaceStory(
         {
           ...fresh,
@@ -420,6 +449,7 @@ export default function Studio() {
           mood: mood ?? tape.mood,
           musicOn: mood ? true : tape.musicOn,
           remix: tape.remix,
+          ...(name ? { voiceName: name } : {}),
         },
         `Opened ${tape.manifest.metadata.title}, ${n} ${n === 1 ? "page" : "pages"}. Record your voice on any page.`,
       );
@@ -455,7 +485,7 @@ export default function Studio() {
   const offerTape = React.useCallback(
     (offer: PendingOpen) => {
       if (offer.saved || storyHasContent(stateRef.current)) setPendingOpen(offer);
-      else applyOpenedTape(offer.tape, offer.mood);
+      else applyOpenedTape(offer.tape, offer.mood, offer.voice);
     },
     [applyOpenedTape],
   );
@@ -465,14 +495,14 @@ export default function Studio() {
       load: () => Promise<RevoicedTape>,
       label: string,
       fallback: TapeOpenFailure,
-      options: { mood?: MoodName | null; saved?: SavedDraft | null } = {},
+      options: { mood?: MoodName | null; voice?: string | null; saved?: SavedDraft | null } = {},
     ) => {
       setOpening(true);
       setOpenNote({ tone: "busy", text: label });
       try {
         const tape = await load();
         setOpenNote(null);
-        offerTape({ tape, mood: options.mood ?? null, saved: options.saved ?? null });
+        offerTape({ tape, mood: options.mood ?? null, voice: options.voice ?? null, saved: options.saved ?? null });
       } catch (err) {
         // Nothing was replaced. A saved draft is offered back the usual way.
         setOpenNote({
@@ -490,10 +520,11 @@ export default function Studio() {
 
   /* ------------------------------------------------------------------ boot */
 
-  // Boot: the saved draft, and `?open=` / `?mood=` — read after mount from
-  // window.location (the route stays static) and then cleaned off the URL, so
-  // a refresh does not open the tape again. With a saved draft, "Open
-  // <title>?" takes the place of the restore prompt: one question, not two.
+  // Boot: the saved draft, and `?open=` / `?mood=` (and T22b's `#voice=`) —
+  // read after mount from window.location (the route stays static) and then
+  // cleaned off the URL, so a refresh does not open the tape again. With a
+  // saved draft, "Open <title>?" takes the place of the restore prompt: one
+  // question, not two.
   const bootedRef = React.useRef(false);
   React.useEffect(() => {
     // Once per mount: the query is taken off the URL the first time it is read.
@@ -502,6 +533,8 @@ export default function Studio() {
     const found = loadDraft();
     const saved = found && storyHasContent(found.state) ? found : null;
     const query = takeOpenTapeQuery();
+    // The voice rides with the tape it was chosen for; alone it means nothing.
+    const voice = takeVoiceName();
     const reply = takeReplySeed();
     if (query.open) {
       const open = query.open;
@@ -510,7 +543,7 @@ export default function Studio() {
         () => openTapeFromQuery(open),
         openingLabel({ open }),
         open === HOUSE_TAPE_QUERY ? "houseUnavailable" : "notFound",
-        { mood: query.mood, saved },
+        { mood: query.mood, voice, saved },
       );
     } else if (reply) {
       // A saved story is asked about first, in place of the restore prompt.
@@ -787,8 +820,10 @@ export default function Studio() {
         recordings: {},
         // Magic replaces every page, so an opened tape is a new story now: it is
         // no longer a re-voice of anything, and the opened tape's credit and
-        // blurb are not this story's. The byline becomes the author again.
+        // blurb are not this story's. The byline becomes the author again, and
+        // the voice chosen for the copy (T22b) goes with the copy.
         remix: null,
+        voiceName: undefined,
         manifest: {
           ...prev.manifest,
           metadata: prev.remix
@@ -1272,8 +1307,13 @@ export default function Studio() {
   const currentMeta = page ? state.recordings[String(page.id)] : undefined;
   /** The open note on show: a failure goes with the next change to the story. */
   const note = openNote && (openNote.tone === "busy" || openNote.during === state) ? openNote : null;
-  /** What the gate's byline starts as: "story by" is the author; "read by" starts empty. */
-  const gateDefault = state.remix ? readerRef.current : (state.manifest.metadata.author ?? "");
+  /**
+   * What the gate's byline starts as: "story by" is the author; "read by" is
+   * the reader last typed, else the voice the shelf chose (T22b), else empty.
+   */
+  const gateDefault = state.remix
+    ? (readerRef.current ?? state.voiceName ?? "")
+    : (state.manifest.metadata.author ?? "");
   /** The draft the gate's sheet describes ("What goes into your tape"). */
   const gateSheet = React.useMemo(
     () => ({
@@ -1444,6 +1484,7 @@ export default function Studio() {
           <VoicePanel
             recording={recording}
             pageWords={page?.text?.content ?? ""}
+            readingAs={state.voiceName}
             hasVoice={hasVoice}
             voiceSeconds={currentMeta?.duration ?? audio.clipDuration}
             recordSeconds={audio.recordSeconds}
@@ -1695,7 +1736,7 @@ export default function Studio() {
             setPendingOpen(null);
             if (saved) keepSavedDraft(saved);
           }}
-          onOpen={() => applyOpenedTape(pendingOpen.tape, pendingOpen.mood)}
+          onOpen={() => applyOpenedTape(pendingOpen.tape, pendingOpen.mood, pendingOpen.voice)}
         />
       ) : null}
 
