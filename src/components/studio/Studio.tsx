@@ -141,6 +141,8 @@ function slugify(title: string): string {
 }
 
 const STEP_TEMPLATE: PublishStep[] = [
+  // First because it happens first: each voice is evened out on its way to AAC (T17).
+  { id: "level", label: "Evening out each voice", state: "pending" },
   { id: "voices", label: "Converting voices to AAC", state: "pending" },
   { id: "assemble", label: "Assembling the SSYNC manifest", state: "pending" },
   { id: "save", label: "Saving your tape", state: "pending" },
@@ -891,10 +893,26 @@ export default function Studio() {
         : base.manifest;
 
       try {
-        /* 1 — narration codec normalization (the load-bearing publish rule) */
+        /*
+         * 1 — evening out each voice, then the narration codec normalization
+         * (the load-bearing publish rule), one pass per recording: a take is
+         * levelled on its way to AAC, never decoded twice.
+         */
+        const levelOn = base.levelVoices !== false;
+        markStep("level", { state: "active" });
         markStep("voices", { state: "active" });
         const total = source.pages.filter((p) => p.text?.audioUrl?.startsWith("data:")).length;
         let done = 0;
+        /** Takes brought to the target loudness or found there, now or by an earlier publish. */
+        let even = 0;
+        /** Takes left exactly as recorded (no AAC encoder for an AAC take, or not decodable). */
+        let leftAsRecorded = 0;
+        const levelDetail = () =>
+          !levelOn
+            ? "off"
+            : total === 0
+              ? "no recordings"
+              : `${even}/${total}${leftAsRecorded ? ` · ${leftAsRecorded} left as recorded` : ""}`;
         const nextRecordings: Record<string, RecordingMeta> = {};
         const publishedPages: SsyncPage[] = [];
 
@@ -913,14 +931,30 @@ export default function Studio() {
 
           const url = next.text?.audioUrl;
           if (next.text && url && url.startsWith("data:")) {
-            if (original.text?.audioCodec) {
+            // A take is levelled once: a levelled clip passes straight through.
+            const needsLevel = levelOn && !meta?.levelled;
+            if (original.text?.audioCodec && !needsLevel) {
               // Already normalized by an earlier publish — decoding and
               // re-encoding it would only lose quality and time.
+              if (levelOn) even += 1;
               done += 1;
+              markStep("level", { detail: levelDetail() });
               markStep("voices", { detail: `${done}/${total}` });
             } else {
               const blob = await dataUrlToBlob(url);
-              const normalized = await normalizeNarration(blob, meta?.mimeType || blob.type);
+              // A clip published with levelling off is already AAC or WAV; it
+              // is levelled now as what it is (a WAV in place, an AAC only
+              // where it can be re-encoded as AAC).
+              const published = original.text?.audioCodec;
+              const mime = published
+                ? published === "aac"
+                  ? "audio/mp4"
+                  : "audio/wav"
+                : meta?.mimeType || blob.type;
+              const normalized = await normalizeNarration(blob, mime, levelOn ? { level: true } : undefined);
+              const levelling = normalized.levelling;
+              if (levelling?.outcome === "skipped") leftAsRecorded += 1;
+              else if (levelling) even += 1;
               // Force the clean container mime: a recorder blob carries
               // "audio/mp4;codecs=…", and the container's data-URL parser (and the
               // asset extension map) only understand the bare type.
@@ -935,13 +969,18 @@ export default function Studio() {
               nextRecordings[String(newId)] = {
                 mimeType: normalized.mimeType,
                 duration: meta?.duration ?? 0,
+                levelled: levelling ? levelling.outcome !== "skipped" : meta?.levelled === true,
               };
               done += 1;
+              markStep("level", { detail: levelDetail() });
               markStep("voices", { detail: `${done}/${total}` });
             }
           }
           publishedPages.push(next);
         }
+        // Levelling never fails a publish: a take it could not touch is
+        // published as recorded, and the step says how many.
+        markStep("level", { state: "done", detail: levelDetail() });
         markStep("voices", { state: "done", detail: total ? `${done}/${total}` : "no recordings" });
 
         /* 2 — assemble the manifest, signature layer included */
@@ -1414,6 +1453,7 @@ export default function Studio() {
           musicOn={state.musicOn}
           musicVolume={state.musicVolume}
           narrationVolume={state.narrationVolume}
+          levelVoices={state.levelVoices !== false}
           subscribeLevel={audio.subscribeLevel}
           onAutoPause={setAutoPause}
           onApplyPauseToAll={applyPauseToAll}
@@ -1424,6 +1464,7 @@ export default function Studio() {
           onMusicToggle={(on) => setState((prev) => ({ ...prev, musicOn: on }))}
           onMusicVolume={(v) => setState((prev) => ({ ...prev, musicVolume: v }))}
           onNarrationVolume={(v) => setState((prev) => ({ ...prev, narrationVolume: v }))}
+          onLevelVoices={(on) => setState((prev) => ({ ...prev, levelVoices: on }))}
           onClose={() => setAdvanced(false)}
         />
       ) : null}

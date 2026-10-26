@@ -40,6 +40,12 @@ export interface RecordingMeta {
   mimeType: string;
   /** Wall-clock seconds. */
   duration: number;
+  /**
+   * Set by a publish with "Evening out each voice" on, once this take has been
+   * brought to the target loudness or found already there (T17). A levelled
+   * take is never levelled again; a new take starts without it.
+   */
+  levelled?: boolean;
 }
 
 export interface PublishRecord {
@@ -58,6 +64,13 @@ export interface StudioState {
   /** 0..1, pre-duck. */
   musicVolume: number;
   narrationVolume: number;
+  /**
+   * "Evening out each voice" (T17): publish brings every recording to one
+   * loudness before it becomes AAC. Draft-only, never written to a manifest.
+   * Optional, and absent means on, so a draft from an older build (or a test
+   * fixture) still levels: the draft loader merges over `blankState`.
+   */
+  levelVoices?: boolean;
   published: PublishRecord | null;
   /**
    * Every story id this tape has ever been saved under, so "delete everything"
@@ -120,6 +133,7 @@ export function blankState(): StudioState {
     musicOn: true,
     musicVolume: 0.3,
     narrationVolume: 0.85,
+    levelVoices: true,
     published: null,
     publishedIds: [],
     startedAt: new Date().toISOString(),

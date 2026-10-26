@@ -467,3 +467,21 @@ privacy line in `--ss-fg-3`). From 880px the card lays out in two columns so a l
   consent the tape does not carry.
 - The legacy v1 `signature.qrCode` is never surfaced.
 - The figure is static at every width and motion preference, and is flat below 768 px.
+
+**2026-10-25 · T17 · "Evening out each voice": loudness levelling before AAC.**
+- **Where.** `src/lib/audio/level.ts` is pure: no DOM, no Web Audio, no dependencies. It runs on the device at publish, so a child's voice never leaves the device to be levelled. `normalizeNarration(blob, mime, { level: true })` uses it; without the option the function is byte-for-byte what it was, and `/classic` never passes it.
+- **Measure.** Active-speech RMS is computed over 50 ms windows; windows under −50 dBFS are ignored, and an all-silent take is left alone.
+- **Target and clamp.** −20 dBFS RMS. The gain is clamped to [−12, +18] dB. T17 proposed +15, but a −26 dBFS-peak whisper measures about −37 dBFS RMS, and +15 left it 2 dB short. No gain is applied within ±0.5 dB of the target. After the gain, the result is re-measured and nudged to within 0.1 dB, so a second pass is the identity.
+- **Limiter.** A sample-wise soft knee from −6 dBFS, tanh-shaped with slope 1 at the knee, toward a −1 dBFS ceiling that no sample passes. Below the knee the gain is exactly linear.
+- **Codec policy.**
+  - WAV (16-bit PCM mono) is levelled in place, with the same header, rate and length.
+  - Other WAV layouts are decoded, and stay as recorded when already even.
+  - Draft Opus/WebM is decoded, levelled, then goes AAC, else WAV, in the same single pass.
+  - AAC/MP4 (Safari) is decoded, levelled and re-encoded as AAC, but only where a WebCodecs AAC encoder exists. Otherwise it is left exactly as recorded (`aac-encoder-unavailable`), and never turned into a WAV just to level it (M3-PRD OQ 5).
+  - Any compliant clip that will not decode (`undecodable`) or re-encode (`encode-failed`) is left as recorded.
+  - Opus/WebM is never an output.
+- **Once.** `RecordingMeta.levelled` marks a take that has been levelled or found even. Such a take passes straight through on later publishes, so a re-publish writes identical clips. A new take levels only its own page, and a clip published with levelling off is levelled on the next publish with it on.
+- **UI.** The publish list gains "Evening out each voice" first (id `level`). Its detail is `<even>/<total>`, plus " · k left as recorded" for skipped takes, or "off", or "no recordings". It is always done: levelling never fails a publish.
+- **Inspector.** Mix ends with the switch `#insp-level-voices`, on by default. Its setting, `StudioState.levelVoices`, is draft-only and never written to a manifest.
+- **Label.** "Evening out each voice", not s09's "Voice clean-up (level, rumble)": no rumble filter is built (M3-PRD OQ 4).
+- **Open for Jon.** OQ 4 (rumble high-pass and the s09 label), OQ 5 (the AAC passthrough policy), and OQ 6 (the −20 dBFS target, and now the +18 dB boost ceiling).

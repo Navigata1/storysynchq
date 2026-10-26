@@ -31,6 +31,8 @@ export interface InspectorProps {
   musicOn: boolean;
   musicVolume: number;
   narrationVolume: number;
+  /** "Evening out each voice" at publish (T17). Draft-only, on by default. */
+  levelVoices: boolean;
   /**
    * The meter subscribes itself instead of taking a `level` prop: a value
    * arriving 15 times a second through the tree would re-render the whole
@@ -46,6 +48,7 @@ export interface InspectorProps {
   onMusicToggle: (on: boolean) => void;
   onMusicVolume: (v: number) => void;
   onNarrationVolume: (v: number) => void;
+  onLevelVoices: (on: boolean) => void;
   onClose: () => void;
 }
 
@@ -135,6 +138,41 @@ function ActivityMeter({
   );
 }
 
+/**
+ * s09's clean-up row, built: "Evening out each voice" and its switch, at the
+ * end of Mix. A native checkbox with the switch role, so Space toggles it and
+ * a screen reader says "switch, on"; the whole label row is the target. Named
+ * after the publish step, not s09's "Voice clean-up (level, rumble)": no
+ * rumble filter is built (M3-PRD OQ 4).
+ */
+function LevelVoicesSwitch({ on, onChange }: { on: boolean; onChange: (on: boolean) => void }) {
+  return (
+    <div data-studio="level-voices" className="mt-1">
+      <div className="flex items-center gap-3">
+        <label
+          htmlFor="insp-level-voices"
+          className="flex min-h-11 flex-1 cursor-pointer items-center text-[12px] leading-none text-ss-fg-3"
+        >
+          Evening out each voice
+        </label>
+        <input
+          id="insp-level-voices"
+          type="checkbox"
+          role="switch"
+          checked={on}
+          onChange={(e) => onChange(e.target.checked)}
+          aria-describedby="insp-level-voices-note"
+          className="sk-focus relative h-5 w-[34px] flex-none cursor-pointer appearance-none rounded-full bg-white/14 transition-colors duration-300 ease-out before:absolute before:top-[3px] before:left-[3px] before:size-[14px] before:rounded-full before:bg-white before:shadow-[0_2px_6px_rgba(0,0,0,0.35)] before:transition-transform before:duration-300 before:ease-out checked:bg-ss-gold checked:before:translate-x-[14px] motion-reduce:transition-none motion-reduce:before:transition-none"
+        />
+      </div>
+      <p id="insp-level-voices-note" className="text-[12px] leading-[1.45] text-white/40">
+        Brings every recording to the same loudness before it becomes AAC. Nothing leaves this
+        device to do it.
+      </p>
+    </div>
+  );
+}
+
 const BADGE_TONE: Record<string, string> = {
   published: "border-emerald-400/40 bg-emerald-500/10 text-emerald-200",
   draft: "border-amber-400/40 bg-amber-500/10 text-amber-200",
@@ -151,6 +189,7 @@ export function Inspector(props: InspectorProps) {
     musicOn,
     musicVolume,
     narrationVolume,
+    levelVoices,
     subscribeLevel,
     onAutoPause,
     onApplyPauseToAll,
@@ -161,6 +200,7 @@ export function Inspector(props: InspectorProps) {
     onMusicToggle,
     onMusicVolume,
     onNarrationVolume,
+    onLevelVoices,
     onClose,
   } = props;
 
@@ -273,6 +313,7 @@ export function Inspector(props: InspectorProps) {
         </select>
 
         <ActivityMeter subscribeLevel={subscribeLevel} />
+        <LevelVoicesSwitch on={levelVoices} onChange={onLevelVoices} />
       </Section>
 
       {/* ------------------------------------------------------------- page */}
