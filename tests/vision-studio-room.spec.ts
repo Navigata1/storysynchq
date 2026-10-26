@@ -262,7 +262,9 @@ test.describe("T13a · the room fits the tablet", () => {
   test("375: the transport readout stays on one line; mid-take the live ring clears its name", async ({ page }) => {
     await openTwinkle(page, { viewport: PHONE });
     const readout = page.locator(`${SEL.transport} > :last-child`);
-    await expect(readout).toContainText("0:00 / 0:00");
+    // M6: a voice length the transport does not know reads "—", not a made-up
+    // "0:00" (it was "0:00 / 0:00"); W2b passes page 3's own 0:06.
+    await expect(readout).toContainText(/0:00 \/ (—|0:06)/);
     for (const line of await readout.locator(":scope > *").all()) {
       const { height, lineHeight } = await line.evaluate((el) => ({
         height: el.getBoundingClientRect().height,
@@ -983,5 +985,374 @@ test.describe("T13a · honesty and motion", () => {
     for (const r of reels) expect(r).toEqual({ name: "none", running: 0 });
     expect(await infiniteAnimations(page)).toEqual([]);
     await stopTake(page);
+  });
+});
+
+/* ======================================================== M6 · s03 chrome */
+//
+// The s03 critic panel (M6, group E): the Transport while a take records
+// (only REC is live, and it is the stop square in the armed ring), the deck
+// the reference draws (inset panel, reels in a capsule, one mono readout
+// line), honest and legible readout text, the title's 22 px, the waiting
+// Finish, and the Stage's cream words.
+
+const transport = (page: Page) => page.locator(SEL.transport);
+const readout = (page: Page) => page.locator('[data-studio="transport-readout"]');
+
+/** Parse a computed `rgb()/rgba()` colour (computed colours are stable across minifiers). */
+function rgba(css: string): [number, number, number, number] {
+  const n = css.match(/[\d.]+/g)?.map(Number) ?? [];
+  return [n[0] ?? 0, n[1] ?? 0, n[2] ?? 0, n[3] ?? 1];
+}
+
+/**
+ * Read a style once it stops moving: polls until two readings a frame apart
+ * agree, so an eased colour is never caught mid-transition.
+ */
+async function steady<T>(locator: Locator, read: (el: Element) => T): Promise<T> {
+  let value: T | undefined;
+  await expect
+    .poll(
+      async () => {
+        const a = JSON.stringify(await locator.evaluate(read));
+        await locator.page().evaluate(
+          () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+        );
+        value = await locator.evaluate(read);
+        return a === JSON.stringify(value);
+      },
+      { timeout: 3000, intervals: [50, 100, 100, 200] },
+    )
+    .toBe(true);
+  return value as T;
+}
+
+/**
+ * WCAG contrast of an element's text against what is actually under it: the
+ * element's and every ancestor's background colour, composited over the room
+ * (the gradients in the room are ignored; they are faint and the margin is
+ * wide).
+ */
+async function contrastOf(locator: Locator): Promise<number> {
+  return locator.evaluate((el) => {
+    const parse = (css: string) => {
+      const n = css.match(/[\d.]+/g)?.map(Number) ?? [];
+      return [n[0] ?? 0, n[1] ?? 0, n[2] ?? 0, n.length > 3 ? n[3] : 1] as [number, number, number, number];
+    };
+    const layers: [number, number, number, number][] = [];
+    for (let node: Element | null = el; node; node = node.parentElement) {
+      const c = parse(getComputedStyle(node).backgroundColor);
+      if (c[3] > 0) layers.push(c);
+      if (c[3] >= 1) break;
+    }
+    let bg: [number, number, number] = [255, 255, 255];
+    for (const [r, g, b, a] of layers.reverse()) {
+      bg = [r * a + bg[0] * (1 - a), g * a + bg[1] * (1 - a), b * a + bg[2] * (1 - a)];
+    }
+    const fgc = parse(getComputedStyle(el).color);
+    const fg: [number, number, number] = [
+      fgc[0] * fgc[3] + bg[0] * (1 - fgc[3]),
+      fgc[1] * fgc[3] + bg[1] * (1 - fgc[3]),
+      fgc[2] * fgc[3] + bg[2] * (1 - fgc[3]),
+    ];
+    const lum = ([r, g, b]: [number, number, number]) => {
+      const ch = (v: number) => {
+        const s = v / 255;
+        return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+      };
+      return 0.2126 * ch(r) + 0.7152 * ch(g) + 0.0722 * ch(b);
+    };
+    const [hi, lo] = [lum(fg), lum(bg)].sort((a, b) => b - a);
+    return (hi + 0.05) / (lo + 0.05);
+  });
+}
+
+test.describe("M6 · s03 transport during a take", () => {
+  test("only REC is live mid-take: Play is disabled and a forced press plays nothing into the open mic", async ({ page }) => {
+    await openTwinkle(page, { viewport: TABLET });
+    const play = page.getByRole("button", { name: "Play the story" });
+    await expect(play).toBeEnabled();
+    await startTake(page);
+    await expect(play).toBeDisabled();
+    await expect(transport(page).locator('[data-kind="prev"]')).toBeDisabled();
+    await expect(transport(page).locator('[data-kind="next"]')).toBeDisabled();
+    await play.click({ force: true });
+    await page.waitForTimeout(400);
+    await expect(page.locator(".studio[data-recording='true']"), "the take goes on").toHaveCount(1);
+    await expect(page.getByRole("button", { name: "Stop playing" })).toHaveCount(0);
+    const sounding = await page.evaluate(() =>
+      Array.from(document.querySelectorAll("audio")).filter((a) => !a.paused).length,
+    );
+    expect(sounding, "no <audio> plays during the take").toBe(0);
+    await stopTake(page);
+    await expect(play).toBeEnabled();
+  });
+
+  test("REC wears the stop square in its armed ring mid-take; one name per state, no aria-pressed; Enter starts and stops", async ({ page }) => {
+    await openTwinkle(page, { viewport: TABLET });
+    const idle = page.getByRole("button", { name: "Record my voice on this page" });
+    await expect(idle).toHaveAttribute("data-kind", "rec");
+    await expect(idle.locator("svg circle")).toHaveCount(1);
+    expect(await idle.getAttribute("aria-pressed"), "idle REC is not a pressed toggle").toBeNull();
+
+    // keyboard: the same key, focused, starts and stops the take
+    await idle.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.locator(".studio[data-recording='true']")).toHaveCount(1);
+    const stop = page.getByRole("button", { name: "Stop recording" });
+    await expect(stop).toHaveAttribute("data-kind", "stop");
+    await expect(stop.locator("svg rect")).toHaveCount(1);
+    await expect(stop.locator("svg circle")).toHaveCount(0);
+    expect(await stop.getAttribute("aria-pressed"), "the name changes; aria-pressed does not ride along").toBeNull();
+    // The kit eases the key's border and colour over ~240 ms: read the ring at
+    // rest (transitions landed, then two readings a frame apart that agree).
+    await settle(page);
+    const ring = await steady(stop, (el) => {
+      const cs = getComputedStyle(el);
+      return {
+        width: parseFloat(cs.borderTopWidth),
+        color: cs.borderTopColor,
+        shadow: cs.boxShadow,
+        anim: cs.animationName,
+        fill: getComputedStyle(el.querySelector("svg") as Element).fill,
+      };
+    });
+    expect(ring.width, "the armed ring").toBeGreaterThanOrEqual(2.5);
+    const [r, g, b] = rgba(ring.color);
+    expect(r > 200 && g < 100 && b < 80, `the ring is tape-red (${ring.color})`).toBe(true);
+    expect(ring.shadow).not.toBe("none");
+    expect(ring.anim, "a still ring: nothing loops in the Studio").toBe("none");
+    // the stop square is red too
+    const glyph = rgba(ring.fill);
+    expect(glyph[0] > 200 && glyph[1] < 110, "a red stop square").toBe(true);
+
+    await stop.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.locator(".studio[data-recording='true']")).toHaveCount(0, { timeout: 10000 });
+    await expect(page.getByRole("button", { name: "Record my voice on this page" })).toHaveAttribute("data-kind", "rec");
+  });
+});
+
+test.describe("M6 · s03 the transport is a deck", () => {
+  test("1180×820: inset on the strip's column, rounded; reels in a capsule; one readout line, `0:0n · pg 3/5` tape-red mid-take", async ({ page }) => {
+    for (const viewport of [TABLET, { width: 1024, height: 768 }, { width: 1280, height: 720 }]) {
+      await page.setViewportSize(viewport);
+      if (viewport === TABLET) await openTwinkle(page, { viewport });
+      await settle(page);
+      const where = `${viewport.width}×${viewport.height}`;
+      const m = await page.evaluate(([t, p]) => {
+        const tr = document.querySelector(t) as HTMLElement;
+        const pg = document.querySelector(p) as HTMLElement;
+        const a = tr.getBoundingClientRect();
+        const b = pg.getBoundingClientRect();
+        const ps = getComputedStyle(pg);
+        const ts = getComputedStyle(tr);
+        return {
+          t: { left: a.left, right: a.right, bottom: a.bottom },
+          strip: { left: b.left + parseFloat(ps.paddingLeft), right: b.right - parseFloat(ps.paddingRight) },
+          radius: parseFloat(ts.borderTopLeftRadius),
+          pad: [ts.paddingTop, ts.paddingRight, ts.paddingBottom, ts.paddingLeft].map(parseFloat),
+          fill: ts.backgroundColor,
+          border: [ts.borderTopWidth, ts.borderBottomWidth, ts.borderLeftWidth].map(parseFloat),
+          borderColor: ts.borderLeftColor,
+          vh: window.innerHeight,
+        };
+      }, [SEL.transport, SEL.pages] as const);
+      // the deck's own padding and glass-dark fill — no phone-bar utility pins
+      // them (utilities beat the layered studio.css rules)
+      expect(m.pad, `${where}: the deck's padding`).toEqual([11, 22, 11, 22]);
+      const fill = rgba(m.fill);
+      expect(
+        Math.abs(fill[0] - 8) <= 1 && Math.abs(fill[1] - 11) <= 1 && Math.abs(fill[2] - 21) <= 1 && Math.abs(fill[3] - 0.62) <= 0.01,
+        `${where}: glass-dark fill (${m.fill})`,
+      ).toBe(true);
+      expect(m.border, `${where}: a hairline all round`).toEqual([1, 1, 1]);
+      const line = rgba(m.borderColor);
+      expect(line[0] === 255 && Math.abs(line[3] - 0.1) <= 0.01, `${where}: --ss-line (${m.borderColor})`).toBe(true);
+      expect(Math.abs(m.t.left - m.strip.left), `${where}: left edge on the strip's column`).toBeLessThanOrEqual(2);
+      expect(Math.abs(m.t.right - m.strip.right), `${where}: right edge on the strip's column`).toBeLessThanOrEqual(2);
+      expect(m.radius, `${where}: a rounded deck`).toBeGreaterThanOrEqual(16);
+      expect(m.vh - m.t.bottom, `${where}: off the foot`).toBeGreaterThanOrEqual(8);
+
+      const deck = transport(page).locator('[data-studio="transport-deck"]');
+      await expect(deck.locator('[data-sk="reel"]')).toHaveCount(2);
+      const cap = await deck.evaluate((el) => ({ radius: parseFloat(getComputedStyle(el).borderTopLeftRadius), h: el.getBoundingClientRect().height, bg: getComputedStyle(el).backgroundColor }));
+      expect(cap.radius, `${where}: the reels sit in a capsule`).toBeGreaterThanOrEqual(cap.h / 2 - 1);
+      expect(rgba(cap.bg)[3], `${where}: a dark capsule`).toBe(1);
+    }
+    // A short laptop: the deck slims to 8 px top and bottom (both edges, not
+    // just the foot) and keeps its 22 px sides; the room still fits whole.
+    for (const viewport of [{ width: 1366, height: 650 }, { width: 1366, height: 600 }]) {
+      await page.setViewportSize(viewport);
+      await settle(page);
+      const pad = await transport(page).evaluate((el) => {
+        const ts = getComputedStyle(el);
+        return [ts.paddingTop, ts.paddingRight, ts.paddingBottom, ts.paddingLeft].map(parseFloat);
+      });
+      const where2 = `${viewport.width}×${viewport.height}`;
+      expect(pad, `${where2}: the slim deck`).toEqual([8, 22, 8, 22]);
+      // nothing scrolls, the deck is whole on screen, and its band (deck plus
+      // the 6 px under it) is no taller than the 85 px full-bleed bar it
+      // replaced, so the Stage loses nothing to it
+      const fit = await page.evaluate(([t]) => {
+        const tr = (document.querySelector(t) as HTMLElement).getBoundingClientRect();
+        const area = (document.querySelector(t) as HTMLElement).parentElement!.getBoundingClientRect();
+        return {
+          sh: document.documentElement.scrollHeight,
+          sw: document.documentElement.scrollWidth,
+          vh: window.innerHeight,
+          vw: window.innerWidth,
+          bottom: tr.bottom,
+          band: area.bottom - tr.top,
+        };
+      }, [SEL.transport] as const);
+      expect(fit.sh, `${where2}: the page scrolls`).toBeLessThanOrEqual(fit.vh);
+      expect(fit.sw, `${where2}: the page scrolls sideways`).toBeLessThanOrEqual(fit.vw);
+      expect(fit.bottom, `${where2}: the deck is on screen`).toBeLessThanOrEqual(fit.vh + 0.5);
+      expect(fit.band, `${where2}: the deck's band`).toBeLessThanOrEqual(85.5);
+    }
+    await page.setViewportSize(TABLET);
+    await settle(page);
+    const lines = async () =>
+      readout(page).evaluate((el) => {
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        // one line box: every fragment's middle within 4 px of the first's (a
+        // fallback glyph such as the dash may sit a hair higher or lower)
+        const mids = Array.from(range.getClientRects())
+          .filter((r) => r.width > 0)
+          .map((r) => r.top + r.height / 2);
+        return 1 + mids.filter((m) => Math.abs(m - mids[0]) > 4).length;
+      });
+    await page.evaluate(() => document.fonts.ready);
+    expect(await lines(), "idle: one readout line").toBe(1);
+    expect(await readout(page).evaluate((el) => parseFloat(getComputedStyle(el).fontSize))).toBe(13);
+
+    await startTake(page);
+    await expect(readout(page)).toHaveText(/^● 0:0\d · pg 3\/5$/i);
+    await expect(readout(page)).toHaveText(/0:0[2-9] · pg 3\/5/i, { timeout: 8000 });
+    expect(await lines(), "mid-take: one readout line").toBe(1);
+    const red = rgba(await readout(page).evaluate((el) => getComputedStyle(el).color));
+    expect(red[0] > 240 && red[1] < 120 && red[2] < 100, "tape-red while recording").toBe(true);
+    await stopTake(page);
+  });
+
+  test("375×812: no sideways scroll; the readout keeps 12+ px clear of the keys", async ({ page }) => {
+    await openTwinkle(page, { viewport: PHONE });
+    for (const when of ["idle", "recording"] as const) {
+      if (when === "recording") await startTake(page);
+      await settle(page);
+      const m = await page.evaluate(([t]) => {
+        const tr = document.querySelector(t) as HTMLElement;
+        const out = tr.querySelector('[data-studio="transport-readout"]') as HTMLElement;
+        const keys = Array.from(tr.querySelectorAll('[data-sk="transport"]')).map((k) => k.getBoundingClientRect());
+        const range = document.createRange();
+        range.selectNodeContents(out);
+        const text = Array.from(range.getClientRects()).filter((r) => r.width > 0);
+        return {
+          sw: document.documentElement.scrollWidth,
+          keysRight: Math.max(...keys.map((k) => k.right)),
+          textLeft: Math.min(...text.map((r) => r.left)),
+          textRight: Math.max(...text.map((r) => r.right)),
+          vw: window.innerWidth,
+        };
+      }, [SEL.transport] as const);
+      expect(m.sw, `${when}: no sideways scroll`).toBeLessThanOrEqual(PHONE.width);
+      expect(m.textLeft - m.keysRight, `${when}: readout clear of the last key`).toBeGreaterThanOrEqual(12);
+      expect(m.textRight, `${when}: readout on screen`).toBeLessThanOrEqual(m.vw);
+    }
+    await stopTake(page);
+  });
+
+  test("honest readout: a length nobody knows is a dash, never `/ 0:00`", async ({ page }) => {
+    // page 1 of a fresh studio has no voice at all
+    await page.setViewportSize(TABLET);
+    await page.goto("/studio");
+    await expect(readout(page)).toContainText("pg 1/");
+    await expect(readout(page)).not.toContainText("/ 0:00");
+    await expect(readout(page)).toContainText("0:00 / —");
+    // Twinkle page 3 has a voice: never `/ 0:00` (its length, 0:06, once the
+    // Studio passes the page's own duration — W2b; a dash until then)
+    await openTwinkle(page, { viewport: TABLET });
+    await expect(readout(page)).not.toContainText("/ 0:00");
+    await expect(readout(page)).toHaveText(/^0:00 \/ (—|0:06) · pg 3\/5$/);
+  });
+
+  for (const viewport of [TABLET, PHONE]) {
+  test(`${viewport.width}×${viewport.height}: the readout passes WCAG AA (4.5:1) on its bar, idle and mid-take`, async ({ page }) => {
+    {
+      await openTwinkle(page, { viewport });
+      const where = `${viewport.width}×${viewport.height}`;
+      for (const part of ["transport-time", "transport-page"]) {
+        const c = await contrastOf(transport(page).locator(`[data-studio="${part}"]`));
+        expect(c, `${where} idle: ${part} ${c.toFixed(2)}:1`).toBeGreaterThanOrEqual(4.5);
+      }
+      await startTake(page);
+      for (const part of ["transport-time", "transport-page"]) {
+        const c = await contrastOf(transport(page).locator(`[data-studio="${part}"]`));
+        expect(c, `${where} recording: ${part} ${c.toFixed(2)}:1`).toBeGreaterThanOrEqual(4.5);
+      }
+      await stopTake(page);
+    }
+  });
+  }
+});
+
+test.describe("M6 · s03 top bar and Stage words", () => {
+  test("the title is Fraunces 22 px from 1180 (1180×820, 1280×720); the pen keeps 12+ px clear of SIMPLE at 1180 and 1024", async ({ page }) => {
+    await openTwinkle(page, { viewport: TABLET });
+    for (const viewport of [TABLET, { width: 1280, height: 720 }, { width: 1024, height: 768 }]) {
+      await page.setViewportSize(viewport);
+      await settle(page);
+      await page.evaluate(() => document.fonts.ready);
+      const where = `${viewport.width}×${viewport.height}`;
+      const input = page.locator("#studio-title");
+      const size = await input.evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+      if (viewport.width >= 1180) {
+        expect(size, `${where}: 22 px`).toBe(22);
+        expect(await input.evaluate((el) => getComputedStyle(el).fontWeight)).toBe("700");
+      }
+      const pen = await box(page.locator(SEL.title).locator("svg.lucide-pen"));
+      const mode = await box(page.locator('[data-sk="mode"]'));
+      expect(mode.x - pen.right, `${where}: the pen keeps clear of SIMPLE`).toBeGreaterThanOrEqual(12);
+      const clip = await input.evaluate((el) => (el as HTMLInputElement).scrollWidth - (el as HTMLInputElement).clientWidth);
+      if (viewport.width >= 1180) expect(clip, `${where}: the whole title shows`).toBeLessThanOrEqual(1);
+    }
+  });
+
+  test("mid-take Finish waits as s03's tinted-gold outline, not a dimmed gold block", async ({ page }) => {
+    await openTwinkle(page, { viewport: TABLET });
+    await startTake(page);
+    const finish = page.getByRole("button", { name: "Finish my story" });
+    await expect(finish).toBeDisabled();
+    await settle(page); // the kit eases colours over 220 ms: read them at rest
+    const s = await finish.evaluate((el) => {
+      const cs = getComputedStyle(el);
+      return { opacity: cs.opacity, bg: cs.backgroundColor, image: cs.backgroundImage, color: cs.color, border: cs.borderTopColor };
+    });
+    expect(s.opacity).toBe("1");
+    expect(s.image).toBe("none");
+    const bg = rgba(s.bg);
+    expect(bg[3], `a tinted fill (${s.bg})`).toBeLessThanOrEqual(0.2);
+    expect(bg[3]).toBeGreaterThan(0);
+    const text = rgba(s.color);
+    expect(text[0] > 230 && text[1] > 150 && text[2] < 120, `gold words (${s.color})`).toBe(true);
+    expect(text[3]).toBeLessThan(1);
+    const border = rgba(s.border);
+    expect(border[0] > 230 && border[3] > 0 && border[3] < 0.6, `a gold hairline (${s.border})`).toBe(true);
+    await stopTake(page);
+  });
+
+  test("the Stage's words are the reference cream, balanced, in a measure no wider than 640 px", async ({ page }) => {
+    await openTwinkle(page, { viewport: TABLET });
+    const words = page.locator("#studio-page-text");
+    const s = await words.evaluate((el) => {
+      const cs = getComputedStyle(el);
+      return { color: cs.color, wrap: cs.getPropertyValue("text-wrap-style") || cs.getPropertyValue("text-wrap"), width: el.getBoundingClientRect().width };
+    });
+    expect(s.color).toBe("rgb(243, 230, 200)");
+    expect(s.wrap).toContain("balance");
+    expect(s.width).toBeLessThanOrEqual(640.5);
+    await expectRoomFits(page, "1180×820 words");
   });
 });

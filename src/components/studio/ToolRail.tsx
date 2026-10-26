@@ -6,6 +6,12 @@
  * the moat (s03). Left edge on a tablet or desktop, a bottom toolbar on a
  * phone (studio.css handles the flip). Child-scale targets: the three tools
  * are 92px tiles.
+ *
+ * While a take records, Photo and Magic wait: a new picture (the camera can
+ * take the microphone) or a new story would change the page under the take,
+ * and the Voice card promises "Pages stay put while you record." They stay
+ * in the Tab order with aria-disabled and say why, so a keyboard or screen
+ * reader user hears the reason instead of a silent dead key.
  */
 
 import * as React from "react";
@@ -20,7 +26,13 @@ export interface ToolRailProps {
   photoBusy: boolean;
   narrated: boolean;
   musicOn: boolean;
+  /** A take is recording: Photo and Magic wait until it is finished. */
+  recording?: boolean;
 }
+
+/** Tools that would change the page under a take. */
+const LOCKED_WHILE_RECORDING: ReadonlySet<StudioTool> = new Set(["photo", "magic"]);
+const WAIT_HINT = "Finish the recording first";
 
 interface ToolSpec {
   id: StudioTool;
@@ -38,8 +50,13 @@ const TOOLS: ToolSpec[] = [
 
 const MAGIC: ToolSpec = { id: "magic", Icon: Sparkles, label: "Magic", hint: "Make a story from an idea" };
 
-export function ToolRail({ active, onSelect, photoBusy, narrated, musicOn }: ToolRailProps) {
+export function ToolRail({ active, onSelect, photoBusy, narrated, musicOn, recording = false }: ToolRailProps) {
   const magicOn = active === MAGIC.id;
+  const waits = (id: StudioTool) => recording && LOCKED_WHILE_RECORDING.has(id);
+  const select = (id: StudioTool) => {
+    if (waits(id)) return;
+    onSelect(id);
+  };
   return (
     <nav
       aria-label="Story tools"
@@ -49,6 +66,7 @@ export function ToolRail({ active, onSelect, photoBusy, narrated, musicOn }: Too
         const isActive = active === id;
         const busy = id === "photo" && photoBusy;
         const Glyph = busy ? Hourglass : Icon;
+        const waiting = waits(id);
         return (
           <BigButton
             key={id}
@@ -56,8 +74,10 @@ export function ToolRail({ active, onSelect, photoBusy, narrated, musicOn }: Too
             label={label}
             variant={isActive ? "gold" : "ghost"}
             aria-pressed={isActive}
-            title={hint}
-            onClick={() => onSelect(id)}
+            aria-disabled={waiting ? true : undefined}
+            data-waiting={waiting ? "true" : undefined}
+            title={waiting ? WAIT_HINT : hint}
+            onClick={() => select(id)}
             className={`studio-rail-tool w-full flex-col gap-2 rounded-[22px] px-2 text-center text-[14px] font-semibold ${
               isActive ? "" : "text-ss-fg-2"
             }`}
@@ -80,8 +100,10 @@ export function ToolRail({ active, onSelect, photoBusy, narrated, musicOn }: Too
         label={MAGIC.label}
         variant={magicOn ? "gold" : "ghost"}
         aria-pressed={magicOn}
-        title={MAGIC.hint}
-        onClick={() => onSelect(MAGIC.id)}
+        aria-disabled={waits(MAGIC.id) ? true : undefined}
+        data-waiting={waits(MAGIC.id) ? "true" : undefined}
+        title={waits(MAGIC.id) ? WAIT_HINT : MAGIC.hint}
+        onClick={() => select(MAGIC.id)}
         className={`studio-rail-magic min-h-0 flex-col gap-1.5 rounded-[18px] px-1 py-0.5 text-center text-[12px] font-medium ${
           magicOn ? "" : "border-transparent bg-transparent text-ss-fg-3 backdrop-blur-none hover:bg-white/5"
         }`}
@@ -90,6 +112,7 @@ export function ToolRail({ active, onSelect, photoBusy, narrated, musicOn }: Too
       <span className="sr-only" aria-live="polite">
         {narrated ? "This page has narration." : "This page has no narration yet."}{" "}
         {musicOn ? "Music bed on." : "Music bed off."}
+        {recording ? " Photo and Magic wait until the recording is finished." : ""}
       </span>
     </nav>
   );

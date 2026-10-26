@@ -20,9 +20,15 @@
    than its own height. The sheet, the floating card and the docked column
    keep their size, so the room never scrolls (T13a's fit).
      < 768px   the sheet; the take keeps its phone shape (disc beside name)
-     ≥ 768px   the take lies on its side too, as T13a sets it on a phone and
-               a short laptop, so the words get the room the tall disc stood
-               in: at 1180×820 Grandma's five lines fit whole
+     768–1023  the floating card: the take lies on its side too, as T13a
+               sets it on a phone and a short laptop
+     docked, ≥ 700px tall
+               the take measures the room the card leaves (a size
+               container): standing up, s03's hero disc up to 132px with its
+               name under it, when there is room (Twinkle's three lines at
+               1180×820); on its side when there is not (Grandma's five
+               lines, which still fit whole at 1180×820). It starts right
+               under the card, never below an empty band (M6)
      docked, under 700px tall
                no card: the column has 155–250px for the take and the words,
                and the Stage beside it (never covered there) already shows
@@ -164,6 +170,47 @@
     }
     .studio .studio-voice-body[data-reading="true"] .studio-voice-record > :last-child {
       margin-left: 8px;
+    }
+  }
+
+  /* Docked with the height (≥ 1024px, ≥ 700px tall): the take is measured,
+     not assumed. It keeps all the room the card leaves and is its own size
+     container, so it picks its arrangement from that room: with 176px or
+     more it stands up as s03 draws it — the disc growing with the room up to
+     132px, "Stop — m:ss" centred under it, the lock row below (Twinkle's
+     three lines at 1180×820); in less it lies on its side, 64px (Grandma's
+     five lines). Either way it starts right under the card: the live ring
+     (16px out from the disc) stands 12px under READ THIS, and any room left
+     over goes below the lock row, never into a band under the card. */
+  @media (min-width: 1024px) and (min-height: 700px) {
+    .studio .studio-voice-body[data-reading="true"] {
+      /* 12 + a 72px row (the 64px disc) + 18 + the 20px lock row */
+      --read-this-take: 122px;
+      grid-template-rows: minmax(var(--read-this-min), auto) minmax(var(--read-this-take), 1fr);
+    }
+    .studio .studio-voice-body[data-reading="true"] > .studio-voice-take {
+      container: voice-take / size;
+      justify-content: flex-start;
+      gap: 0;
+      padding: 0;
+    }
+    .studio .studio-voice-body[data-reading="true"] .studio-voice-record { margin-top: 12px; }
+    .studio .studio-voice-body[data-reading="true"] [data-studio="voice-lock"] { margin-top: 18px; }
+    @container voice-take (min-height: 176px) {
+      .studio .studio-voice-body[data-reading="true"] .studio-voice-record {
+        flex-direction: column;
+        margin-top: 16px;
+        padding: 0 16px;
+      }
+      .studio .studio-voice-body[data-reading="true"] .studio-voice-record > :last-child {
+        margin-left: 0;
+      }
+      .studio .studio-voice-body[data-reading="true"] [data-studio="voice-lock"] { margin-top: 10px; }
+      /* 16 (the ring's room) + 16 (to the name) + 18 (the name) + 10 + 20 (the lock row) */
+      .studio .studio-voice-body[data-reading="true"] .studio-voice-disc {
+        width: clamp(64px, calc(100cqh - 80px), 132px);
+        height: clamp(64px, calc(100cqh - 80px), 132px);
+      }
     }
   }
 

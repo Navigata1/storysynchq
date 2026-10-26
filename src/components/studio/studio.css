@@ -12,7 +12,8 @@
                over the Stage. With 600px of height or more the room fits the
                screen (100dvh): the Stage gives way, nothing scrolls (s03)
      ≥ 1024px  an open tool card docks in its own column between the rail and
-               the Stage, so it never covers the page it talks about
+               the Stage, so it never covers the page it talks about; the
+               transport becomes s03's inset deck on the strip's column
      ≥ 1180px  the inspector takes its own column (Advanced only); the title
                sits centred on the top bar
    ========================================================================== */
@@ -94,17 +95,78 @@
     z-index: 48; /* above both bottom sheets: ● REC / ▶ are always one tap away */
   }
   .studio { --studio-transport-h: calc(88px + env(safe-area-inset-bottom, 0px)); }
+
+  /* ------------------------------------------------------------ transport */
+  /* Below 1024px a bar across the foot (a phone's thumb zone); from 1024px
+     s03's inset deck (see "≥ 1024px"). The reels sit in a dark capsule; the
+     readout is one mono line from 1024px, `0:05 · pg 3/5`, and folds in two
+     (time over page) below it so the keys keep their room. */
+  .studio-transport {
+    padding: 12px 12px calc(12px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    background-color: rgba(0, 0, 0, 0.45);
+    -webkit-backdrop-filter: blur(24px);
+    backdrop-filter: blur(24px);
+  }
+  /* the two sides match, so the keys sit on the bar's centre */
+  .studio-transport-side { width: 86px; }
+  .studio-transport-deck {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background-color: #05070d;
+    box-shadow:
+      inset 0 2px 6px rgba(0, 0, 0, 0.8),
+      0 0 0 1px rgba(255, 255, 255, 0.06);
+  }
+  /* --ss-fg-3 measures ≥ 6:1 on the bar (WCAG AA); tape-red while recording */
+  .studio-transport-readout {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 3px;
+    font-family: var(--ss-mono);
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.2;
+    letter-spacing: 0.1em;
+    text-align: right;
+    white-space: nowrap;
+    color: var(--ss-fg-3);
+  }
+  .studio-transport-sep { display: none; }
+  .studio-transport[data-recording="true"] .studio-transport-readout { color: #ff6a52; }
+  /* While the mic is live, REC is the stop square in s03's armed ring
+     (`.s3-rec56`): a frozen ring, never a pulse — nothing loops here. */
+  .studio-transport .studio-transport-rec[data-kind="stop"] {
+    color: var(--ss-red);
+    border: 3px solid rgba(227, 69, 47, 0.85);
+    background-color: #1a1f33;
+    background-image: none;
+    box-shadow:
+      0 0 0 6px rgba(227, 69, 47, 0.14),
+      0 0 26px rgba(227, 69, 47, 0.35);
+  }
+  /* the pointer that pressed REC is still over the key: keep the ring red */
+  .studio-transport .studio-transport-rec[data-kind="stop"]:not(:disabled):hover {
+    color: #ff6a52;
+    border-color: rgba(227, 69, 47, 0.85);
+  }
+  .studio-transport .studio-transport-rec[data-kind="stop"] .sk-transport-glyph {
+    width: 36%;
+    height: 36%;
+  }
+  @media (min-width: 640px) {
+    .studio-transport-side { width: 132px; }
+  }
   /* A 375px phone cannot carry four 60px keys, their gaps and the readout:
      the keys come down to 52px there, so the transport never scrolls the
-     page sideways. */
+     page sideways; the readout tracks a little tighter inside its 86px. */
   @media (max-width: 399.98px) {
     .studio-area-transport .sk-transport { --sk-transport-size: 52px; }
-    /* ...and the readout keeps "0:00 / 0:00" on one line inside its 86px
-       (the tighter tracking has to beat the readout's own utility). */
-    .studio-area-transport section[aria-label="Transport"] > :last-child {
-      white-space: nowrap;
-      letter-spacing: 0.06em !important;
-    }
+    .studio-transport-readout { letter-spacing: 0.06em; }
   }
 
   /* ------------------------------------------------------------ top bar */
@@ -135,6 +197,17 @@
     transition: transform 300ms var(--ss-ease);
   }
   .studio-finish[data-recording="true"] { transform: translateY(-6px); }
+  /* Waiting for the take (disabled): s03's tinted-gold outline, not the
+     generic dimmed gold block, with the record dot at half strength. */
+  .studio-finish .sk-big--gold:disabled {
+    opacity: 1;
+    background-color: rgba(245, 158, 11, 0.14);
+    background-image: none;
+    color: rgba(251, 191, 74, 0.62);
+    border-color: rgba(245, 158, 11, 0.32);
+    box-shadow: none;
+  }
+  .studio-finish .sk-big--gold:disabled .sk-big-icon { opacity: 0.5; }
   .studio-finish-note {
     position: absolute;
     top: calc(100% + 3px);
@@ -168,6 +241,12 @@
     background-color: var(--ss-line-2);
   }
   .studio-rail-list > .studio-rail-magic { flex: 0 0 60px; }
+  /* mid-take, Photo and Magic wait (aria-disabled, still focusable): dimmed
+     like the strip's locked controls */
+  .studio-rail-list > [data-waiting="true"] {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
 
   /* --------------------------------------------------------- tool panel */
   .studio-toolpanel {
@@ -332,6 +411,31 @@
       height: 100%;
       animation: studio-fade 260ms ease-out both;
     }
+
+    /* s03's inset deck: on the strip's column (12px in from the rail and
+       the screen's edge, as the Pages strip's own padding sets it), 12px
+       off the foot, a rounded dark-glass panel. */
+    .studio-area-transport {
+      padding: 0 12px calc(12px + env(safe-area-inset-bottom, 0px));
+    }
+    .studio-transport {
+      padding: 11px 22px;
+      border: 1px solid var(--ss-line);
+      border-radius: 18px;
+      background-color: rgba(8, 11, 21, 0.62);
+    }
+    /* room for the one-line readout, both sides alike so the keys stay
+       centred (a two-digit "0:00 / 0:00 · pg 12/12" fits) */
+    .studio-transport-side { width: 230px; }
+    .studio-transport-readout {
+      flex-direction: row;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 0;
+      font-size: 13px;
+      line-height: 1;
+    }
+    .studio-transport-sep { display: inline; white-space: pre; }
   }
 
   /* A short laptop (docked, under 700px tall): the disc lies beside its name
@@ -339,6 +443,12 @@
      never leaves the card's foot. The body's 8px of inner room keeps a focus
      ring or the live ring inside its clip. */
   @media (min-width: 1024px) and (max-height: 699.98px) {
+    /* the inset deck gives back its height: 6px off the foot and a slimmer
+       panel, no taller than the full-bleed bar it replaced */
+    .studio-area-transport {
+      padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
+    }
+    .studio-transport { padding-block: 8px; }
     .studio-voice-body {
       min-height: 0;
       overflow-y: auto;
@@ -405,6 +515,10 @@
       animation: studio-fade 260ms ease-out both;
     }
     .studio-inspector-close { display: none; }
+    /* s03's title: Fraunces 700 at 22px. The `min-[1180px]:text-[22px]`
+       utility on the input sorts before `sm:text-lg` and silently loses to it;
+       a layered rule can only beat a utility as !important. */
+    .studio-topbar .studio-title .studio-title-input { font-size: 22px !important; }
   }
 
   /* ------------------------------------------------------------- the stage */
@@ -437,17 +551,22 @@
       inset 0 0 0 1px rgba(255, 255, 255, 0.03),
       inset 0 1px 0 rgba(255, 255, 255, 0.07);
   }
+  /* The page's words in the reference's cream (.ss-story #F3E6C8), set as
+     balanced lines in a measure no wider than the Player's (~640px). */
   .studio-story-text {
+    --studio-cream: #f3e6c8;
     font-family: var(--font-fraunces), Georgia, "Iowan Old Style", serif;
     font-size: clamp(1.05rem, 1.15vw + 0.85rem, 1.6rem);
     line-height: 1.55;
     letter-spacing: 0.002em;
-    color: #f4f1e8;
-    text-wrap: pretty;
+    color: var(--studio-cream);
+    text-wrap: balance;
     white-space: pre-wrap;
   }
   .studio-story-input {
     width: 100%;
+    max-inline-size: 640px;
+    margin-inline: auto;
     resize: none;
     background: transparent;
     border: none;
@@ -508,9 +627,9 @@
   /* ------------------------------------- nothing loops in the Creator */
   /* Reels turn while the tape moves; nothing else repeats. The kit's record
      rings pulse elsewhere; in the Studio they hold a frozen frame of the
-     pulse, as the reference draws the live record button. */
-  .studio .sk-big--red:not(:disabled) .sk-big-ring,
-  .studio .sk-transport--rec.is-active:not(:disabled) .sk-transport-ring {
+     pulse, as the reference draws the live record button (the Transport's
+     live REC is the stop square in a still ring, "transport" above). */
+  .studio .sk-big--red:not(:disabled) .sk-big-ring {
     animation: none;
     opacity: 0.55;
   }

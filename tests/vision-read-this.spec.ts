@@ -27,7 +27,7 @@
 import { test, expect, type Locator, type Page } from "@playwright/test";
 import { restoreDraft, seedStudioDraft } from "./fixtures/helpers";
 import { stubMicrophone } from "./fixtures/mic";
-import { GOODNIGHT_MIA } from "./fixtures/tapes";
+import { GOODNIGHT_MIA, TWINKLE } from "./fixtures/tapes";
 
 /* ------------------------------------------------------------------ facts */
 
@@ -575,4 +575,149 @@ test.describe("T19 · READ THIS fits the room", () => {
     await expectRoomFits(page, "900×800 mid-take");
     await stopTake(page);
   });
+});
+
+/* ======================================================= M6 · s03 the take */
+//
+// s03 draws the take as the Voice card's hero: a ~132 px disc with
+// "Stop — 0:05" centred under it. READ THIS (s06) has to share the card, so
+// the take measures the room the card leaves: three lines (Twinkle page 3)
+// leave room for it standing up; five (Grandma's page 1) do not, and it lies
+// on its side. Either way it sits just under the card — no empty band.
+
+/** Twinkle page 3's words, verbatim from the fixture: three lines on the card. */
+const TWINKLE_3 = TWINKLE.pages[2].text;
+
+async function openTwinklePage3(page: Page, viewport: Size): Promise<void> {
+  await page.setViewportSize(viewport);
+  await stubMicrophone(page);
+  await seedStudioDraft(page, "twinkle");
+  await page.goto("/studio");
+  await restoreDraft(page);
+  await page.getByRole("button", { name: /^Page 3\b/ }).click();
+  await expect(
+    page.getByRole("button", { name: /^Page 3\b.*selected/ }),
+  ).toHaveCount(1);
+  await expect(page.locator(SEL.textarea)).toHaveValue(TWINKLE_3);
+  await settle(page);
+}
+
+/** The card, the disc, the take's name and the record button, in one frame. */
+async function readTakeParts(page: Page) {
+  await settle(page);
+  return page.evaluate(
+    ([cardSel, recordSel, wordsSel]) => {
+      const r = (el: Element | null) =>
+        el ? el.getBoundingClientRect().toJSON() : null;
+      const record = document.querySelector(recordSel);
+      const words = document.querySelector(wordsSel) as HTMLElement | null;
+      return {
+        card: r(document.querySelector(cardSel)) as DOMRect | null,
+        record: r(record) as DOMRect | null,
+        disc: r(
+          record?.querySelector(".studio-voice-disc") ?? null,
+        ) as DOMRect | null,
+        name: r(record?.lastElementChild ?? null) as DOMRect | null,
+        /** the take's visible top: the live ring stands 16 px out from the disc */
+        ring: r(
+          record?.querySelector('[data-studio="voice-live-ring"]') ?? null,
+        ) as DOMRect | null,
+        words: words
+          ? {
+              scrollHeight: words.scrollHeight,
+              clientHeight: words.clientHeight,
+            }
+          : null,
+      };
+    },
+    [SEL.card, SEL.record, SEL.words] as const,
+  );
+}
+
+test.describe("M6 · s03 the take shares the Voice card with READ THIS", () => {
+  test("1180×820, Twinkle page 3 (three lines): the take stands up — a 100+ px disc, Stop — m:ss centred under it, just under the card", async ({
+    page,
+  }) => {
+    await openTwinklePage3(page, TABLET);
+    await startTake(page);
+    await expect(card(page)).toBeVisible();
+    await expect(card(page).locator(SEL.words)).toHaveText(TWINKLE_3);
+    await expectCardAboveStop(page, "1180×820 Twinkle");
+    const t = await readTakeParts(page);
+    const disc = toBox(t.disc as DOMRect);
+    const name = toBox(t.name as DOMRect);
+    expect(
+      disc.width,
+      "the take is the hero: a 100+ px disc",
+    ).toBeGreaterThanOrEqual(100);
+    expect(name.y, "its name under the disc").toBeGreaterThanOrEqual(
+      disc.bottom - 0.5,
+    );
+    expect(
+      Math.abs(name.x + name.width / 2 - (disc.x + disc.width / 2)),
+      "its name centred under it",
+    ).toBeLessThanOrEqual(2);
+    const gap = toBox(t.ring as DOMRect).y - toBox(t.card as DOMRect).bottom;
+    expect(
+      gap,
+      `no empty band under READ THIS (${gap.toFixed(1)} px)`,
+    ).toBeLessThanOrEqual(24);
+    expect(gap, "the live ring clear of the card").toBeGreaterThanOrEqual(0);
+    expect(
+      t.words?.scrollHeight ?? 0,
+      "every word in view",
+    ).toBeLessThanOrEqual((t.words?.clientHeight ?? 0) + 1);
+    await expectRoomFits(page, "1180×820 Twinkle mid-take");
+    await stopTake(page);
+  });
+
+  for (const viewport of [TABLET, LAPTOP, IPAD_LANDSCAPE]) {
+    const where = `${viewport.width}×${viewport.height}`;
+    // one story per test: a tab takes one seeded draft
+    for (const story of ["twinkle", "goodnight-mia"] as const) {
+      test(`${where}, ${story === "twinkle" ? "three lines" : "five lines"}: the take sits just under the card (≤ 24 px), nothing overlaps`, async ({
+        page,
+      }) => {
+        {
+          if (story === "twinkle") await openTwinklePage3(page, viewport);
+          else await openGoodnightMia(page, { viewport });
+          await startTake(page);
+          await expect(card(page)).toBeVisible();
+          await expectCardAboveStop(page, `${where} ${story}`);
+          const t = await readTakeParts(page);
+          const gap =
+            toBox(t.ring as DOMRect).y - toBox(t.card as DOMRect).bottom;
+          expect(
+            gap,
+            `${where} ${story}: card to take ${gap.toFixed(1)} px`,
+          ).toBeLessThanOrEqual(24);
+          expect(gap, `${where} ${story}: apart`).toBeGreaterThanOrEqual(0);
+          // T19's claim: at 1180×820 every word is in view; on the shorter
+          // docked screens the card gives way first and scrolls inside itself
+          if (viewport === TABLET) {
+            expect(
+              t.words?.scrollHeight ?? 0,
+              `${where} ${story}: every word in view`,
+            ).toBeLessThanOrEqual((t.words?.clientHeight ?? 0) + 1);
+          }
+          const disc = toBox(t.disc as DOMRect);
+          const name = toBox(t.name as DOMRect);
+          // standing up: the name centred under the disc; on its side: beside it, clear of the live ring
+          if (name.y >= disc.bottom - 0.5) {
+            expect(
+              Math.abs(name.x + name.width / 2 - (disc.x + disc.width / 2)),
+              `${where} ${story}: name centred`,
+            ).toBeLessThanOrEqual(2);
+          } else {
+            expect(
+              name.x - disc.right,
+              `${where} ${story}: name clear of the ring`,
+            ).toBeGreaterThanOrEqual(16);
+          }
+          await expectRoomFits(page, `${where} ${story} mid-take`);
+          await stopTake(page);
+        }
+      });
+    }
+  }
 });
