@@ -18,14 +18,17 @@
  *   s04  gate        the grown-up moment and the seven-layer sheet; the stamp inked · 1180×820
  *   s05  publish     the printed tape card · 1180×820 · 375×812; the link's cover on a phone · 390×844
  *   s06  end card    the J-card liner notes · 390×844; the reply Creator and READ THIS · 390×844
- *   s07  /read       the shelf: Grandma's tape NEW and sent, Twinkle lifted · 1140×712
+ *   s07  /read       the shelf: Grandma's tape NEW and sent, Twinkle lifted with "You stopped at
+ *                    page 3."; "Read it in…" for the house tape, Hush, the browser voice reading now · 1140×712
  *   s08  /protocol   hero, FIG. 1 and the three cards · 1140×712 · 375×812
- *   s09  /studio     Advanced with the Inspector, house tape page 3 · 1290×900
+ *   s09  /studio     Advanced, house tape page 3 in its own Hush; TYPE A FEELING "a quiet lullaby for
+ *                    bedtime" → Hush · 1290×900
  *   s10  /read?story the link opens with no account · 390×844
  *
- * Not reachable today (built by tickets still in flight, never faked here):
- * s07's resume line and "Read it in…" (T21, T22a/b); s09's per-page moods and
- * "Type a feeling" (T24a/b). Idea and Phase 3 items are never shown.
+ * Every N item of s07 (T20a/b, T21, T22a/b) and s09 (T24a/b) is reached
+ * through the app itself, never faked. Idea and Phase 3 items (search, genre
+ * pills, the catalog, Premium, made voices, the desktop window, Cast, the
+ * timeline, the SFX lane) are not built, and the tests say so.
  *
  * The family content (Mia, Twinkle, Grandma Rose) is illustrative and lives in
  * tests/fixtures only.
@@ -36,7 +39,7 @@ import { evidenceShot } from "./fixtures/evidence";
 import { watchSends } from "./fixtures/sends";
 import { restoreDraft, seedDeviceLibrary, seedStudioDraft, LIBRARY_KEY } from "./fixtures/helpers";
 import { stubMicrophone } from "./fixtures/mic";
-import { pictureLessTape, seedShelf, sentRow, shelfRow } from "./fixtures/shelf-seed";
+import { pictureLessTape, resumeAt, seedShelf, sentRow, shelfRow } from "./fixtures/shelf-seed";
 import { FIXTURE_PATHS, GOODNIGHT_MIA, TWINKLE, loadTape } from "./fixtures/tapes";
 import { runtimeLabel } from "../src/lib/storysync/tape-meta";
 
@@ -69,6 +72,8 @@ const GRANDMA_ADDED = "2026-10-20T19:31:00.000Z";
 const GRANDMA_CODE = "60d01a6060d01a6060d01a6060d01a60";
 const TWINKLE_CODE = "7b20a7b20a7b20a7b20a7b20a7b20a71";
 const BATH_CODE = "7b20b7b20b7b20b7b20b7b20b7b20b71";
+/** s07: Twinkle was left at page 3 last night (T21's place, this device only). */
+const TWINKLE_STOPPED = "2026-10-20T19:12:00.000Z";
 /**
  * The unlisted code a seeded Twinkle link resolves (s06, s10): fixed, so the
  * end card's QR and link print the same in every run. Shaped like a minted
@@ -637,7 +642,7 @@ test.describe("T25 · vision fidelity sweep", () => {
 
   /* ------------------------------------------------------------- s07 shelf */
 
-  test("s07 · shelf 1140x712: Grandma's tape sent and NEW, Twinkle lifted, Bath Time Song, the blank tape", async ({
+  test("s07 · shelf 1140x712: Grandma's tape sent and NEW, Twinkle lifted where it stopped, Read it in… the house tape in Hush", async ({
     page,
   }) => {
     test.setTimeout(90000);
@@ -651,28 +656,78 @@ test.describe("T25 · vision fidelity sweep", () => {
       ],
       sent: [sentRow(GOODNIGHT_MIA, GRANDMA_CODE, runtimeLabel(goodnight), GRANDMA_ADDED)],
       previousVisit: SHELF_PREVIOUS_VISIT,
+      resume: { [`code:${TWINKLE_CODE}`]: resumeAt(3, TWINKLE.pages.length, TWINKLE_STOPPED) },
     });
     await prepare(page, LAPTOP_SHELF);
     await page.goto("/read");
     const where = "s07 1140x712";
     const face = (code: string) => page.locator(`[data-sk="shelf-tape"][data-tape-id="${code}"]`);
+    const band = page.locator('[data-shelf="band"]');
+    const panel = page.locator('[data-panel="read-it-in"]');
 
     await expect(page.getByRole("heading", { level: 1, name: "Pick a tape." })).toBeVisible({ timeout: 20000 });
     await expect(page.locator('[data-sk="shelf-tape"]')).toHaveCount(3);
-    await face(TWINKLE_CODE).click();
-    await page.mouse.move(1, 1);
+    await expect(page.locator('[data-sk="shelf-blank"]')).toHaveCount(1);
+    // the room is hydrated once it has written this visit's time
+    await expect
+      .poll(() => page.evaluate(() => window.localStorage.getItem("ssync-shelf-visit")), { timeout: 20000 })
+      .toBe(SHELF_NOW);
+
+    // T21: the tape stopped in most recently is selected on arrival, lifted, its place in the band
     await expect(face(TWINKLE_CODE)).toHaveAttribute("aria-checked", "true");
     await expect
       .poll(() => face(TWINKLE_CODE).evaluate((el) => new DOMMatrixReadOnly(getComputedStyle(el).transform).m42))
       .toBe(-10);
+    await expect(band.locator(".rr-band-line")).toHaveText(`${TWINKLE.title} · ${TWINKLE.byline}`);
+    await expect(band.getByText("You stopped at page 3.", { exact: true })).toBeVisible();
+    await expect(band.getByRole("button", { name: "Pick up where you left off" })).toBeVisible();
+    await expect(band.getByRole("button", { name: "Start again" })).toBeVisible();
+    await expect(band.getByRole("button", { name: "Play this tape" })).toHaveCount(0);
+
+    // T20b: Grandma's reply, sent and stamped NEW
     const grandma = face(GRANDMA_CODE);
     await expect(grandma).toHaveAttribute("data-sent", "true");
     await expect(grandma.locator('[data-stamp="new"]')).toBeVisible();
     await expect(page.locator('[data-shelf="yours"]')).toContainText(/SENT TO YOU/i);
     await expect(face(BATH_CODE)).toBeVisible();
-    await settle(page);
+
+    // T22a/b: "Read it in…" for the house tape, as s07 draws it — Hush, the browser voice reading now
+    await page.locator('[data-shelf="house"]').getByRole("button", { name: "Read it in…" }).click();
+    await expect(panel.getByRole("heading", { level: 2, name: "Read it in…" })).toBeFocused();
+    await expect(panel.locator('[data-rin="line"]')).toHaveText("A computer read you this one. Now read it in yours.");
+    const voices = panel.getByRole("radiogroup", { name: "Whose voice?" });
+    expect(
+      await voices.getByRole("radio").evaluateAll((els) => els.map((el) => el.getAttribute("aria-label") ?? "")),
+    ).toEqual(["Browser voice, reading now", "Grandma Rose", "Mia", "Someone new"]);
+    await expect(voices.getByRole("radio", { name: "Browser voice, reading now", exact: true })).toBeChecked();
+    const feel = panel.getByRole("radiogroup", { name: "What should it feel like?" });
+    await expect(feel.locator('[data-sk="mood-chip"]')).toHaveCount(8);
+    await feel.getByRole("radio", { name: /^Hush, / }).check();
+    await expect(feel.locator('[data-sk="mood-chip"][data-mood="Hush"]')).toHaveClass(/is-on/);
+    // the shelf's choice is untouched by the panel's target
+    await expect(face(TWINKLE_CODE)).toHaveAttribute("aria-checked", "true");
+    await expect(band.getByText("You stopped at page 3.", { exact: true })).toBeVisible();
+
+    // at rest: no hover, no focus ring, the header picture in
+    await page.mouse.move(1, 1);
+    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
     await page.evaluate(() => window.scrollTo(0, 0));
+    await expect
+      .poll(() =>
+        panel.locator('[data-rin="art"] img').evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0),
+      )
+      .toBe(true);
+    await settle(page);
     for (const code of [GRANDMA_CODE, TWINKLE_CODE, BATH_CODE]) await expectInView(page, face(code), `${where}: ${code}`);
+    await expectInView(page, page.locator('[data-sk="shelf-blank"]'), `${where}: the blank tape`);
+    await expectInView(page, band.locator('[data-shelf="resume"]'), `${where}: the resume line`);
+    await expectInView(page, band.getByRole("button", { name: "Pick up where you left off" }), `${where}: Pick up`);
+    await expectInView(page, panel.locator('[data-rin="art"]'), `${where}: the panel's header picture`);
+    await expectInView(page, voices, `${where}: WHOSE VOICE?`);
+    await expectInView(page, feel.locator('[data-sk="mood-chip"][data-mood="Hush"]'), `${where}: Hush`);
+    // Idea / Phase 3 stay unbuilt: no search, genre pills, Premium, made voice
+    await expect(page.getByRole("searchbox")).toHaveCount(0);
+    await expect(page.getByText(/PREMIUM|Faith-Based|MADE VOICE|PHASE 3/i)).toHaveCount(0);
     await expectClean(page, errors, where);
     await evidenceShot(page, "s07-shelf-1140x712.png");
   });
@@ -720,25 +775,58 @@ test.describe("T25 · vision fidelity sweep", () => {
 
   /* ---------------------------------------------------------- s09 advanced */
 
-  test("s09 · advanced 1290x900: the house tape on page 3, Advanced on, the Inspector open", async ({ page }) => {
+  test("s09 · advanced 1290x900: the house tape on page 3 in its own Hush; TYPE A FEELING resolves to Hush", async ({
+    page,
+  }) => {
     test.setTimeout(90000);
     const errors = watchErrors(page);
     await prepare(page, WINDOW_S09);
     await page.goto("/studio?open=house");
     await expect(page.locator("#studio-title")).toHaveValue("The Brave Little Star", { timeout: 30000 });
+    await expect(page.locator("[data-page-index]")).toHaveCount(8, { timeout: 30000 });
     const where = "s09 1290x900";
 
     const mode = page.locator('[data-sk="mode"] [role="switch"]');
     await mode.click();
     await expect(mode).toHaveAttribute("aria-checked", "true");
-    const inspector = page.getByRole("complementary", { name: "Inspector" }).or(page.locator('[aria-label="Inspector"]'));
+    const inspector = page.locator('[aria-label="Inspector"]');
     await expect(inspector.first()).toBeVisible();
     await expect(page.locator("#insp-autopause")).toBeVisible();
     await goToPage(page, 3);
     await photoReady(page);
-    await settle(page);
+
+    // T24a: page 3 gets its own mood; the story stays Wonder
+    await expect(page.locator('label[for="insp-page-mood"]')).toHaveText("mood · page 3");
+    await page.locator("#insp-page-mood").selectOption("Hush");
+    await expect(page.locator("#insp-page-mood")).toHaveValue("Hush");
+    await expect(page.locator('[data-studio="mood-reach"]')).toHaveText("whole story · page 3 has its own mood");
+    await expect(page.locator("#insp-mood")).toHaveValue("Wonder");
+    await expect(page.locator('[data-studio="stage-status-music"]')).toHaveText("Hush · music on");
+
+    // T24b: the words resolve to a mood pill, not yet applied
+    const feeling = page.locator("#insp-feeling");
+    await expect(page.locator('label[for="insp-feeling"]')).toHaveText("TYPE A FEELING", { useInnerText: true });
+    await feeling.fill("a quiet lullaby for bedtime");
+    const pill = page.locator('[data-studio="feeling-result"]');
+    await expect(pill).toHaveText("Hush");
+    await expect(pill).toHaveAttribute("data-mood", "Hush");
+    await expect(page.locator('[data-studio="feeling-note"]')).toHaveText("");
+
+    // frame the Inspector as s09 does: MIX up, the MOOD row and the feeling row in view
+    await inspector.first().evaluate((aside) => {
+      const mix = Array.from(aside.querySelectorAll("section")).find((s) => s.querySelector("h3")?.textContent === "Mix");
+      if (mix) aside.scrollTop = Math.max(0, mix.offsetTop - 64);
+    });
+    await page.mouse.move(1, 1);
+    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
     await page.evaluate(() => window.scrollTo(0, 0));
+    await settle(page);
     await expectInView(page, page.locator('[data-studio="stage-photo"]'), `${where}: the Stage`);
+    await expectInView(page, page.locator("#insp-page-mood"), `${where}: mood · page 3`);
+    await expectInView(page, feeling, `${where}: TYPE A FEELING`);
+    await expectInView(page, pill, `${where}: the Hush pill`);
+    // Phase 3 stays unbuilt: no desktop window, Cast, timeline lanes or SFX lane
+    await expect(page.getByText(/^CAST$|Professional timeline|^SFX$|Tauri/)).toHaveCount(0);
     await expectClean(page, errors, where);
     await evidenceShot(page, "s09-advanced-1290x900.png");
   });
