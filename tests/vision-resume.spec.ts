@@ -316,6 +316,9 @@ test.describe("T21 · resume on /read", () => {
       const url = new URL(req.url());
       if (url.protocol !== "http:" && url.protocol !== "https:") return;
       if (url.pathname.startsWith("/_next/") || url.pathname.startsWith("/__nextjs")) return;
+      // Next's own route prefetch (production prefetches a visible <Link href="/">
+      // as ?_rsc=…): page payload for a link, not anything reading sends
+      if (url.searchParams.has("_rsc")) return;
       asked.push(req.url());
     });
 
