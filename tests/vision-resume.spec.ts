@@ -603,6 +603,67 @@ test.describe("T21 · resume on /read", () => {
     );
   });
 
+  test("≥ 1024px the band holds its four actions on one row (s07's ~150px band); a phone keeps 44px targets", async ({
+    page,
+  }) => {
+    await seedShelf(page, {
+      library: library(),
+      sent: [sentRow(GOODNIGHT_MIA, GRANDMA_CODE, "~0:08", "2026-10-20T19:31:00.000Z")],
+      resume: { [TWINKLE_KEY]: resumeAt(3, 5, LAST_NIGHT) },
+    });
+    await page.setViewportSize({ width: 1140, height: 712 });
+    await openShelf(page);
+    await expect(face(page, TWINKLE_CODE)).toHaveAttribute("aria-checked", "true");
+    await expect(band(page).getByText(STOPPED(3), { exact: true })).toBeVisible();
+
+    /** The band and its buttons, in one frame. */
+    const measure = () =>
+      band(page).evaluate((el) => {
+        const buttons = [...el.querySelectorAll<HTMLElement>(".rr-band-actions > button")].map((b) => {
+          const r = b.getBoundingClientRect();
+          return { name: b.textContent?.trim() ?? "", top: Math.round(r.top), left: Math.round(r.left), right: Math.round(r.right), height: Math.round(r.height) };
+        });
+        const r = el.getBoundingClientRect();
+        return { height: Math.round(r.height), right: Math.round(r.right), buttons };
+      });
+    const settled = async () => {
+      await page.evaluate(() => document.fonts.ready);
+      let m = await measure();
+      await expect
+        .poll(async () => {
+          const a = await measure();
+          await new Promise((r) => setTimeout(r, 150));
+          m = await measure();
+          return JSON.stringify(a) === JSON.stringify(m);
+        })
+        .toBe(true);
+      return m;
+    };
+
+    for (const width of [1024, 1140, 1280, 1440]) {
+      await page.setViewportSize({ width, height: 712 });
+      const m = await settled();
+      expect(m.buttons.map((b) => b.name)).toEqual([PICK_UP, START_AGAIN, "Pull the tape out", "Read it in…"]);
+      expect(new Set(m.buttons.map((b) => b.top)).size, `${width}: one row`).toBe(1);
+      for (let i = 1; i < m.buttons.length; i++) expect(m.buttons[i].left, `${width}: left to right`).toBeGreaterThan(m.buttons[i - 1].right);
+      for (const b of m.buttons) {
+        expect(b.height, `${width}: ${b.name} is s07's 40px pill`).toBeGreaterThanOrEqual(40);
+        expect(b.right, `${width}: ${b.name} inside the band`).toBeLessThanOrEqual(m.right);
+      }
+      expect(m.height, `${width}: the band stays about s07's 150px`).toBeLessThanOrEqual(160);
+      // from 1140 every action spells itself out; 1024–1139 shows the pull icon alone (its name kept)
+      const pull = m.buttons[2];
+      if (width >= 1140) expect(pull.right - pull.left, `${width}: Pull the tape out, in words`).toBeGreaterThan(100);
+      else expect(pull.right - pull.left, `${width}: the pull icon, a 44px target`).toBeGreaterThanOrEqual(44);
+    }
+
+    // a phone: the buttons stack, every one a 44px target
+    await page.setViewportSize({ width: 375, height: 812 });
+    const phone = await settled();
+    for (const b of phone.buttons) expect(b.height, `375: ${b.name}`).toBeGreaterThanOrEqual(44);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
+  });
+
   test("keyboard: cover and band buttons in visual order with the kit ring; ← → turn after resuming", async ({
     page,
   }) => {

@@ -327,7 +327,7 @@ test.describe("T22a · the panel on /read", () => {
     await expect(chip(page, "Wonder")).not.toHaveClass(/is-on/);
   });
 
-  test("the panel's own box: glass, radius 20, padding 16; the heading and lines in their faces", async ({ page }) => {
+  test("the panel's own box: glass, radius 20, padding 16 (s07's 12 from 1024px); the heading and lines in their faces", async ({ page }) => {
     await openRoom(page);
     await page.evaluate(() => document.fonts.ready);
     const box = await panel(page).evaluate((el) => {
@@ -363,7 +363,10 @@ test.describe("T22a · the panel on /read", () => {
       };
     });
     expect(box.radius).toBe("20px");
-    expect(box.padding).toEqual(["16px", "16px", "16px", "16px"]);
+    // phones and tablets: 16; from 1024px s07.html's own .s7-panel padding, 12
+    // (changed with the s07 fold fix: the 440px panel fits a 712px laptop screen)
+    const pad = (page.viewportSize()?.width ?? 0) >= 1024 ? "12px" : "16px";
+    expect(box.padding).toEqual([pad, pad, pad, pad]);
     expect(box.border).toBe("1px");
     expect(box.blur).toContain("blur");
     expect(box.h).toEqual({ weight: "600", size: "17px", geist: true });
@@ -705,9 +708,11 @@ test.describe("T22a · the panel on /read", () => {
         };
       });
 
-    // 1140: the brief's 404px panel (s07 x708–1112); from 1280 the 472px one
+    // 1140: s07's own 440px panel (s07.html .s7-panel x676–1116; it was the
+    // brief's 404px, which wrapped the line and two blurbs and pushed "Make our
+    // own copy" under the fold); from 1280 the 472px one
     for (const [width, panelWidth] of [
-      [1140, 404],
+      [1140, 440],
       [1280, 472],
       [1440, 472],
     ] as const) {
@@ -733,6 +738,74 @@ test.describe("T22a · the panel on /read", () => {
       }
       expect(m.panelLeft, `${width}: the panel stands beside the shelf, not over it`).toBeGreaterThanOrEqual(m.shelfRight);
     }
+  });
+
+  test("s07 at 1140×712 (and 1024/1280 × 712): the whole panel, Make our own copy included, fits the first screen", async ({
+    page,
+  }) => {
+    // s07's room: Grandma's sent tape, Twinkle stopped at page 3, Bath Time Song;
+    // the panel reads the house tape in Hush (the fidelity capture's state)
+    await seedShelf(page, {
+      library: [twinkleRow(), shelfRow(pictureLessTape("Bath Time Song", ""), BATH_CODE, "2026-10-12T18:00:00.000Z")],
+      sent: [sentRow(GOODNIGHT_MIA, GRANDMA_CODE, "~0:08", "2026-10-19T18:40:00.000Z")],
+      resume: { [TWINKLE_KEY]: resumeAt(3, twinkleStory().pages.length, "2026-10-20T19:12:00.000Z") },
+    });
+    await page.setViewportSize({ width: 1140, height: 712 });
+    await openRoom(page);
+    await expect(band(page).getByText("You stopped at page 3.", { exact: true })).toBeVisible();
+    await house(page).getByRole("button", { name: "Read it in…" }).click();
+    await expect(heading(page)).toBeFocused();
+    await moodRadio(page, "Hush").check();
+
+    /** Every box this test reads, in one frame. */
+    const measure = () =>
+      page.evaluate(() => {
+        const box = (el: Element | null) => {
+          const r = el!.getBoundingClientRect();
+          return { top: Math.round(r.top), bottom: Math.round(r.bottom), left: Math.round(r.left), right: Math.round(r.right) };
+        };
+        const oneLine = (el: HTMLElement) => {
+          const lh = parseFloat(getComputedStyle(el).lineHeight);
+          return el.getBoundingClientRect().height <= lh * 1.05 && el.scrollWidth <= el.clientWidth;
+        };
+        const panelEl = document.querySelector('[data-panel="read-it-in"]')!;
+        const make = [...panelEl.querySelectorAll("button")].find((b) => b.textContent?.includes("Make our own copy"))!;
+        return {
+          view: window.innerHeight,
+          panel: box(panelEl),
+          make: { ...box(make), height: Math.round(make.getBoundingClientRect().height) },
+          yours: box(document.getElementById("rr-yours-label")),
+          line: oneLine(panelEl.querySelector<HTMLElement>('[data-rin="line"]')!),
+          blurbs: [...panelEl.querySelectorAll<HTMLElement>(".sk-mood-chip-blurb")].map(oneLine),
+        };
+      });
+
+    for (const width of [1024, 1140, 1280]) {
+      await page.setViewportSize({ width, height: 712 });
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await page.evaluate(() => document.fonts.ready);
+      let m = await measure();
+      await expect
+        .poll(async () => {
+          const a = await measure();
+          await new Promise((r) => setTimeout(r, 150));
+          m = await measure();
+          return JSON.stringify(a) === JSON.stringify(m);
+        })
+        .toBe(true);
+      // s07: YOUR TAPES at y90, the panel from y92, its gold pill ending near y683
+      expect(m.yours.top, `${width}: YOUR TAPES sits near the top (s07 y90)`).toBeLessThanOrEqual(104);
+      expect(m.panel.top, `${width}: the panel starts near s07's y92`).toBeLessThanOrEqual(100);
+      expect(m.make.bottom, `${width}: Make our own copy ends ≥ 12px above the fold`).toBeLessThanOrEqual(m.view - 12);
+      expect(m.panel.bottom, `${width}: the whole panel is on the first screen`).toBeLessThanOrEqual(m.view);
+      expect(m.make.height, `${width}: s07's 42px pill`).toBeGreaterThanOrEqual(42);
+      expect(m.line, `${width}: "…Now read it in yours." holds one line`).toBe(true);
+      expect(m.blurbs, `${width}: every mood blurb holds one line`).toEqual(Array(8).fill(true));
+    }
+
+    // a phone keeps the 44px touch target
+    await page.setViewportSize({ width: 375, height: 812 });
+    await expect.poll(async () => (await measure()).make.height).toBeGreaterThanOrEqual(44);
   });
 
   test("375×812: the band's Read it in… scrolls the panel into view and focuses its heading", async ({ page }) => {

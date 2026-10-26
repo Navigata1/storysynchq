@@ -3,10 +3,11 @@
    holding Register B tape chips. Owned here; read-room.css (T20a) is not
    edited.
 
-     .rin-panel        glass, radius 20, padding 16. At ≥ 1024px it is the
-                       Read Room's right column (the brief's 404px; 472px from
-                       1280px, where every mood blurb holds one line); below
-                       that it stands under the shelves, full width
+     .rin-panel        glass, radius 20, padding 16 (12 from 1024px). At
+                       ≥ 1024px it is the Read Room's right column (s07's own
+                       440px; 472px from 1280px), where the house line and
+                       every mood blurb hold one line; below that it stands
+                       under the shelves, full width
      .rin-art          the header picture, 110px tall, radius 12, with its
                        paper "PAGE N" tab (.rin-art-tab)
      .rin-heading      Geist 600 17px
@@ -26,15 +27,14 @@
 @layer components {
   /* the two-column room (read-room.css turns it on for any .rr-aside): this
      panel takes a fixed column, the shelves the rest (they scroll sideways
-     when they need more). 1024–1279px: the brief's own panel, 404px (s07
-     x708–1112), so at 1140 the shelves keep s07's 660px and the blank tape
-     stands whole; the chips are the brief's 182px and the two longest blurbs
-     wrap (the chip row grows). From 1280px there is room for 472px, where
-     every blurb holds one line. */
+     when they need more). 1024–1279px: s07's own panel, 440px with a 16px
+     gap (s07.html .s7-panel x676–1116), so at 1140 the shelves keep s07's
+     636px (x24–660) and the blank tape stands whole, the chips are 204px and
+     every blurb holds one line. From 1280px there is room for 472px. */
   @media (min-width: 1024px) {
     .rr-columns:has(> .rr-aside.rin-panel) {
-      grid-template-columns: minmax(0, 1fr) 404px;
-      column-gap: 20px;
+      grid-template-columns: minmax(0, 1fr) 440px;
+      column-gap: 16px;
     }
   }
   @media (min-width: 1280px) {
@@ -137,7 +137,9 @@
     font-weight: 500;
     line-height: 1.3;
     color: var(--ss-fg-2);
-    text-wrap: pretty;
+    /* where it must wrap (a phone), the two lines share the words: no
+       "…Now read it / in yours." orphan */
+    text-wrap: balance;
   }
 
   .rin-label {
@@ -211,6 +213,40 @@
   .rin-panel > .rin-make .sk-big-icon > svg {
     width: 18px;
     height: 18px;
+  }
+
+  /* ---------- ≥ 1024px: s07's own panel rhythm (.s7-panel) ----------
+     440px wide, padding 12 (s07 x676–1116), so the house line and every mood
+     blurb hold one line; s07's gaps (heading 12, line 3, labels 10, rows 6,
+     chip rows 5) and its 42px pill: the whole panel, "Make our own copy"
+     included, sits on a 712px-tall laptop's first screen. Phones keep their
+     48px pill (≥ 44px targets). */
+  @media (min-width: 1024px) {
+    .rin-panel {
+      padding: 12px;
+    }
+    .rin-target {
+      margin-top: 4px;
+    }
+    .rin-line {
+      margin-top: 3px;
+    }
+    .rin-label {
+      margin-top: 10px;
+    }
+    .rin-voices,
+    .rin-moods {
+      margin-top: 6px;
+    }
+    .rin-moods.sk-mood-chips {
+      row-gap: 5px;
+    }
+    .rin-panel > .rin-make {
+      --sk-big-h: 42px;
+      margin-top: 12px;
+      padding: 6px 22px;
+      font-size: 15px;
+    }
   }
 
   /* ---------- the house row's "Read it in…" (the band's own style) ----------

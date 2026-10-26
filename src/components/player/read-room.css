@@ -27,6 +27,38 @@
       padding: 22px 28px 64px;
     }
   }
+  /* ≥ 1024px: s07's header (y0–88): the kicker at y16, the title at y32, the
+     shelves' YOUR TAPES and the right panel from y90, 24px gutters. The ← Home
+     chip keeps its 44px but no longer adds a row: the kicker's row is only as
+     tall as the kicker, and the chip hangs at the right beside the title, where
+     s07 sets its avatar (y31–71). */
+  @media (min-width: 1024px) {
+    .pl-room-inner.rr-inner {
+      padding: 16px 24px 64px;
+    }
+    .rr-inner > .rr-head {
+      height: 15px;
+      align-items: flex-start;
+    }
+    .rr-inner > .rr-head > a {
+      margin-top: 12px;
+    }
+    .rr-inner > .rr-head + .rr-title {
+      margin-top: 1px;
+    }
+    .rr-inner .rr-columns {
+      margin-top: 17px;
+    }
+  }
+
+  /* the chooser's header row: the kicker and ← Home (the other states keep
+     their Tailwind row) */
+  .rr-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
 
   /* s07 .ss-kicker: mono, gold, tracked */
   .rr-kicker {
@@ -190,6 +222,47 @@
     .rr-band-actions > .rr-band-btn {
       flex: 1 1 100%;
       justify-content: center;
+    }
+  }
+  /* ≥ 1024px: s07's band holds its actions on one row (.s7-feat__btns: 40px
+     pills). Four of them (Pick up / Start again / Pull the tape out / Read it
+     in…) share the shelves' 636px at 1140, so they are compact: 14px type,
+     14px sides on the gold, 11px on the ghosts, 6px apart. Between 1024 and
+     1139px the shelves are narrower still (520px): "Pull the tape out" shows
+     its pull icon alone there (its name stays its accessible name and its
+     tooltip; armed, it spells "Tap again to delete everything" out). Below
+     1024 (touch-first widths) the 48px targets stay. */
+  @media (min-width: 1024px) {
+    .rr-band {
+      padding: 14px 14px 16px;
+    }
+    .rr-band-actions {
+      gap: 6px;
+    }
+    .rr-band-actions > .rr-band-btn {
+      --sk-big-h: 40px;
+      flex: none;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 12px;
+      font-size: 14px;
+    }
+    .rr-band-actions > .rr-band-btn.sk-big--ghost {
+      padding: 6px 11px;
+    }
+  }
+  @media (min-width: 1024px) and (max-width: 1139.98px) {
+    .rr-band-actions > .rr-pull {
+      min-width: 44px;
+      padding: 6px 9px;
+    }
+    .rr-band-actions > .rr-pull > .sk-big-label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
     }
   }
 

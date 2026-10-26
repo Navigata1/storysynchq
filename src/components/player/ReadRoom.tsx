@@ -819,7 +819,7 @@ export function ReadRoom() {
     <div className="pl-room">
       <div className="pl-room-light" aria-hidden="true" />
       <div className={inChooser ? "pl-room-inner rr-inner" : "pl-room-inner"}>
-        <div className="flex items-center justify-between gap-4">
+        <div className={inChooser ? "rr-head" : "flex items-center justify-between gap-4"}>
           <Kicker>StorySync Reader</Kicker>
           <Link href="/" className="pl-chip sk-focus">
             ← Home
@@ -1070,6 +1070,7 @@ export function ReadRoom() {
                             variant={armed ? "red" : "ghost"}
                             icon={<PullTapeIcon className="h-[21px] w-[24px]" />}
                             label={armed ? "Tap again to delete everything" : "Pull the tape out"}
+                            title={armed ? undefined : "Pull the tape out"}
                             onClick={onPull}
                             className={armed ? "rr-band-btn" : "rr-band-btn rr-pull"}
                           />
