@@ -321,7 +321,8 @@ test.describe("CRITIC · WP-S share loop", () => {
     expect(second[0].ssyncData.metadata.title).toBe("Bo and the Blue Moon, Again");
     expect(second[0].title).toBe("Bo and the Blue Moon, Again");
 
-    await page.getByRole("button", { name: /^Delete everything$/ }).click();
+    // s05 renames the control (T16): "Pull the tape out — delete everything".
+    await page.getByRole("button", { name: "Pull the tape out — delete everything", exact: true }).click();
     await page.getByRole("button", { name: /Tap again to delete everything/ }).click();
     await expect(page.getByRole("button", { name: "Finish my story" })).toBeVisible();
     expect(await library(page)).toHaveLength(0);

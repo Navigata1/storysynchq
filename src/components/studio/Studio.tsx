@@ -63,7 +63,9 @@ import {
   type RevoicedTape,
   type TapeOpenFailure,
 } from "./open-tape";
-import PublishCard, { type AuthMode, type PublishStep } from "./PublishCard";
+import PublishCard, { type AuthMode, type PublishCardProps, type PublishStep } from "./PublishCard";
+import { layerPresence } from "./tape-sheet";
+import { tapeBytes } from "@/lib/storysync/tape-size";
 import { MagicPanel, MusicPanel, VoicePanel, type MagicLook } from "./ToolPanels";
 import { useStudioAudio } from "./useStudioAudio";
 import type { StudioCues } from "./cues";
@@ -143,6 +145,35 @@ const STEP_TEMPLATE: PublishStep[] = [
   { id: "assemble", label: "Assembling the SSYNC manifest", state: "pending" },
   { id: "save", label: "Saving your tape", state: "pending" },
 ];
+
+/** What the printed tape's card shows about the tape (T16): all of it read from the published manifest. */
+type PrintedTape = Pick<PublishCardProps, "firstPicture" | "layers" | "consentWritten" | "size">;
+
+const NOT_PRINTED: PrintedTape = {
+  firstPicture: null,
+  layers: {
+    Metadata: false,
+    Visual: false,
+    Text: false,
+    Voice: false,
+    Sound: false,
+    Behavior: false,
+    Signature: false,
+  },
+  consentWritten: false,
+  size: { pictureBytes: 0, voiceBytes: 0, totalBytes: 0 },
+};
+
+/** Page 1's picture for the label, the seven layers, the consent record and the bytes. */
+function printedTape(manifest: SsyncManifest): PrintedTape {
+  const first = manifest.pages[0]?.illustration;
+  return {
+    firstPicture: first?.url ? { src: first.url, alt: first.alt ?? "" } : null,
+    layers: layerPresence(manifest),
+    consentWritten: Boolean(manifest.signature?.voiceConsent?.length),
+    size: tapeBytes(manifest),
+  };
+}
 
 /** Wall-clock minutes:seconds from the first edit to now. */
 function madeIn(startedAt: string): string {
@@ -1141,6 +1172,16 @@ export default function Studio() {
     return "AAC + WAV";
   }, [state.manifest]);
 
+  /**
+   * The printed tape's facts (T16), read off the manifest that was published.
+   * `publishedRef` is set before the phase turns "published", and every later
+   * change to it (a link made after sign-in) also lands in `state.manifest`.
+   */
+  const printed = React.useMemo(
+    () => (phase === "published" ? printedTape(publishedRef.current ?? state.manifest) : NOT_PRINTED),
+    [phase, state.manifest],
+  );
+
   /* -------------------------------------------------------------- render */
 
   return (
@@ -1534,6 +1575,7 @@ export default function Studio() {
 
       {phase === "publishing" || phase === "published" ? (
         <PublishCard
+          {...printed}
           phase={phase === "publishing" ? "publishing" : "published"}
           steps={steps}
           title={(publishedRef.current ?? state.manifest).metadata.title}

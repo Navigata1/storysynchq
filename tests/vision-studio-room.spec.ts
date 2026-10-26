@@ -494,7 +494,7 @@ test.describe("T13a · the Stage borrows the Player's light", () => {
     await page.getByRole("button", { name: "Continue" }).click();
     await expect(page.getByRole("heading", { name: "Your tape is ready" })).toBeVisible({ timeout: 20000 });
 
-    await page.getByRole("button", { name: /^Delete everything$/ }).click();
+    await page.getByRole("button", { name: "Pull the tape out — delete everything", exact: true }).click();
     await page.getByRole("button", { name: /Tap again to delete everything/ }).click();
     await expect(page.getByRole("button", { name: "Finish my story" })).toBeVisible();
     await expect(page.locator(SEL.monitor).getByRole("button", { name: /Add a picture/ })).toBeVisible();

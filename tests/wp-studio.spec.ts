@@ -312,7 +312,8 @@ test.describe("WP-S · the share loop", () => {
     expect(second[0].shareCode).toBe(firstCode);
 
     /* one tap wipes it everywhere */
-    const deleteButton = page.getByRole("button", { name: /Delete everything/ });
+    // s05 renames the control (T16): "Pull the tape out — delete everything".
+    const deleteButton = page.getByRole("button", { name: /Pull the tape out — delete everything/ });
     await deleteButton.click();
     await page.getByRole("button", { name: /Tap again to delete everything/ }).click();
     await expect(page.getByRole("button", { name: "Finish my story" })).toBeVisible();

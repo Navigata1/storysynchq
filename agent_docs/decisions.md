@@ -448,3 +448,8 @@ privacy line in `--ss-fg-3`). From 880px the card lays out in two columns so a l
     anon key list share codes and published stories. Proposed fix: T02b (migration 003 plus a by-code RPC).
   - **OQ3, counter columns.** `shared_links.views` and `storybooks.view_count` now have no reader or writer in `src/`.
     Dropping them needs Jon's yes.
+
+**2026-10-25 · T16 · Publish card: phone order is DOM order, tape budget, no false "saved"**
+- **Phone order is DOM order, not CSS `order`.** The ready card chooses two columns or one from `(min-width: 1024px)` (`useSyncExternalStore`, client-only) and sets `data-layout`; `publish-card.css` lays out from that attribute. Below 1024 the left column's lower half (meter, Download, Back, delete, fine print) renders after the link column, so Tab and screen-reader order match visual order at every width (WCAG 2.4.3 / 1.3.2), and a half-typed sign-in survives an iPad rotation.
+- **Tape budget.** `TAPE_BUDGET_BYTES` = 15 × 1,048,576 (format-spec §5 "≤ 15 MB"). The size meter shows an over-budget tape in tape-red with " · over the 15 MB budget" in its value text and blocks nothing; `aria-valuenow` is clamped to the budget while the value text keeps the true size.
+- **No "Saved on this device" when nothing was saved.** When the save step fails, the ready card drops that sentence; the sign-in offer stays.

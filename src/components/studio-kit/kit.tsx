@@ -145,6 +145,12 @@ export interface TapeLabelProps {
   meta?: React.ReactNode;
   /** Override the label-yellow band (the red stripe is fixed brand). */
   accent?: string;
+  /**
+   * A picture printed at the left of the field, beside the words (s05: the
+   * child's first page, 72×72 in a 2px ink frame — the consumer draws it).
+   * Absent, the label renders exactly as it always has.
+   */
+  inset?: React.ReactNode;
   className?: string;
 }
 
@@ -155,7 +161,14 @@ export interface TapeLabelProps {
  * ink holes at the left and "STORYSYNC" at the right. This is the cover gate
  * of every published story and the face of a story in the library.
  */
-export function TapeLabel({ title, author, meta, accent, className }: TapeLabelProps) {
+export function TapeLabel({ title, author, meta, accent, inset, className }: TapeLabelProps) {
+  const words = (
+    <>
+      <div className="sk-tape-title sk-font-tape">{title}</div>
+      {author ? <div className="sk-tape-author sk-font-tape">by {author}</div> : null}
+      {meta ? <div className="sk-tape-meta sk-font-meta">{meta}</div> : null}
+    </>
+  );
   return (
     <div data-sk="tape" className={cx("sk-tape", className)}>
       <div className="sk-tape-stripe" aria-hidden="true" />
@@ -171,11 +184,17 @@ export function TapeLabel({ title, author, meta, accent, className }: TapeLabelP
           STORYSYNC
         </span>
       </div>
-      <div className="sk-tape-field">
-        <div className="sk-tape-title sk-font-tape">{title}</div>
-        {author ? <div className="sk-tape-author sk-font-tape">by {author}</div> : null}
-        {meta ? <div className="sk-tape-meta sk-font-meta">{meta}</div> : null}
-      </div>
+      {inset ? (
+        // s05 `.t-field`: the picture, then the words, 18px apart.
+        <div className="sk-tape-field flex items-center gap-[18px]">
+          <div data-sk="tape-inset" className="flex-none">
+            {inset}
+          </div>
+          <div className="min-w-0">{words}</div>
+        </div>
+      ) : (
+        <div className="sk-tape-field">{words}</div>
+      )}
     </div>
   );
 }
