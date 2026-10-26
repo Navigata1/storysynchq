@@ -392,3 +392,14 @@ asserted the old Space or P bindings.
     s05.
   - Phones: 16 px gutters at `bottom: max(19px, safe-area)`, with the transport moved above it.
   - The open book: a tape-brown strip on the bottom edge with a 6 px tick per page.
+
+**2026-10-25 · T13b · The filmstrip is a strip of tape: one scrolling track, a kit TapeRibbon, a per-page mood lane.**
+- **Kit:** `TapeRibbon` (`studio-kit/TapeRibbon.tsx` + `tape-ribbon.css`) is the brief's LOCAL (3) tape-brown band: `data-sk="tape-ribbon"`, `variant="band"`, always `aria-hidden`, thickness by `--sk-ribbon-h` (12px default; the filmstrip spine is 10px, as s03). Static. The curved SVG variant is added by its first consumer (T20).
+- **One track:** the ribbon, the frames and the mood lane share one horizontally scrolling track, so they scroll together on a phone. The ribbon runs the full track width behind the frames at mid-height; the frames row passes pointer events to its tiles only, so between frames the ribbon is what is hit.
+- **Pinned controls:** the move controls (and, mid-take, the locked "move" pill) are `position: sticky; right: 0` in the track, so they sit on the ribbon at the strip's right end, as in s03, and stay in reach when the strip scrolls. Two parts keep a tile clear of them:
+  - `scroll-padding-inline-end` covers the strip's own `scrollIntoView` calls: the Transport's page turn and a click on a frame.
+  - A focus handler on the scroller covers Tab. The browser's focus scroll ignores scroll-padding and skips a tile that is already inside the scroller. One frame after keyboard focus, a tile that is not inside the padded scrollport is centred (`inline: "center"`), so it is its own snap position under proximity snapping.
+- **Mood lane:** `Filmstrip` takes `moods: (MoodName | null)[]`, one per page. The Studio passes `musicOn ? mood : null` for every page today; T24 fills it per page. One 8px segment per page in `--mood-<name>`, under its frame; the label names the current page's mood ("WONDER · GENTLE MUSIC ADDED FOR YOU", uppercase by CSS) and wraps under the lane, right-aligned and sticky, rather than widen the tape. No page with music → no lane.
+- **Snap the next drawing** replaces "+": add a page, then open the shipped camera input in the same gesture.
+- **Frame size:** 112×84 at ≥ 1024px wide and ≥ 700px tall; 84×62 otherwise. A short laptop keeps the small frames so the docked Voice card's body fits (T13a's 700px line). From 1024 to 1179px wide the same frames are packed tighter: 10px gap, 12px inset, a 104px Snap tile and a slimmer housing. Five pages, the Snap tile and the move controls then fit an iPad held sideways, and the Snap tile is never under the controls on load.
+- **`addPage` returns whether it added a page.** The Snap tile reuses its mid-take guard instead of repeating it.

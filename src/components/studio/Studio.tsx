@@ -495,10 +495,11 @@ export default function Studio() {
       },
     }));
 
-  const addPage = () => {
+  /** Adds a blank page and selects it; refuses (false) mid-take. */
+  const addPage = (): boolean => {
     if (recording) {
       setAnnouncement("Finish the recording before adding a page.");
-      return;
+      return false;
     }
     setState((prev) => {
       const id = nextPageId(prev.manifest);
@@ -508,6 +509,7 @@ export default function Studio() {
     setActiveIndexState(pages.length);
     cuesRef.current?.pageTurn();
     setAnnouncement(`Page ${pages.length + 1} added.`);
+    return true;
   };
 
   const movePage = (index: number, direction: -1 | 1) => {
@@ -572,6 +574,21 @@ export default function Studio() {
     clearMicError();
     fileInputRef.current?.click();
   };
+
+  /** The strip's last tile: a new page, then the camera, in one tap (s03). */
+  const snapNextDrawing = () => {
+    if (!addPage()) return;
+    pickPhoto();
+  };
+
+  /**
+   * The mood lane, one entry per page. Today every page plays the story's
+   * mood (or none with music off); per-page moods ride the same list.
+   */
+  const laneMoods = React.useMemo(
+    () => pages.map(() => (state.musicOn ? state.mood : null)),
+    [pages, state.musicOn, state.mood],
+  );
 
   const onFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -1356,6 +1373,7 @@ export default function Studio() {
         <Filmstrip
           pages={pages}
           activeIndex={activeIndex}
+          moods={laneMoods}
           locked={recording}
           onSelect={(index) => {
             stopAudio();
@@ -1363,7 +1381,7 @@ export default function Studio() {
           }}
           onMove={movePage}
           onDelete={deletePage}
-          onAdd={addPage}
+          onSnapNext={snapNextDrawing}
         />
       </div>
 

@@ -1,0 +1,331 @@
+/* ============================================================================
+   THE FILMSTRIP — the pages as a strip of tape (s03).
+
+   One scrolling track holds three layers:
+     the ribbon  · the kit TapeRibbon, 10px, behind the frames at mid-height
+     the frames  · 112×84 at ≥ 1024px (84×62 below, and on a laptop under
+                   700px tall, where the docked Voice card needs the height),
+                   then "Snap the next drawing", then the move controls
+                   pinned at the right end
+     the lane    · one 8px mood segment under each frame, the mood named at
+                   the lane's right end
+   so on a phone the ribbon and the lane scroll with the frames. No sprocket
+   rows: this is tape, not film.
+
+   Layering: the frames row lets taps through (pointer-events: none) and its
+   tiles take them back, so between two frames the ribbon itself is what you
+   touch; frames paint over it.
+
+   @layer components, like the rest of the studio, so utilities still win.
+   ========================================================================== */
+
+@layer components {
+  .studio-film {
+    --film-frame-w: 84px;
+    --film-frame-h: 62px;
+    --film-snap-w: 104px;
+    --film-gap: 10px;
+    --film-inset: 12px;
+    /* what the pinned move controls cover at the right end */
+    --film-moves-w: 160px;
+    padding: 4px 12px 2px;
+  }
+
+  /* Docked: the strip sits 12-14px under the Stage and the lane 12px over
+     the Transport, as s03 spaces them (the Stage cell keeps 16px under it). */
+  @media (min-width: 1024px) {
+    .studio-film {
+      margin-top: -8px;
+      padding: 0 12px 8px;
+    }
+  }
+
+  /* The s03 frames. A short laptop keeps the small ones: the docked card's
+     body must fit there (studio.css, "a short laptop"). */
+  @media (min-width: 1024px) and (min-height: 700px) {
+    .studio-film {
+      --film-frame-w: 112px;
+      --film-frame-h: 84px;
+      --film-snap-w: 112px;
+      --film-gap: 12px;
+      --film-inset: 16px;
+    }
+  }
+
+  /* An iPad held sideways (1024-1179px): the same frames, packed a little
+     tighter, so five pages, the Snap tile and the move housing fit without
+     the housing covering the child's next action. */
+  @media (min-width: 1024px) and (max-width: 1179.98px) and (min-height: 700px) {
+    .studio-film {
+      --film-snap-w: 104px;
+      --film-gap: 10px;
+      --film-inset: 12px;
+      --film-housing-pad: 4px;
+      --film-housing-gap: 2px;
+    }
+  }
+
+  /* ------------------------------------------------------- the scroller */
+  .studio-strip {
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity;
+    /* a frame brought into view is never left under the move controls */
+    scroll-padding-inline: var(--film-inset) var(--film-moves-w);
+    scrollbar-width: thin;
+  }
+  .studio-strip::-webkit-scrollbar { height: 8px; }
+  .studio-strip::-webkit-scrollbar-thumb {
+    background-color: rgba(245, 158, 11, 0.35);
+    border-radius: 999px;
+  }
+  .studio-strip::-webkit-scrollbar-track { background-color: rgba(255, 255, 255, 0.04); }
+
+  /* As wide as its frames, never narrower than the strip. */
+  .studio-film-track {
+    display: flex;
+    flex-direction: column;
+    width: max-content;
+    min-width: 100%;
+    padding-bottom: 2px;
+  }
+
+  /* ------------------------------------------------ the frames + ribbon */
+  .studio-film-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--film-gap);
+    /* room for a focus ring and the selected glow inside the scroller */
+    padding: 6px 0 6px var(--film-inset);
+    pointer-events: none;
+  }
+  .studio-film-row > * { pointer-events: auto; }
+
+  .studio-film-ribbon {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(50% - var(--sk-ribbon-h, 10px) / 2);
+    z-index: 0;
+  }
+
+  .studio-thumb {
+    position: relative;
+    z-index: 1;
+    flex: none;
+    width: var(--film-frame-w);
+    height: var(--film-frame-h);
+    overflow: hidden;
+    border-radius: 8px;
+    border: 2px solid rgba(255, 255, 255, 0.12);
+    background-color: var(--ss-navy-3);
+    cursor: pointer;
+    scroll-snap-align: center;
+    transition:
+      border-color 200ms ease-out,
+      box-shadow 240ms ease-out,
+      transform 180ms var(--ss-ease);
+  }
+  .studio-thumb:not(:disabled):hover { transform: translateY(-2px); }
+  .studio-thumb:disabled { cursor: not-allowed; }
+  .studio-thumb.is-current {
+    border-color: var(--ss-gold);
+    box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.22);
+  }
+  /* the page being told: the gold frame warms to the tape-red listening glow */
+  .studio-thumb.is-live {
+    box-shadow:
+      0 0 0 4px rgba(245, 158, 11, 0.22),
+      0 0 26px rgba(227, 69, 47, 0.35);
+  }
+  .studio-thumb-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  .studio-thumb-blank {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    align-items: center;
+    justify-content: center;
+    color: var(--ss-fg-4);
+  }
+  .studio-thumb-blank-icon { width: 20px; height: 20px; }
+
+  /* page number, top-left */
+  .studio-thumb-num {
+    position: absolute;
+    left: 4px;
+    top: 4px;
+    min-width: 20px;
+    height: 18px;
+    padding: 0 5px;
+    display: grid;
+    place-items: center;
+    border-radius: 6px;
+    background-color: rgba(10, 14, 26, 0.78);
+    font: 600 11px/1 var(--ss-mono);
+    color: #fff;
+  }
+
+  /* told: a red Mic badge, bottom-right */
+  .studio-thumb-voice {
+    position: absolute;
+    right: 4px;
+    bottom: 4px;
+    width: 18px;
+    height: 18px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background-color: var(--ss-red);
+    color: #fff;
+    box-shadow: 0 0 0 2px rgba(10, 14, 26, 0.7);
+  }
+  .studio-thumb-voice svg { width: 11px; height: 11px; }
+
+  /* being told: a static red dot, top-right (nothing loops in the Creator) */
+  .studio-thumb-live {
+    position: absolute;
+    right: 7px;
+    top: 7px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: var(--ss-red);
+    box-shadow:
+      0 0 0 3px rgba(227, 69, 47, 0.3),
+      0 0 0 6px rgba(227, 69, 47, 0.12);
+    animation: none;
+  }
+
+  @media (min-width: 1024px) and (min-height: 700px) {
+    .studio-thumb-num { left: 6px; top: 6px; min-width: 22px; height: 20px; padding: 0 6px; }
+    .studio-thumb-voice { right: 6px; bottom: 6px; width: 22px; height: 22px; }
+    .studio-thumb-voice svg { width: 12px; height: 12px; }
+    .studio-thumb-live { right: 9px; top: 9px; width: 12px; height: 12px; }
+    .studio-thumb-blank-icon { width: 24px; height: 24px; }
+  }
+
+  /* ------------------------------------------------ snap the next drawing */
+  .studio-snap {
+    position: relative;
+    z-index: 1;
+    flex: none;
+    width: var(--film-snap-w);
+    height: var(--film-frame-h);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 0 6px;
+    border-radius: 8px;
+    border: 2px dashed rgba(255, 255, 255, 0.18);
+    background-color: #0a0e1a;
+    text-align: center;
+    font: 500 11px/1.2 var(--ss-ui);
+    color: var(--ss-fg-2);
+    cursor: pointer;
+    scroll-snap-align: center;
+    transition: border-color 200ms ease-out, color 200ms ease-out;
+  }
+  .studio-snap:not(:disabled):hover { border-color: rgba(245, 158, 11, 0.6); color: #fff; }
+  /* mid-take it stays legible, as s03 draws it, but takes no tap */
+  .studio-snap:disabled { cursor: not-allowed; opacity: 0.7; }
+  .studio-snap-icon { width: 16px; height: 16px; flex: none; color: var(--ss-gold-2); }
+
+  @media (min-width: 1024px) and (min-height: 700px) {
+    .studio-snap { gap: 6px; padding: 0 10px; font-size: 12px; line-height: 1.25; }
+    .studio-snap-icon { width: 22px; height: 22px; }
+  }
+
+  /* ---------------------------------------------------- move controls */
+  /* Pinned at the strip's right end, on the ribbon; frames scroll under. */
+  .studio-film-moves {
+    position: sticky;
+    right: 0;
+    z-index: 2;
+    flex: none;
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+  }
+  .studio-move-housing {
+    display: flex;
+    align-items: center;
+    gap: var(--film-housing-gap, 4px);
+    padding: var(--film-housing-pad, 5px);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background-color: #0d1120;
+    /* frames that scroll under it pass into its shadow */
+    box-shadow: -14px 0 18px -10px rgba(5, 7, 13, 0.9);
+  }
+  /* mid-take: one quiet locked pill (s03) */
+  .studio-move-locked {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    height: 30px;
+    padding: 0 14px 0 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background-color: #0d1120;
+    font: 500 13px/1 var(--ss-ui);
+    color: var(--ss-fg-4);
+    cursor: not-allowed;
+  }
+
+  /* --------------------------------------------------------- mood lane */
+  /* As wide as the track, never wider: its label wraps under the lane
+     rather than stretch the tape. */
+  .studio-lane {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: var(--film-gap);
+    row-gap: 6px;
+    width: 0;
+    min-width: 100%;
+    padding-left: var(--film-inset);
+    margin-top: 2px;
+  }
+  .studio-lane-seg {
+    flex: none;
+    width: var(--film-frame-w);
+    height: 8px;
+    border-radius: 4px;
+    background-color: var(--lane-mood, rgba(255, 255, 255, 0.06));
+    box-shadow: 0 0 12px color-mix(in srgb, var(--lane-mood, transparent) 30%, transparent);
+  }
+  .studio-lane-rest {
+    flex: 1 1 0;
+    min-width: 0;
+    height: 8px;
+    border-radius: 4px;
+    background-image: linear-gradient(90deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0));
+  }
+  .studio-lane-label {
+    position: sticky;
+    right: 0;
+    flex: none;
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font: 500 11px/1 var(--ss-mono);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--lane-mood);
+  }
+  .studio-lane-icon { width: 12px; height: 12px; flex: none; }
+
+  /* ------------------------------------------------- reduced motion: off */
+  @media (prefers-reduced-motion: reduce) {
+    .studio-thumb,
+    .studio-snap { transition: none; }
+    .studio-thumb:not(:disabled):hover { transform: none; }
+  }
+}

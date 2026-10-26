@@ -1,17 +1,41 @@
 "use client";
 
 /**
- * FILMSTRIP — the pages as a length of tape.
- * Tap a frame to work on it; the cluster on the right moves or pulls the
- * selected frame. A 🎙 badge means that page already has a voice on it.
+ * FILMSTRIP — the pages as a strip of tape (s03 "Filmstrip as tape").
+ *
+ * The frames ride a tape-brown ribbon (the kit TapeRibbon) running behind them
+ * at mid-height. A told page carries a red Mic badge; the page being told
+ * carries a static red dot. The last tile snaps the next drawing: it adds a
+ * page and opens the camera. On the right, the controls that move or pull the
+ * selected page; while the mic is live they give way to one locked "move"
+ * pill. Under the frames runs the mood lane, one segment per page in that
+ * page's mood colour, with the current page's mood named at its right end
+ * ("WONDER · GENTLE MUSIC ADDED FOR YOU").
+ *
+ * The ribbon, the frames and the lane share one scrolling track, so on a phone
+ * they move together; the move controls and the lane's label stay pinned at
+ * the strip's right end. Layout lives in filmstrip.css.
  */
 
 import * as React from "react";
+import { Camera, ChevronLeft, ChevronRight, Lock, Mic, Pen, Star, Trash2, type LucideIcon } from "lucide-react";
+import type { MoodName } from "@/lib/audio/moods";
 import type { SsyncPage } from "@/lib/storysync/manifest";
+import { TapeRibbon } from "@/components/studio-kit/TapeRibbon";
+import "./filmstrip.css";
+
+const LOCKED_TITLE = "Finish the recording first";
+const SNAP_LABEL = "Snap the next drawing";
 
 export interface FilmstripProps {
   pages: SsyncPage[];
   activeIndex: number;
+  /**
+   * The page's mood, one entry per page (`null`: no music on that page). The
+   * lane draws one segment per page and names the current page's mood; when
+   * no page has music there is no lane.
+   */
+  moods: (MoodName | null)[];
   /**
    * The tape does not move while the mic is live: a page change mid-take
    * would file the recording against the wrong page.
@@ -20,17 +44,43 @@ export interface FilmstripProps {
   onSelect: (index: number) => void;
   onMove: (index: number, direction: -1 | 1) => void;
   onDelete: (index: number) => void;
-  onAdd: () => void;
+  /** "Snap the next drawing": add a page and open the camera for it. */
+  onSnapNext: () => void;
+}
+
+const moodToken = (mood: MoodName) => `var(--mood-${mood.toLowerCase()})`;
+
+/** A glide along the tape, or a cut under reduced motion (browser only). */
+const glide = (): ScrollBehavior =>
+  (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false) ? "auto" : "smooth";
+
+/** Is the tile wholly inside the strip's scrollport less its scroll-padding (clear of the move controls)? */
+function insidePaddedScrollport(strip: HTMLElement, tile: HTMLElement): boolean {
+  const cs = getComputedStyle(strip);
+  const port = strip.getBoundingClientRect();
+  const start = port.left + strip.clientLeft + (parseFloat(cs.getPropertyValue("scroll-padding-inline-start")) || 0);
+  const end = port.left + strip.clientLeft + strip.clientWidth - (parseFloat(cs.getPropertyValue("scroll-padding-inline-end")) || 0);
+  const r = tile.getBoundingClientRect();
+  return r.left >= start - 0.5 && r.right <= end + 0.5;
+}
+
+/** Keyboard (or keyboard-like) focus; a browser without :focus-visible counts every focus. */
+function focusVisible(el: HTMLElement): boolean {
+  try {
+    return el.matches(":focus-visible");
+  } catch {
+    return true;
+  }
 }
 
 function StripButton({
   label,
-  glyph,
+  Icon,
   onClick,
   disabled,
 }: {
   label: string;
-  glyph: string;
+  Icon: LucideIcon;
   onClick: () => void;
   disabled?: boolean;
 }) {
@@ -41,9 +91,9 @@ function StripButton({
       title={label}
       onClick={onClick}
       disabled={disabled}
-      className="sk-focus flex h-11 w-11 items-center justify-center rounded-xl border border-white/12 bg-white/5 text-lg text-white/80 transition-colors hover:border-white/25 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-30"
+      className="sk-focus flex h-11 w-11 items-center justify-center rounded-[11px] text-white/80 transition-colors hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
     >
-      <span aria-hidden="true">{glyph}</span>
+      <Icon aria-hidden="true" className="h-[18px] w-[18px]" strokeWidth={2} />
     </button>
   );
 }
@@ -51,101 +101,164 @@ function StripButton({
 export function Filmstrip({
   pages,
   activeIndex,
+  moods,
   locked = false,
   onSelect,
   onMove,
   onDelete,
-  onAdd,
+  onSnapNext,
 }: FilmstripProps) {
   const stripRef = React.useRef<HTMLDivElement | null>(null);
 
-  // Keep the selected frame in view when the transport turns the page.
+  // Keep the selected frame in view when the transport turns the page
+  // (a glide, or a cut under reduced motion).
   React.useEffect(() => {
     const strip = stripRef.current;
     const child = strip?.querySelector<HTMLElement>(`[data-page-index="${activeIndex}"]`);
-    child?.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
+    child?.scrollIntoView({ block: "nearest", inline: "center", behavior: glide() });
   }, [activeIndex]);
 
+  // Keep a tile that Tab reaches clear of the pinned move controls. The
+  // browser's own focus scroll skips any tile already inside the scroller and
+  // ignores scroll-padding when it checks, so a tile can land under the
+  // controls. One frame later (after that scroll), a keyboard-focused tile
+  // that is not inside the padded scrollport is centred in it, like a page the
+  // Transport turns to: scrollIntoView honours the padding, and a centred tile
+  // is its own snap position, so proximity snapping cannot pull a neighbour in
+  // instead. A tap or click is left to the selection scroll above. Focus
+  // bubbles in React, so one handler covers every frame and the Snap tile.
+  const clearFrame = React.useRef(0);
+  React.useEffect(() => () => cancelAnimationFrame(clearFrame.current), []);
+  const keepClear = (event: React.FocusEvent<HTMLDivElement>) => {
+    const tile = (event.target as HTMLElement).closest<HTMLElement>(".studio-thumb, .studio-snap");
+    if (!tile) return;
+    cancelAnimationFrame(clearFrame.current);
+    clearFrame.current = requestAnimationFrame(() => {
+      const strip = stripRef.current;
+      if (!strip || document.activeElement !== tile || !focusVisible(tile)) return;
+      if (insidePaddedScrollport(strip, tile)) return;
+      tile.scrollIntoView({ block: "nearest", inline: "center", behavior: glide() });
+    });
+  };
+
+  const laneMoods = pages.map((_, index) => moods[index] ?? null);
+  const hasLane = laneMoods.some((mood) => mood !== null);
+  const currentMood = laneMoods[activeIndex] ?? null;
+
   return (
-    <section
-      aria-label="Pages"
-      className="flex items-center gap-3 border-t border-white/8 bg-black/25 px-3 py-2 backdrop-blur-xl"
-    >
-      <div ref={stripRef} className="studio-strip min-w-0 flex-1">
-        {pages.map((page, index) => {
-          const current = index === activeIndex;
-          const narrated = Boolean(page.text?.audioUrl);
-          const image = page.illustration?.url;
-          return (
-            <button
-              key={page.id}
-              type="button"
-              data-page-index={index}
-              aria-current={current ? "true" : undefined}
-              aria-label={`Page ${index + 1}${narrated ? ", has voice" : ""}${current ? ", selected" : ""}`}
-              onClick={() => onSelect(index)}
-              disabled={locked && !current}
-              title={locked && !current ? "Finish the recording first" : undefined}
-              className={`studio-thumb sk-focus ${current ? "is-current" : ""}`}
-            >
-              {image ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={image} alt="" className="studio-thumb-img" />
-              ) : (
-                <span className="flex h-full w-full items-center justify-center text-xl text-white/25" aria-hidden="true">
-                  ✎
-                </span>
-              )}
-              <span
-                aria-hidden="true"
-                className="absolute top-0 left-0 rounded-br-lg bg-black/70 px-1.5 py-0.5 text-[10px] text-white/80"
-                style={{ fontFamily: "var(--font-plex-mono), monospace" }}
-              >
-                {index + 1}
-              </span>
-              {narrated ? (
-                <span
-                  aria-hidden="true"
-                  className="absolute right-1 bottom-1 rounded-full bg-[#E3452F] px-1.5 py-[1px] text-[10px] leading-none text-white"
+    <section aria-label="Pages" className="studio-film">
+      <div ref={stripRef} className="studio-strip" data-studio="film-scroll" onFocus={keepClear}>
+        <div className="studio-film-track">
+          <div className="studio-film-row">
+            <TapeRibbon variant="band" thickness={10} className="studio-film-ribbon" />
+
+            {pages.map((page, index) => {
+              const current = index === activeIndex;
+              const narrated = Boolean(page.text?.audioUrl);
+              const image = page.illustration?.url;
+              return (
+                <button
+                  key={page.id}
+                  type="button"
+                  data-page-index={index}
+                  aria-current={current ? "true" : undefined}
+                  aria-label={`Page ${index + 1}${narrated ? ", has voice" : ""}${current ? ", selected" : ""}`}
+                  onClick={() => onSelect(index)}
+                  disabled={locked && !current}
+                  title={locked && !current ? LOCKED_TITLE : undefined}
+                  className={`studio-thumb sk-focus${current ? " is-current" : ""}${current && locked ? " is-live" : ""}`}
                 >
-                  🎙
+                  {image ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={image} alt="" className="studio-thumb-img" />
+                  ) : (
+                    <span className="studio-thumb-blank" aria-hidden="true">
+                      <Pen className="studio-thumb-blank-icon" strokeWidth={2} />
+                    </span>
+                  )}
+                  <span aria-hidden="true" className="studio-thumb-num">
+                    {index + 1}
+                  </span>
+                  {narrated ? (
+                    <span aria-hidden="true" data-studio="frame-voice" className="studio-thumb-voice">
+                      <Mic strokeWidth={2.25} />
+                    </span>
+                  ) : null}
+                  {current && locked ? (
+                    <i aria-hidden="true" data-studio="frame-live" className="studio-thumb-live" />
+                  ) : null}
+                </button>
+              );
+            })}
+
+            <button
+              type="button"
+              onClick={onSnapNext}
+              disabled={locked}
+              title={locked ? LOCKED_TITLE : undefined}
+              className="studio-snap sk-focus"
+            >
+              <Camera aria-hidden="true" className="studio-snap-icon" strokeWidth={2} />
+              <span>{SNAP_LABEL}</span>
+            </button>
+
+            <div className="studio-film-moves" data-studio="film-moves">
+              {locked ? (
+                <button type="button" disabled title={LOCKED_TITLE} className="studio-move-locked">
+                  <Lock aria-hidden="true" className="h-[13px] w-[13px] flex-none" strokeWidth={2} />
+                  move
+                </button>
+              ) : (
+                <div className="studio-move-housing">
+                  <StripButton
+                    label="Move this page earlier"
+                    Icon={ChevronLeft}
+                    onClick={() => onMove(activeIndex, -1)}
+                    disabled={activeIndex <= 0}
+                  />
+                  <StripButton
+                    label="Move this page later"
+                    Icon={ChevronRight}
+                    onClick={() => onMove(activeIndex, 1)}
+                    disabled={activeIndex >= pages.length - 1}
+                  />
+                  <StripButton
+                    label="Delete this page"
+                    Icon={Trash2}
+                    onClick={() => onDelete(activeIndex)}
+                    disabled={pages.length <= 1}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {hasLane ? (
+            <div data-studio="mood-lane" className="studio-lane">
+              {laneMoods.map((mood, index) => (
+                <i
+                  key={pages[index].id}
+                  aria-hidden="true"
+                  data-studio="mood-segment"
+                  data-mood={mood ?? "none"}
+                  className="studio-lane-seg"
+                  style={mood ? ({ "--lane-mood": moodToken(mood) } as React.CSSProperties) : undefined}
+                />
+              ))}
+              <i aria-hidden="true" className="studio-lane-rest" />
+              {currentMood ? (
+                <span
+                  data-studio="mood-lane-label"
+                  className="studio-lane-label"
+                  style={{ "--lane-mood": moodToken(currentMood) } as React.CSSProperties}
+                >
+                  <Star aria-hidden="true" className="studio-lane-icon" strokeWidth={2} />
+                  {`${currentMood} · gentle music added for you`}
                 </span>
               ) : null}
-            </button>
-          );
-        })}
-
-        <button
-          type="button"
-          onClick={onAdd}
-          disabled={locked}
-          aria-label="Add a new page"
-          title={locked ? "Finish the recording first" : "Add a new page"}
-          className="studio-thumb sk-focus flex items-center justify-center border-dashed text-2xl text-amber-300/80 hover:border-amber-400/60 hover:text-amber-200"
-        >
-          <span aria-hidden="true">+</span>
-        </button>
-      </div>
-
-      <div className="flex flex-none items-center gap-1.5">
-        <StripButton
-          label="Move this page earlier"
-          glyph="◀"
-          onClick={() => onMove(activeIndex, -1)}
-          disabled={locked || activeIndex <= 0}
-        />
-        <StripButton
-          label="Move this page later"
-          glyph="▶"
-          onClick={() => onMove(activeIndex, 1)}
-          disabled={locked || activeIndex >= pages.length - 1}
-        />
-        <StripButton
-          label="Delete this page"
-          glyph="🗑"
-          onClick={() => onDelete(activeIndex)}
-          disabled={locked || pages.length <= 1}
-        />
+            </div>
+          ) : null}
+        </div>
       </div>
     </section>
   );
