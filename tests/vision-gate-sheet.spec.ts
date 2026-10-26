@@ -452,9 +452,6 @@ test.describe("T14 · the grown-up moment and what goes into the tape", () => {
     await expect(stamp).toHaveAttribute("data-inked", "false");
     await expect(stamp.locator("[data-line]").first()).toBeHidden();
 
-    /* it sits over the Signature band's right half */
-    const sig = await box(band(page, "Signature"));
-
     await page.locator("#studio-gate-consent").check();
     await expect(stamp).toHaveAttribute("data-inked", "true");
     expect(await stampLines(page)).toEqual(["VOICE CONSENT · GRANTED", `PARENT/GUARDIAN · ${STAMP_DATE}`]);
@@ -466,7 +463,19 @@ test.describe("T14 · the grown-up moment and what goes into the tape", () => {
     expect(motion.count, "it presses once and never loops").toBe("1");
     expect(motion.duration).toBe("0.42s");
     await settle(stamp);
-    const st = await box(stamp);
+    /* it sits over the Signature band's right half. Both boxes are read in one
+       frame, after the tick: checking the box can scroll the sheet, which
+       would leave a band measured before it stale. */
+    const [st, sig] = await sheetOf(page).evaluate((sheet) => {
+      const r = (el: Element) => {
+        const b = el.getBoundingClientRect();
+        return { x: b.x, y: b.y, width: b.width, height: b.height };
+      };
+      return [
+        r(document.querySelector('[data-sk="consent-stamp"]')!),
+        r(sheet.querySelector('[data-sk="packet-band"][data-layer="Signature"]')!),
+      ];
+    });
     expect(st.x + st.width / 2, "over the band's right half").toBeGreaterThan(sig.x + sig.width / 2);
     expect(st.y).toBeGreaterThanOrEqual(sig.y - 8);
     expect(st.y + st.height).toBeLessThanOrEqual(sig.y + sig.height + 8);

@@ -323,16 +323,25 @@ test.describe("T12 · end card · Twinkle's liner notes", () => {
     const qrRow = end.locator('[data-pl="qr-card"]');
     await expect(qrRow.locator('[data-pl="qr"]')).toBeVisible({ timeout: 10000 });
     expect((await qrRow.locator(".pl-qr-title").innerText()).trim()).toBe("PASS IT ON · POINT A PHONE AT THIS");
-    // s06 `.s06-qrrow__t`: mono 11px on one line at 390
+    // s06 `.s06-qrrow__t`: mono 11px, on one line wherever its row has room
+    // for the whole line (224px of text in 232px at 390), never past the row
     const heading = await qrRow.locator(".pl-qr-title").evaluate((el) => {
       const cs = getComputedStyle(el);
+      const probe = el.cloneNode(true) as HTMLElement;
+      probe.style.cssText = "position:absolute;visibility:hidden;white-space:nowrap;width:max-content";
+      el.parentElement!.appendChild(probe);
+      const line = probe.getBoundingClientRect().width;
+      probe.remove();
       return {
         size: cs.fontSize,
+        room: line <= el.clientWidth,
         oneLine: el.getBoundingClientRect().height <= parseFloat(cs.lineHeight) + 1,
         fits: el.scrollWidth <= el.clientWidth,
       };
     });
-    expect(heading).toEqual({ size: "11px", oneLine: true, fits: true });
+    expect(heading.size).toBe("11px");
+    expect(heading.fits, "never past the row").toBe(true);
+    expect(heading.oneLine, "one line when the row has room for it").toBe(heading.room);
     expect((await qrRow.locator(".pl-qr-url").innerText()).trim()).toBe(page.url());
 
     // Close, then the privacy line in mono
