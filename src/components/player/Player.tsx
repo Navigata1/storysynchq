@@ -33,14 +33,16 @@
 
 import * as React from "react";
 import QRCode from "qrcode";
-import { Lock, Mic, Music, Settings, X } from "lucide-react";
+import { Lock, Music, Settings, X } from "lucide-react";
 import type { SsyncManifest, SsyncPage } from "@/lib/storysync/manifest";
-import { DualBusAudioEngine } from "@/lib/audio/engine";
+import { DUCK_DEPTH_DB, DualBusAudioEngine } from "@/lib/audio/engine";
 import type { MoodName } from "@/lib/audio/moods";
 import { BigButton, GlassPanel, Reel, TapeLabel, TransportButton } from "@/components/studio-kit/kit";
+import { DeckChip } from "@/components/studio-kit/DeckChip";
 import { estimateSeconds, formatClock, parseDuration, splitWords, wordIndexAtTime } from "./timing";
 import { openCueContext, playPageTurnCue } from "./sound";
 import { pageCrossfadeSeconds, pageMood } from "./music-plan";
+import { deckStatus } from "./deck-status";
 import {
   PREFS_KEY,
   SPEED_RATE,
@@ -55,6 +57,7 @@ import {
 import { useSpread } from "./useSpread";
 import "./player.css";
 import "./spread.css";
+import "./deck.css";
 
 /* ────────────────────────────────────────────────────────────── constants */
 
@@ -65,6 +68,8 @@ const RESUME_DELAY_MS = 120;
 const TURN_OUT_MS = 240;
 const TURN_IN_MS = 460;
 const UI_IDLE_MS = 4200;
+/** The shortest hold before an automatic turn, whatever the tape asks. */
+const MIN_HOLD_MS = 300;
 const MUSIC_VOLUME = 0.35;
 /** The keys, as the room prints them (s02). Every one of them does what it says. */
 const KEY_HINT = "← → turn · space pause · P music · esc close";
@@ -73,6 +78,20 @@ const KEY_HINT = "← → turn · space pause · P music · esc close";
 
 function cx(...parts: Array<string | false | null | undefined>): string {
   return parts.filter(Boolean).join(" ");
+}
+
+/* Whether this browser has a voice to read with (the deck's VOICE row). It
+   never appears or leaves mid-visit, so the store has nothing to subscribe
+   to; the server assumes it, and the client corrects it before the cover
+   gate opens. */
+const noSubscribe = () => () => {};
+const speechOnDevice = () => typeof window !== "undefined" && !!window.speechSynthesis;
+const speechOnServer = () => true;
+
+/** A page's hold before the automatic turn: its own `autoPause` (else the
+ *  tape's default pause) × the timing multiplier, never under MIN_HOLD_MS. */
+function pageHoldMs(page: SsyncPage | undefined, defaultPauseMs: number, multiplier: number): number {
+  return Math.max(MIN_HOLD_MS, parseDuration(page?.timing?.autoPause, defaultPauseMs) * multiplier);
 }
 
 /**
@@ -199,6 +218,60 @@ function SwitchRow({
   );
 }
 
+/**
+ * The turn ring at the foot of the text page (s02): a 24px track and a gold
+ * arc for the elapsed share of the hold before an automatic turn — no arc at
+ * all while the voice speaks or before the hold. With motion the arc fills in one smooth pass across
+ * the hold (a CSS animation started where the hold stands when the ring
+ * mounts; keyed per hold by the caller). Under reduced motion the animation
+ * is off and the inline share — stepped by the Player's 1 s tick — shows, so
+ * the arc jumps without easing (./deck.css).
+ */
+function TurnRing({
+  share,
+  running,
+  holdMs,
+  elapsedMs,
+}: {
+  share: number;
+  running: boolean;
+  holdMs: number;
+  elapsedMs: number;
+}) {
+  // Fixed at mount: a delay that moved with each tick would jump the animation.
+  const [delayMs] = React.useState(() => -Math.max(0, elapsedMs));
+  return (
+    <svg
+      className="pl-turn-ring"
+      data-pl="turn-ring"
+      data-share={share.toFixed(3)}
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <circle className="pl-turn-track" cx="12" cy="12" r="10" />
+      {running ? (
+        <circle
+          className={cx("pl-turn-arc", running && "is-running")}
+          data-pl="turn-arc"
+          cx="12"
+          cy="12"
+          r="10"
+          pathLength={1}
+          transform="rotate(-90 12 12)"
+          style={
+            {
+              strokeDashoffset: 1 - share,
+              "--pl-hold-ms": `${Math.round(holdMs)}ms`,
+              "--pl-hold-delay": `${Math.round(delayMs)}ms`,
+            } as React.CSSProperties
+          }
+        />
+      ) : null}
+    </svg>
+  );
+}
+
 /* ──────────────────────────────────────────────────────────────── Player */
 
 export interface PlayerProps {
@@ -247,6 +320,12 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
   const wide = useSpread();
   /** Natural width / height of each picture, by URL — the left page takes its shape. */
   const [artRatio, setArtRatio] = React.useState<Record<string, number>>({});
+  /** The hold before an automatic turn: set when the voice finishes, cleared
+   *  when the page turns or the tape pauses. The deck counts it down. */
+  const [hold, setHold] = React.useState<{ page: number; until: number; totalMs: number } | null>(null);
+  /** The clock the countdown reads — moved once a second, only while a hold runs. */
+  const [clock, setClock] = React.useState(0);
+  const speechAvailable = React.useSyncExternalStore(noSubscribe, speechOnDevice, speechOnServer);
 
   const engineRef = React.useRef<DualBusAudioEngine | null>(null);
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
@@ -591,6 +670,7 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
         clearTimeout(autoTimerRef.current);
         autoTimerRef.current = undefined;
       }
+      setHold(null);
     };
 
     /** Narration finished → hold for the page's pause, then turn the page. */
@@ -600,16 +680,17 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
       setHighlight(-1);
       engine?.setNarrating(false);
       if (!autoPlay) return;
-      const hold = parseDuration(current.timing?.autoPause, defaultPauseMs) * timingRef.current;
+      const holdMs = pageHoldMs(current, defaultPauseMs, timingRef.current);
       clearAuto();
-      autoTimerRef.current = setTimeout(
-        () => {
-          if (cancelled) return;
-          if (index >= total - 1) setEnded(true);
-          else goToRef.current("next");
-        },
-        Math.max(300, hold),
-      );
+      // The deck reads this deadline; the timer below is still the one that turns.
+      const now = Date.now();
+      setClock(now);
+      setHold({ page: index, until: now + holdMs, totalMs: holdMs });
+      autoTimerRef.current = setTimeout(() => {
+        if (cancelled) return;
+        if (index >= total - 1) setEnded(true);
+        else goToRef.current("next");
+      }, holdMs);
     };
 
     const audioUrl = current.text?.audioUrl;
@@ -718,6 +799,28 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
     ttsRate,
     highlightOn,
   ]);
+
+  /* ── the countdown's clock: one tick a second, only while a hold runs ───
+     Each tick lands just after a whole second of the hold has gone, so the
+     deck reads 0:04 → 0:03 → 0:02 → 0:01 and the turn itself ends the last
+     second. Nothing else moves the clock. */
+  React.useEffect(() => {
+    if (!hold) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const schedule = () => {
+      const left = hold.until - Date.now();
+      if (left <= 1000) return;
+      timer = setTimeout(
+        () => {
+          setClock(Date.now());
+          schedule();
+        },
+        (left % 1000 || 1000) + 15,
+      );
+    };
+    schedule();
+    return () => clearTimeout(timer);
+  }, [hold]);
 
   /* ── read-along for a RECORDED voice ─────────────────────────────────
      A recorded clip carries no word boundaries, so words light on a linear
@@ -919,6 +1022,29 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
   const ratio = image ? artRatio[image] : undefined;
   const kicker = `PAGE ${index + 1}${mood ? ` · ${mood.toUpperCase()}` : ""}`;
 
+  /* The deck's three sounds (./deck-status): read off the manifest and the
+     room's live state — the hold the narration effect scheduled, the engine's
+     own word on the bed, the duck depth it exports. Nothing counted, nothing
+     stored. A hold belongs to its page: a stale one never leaks onto the next. */
+  const holdNow = hold && hold.page === index && !paused && !ended ? hold : null;
+  const holdTotalS = (holdNow ? holdNow.totalMs : pageHoldMs(page, defaultPauseMs, timingMult)) / 1000;
+  const status = deckStatus(
+    page,
+    manifest,
+    {
+      narrating,
+      paused,
+      musicOn,
+      musicLive,
+      audioOk,
+      speechAvailable,
+      holdRemainingS: holdNow ? Math.max(0, holdNow.until - clock) / 1000 : null,
+      holdTotalS,
+      lastPage: index >= total - 1,
+    },
+    DUCK_DEPTH_DB,
+  );
+
   return (
     <div
       className={cx(
@@ -1032,6 +1158,20 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
                     scale={textScale}
                     book
                   />
+                  {/* s02: the hold before the automatic turn, at the page's foot.
+                      Not a live region — it is never announced each second. */}
+                  {status.foot ? (
+                    <div className="pl-turn-foot" data-pl="turn-foot">
+                      <TurnRing
+                        key={holdNow ? holdNow.until : "rest"}
+                        share={status.holdShare}
+                        running={!!holdNow}
+                        holdMs={holdTotalS * 1000}
+                        elapsedMs={holdNow ? clock - (holdNow.until - holdNow.totalMs) : 0}
+                      />
+                      <span data-pl="turn-line">{status.foot}</span>
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
             </div>
@@ -1079,45 +1219,21 @@ export function Player({ manifest, onExit, onMakeYourOwn, shareUrl }: PlayerProp
       </div>
 
       {/* ─────────────────────────────────────────────────── the tape deck */}
-      <div className={cx("pl-deck", narrating && "is-live")} aria-hidden="true">
-        <Reel spinning={narrating} size={18} />
-        <Reel spinning={narrating} size={18} />
-        <span className="pl-deck-read">
-          {String(index + 1).padStart(2, "0")} / {String(total).padStart(2, "0")}
-        </span>
-        {/* Whose voice (s05): a hairline, the mic, the narrator's name — only
-            when the tape names one. The cover meta is the accessible statement.
-            Below md the top chrome's chips sit where the name runs, so while
-            they are up the group folds away — width as well as opacity, and
-            -ml-2.5 cancels the pill's 10px gap — leaving the pill its counter-
-            only size; it opens again when they idle out. */}
-        {narrator ? (
-          <span
-            data-pl="deck-voice"
-            className={cx(
-              "inline-flex min-w-0 max-w-[12rem] items-center gap-2.5 overflow-hidden transition-[max-width,opacity,margin] duration-300 ease-out motion-reduce:transition-none md:max-w-[16rem]",
-              !chromeHidden && "max-md:-ml-2.5 max-md:max-w-0 max-md:opacity-0",
-            )}
-          >
-            <span data-pl="deck-rule" className="h-[18px] w-px flex-none bg-white/[.16]" />
-            <span className="inline-flex min-w-0 items-center gap-1.5">
-              <Mic
-                data-pl="deck-mic"
-                size={12}
-                strokeWidth={2}
-                aria-hidden="true"
-                className="flex-none text-[#fbbf4a]"
-              />
-              <span
-                data-pl="deck-narrator"
-                className="max-w-[7.5rem] truncate text-[13px] leading-tight font-semibold text-white md:max-w-[13rem]"
-              >
-                {narrator}
-              </span>
-            </span>
-          </span>
-        ) : null}
-      </div>
+      {/* Three sounds at once (s02): VOICE · MELODY · CHIME rows from 768 px,
+          the s05 pill (reels, counter, | mic, narrator) below it. The rows
+          fold with the chrome; the reels and the counter never hide; the
+          narrator's name opens when the chrome idles out. */}
+      <DeckChip
+        className="pl-deck"
+        countClassName="pl-deck-read"
+        page={index + 1}
+        total={total}
+        spinning={narrating}
+        speaking={status.speaking}
+        rows={{ voice: status.voice, melody: status.melody, chime: status.chime }}
+        narrator={narrator}
+        idle={chromeHidden}
+      />
 
       {/* ───────────────────────────────────────────────────── top chrome */}
       <div className={cx("pl-chrome pl-chrome--top", chromeHidden && "is-hidden")}>

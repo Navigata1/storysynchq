@@ -1,0 +1,298 @@
+/* ============================================================================
+   DeckChip — deck-chip.css (brief design_system (7); s02 expanded, s05 pill)
+
+   Component-scoped. Placement in a room (position, z-order, safe areas) is
+   the consumer's (the Player's src/components/player/deck.css); everything
+   the chip itself looks like lives here.
+
+   Below 768 px: the s05 pill — reels, counter, and the narrator group.
+   From 768 px: the s02 chip — a reel window over the counter, a hairline,
+   three mono rows. `data-idle="true"` (the room's chrome idled out) folds the
+   rows and opens the narrator group; the reels and counter never hide.
+   ========================================================================== */
+
+@layer components {
+  .sk-deck {
+    /* the reels are the sprite's: paper faces, ink spokes */
+    --sk-ink: #1e1a16;
+    --sk-reel-face: #fffdf6;
+    --sk-deck-ease: var(--ss-ease, cubic-bezier(0.22, 0.8, 0.24, 1));
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    padding: 5px 16px 5px 6px;
+    border: 1px solid rgba(255, 255, 255, 0.13);
+    border-radius: 18px;
+    background-color: rgba(8, 11, 21, 0.56);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+    color: var(--ss-fg-2);
+    white-space: nowrap;
+  }
+
+  /* --------------------------------------------- reels and the counter --- */
+  .sk-deck-left {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 8px;
+  }
+  .sk-deck-win {
+    position: relative;
+    display: block;
+    flex: none;
+    width: 50px;
+    height: 28px;
+  }
+  .sk-deck .sk-deck-reel {
+    position: absolute;
+    top: 50%;
+    width: 18px !important; /* the pill's reels; the expanded window takes 20 */
+    height: 18px !important;
+    border-radius: 999px;
+    transform: translate(-50%, -50%);
+  }
+  .sk-deck-reel--a {
+    left: 12px;
+  }
+  .sk-deck-reel--b {
+    left: 38px;
+  }
+  .sk-deck-count {
+    flex: none;
+    font-family: var(--ss-mono);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: 0.14em;
+    color: var(--ss-fg-2);
+  }
+
+  /* ---------------------------------------- whose voice: | mic  Name ---- */
+  .sk-deck-voice {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    max-width: 12rem;
+    margin-left: 10px;
+    overflow: hidden;
+    transition:
+      max-width 300ms var(--sk-deck-ease),
+      margin-left 300ms var(--sk-deck-ease),
+      opacity 300ms var(--sk-deck-ease);
+  }
+  /* while the chrome is up the rows (or, on a phone, the top chips) have the
+     room: the group folds, width as well as opacity */
+  .sk-deck[data-idle="false"] .sk-deck-voice {
+    max-width: 0;
+    margin-left: 0;
+    opacity: 0;
+  }
+  .sk-deck-hair {
+    width: 1px;
+    height: 18px;
+    flex: none;
+    background-color: rgba(255, 255, 255, 0.16);
+  }
+  .sk-deck-who {
+    display: inline-flex;
+    min-width: 0;
+    align-items: center;
+    gap: 6px;
+  }
+  .sk-deck-mic {
+    flex: none;
+    color: var(--ss-gold-2);
+  }
+  .sk-deck-name {
+    max-width: 7.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-family: var(--ss-ui);
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: #ffffff;
+  }
+
+  /* ------------------------------------------------------- the rows ------ */
+  .sk-deck-rows-wrap {
+    display: none;
+  }
+  .sk-deck-glyph {
+    display: block;
+    flex: none;
+    width: 26px;
+    height: 12px;
+    overflow: visible;
+  }
+  /* VOICE: static bars — gold while a voice speaks, dim otherwise */
+  .sk-deck-glyph--wave rect {
+    fill: var(--ss-fg-4);
+    transition: fill 300ms var(--sk-deck-ease);
+  }
+  .sk-deck-glyph--wave[data-speaking="true"] rect {
+    fill: var(--mood-wonder, #f5b544);
+  }
+  /* MELODY: three note dots and the duck's small down arrow */
+  .sk-deck-glyph--notes circle {
+    fill: var(--mood-wonder, #f5b544);
+  }
+  .sk-deck-glyph--notes path {
+    fill: none;
+    stroke: var(--ss-fg-3);
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  /* CHIME: a hollow ring */
+  .sk-deck-ring {
+    stroke: var(--ss-label, #ffc93c);
+    stroke-width: 1.5;
+  }
+  .sk-deck-ring-dot {
+    fill: var(--ss-label, #ffc93c);
+    opacity: 0.5;
+  }
+
+  /* the smallest phones (320 px): the pill gives back a few pixels so it
+     stays clear of the top chips while they are up */
+  @media (max-width: 359px) {
+    .sk-deck {
+      padding-right: 12px;
+    }
+    .sk-deck-win {
+      width: 46px;
+    }
+    .sk-deck-reel--a {
+      left: 11px;
+    }
+    .sk-deck-reel--b {
+      left: 35px;
+    }
+    .sk-deck-count {
+      font-size: 11px;
+      letter-spacing: 0.12em;
+    }
+  }
+
+  /* ============================================ expanded: 768 px and up */
+  @media (min-width: 768px) {
+    .sk-deck {
+      padding: 7px 16px 7px 12px;
+    }
+    .sk-deck-left {
+      flex-direction: column;
+      gap: 5px;
+    }
+    /* the reel window: dark glass, the tape running between the reels */
+    .sk-deck-win {
+      width: 96px;
+      height: 34px;
+      border-radius: 11px;
+      background-image: linear-gradient(180deg, #07090f, #141823);
+      box-shadow:
+        inset 0 2px 6px rgba(0, 0, 0, 0.8),
+        0 0 0 1px rgba(255, 255, 255, 0.08);
+    }
+    .sk-deck-win::after {
+      content: "";
+      position: absolute;
+      right: 25px;
+      bottom: 2px;
+      left: 25px;
+      height: 2px;
+      background-image: var(--ss-tape-brown, linear-gradient(180deg, #5b3a24, #3d2616));
+    }
+    .sk-deck .sk-deck-reel {
+      z-index: 1;
+      width: 20px !important;
+      height: 20px !important;
+    }
+    .sk-deck-reel--a {
+      left: 25px;
+    }
+    .sk-deck-reel--b {
+      left: 71px;
+    }
+    .sk-deck-count {
+      font-size: 12px;
+      letter-spacing: 0.16em;
+    }
+    .sk-deck-voice {
+      margin-left: 14px;
+    }
+    .sk-deck[data-idle="false"] .sk-deck-voice {
+      margin-left: 0;
+    }
+    .sk-deck-name {
+      max-width: 13rem;
+    }
+
+    .sk-deck-rows-wrap {
+      display: flex;
+      flex: 0 1 auto;
+      align-self: stretch;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+      max-width: 40rem;
+      margin-left: 14px;
+      overflow: hidden;
+      transition:
+        max-width 320ms var(--sk-deck-ease),
+        margin-left 320ms var(--sk-deck-ease),
+        opacity 320ms var(--sk-deck-ease);
+    }
+    /* the rows fade with the room's chrome; the reels and counter stay */
+    .sk-deck[data-idle="true"] .sk-deck-rows-wrap {
+      max-width: 0;
+      margin-left: 0;
+      opacity: 0;
+    }
+    .sk-deck-rule {
+      width: 1px;
+      flex: none;
+      align-self: stretch;
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+    .sk-deck-rows {
+      display: flex;
+      min-width: 0;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .sk-deck-row {
+      display: flex;
+      min-width: 0;
+      align-items: center;
+      gap: 9px;
+      font-family: var(--ss-mono);
+      font-size: 11px;
+      font-weight: 400;
+      line-height: 14px;
+      color: var(--ss-fg-2);
+    }
+    .sk-deck-row b {
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      color: var(--ss-fg-3);
+    }
+    .sk-deck-row-text {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+
+  /* ------------------------------------------- reduced motion: no fades -- */
+  @media (prefers-reduced-motion: reduce) {
+    .sk-deck-voice,
+    .sk-deck-rows-wrap,
+    .sk-deck-glyph--wave rect {
+      transition: none;
+    }
+  }
+}

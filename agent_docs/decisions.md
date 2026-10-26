@@ -337,3 +337,17 @@ make it true:
 
 Arrows and Escape are unchanged, and Space on a focused control still belongs to that control. No existing test
 asserted the old Space or P bindings.
+
+**2026-10-25 · T09a · The deck chip states the three sounds; the book makes room for it.**
+- **Rows:** from 768 px the Player's deck chip (kit `DeckChip`) is a `role="group"` named "Now playing" with three
+  mono rows. Their words come from one pure module, `src/components/player/deck-status.ts`, which reads the manifest
+  and live flags only. The MELODY number is `round(DUCK_DEPTH_DB)` from the engine, never a literal.
+- **Countdown:** it ticks once a second, only during the hold the Player already schedules, and is never `aria-live`.
+- **Whose voice:** the name is shown exactly once at any time. While the chrome is up, the VOICE row names the
+  narrator (≥ 768); when the chrome idles out, the rows fold and T03's mic + name opens. This is now the rule at
+  every width; T03 previously kept the name always open at ≥ md.
+- **Book clearance:** in spread mode the book's top edge moves to 98 px. `deck.css` overrides spread.css's
+  `--pl-spread-reserve-y` and re-centres with `padding-top`. The book is 950×532 at 1120×700 (was 1000×560), the
+  render's chip-above-book composition, with T08's ≥ 75 % vh and centring rules intact.
+- **Last page:** CHIME reads "last page" and the foot "the end in N s", because the automatic end does not chime.
+- **Open question for Jon:** should the automatic end chime like a manual "next" on the last page does?

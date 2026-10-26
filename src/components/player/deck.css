@@ -1,0 +1,112 @@
+/* ============================================================================
+   The deck in the room — deck.css (T09a, reference s02 + s05)
+
+   The kit DeckChip (src/components/studio-kit/DeckChip.tsx) draws the chip;
+   this file places it in the Player's room and draws the text page's foot
+   line: a 24px turn ring and "next page in N s · turn cue ready".
+
+   Moved here from player.css (the `.pl-deck*` block) so the chip's placement
+   has one owner. Same @layer as player.css and spread.css; imported after
+   spread.css, so the clearance rule below follows the book's own geometry.
+   ========================================================================== */
+
+@keyframes pl-turn-fill {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@layer components {
+  /* ------------------------------------------------------- placement --- */
+  /* Top-left, never auto-hidden: the reels and the counter are the one
+     honest indicator that sound is moving (the rows fade with the chrome —
+     DeckChip's `idle`). Not a control: pointer events fall through to the
+     page's tap zone underneath. */
+  .pl-deck {
+    position: absolute;
+    top: max(14px, env(safe-area-inset-top, 0px));
+    left: 16px;
+    z-index: 20;
+    pointer-events: none;
+  }
+  /* From 768 px the expanded chip shares the top edge with the labelled top
+     chips (~345 px + their 14 px inset): it stops 12 px short of them, and a
+     row that does not fit ends in an ellipsis rather than running under them. */
+  @media (min-width: 768px) {
+    .pl-deck {
+      max-width: calc(100vw - 387px);
+    }
+  }
+
+  /* --------------------------------------- the book clears the chip ---- */
+  /* The open book (spread.css) keeps 70px of air above and below. The
+     expanded chip is taller than that top band (≈ 14 + 69 px), so in spread
+     mode the book's top edge moves to 98px — the reference's air between the
+     chip and the book — and its bottom stays 70px off the floor, clear of the
+     transport. --pl-spread-reserve-y is spread.css's own knob ("clear air
+     above (deck chip …) and below"); split into a top and a bottom here, the
+     page's padding re-centres the book in what is left. */
+  .pl-root[data-layout="spread"] {
+    --pl-deck-clear-top: 98px;
+    --pl-deck-clear-bottom: 70px;
+    --pl-spread-reserve-y: calc((var(--pl-deck-clear-top) + var(--pl-deck-clear-bottom)) / 2);
+  }
+  .pl-root[data-layout="spread"] .pl-page.is-spread,
+  .pl-root[data-layout="spread"] .pl-page.is-single {
+    padding-top: calc(var(--pl-deck-clear-top) - var(--pl-deck-clear-bottom));
+  }
+
+  /* ---------------------------------------- the foot of the text page --- */
+  /* s02: a 24px ring (the gold arc is the elapsed share of the hold, empty
+     while the voice speaks) beside a mono 11px line. */
+  .pl-turn-foot {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 10px;
+    margin: 18px 0 0;
+    font-family: var(--ss-mono);
+    font-size: 11px;
+    line-height: 1;
+    letter-spacing: 0.06em;
+    color: var(--ss-fg-3);
+  }
+  .pl-turn-ring {
+    display: block;
+    flex: none;
+    width: 24px;
+    height: 24px;
+  }
+  .pl-turn-track {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.16);
+    stroke-width: 2.5;
+  }
+  .pl-turn-arc {
+    fill: none;
+    stroke: var(--ss-gold);
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-dasharray: 1 1;
+  }
+  /* full motion: one smooth fill across the hold (never a loop); the inline
+     dashoffset underneath is the stepped value reduced motion shows */
+  .pl-turn-arc.is-running {
+    animation: pl-turn-fill var(--pl-hold-ms, 3000ms) linear var(--pl-hold-delay, 0ms) both;
+  }
+  .pl-root.is-hc .pl-turn-foot {
+    color: rgba(255, 255, 255, 0.85);
+  }
+
+  /* reduced motion: the arc jumps once a second, with no easing */
+  @media (prefers-reduced-motion: reduce) {
+    .pl-turn-arc,
+    .pl-turn-arc.is-running {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+}

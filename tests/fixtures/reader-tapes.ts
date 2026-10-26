@@ -385,3 +385,70 @@ export const whiteArtTape: SsyncManifest = {
 export function t08Rows(): ReaderLibraryRow[] {
   return [libraryRow(wideArtTape, WIDE_ART_CODE), libraryRow(whiteArtTape, WHITE_ART_CODE)];
 }
+
+/* ===================================== T09a · the deck chip's three sounds */
+
+/*
+ * Tapes for the CHIME row and the text page's foot line. Each page carries a
+ * picture and words (so the desktop spread has a text page to put the foot
+ * line on) and a one-second silent clip, so the hold before an automatic turn
+ * starts about 1.7 s after Tap to Begin (the 700 ms beat + the clip).
+ */
+
+/** Share code of the countdown tape. */
+export const COUNTDOWN_CODE = "a09a09a09a09a09a09a09a09a09a09a0";
+
+/**
+ * autoPlay on, the cue on, a one-second clip, then a four-second hold: the
+ * chip counts "next turn in 0:04 … 0:01" and the page turns by itself.
+ */
+export const countdownTape: SsyncManifest = {
+  version: "2.0",
+  metadata: { title: "The Kettle Counts to Four", author: "Reader fixture", genre: "children", ageRange: "3-8" },
+  settings: { autoPlay: true, pageTurnSound: true, readAlongHighlight: true },
+  signature: { voiceConsent: [FIXTURE_CONSENT] },
+  pages: [
+    { ...voicedPage(1, "The kettle sang one short note.", "Calm", 1), timing: { autoPause: "4s" } },
+    { ...voicedPage(2, "Then it waited for the tea.", "Calm", 1), timing: { autoPause: "4s" } },
+    { ...voicedPage(3, "And the tea was ready.", "Calm", 1), timing: { autoPause: "4s" } },
+  ],
+};
+
+/** Share code of the no-cue tape. */
+export const NO_CUE_CODE = "a09b09b09b09b09b09b09b09b09b09b0";
+
+/** autoPlay on, `pageTurnSound: false`: the pages turn by themselves, silently. */
+export const noCueTape: SsyncManifest = {
+  version: "2.0",
+  metadata: { title: "The Quiet Turn", author: "Reader fixture", genre: "children", ageRange: "3-8" },
+  settings: { autoPlay: true, pageTurnSound: false, readAlongHighlight: true },
+  signature: { voiceConsent: [FIXTURE_CONSENT] },
+  pages: [
+    { ...voicedPage(1, "The owl turned the page without a sound.", "Hush", 1), timing: { autoPause: "3s" } },
+    { ...voicedPage(2, "Nobody woke up.", "Hush", 1), timing: { autoPause: "3s" } },
+  ],
+};
+
+/** Share code of the manual tape. */
+export const MANUAL_CODE = "a09c09c09c09c09c09c09c09c09c09c0";
+
+/** `autoPlay: false`: nothing turns a page but the listener. */
+export const manualTape: SsyncManifest = {
+  version: "2.0",
+  metadata: { title: "Turn It Yourself", author: "Reader fixture", genre: "children", ageRange: "3-8" },
+  settings: { autoPlay: false, pageTurnSound: true, readAlongHighlight: true },
+  signature: { voiceConsent: [FIXTURE_CONSENT] },
+  pages: [
+    voicedPage(1, "This page waits for you.", "Joy", 1),
+    voicedPage(2, "And so does this one.", "Joy", 1),
+  ],
+};
+
+/** The three T09a tapes as library rows. */
+export function t09aRows(): ReaderLibraryRow[] {
+  return [
+    libraryRow(countdownTape, COUNTDOWN_CODE),
+    libraryRow(noCueTape, NO_CUE_CODE),
+    libraryRow(manualTape, MANUAL_CODE),
+  ];
+}

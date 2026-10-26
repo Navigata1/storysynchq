@@ -167,9 +167,11 @@ async function onlyTape(page: Page): Promise<SsyncManifest> {
 const COVER_TAPE = '[data-pl="cover"] [data-sk="tape"]';
 const COVER_META = `${COVER_TAPE} .sk-tape-meta`;
 const DECK = ".pl-deck";
-/** The mic — the reels in the deck are inline SVG too, so never a bare `svg`. */
+/** The mic — the reels and (T09a) the rows' micro-glyphs are inline SVG too,
+ *  so the mic is found by its own hook, never by counting `svg`. */
 const DECK_MIC = `${DECK} [data-pl="deck-mic"]`;
-const DECK_NON_REEL_SVG = `${DECK} svg:not(.sk-reel-svg)`;
+/** Every icon on the chip that is neither a reel nor a row's micro-glyph: only the mic may be one. */
+const DECK_ICON_SVG = `${DECK} svg:not(.sk-reel-svg):not([data-sk="deck-glyph"])`;
 
 const DECK_VOICE = `${DECK} [data-pl="deck-voice"]`;
 const TOP_CHROME = ".pl-chrome--top";
@@ -258,12 +260,15 @@ test.describe("narrator · publish → the link (e2e)", () => {
 
     await tapToBegin(page);
     const deck = page.locator(DECK);
-    // The cover meta is the accessible statement; the chip stays decorative.
-    await expect(deck).toHaveAttribute("aria-hidden", "true");
+    // The cover meta states the voice; since T09a the chip is a "Now playing"
+    // group too, because its rows carry what nothing else states (the mood,
+    // the time to the turn).
+    await expect(deck).not.toHaveAttribute("aria-hidden", "true");
+    await expect(page.getByRole("group", { name: "Now playing" })).toHaveCount(1);
     await expect(deck).toContainText("Mia");
     await expect(deck.locator(".pl-deck-read")).toHaveText(/^0\d \/ 05$/);
     await expect(page.locator(DECK_MIC)).toHaveCount(1);
-    await expect(page.locator(DECK_NON_REEL_SVG)).toHaveCount(1);
+    await expect(page.locator(DECK_ICON_SVG)).toHaveCount(1);
     const mic = await page.locator(DECK_MIC).boundingBox();
     expect(mic?.width).toBeCloseTo(12, 0);
     expect(mic?.height).toBeCloseTo(12, 0);
@@ -421,9 +426,13 @@ test.describe("narrator · the house tape names nobody (e2e)", () => {
     await tapToBegin(page);
     const deck = page.locator(DECK);
     await expect(page.locator(DECK_MIC)).toHaveCount(0);
-    await expect(page.locator(DECK_NON_REEL_SVG)).toHaveCount(0);
+    await expect(page.locator(DECK_ICON_SVG)).toHaveCount(0);
     await expect(deck.locator('[data-pl="deck-rule"]')).toHaveCount(0);
-    // Only the page counter: no name.
-    await expect(deck).toHaveText(/^\s*01\s*\/\s*08\s*$/);
+    // The page counter and no name: no narrator group at all (since T09a the
+    // chip also carries the three sound rows, so its whole text is no longer
+    // just the counter).
+    await expect(deck.locator(".pl-deck-read")).toHaveText(/^\s*01\s*\/\s*08\s*$/);
+    await expect(deck.locator('[data-pl="deck-voice"]')).toHaveCount(0);
+    await expect(deck.locator('[data-pl="deck-narrator"]')).toHaveCount(0);
   });
 });
