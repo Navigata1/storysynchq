@@ -636,10 +636,16 @@ test.describe("T12 · end card · keyboard", () => {
       expect(s.inEnd, `${s.name} is on the end card`).toBe(true);
       expect(s.outline, `${s.name} shows the kit focus ring`).toBe("3px solid");
     }
-
     // focus stays on the card: the next Tab comes back round to the link
     await page.keyboard.press("Tab");
     expect(await page.evaluate(() => document.activeElement?.textContent?.trim())).toBe("What’s inside this tape?");
+    // The link sits on paper (#FFFDF6): gold would be ~2.1:1, under WCAG
+    // 1.4.11's 3:1, so its ring is inked (Register B), the way the kit inks
+    // the ring on its gold button.
+    expect(
+      await page.evaluate(() => getComputedStyle(document.activeElement as HTMLElement).outlineColor),
+      "the link's ring is ink on paper",
+    ).toBe("rgb(30, 26, 22)");
 
     // Escape still leaves the tape (a shared link goes home)
     await page.keyboard.press("Escape");

@@ -199,6 +199,9 @@
     text-decoration: underline;
     text-underline-offset: 3px;
   }
+  /* The kit ring, inked: gold on paper is ~2.1:1, under WCAG 1.4.11's 3:1
+     (cf. `.sk-big--gold:focus-visible`). Beats `.sk-focus` on specificity. */
+  .sk-jcard-foot > a:focus-visible { outline-color: var(--ss-ink); }
   .sk-jcard-foot > a > svg {
     flex: none;
     width: 13px;
