@@ -455,8 +455,10 @@ test.describe("CRITIC · WP-L round 2: try to break it", () => {
       await expect(input).toHaveCount(0, { timeout: 2000 });
     }).toPass({ timeout: 20000 });
 
-    // It is a playing tape, not just a parsed file: the illustration and the
-    // first page's words are on screen.
+    // It is a playing tape, not just a parsed file: it opens on its Tap to
+    // Begin cover (only the drawing shows through, as s05 draws it), and once
+    // begun the illustration and the first page's words are on screen.
+    await page.getByRole("button", { name: /Tap to Begin/i }).click({ timeout: 15000 });
     await expect(page.getByRole("img", { name: /tiny star shining brighter/i })).toBeVisible({
       timeout: 15000,
     });
