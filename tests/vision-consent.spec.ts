@@ -16,7 +16,15 @@
 
 import { test, expect, type Locator, type Page } from "@playwright/test";
 import { validateManifest, type SsyncManifest } from "../src/lib/storysync/manifest";
-import { LIBRARY_KEY, restoreDraft, seedStudioDraft } from "./fixtures/helpers";
+import {
+  DEFAULT_STARTED_AGO_S,
+  DRAFT_KEY,
+  LIBRARY_KEY,
+  restoreDraft,
+  seedStudioDraft,
+  studioDraftState,
+  type SeedDraftOptions,
+} from "./fixtures/helpers";
 import { TWINKLE } from "./fixtures/tapes";
 
 /* -------------------------------------------------------- reference copy (s04) */
@@ -85,6 +93,36 @@ async function continueAndWaitForReady(page: Page): Promise<SsyncManifest> {
   const library = await readLibrary(page);
   expect(library, "one publish, one tape in the device library").toHaveLength(1);
   return library[0].ssyncData;
+}
+
+/**
+ * A reply's draft (T18): the Twinkle draft whose manifest names the tape it
+ * answers in `signature.replyTo` — what the end card's "Send a thank-you"
+ * leaves behind. Seeded once per tab, like seedStudioDraft.
+ */
+async function seedReplyDraft(page: Page, opts: SeedDraftOptions): Promise<void> {
+  const state = studioDraftState("twinkle", opts);
+  (state.manifest as SsyncManifest & { signature?: Record<string, unknown> }).signature = {
+    replyTo: "https://storysynchq.vercel.app/read?story=3f9c2a7be41d0c58",
+  };
+  await page.addInitScript(
+    ({ key, stateJson, ago }) => {
+      try {
+        if (window.sessionStorage.getItem("ssync-fixture-seeded:reply")) return;
+        const now = Date.now();
+        const draftState = JSON.parse(stateJson) as { startedAt: string };
+        draftState.startedAt = new Date(now - ago * 1000).toISOString();
+        window.localStorage.setItem(
+          key,
+          JSON.stringify({ v: 1, savedAt: new Date(now).toISOString(), state: draftState }),
+        );
+        window.sessionStorage.setItem("ssync-fixture-seeded:reply", "1");
+      } catch {
+        /* opaque origins have no storage; the next document seeds */
+      }
+    },
+    { key: DRAFT_KEY, stateJson: JSON.stringify(state), ago: DEFAULT_STARTED_AGO_S },
+  );
 }
 
 /** Rule 5: whatever the case, the saved tape is clean under the v2.1 draft. */
@@ -213,6 +251,8 @@ test.describe("consent · one record per recorded voice", () => {
     }
     // The promise is said once, beneath the last row.
     await expect(dialog.getByText(CONSENT_SUBLINE, { exact: true })).toHaveCount(1);
+    // Not a reply: every row starts answered, so there is no "choose first" line.
+    await expect(dialog.locator('[data-studio="consent-prompt"]')).toHaveCount(0);
 
     /* one tick is not consent for the tape */
     const go = dialog.getByRole("button", { name: "Continue" });
@@ -298,6 +338,46 @@ test.describe("consent · one record per recorded voice", () => {
       { voice: "Mom", grantedBy: "parent/guardian", date: REFERENCE_DATE },
     ]);
     expectCleanTape(tape);
+  });
+
+  test("a reply with two recorded voices: nothing presumed, and one line says what comes first", async ({
+    page,
+  }) => {
+    await seedReplyDraft(page, { voices: { 1: "Mom", 2: "Mom" } });
+    await openStudio(page);
+    const dialog = await openAndAnswerGate(page);
+    await page.locator("#studio-gate-author").fill(TWINKLE.byline);
+
+    const go = dialog.getByRole("button", { name: "Continue" });
+    const radios = dialog.getByRole("radio");
+    await expect(radios).toHaveCount(4);
+    for (const radio of await radios.all()) await expect(radio).not.toBeChecked();
+    await expect(dialog.locator('input[type="checkbox"]')).toHaveCount(0);
+    // No "This consent…" pointing at nothing: the box says what comes first.
+    await expect(dialog.getByText(CONSENT_SUBLINE, { exact: true })).toHaveCount(0);
+    const prompt = dialog.locator('[data-studio="consent-prompt"]');
+    await expect(prompt).toHaveText("Choose whose voice each one is first.");
+    await expect(go).toBeDisabled();
+    await expect(go).toHaveAccessibleDescription("Choose whose voice each one is first.");
+
+    /* one answer: its sentence, and now the promise beneath it */
+    const childs = dialog.getByRole("radio", { name: "A child's — I'm their parent or guardian" });
+    const mine = dialog.getByRole("radio", { name: "Mine — I'm the grown-up speaking" });
+    await childs.nth(0).check();
+    await expect(prompt).toHaveCount(0);
+    await expect(dialog.getByText(CONSENT_SUBLINE, { exact: true })).toBeVisible();
+    await expect(dialog.locator('input[type="checkbox"]')).toHaveCount(1);
+    await dialog.locator("#studio-gate-consent-1").check();
+    await expect(go, "the second voice has no answer yet").toBeDisabled();
+
+    await mine.nth(1).check();
+    await dialog.locator("#studio-gate-consent-2").check();
+    await expect(go).toBeEnabled();
+    const tape = await continueAndWait(page);
+    expect(tape.signature?.voiceConsent).toEqual([
+      { voice: "Mom", grantedBy: "parent/guardian", date: REFERENCE_DATE },
+      { voice: TWINKLE.byline, grantedBy: "self", date: REFERENCE_DATE },
+    ]);
   });
 
   test("no recorded voice: no consent row, no voiceConsent key, ownership and rights as today", async ({

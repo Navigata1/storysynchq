@@ -283,13 +283,54 @@ function FinishedSteps({ steps }: { steps: PublishStep[] }) {
           )}
           <span className={step.state === "error" ? "text-[#ff8a76]" : undefined}>
             {step.label}
-            {step.detail ? ` · ${step.detail}` : null}
+            {/* "· 5 pages" never splits on a phone; the line may break before it. */}
+            {step.detail ? (
+              <>
+                {" "}
+                <span data-studio="step-detail" className="whitespace-nowrap">
+                  · {step.detail}
+                </span>
+              </>
+            ) : null}
           </span>
         </li>
       ))}
     </ol>
   );
 }
+
+/* ------------------------------------------------------------ small pieces */
+
+/** Groups that never split across a line ("LINKED ON THIS DEVICE"), " · " between them. */
+function MetaGroups({ groups }: { groups: string[] }) {
+  return (
+    <>
+      {groups.map((group, i) => (
+        <React.Fragment key={i}>
+          {i > 0 ? " · " : null}
+          <span className="whitespace-nowrap">{group}</span>
+        </React.Fragment>
+      ))}
+    </>
+  );
+}
+
+/**
+ * The link as s05 prints it: no scheme, host and path quiet, the code bold —
+ * and the code always whole (the host/path gives way first, then a long
+ * device code wraps inside the field).
+ */
+function splitShareUrl(url: string): { prefix: string; code: string } {
+  const bare = url.replace(/^https?:\/\//, "");
+  const match = bare.match(/^(.*[?&]story=)([^&#]+)$/);
+  return match ? { prefix: match[1], code: match[2] } : { prefix: bare, code: "" };
+}
+
+const FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+/** How long "Tap again to delete everything" stays armed. */
+const DISARM_MS = 5000;
 
 /* ------------------------------------------------------------------- card */
 
@@ -322,7 +363,20 @@ export function PublishCard({
   onRetry,
 }: PublishCardProps) {
   const [copied, setCopied] = React.useState(false);
+  /** Copy could not reach the clipboard: the field is selected and says how. */
+  const [copyFailed, setCopyFailed] = React.useState(false);
+  /** One tap on "Pull the tape out" arms it; it disarms on blur, Escape, another action, or after 5 s. */
   const [confirmDelete, setConfirmDelete] = React.useState(false);
+  /** The overlay: the modal's edge for the focus trap. */
+  const overlayRef = React.useRef<HTMLDivElement | null>(null);
+  const headingRef = React.useRef<HTMLHeadingElement | null>(null);
+  const urlRef = React.useRef<HTMLInputElement | null>(null);
+  /**
+   * The control focus goes back to when the card closes: "Finish my story",
+   * which the gate gives focus back to as it closes, just before this card's
+   * first effect runs. Kept once (a ref survives a Strict Mode re-run).
+   */
+  const openerRef = React.useRef<HTMLElement | null>(null);
   const [qr, setQr] = React.useState<string | null>(null);
   const [canShare, setCanShare] = React.useState(false);
   const twoColumns = useTwoColumns();
@@ -347,6 +401,93 @@ export function PublishCard({
     setCanShare(typeof navigator !== "undefined" && typeof navigator.share === "function");
   }, []);
 
+  // A modal: focus moves in as each phase opens — the printing panel, then the
+  // "Your tape is ready" heading — and goes back to the opener when it closes.
+  React.useEffect(() => {
+    if (!openerRef.current) {
+      const active = document.activeElement;
+      if (active instanceof HTMLElement && active !== document.body && !overlayRef.current?.contains(active)) {
+        openerRef.current = active;
+      }
+    }
+    const root = overlayRef.current;
+    const target =
+      phase === "published" ? headingRef.current : root?.querySelector<HTMLElement>("[data-pc-busy]");
+    // Never pull focus off a control the grown-up has already reached in the card.
+    const active = document.activeElement;
+    const settled = active && active !== document.body && root?.contains(active) && !active.matches("[data-pc-busy]");
+    if (target && !settled) target.focus({ preventScroll: true });
+  }, [phase]);
+
+  React.useEffect(
+    () => () => {
+      const active = document.activeElement;
+      if (active && active !== document.body) return;
+      const opener = openerRef.current;
+      if (opener && opener.isConnected) opener.focus();
+    },
+    [],
+  );
+
+  // Escape: disarm the delete first; otherwise leave (never mid-print).
+  // Tab and Shift+Tab stay inside the card.
+  React.useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const root = overlayRef.current;
+      if (!root) return;
+      if (e.key === "Escape") {
+        if (confirmDelete) {
+          e.preventDefault();
+          setConfirmDelete(false);
+          return;
+        }
+        if (phase === "published" || error) {
+          e.preventDefault();
+          onBack();
+        }
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const items = Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
+        (el) => el.getClientRects().length > 0,
+      );
+      if (items.length === 0) {
+        e.preventDefault();
+        return;
+      }
+      const first = items[0];
+      const last = items[items.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+      if (!active || !root.contains(active)) {
+        e.preventDefault();
+        (e.shiftKey ? last : first).focus();
+        return;
+      }
+      const before = (a: Node, b: Node) => !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+      if (e.shiftKey && (active === first || before(active, first))) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && (active === last || before(last, active))) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [confirmDelete, error, onBack, phase]);
+
+  React.useEffect(() => {
+    if (!confirmDelete) return;
+    const id = window.setTimeout(() => setConfirmDelete(false), DISARM_MS);
+    return () => window.clearTimeout(id);
+  }, [confirmDelete]);
+
+  React.useEffect(() => {
+    if (!copied) return;
+    const id = window.setTimeout(() => setCopied(false), 2200);
+    return () => window.clearTimeout(id);
+  }, [copied]);
+
   React.useEffect(() => {
     let cancelled = false;
     if (!shareUrl) {
@@ -367,17 +508,27 @@ export function PublishCard({
   }, [shareUrl]);
 
   const copy = async () => {
+    setConfirmDelete(false);
     if (!shareUrl) return;
     try {
       await navigator.clipboard.writeText(shareUrl);
+      setCopyFailed(false);
       setCopied(true);
-      window.setTimeout(() => setCopied(false), 2200);
     } catch {
+      // No clipboard here (an insecure page, a refusal, an older iPhone): hand
+      // the grown-up the link itself, selected, and say how to copy it.
       setCopied(false);
+      setCopyFailed(true);
+      const field = urlRef.current;
+      if (field) {
+        field.focus();
+        field.select();
+      }
     }
   };
 
   const share = async () => {
+    setConfirmDelete(false);
     if (!shareUrl) return;
     try {
       await navigator.share({
@@ -393,16 +544,19 @@ export function PublishCard({
   if (phase === "publishing") {
     return (
       <div
+        ref={overlayRef}
         data-studio="publish-overlay"
         className="studio-fade fixed inset-0 z-[60] overflow-y-auto bg-[#070a12]/94 p-4 backdrop-blur-md"
       >
         <div className="mx-auto flex min-h-full w-full max-w-lg flex-col justify-center py-6">
           <GlassPanel
+            data-pc-busy=""
+            tabIndex={-1}
             role="dialog"
             aria-modal="true"
             aria-label="Finishing your story"
             aria-busy={!error}
-            className="studio-rise border-white/12 bg-[#0b1020]/95 p-6"
+            className="studio-rise border-white/12 bg-[#0b1020]/95 p-6 outline-none"
           >
             <div className="flex items-center gap-4">
               <Reel spinning={!error} size={48} />
@@ -469,7 +623,12 @@ export function PublishCard({
   const leftTop = (
     <>
       <div className="flex min-h-[34px] flex-wrap items-center justify-between gap-x-4 gap-y-1">
-        <h2 className="text-[22px]/[1.1] font-semibold tracking-[-0.015em] text-white sm:text-[26px]">
+        <h2
+          ref={headingRef}
+          id="studio-ready-title"
+          tabIndex={-1}
+          className="text-[22px]/[1.1] font-semibold tracking-[-0.015em] text-white outline-none sm:text-[26px]"
+        >
           Your tape is ready
         </h2>
         <p
@@ -497,7 +656,10 @@ export function PublishCard({
         label="Download the .storysync file"
         data-pc-focus="download"
         variant="gold"
-        onClick={onDownload}
+        onClick={() => {
+          setConfirmDelete(false);
+          onDownload();
+        }}
         className="pc-download min-h-14 w-full justify-center text-[16px]"
       />
       <BigButton
@@ -517,12 +679,17 @@ export function PublishCard({
           if (confirmDelete) onDeleteEverything();
           else setConfirmDelete(true);
         }}
+        onBlur={() => setConfirmDelete(false)}
         className={`mt-[18px] min-h-[60px] w-full justify-center text-[15px] ${
           confirmDelete
             ? ""
             : "border-[1.5px] border-[rgba(227,69,47,0.72)] bg-[rgba(227,69,47,0.07)] text-[#ffb9ad] hover:border-[rgba(227,69,47,0.9)] hover:bg-[rgba(227,69,47,0.12)]"
         }`}
       />
+      {/* The label swap is heard, not only seen. */}
+      <span role="status" className="sr-only">
+        {confirmDelete ? "Press again to delete everything" : ""}
+      </span>
       <p className="mt-3 text-[13px]/[1.45] text-pretty text-ss-fg-3">
         Delete removes the pictures, the recordings, the saved copy and the link. Nothing is kept in
         an archive.
@@ -530,9 +697,20 @@ export function PublishCard({
     </>
   );
 
+  const link = shareUrl ? splitShareUrl(shareUrl) : null;
+  // With no cloud library the link opens on this device only: the card says so
+  // before it offers the QR, and never promises "any browser" (s05 "The link,
+  // honestly").
+  const deviceNote = (
+    <p data-studio="device-note" className="mt-3 text-[13px]/[1.45] text-pretty text-ss-fg-3">
+      Unlisted and unguessable — and with no cloud library configured it opens the tape on this
+      device. To send the story further, hand someone the .storysync file.
+    </p>
+  );
+
   const right = (
     <div data-studio="publish-right" className="pc-col">
-      {shareUrl ? (
+      {shareUrl && link ? (
         <>
           <p
             data-studio="link-label"
@@ -542,14 +720,36 @@ export function PublishCard({
             private link
           </p>
           <div className="mt-3.5 flex h-14 items-center gap-2 rounded-[14px] border border-white/14 bg-black/40 py-0 pr-2 pl-1.5 shadow-[inset_0_2px_6px_rgba(0,0,0,0.4)]">
-            <input
-              readOnly
-              value={shareUrl}
-              aria-label="Share link"
-              data-studio="share-url"
-              onFocus={(e) => e.currentTarget.select()}
-              className="sk-focus h-10 min-w-0 flex-1 rounded-[10px] bg-transparent px-2 font-ss-mono text-[13px] text-ss-fg-2"
-            />
+            {/* The real field holds the whole URL (selection, screen readers);
+                at rest the printed link is drawn over it, and focus shows the field. */}
+            <div className="relative h-10 min-w-0 flex-1">
+              <input
+                ref={urlRef}
+                readOnly
+                value={shareUrl}
+                aria-label="Share link"
+                aria-describedby={copyFailed ? "pc-copy-hint" : undefined}
+                data-studio="share-url"
+                onFocus={(e) => {
+                  setConfirmDelete(false);
+                  e.currentTarget.select();
+                }}
+                className="peer sk-focus h-10 w-full rounded-[10px] bg-transparent px-2 font-ss-mono text-[13px] text-transparent caret-transparent focus:text-ss-fg-2"
+              />
+              <span
+                aria-hidden="true"
+                data-studio="share-url-display"
+                // Forced colours paint the field's own text, so the printed copy steps aside.
+                className="pointer-events-none absolute inset-0 flex items-center px-2 font-ss-mono text-[13px]/4 peer-focus:invisible forced-colors:hidden"
+              >
+                <span className="min-w-0 truncate text-ss-fg-3">{link.prefix}</span>
+                {link.code ? (
+                  <b data-studio="share-code" className="max-w-full flex-none font-semibold [overflow-wrap:anywhere] text-ss-fg">
+                    {link.code}
+                  </b>
+                ) : null}
+              </span>
+            </div>
             <button
               type="button"
               onClick={copy}
@@ -563,32 +763,49 @@ export function PublishCard({
               {copied ? "Copied" : "Copy"}
             </button>
           </div>
+          <span role="status" className="sr-only">
+            {copied ? "Link copied" : ""}
+          </span>
+          {copyFailed ? (
+            <p id="pc-copy-hint" data-studio="copy-hint" className="mt-2 text-[13px]/[1.4] text-ss-gold-2">
+              Press and hold to copy — the link is selected.
+            </p>
+          ) : null}
+          {cloud ? null : deviceNote}
 
           <div className="pc-qr mt-5 flex flex-col items-center gap-4 rounded-[18px] border-2 border-ss-ink bg-ss-paper p-4 text-ss-ink shadow-[0_24px_40px_-24px_rgba(0,0,0,0.8)] sm:flex-row sm:gap-[22px] sm:p-5">
-            {qr ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={qr}
-                data-studio="share-qr"
-                alt={`QR code that opens ${title}`}
-                width={160}
-                height={160}
-                className="size-[160px] flex-none rounded-lg"
-              />
-            ) : (
-              <div className="size-[160px] flex-none rounded-lg bg-black/5" aria-hidden="true" />
-            )}
+            {/* The printed sticker (s05 .ss-qr): paper, 10px in, a 2px ink rule, radius 10. */}
+            <span
+              data-studio="qr-frame"
+              className="block flex-none rounded-[10px] border-2 border-ss-ink bg-ss-paper p-2.5"
+            >
+              {qr ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={qr}
+                  data-studio="share-qr"
+                  alt={`QR code that opens ${title}`}
+                  width={136}
+                  height={136}
+                  className="block size-[136px]"
+                />
+              ) : (
+                <span className="block size-[136px] bg-black/5" aria-hidden="true" />
+              )}
+            </span>
             <div className="min-w-0">
               <p
                 data-studio="qr-label"
                 className="flex items-center gap-2 font-ss-mono text-[12px]/[1.2] font-medium tracking-[0.16em] text-ss-ink-2 uppercase"
               >
                 <ScanLine aria-hidden="true" className="size-[15px] flex-none" strokeWidth={2} />
-                point a phone camera here
+                {/* s05's kicker invites another phone; with no cloud library no other phone can open it. */}
+                {cloud ? "point a phone camera here" : "this device only"}
               </p>
               <p className="mt-2.5 text-[16px]/[1.45] text-pretty text-ss-ink-2">
-                Grandparents do not need the app, an account, or the file — the camera app opens the
-                story in any browser.
+                {cloud
+                  ? "Grandparents do not need the app, an account, or the file — the camera app opens the story in any browser."
+                  : "This code opens the tape on this device only. Another phone needs the .storysync file."}
               </p>
             </div>
           </div>
@@ -603,11 +820,12 @@ export function PublishCard({
             />
           ) : null}
 
-          <p className="mt-3 text-[13px]/[1.45] text-pretty text-ss-fg-3">
-            {cloud
-              ? "Unlisted and unguessable. Only someone holding this link can open the story — deleting the story revokes it."
-              : "Unlisted and unguessable — and with no cloud library configured it opens the tape on this device. To send the story further, hand someone the .storysync file."}
-          </p>
+          {cloud ? (
+            <p className="mt-3 text-[13px]/[1.45] text-pretty text-ss-fg-3">
+              Unlisted and unguessable. Only someone holding this link can open the story — deleting
+              the story revokes it.
+            </p>
+          ) : null}
         </>
       ) : (
         <div>
@@ -640,8 +858,13 @@ export function PublishCard({
 
   return (
     <div
+      ref={overlayRef}
       data-studio="publish-overlay"
-      className="studio-fade fixed inset-0 z-[60] overflow-y-auto bg-[#070a12]/94 p-4 backdrop-blur-md"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="studio-ready-title"
+      // Opaque: the Studio's header glow does not show through the printed tape.
+      className="studio-fade fixed inset-0 z-[60] overflow-y-auto bg-[#070a12] p-4"
     >
       <div ref={cardRef} className="pc-ready">
         <div className="pc-print">
@@ -666,11 +889,22 @@ export function PublishCard({
             meta={
               <>
                 <span className="block">
-                  SIDE A · {pageCount} {pageCount === 1 ? "PAGE" : "PAGES"} · {durationLabel} · {codecLabel}
+                  <MetaGroups
+                    groups={[
+                      "SIDE A",
+                      `${pageCount} ${pageCount === 1 ? "PAGE" : "PAGES"}`,
+                      durationLabel,
+                      codecLabel,
+                    ]}
+                  />
                 </span>
                 <span className="pc-meta-2 block">
-                  SSYNC 2.0 ·{" "}
-                  {shareUrl ? (cloud ? "SHARED UNLISTED" : "LINKED ON THIS DEVICE") : "ON THIS DEVICE"}
+                  <MetaGroups
+                    groups={[
+                      "SSYNC 2.0",
+                      shareUrl ? (cloud ? "SHARED UNLISTED" : "LINKED ON THIS DEVICE") : "ON THIS DEVICE",
+                    ]}
+                  />
                 </span>
               </>
             }

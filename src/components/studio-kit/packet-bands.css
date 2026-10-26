@@ -119,6 +119,22 @@
     padding-bottom: var(--sk-band-overlay-h, 66px);
   }
 
+  /* Opt-in: a list inside a flex column that is taller than the bands (the
+     gate's sheet standing beside a taller gate). The list grows, and each
+     band takes an equal share of the extra paper, so no blank paper is left
+     under the Signature band. The 8px rhythm between bands is unchanged, and
+     with no extra room nothing moves. Other consumers keep their rhythm. */
+  .sk-packet--fill {
+    flex: 1 1 auto;
+  }
+  .sk-packet--fill > .sk-packet-row {
+    flex: 1 1 auto;
+    align-items: stretch;
+  }
+  .sk-packet--fill > .sk-packet-row > .sk-packet-num {
+    align-self: center;
+  }
+
   .sk-packet-tag {
     display: inline-flex;
     align-items: center;

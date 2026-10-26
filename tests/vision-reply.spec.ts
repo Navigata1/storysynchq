@@ -184,7 +184,13 @@ async function expectReplyCreator(page: Page): Promise<void> {
 }
 
 /** "Finish my story" → the gate: the sum, "Mine", the byline, consent, Continue. */
-async function publishAsGrownUp(page: Page, byline: string): Promise<void> {
+/**
+ * Pass the gate as the grown-up and choose "Mine". With `unanswered`, first
+ * check that a reply's gate opens with no answer to "Whose voice is on this
+ * tape?" (M6: a reply may be a grandparent's own voice or a child's, so neither
+ * is presumed), no consent sentence to tick, and Continue waiting.
+ */
+async function publishAsGrownUp(page: Page, byline: string, opts: { unanswered?: boolean } = {}): Promise<void> {
   const close = page.getByRole("button", { name: "Close Voice" });
   if (await close.isVisible()) await close.click();
   await page.getByRole("button", { name: "Finish my story" }).click();
@@ -196,6 +202,28 @@ async function publishAsGrownUp(page: Page, byline: string): Promise<void> {
   await page.locator("#studio-gate-answer").fill(String(Number(a) * Number(b)));
   await page.locator("#studio-gate-author").fill(byline);
   const mine = dialog.getByRole("radio", { name: MINE });
+  if (opts.unanswered) {
+    const childs = dialog.getByRole("radio", { name: "A child's — I'm their parent or guardian" });
+    await expect(mine).not.toBeChecked();
+    await expect(childs).not.toBeChecked();
+    await expect(dialog.getByRole("checkbox")).toHaveCount(0);
+    await expect(dialog.getByText("I am this child's parent or guardian", { exact: false })).toHaveCount(0);
+    await expect(dialog.getByRole("button", { name: "Continue" })).toBeDisabled();
+    // No half-empty consent box: no "This consent…" pointing at nothing and no
+    // 07 badge — one line says what comes first, and why Continue waits.
+    await expect(dialog.getByText(/This consent is written into the tape/)).toHaveCount(0);
+    const prompt = dialog.locator('[data-studio="consent-prompt"]');
+    await expect(prompt).toHaveText("Choose whose voice it is first.");
+    await expect(prompt).toBeVisible();
+    await expect(dialog.getByRole("button", { name: "Continue" })).toHaveAccessibleDescription(
+      "Choose whose voice it is first.",
+    );
+    await mine.check();
+    await expect(prompt).toHaveCount(0);
+    await expect(dialog.getByText(/This consent is written into the tape/)).toBeVisible();
+    await expect(dialog.getByRole("checkbox", { name: "This is my own voice, and I'm happy to share it." })).toBeVisible();
+    await expect(dialog.getByRole("button", { name: "Continue" }), "chosen, not yet ticked").toBeDisabled();
+  }
   if ((await mine.count()) > 0) await mine.check();
   for (const box of await dialog.locator('input[type="checkbox"]').all()) await box.check();
   await page.getByRole("button", { name: "Continue" }).click();
@@ -465,7 +493,7 @@ test.describe("T18 · the reply opens in the Creator", () => {
     await expect(page.locator(".studio[data-recording='true']")).toHaveCount(0, { timeout: 10000 });
     await expect(page.getByRole("button", { name: /^Page 1, has voice/ })).toBeVisible();
 
-    await publishAsGrownUp(page, "Grandma Rose");
+    await publishAsGrownUp(page, "Grandma Rose", { unanswered: true });
     const tape = await replyRow(page);
     expect(tape.pages).toHaveLength(1);
     expect(tape.pages[0].text?.audioCodec).toBe("aac");

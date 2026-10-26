@@ -650,6 +650,138 @@ test.describe("T14 · the grown-up moment and what goes into the tape", () => {
     await expect(page.getByRole("button", { name: "Finish my story" })).toBeVisible();
     expect(await readLibrary(page)).toHaveLength(0);
   });
+
+  /* ------------------------------------------------------- 10 · M6 craft */
+
+  for (const motion of ["no-preference", "reduce"] as const) {
+    test(`10 · a wrong answer stays said until the grown-up types again (${motion} motion)`, async ({ page }) => {
+      await page.emulateMedia({ reducedMotion: motion });
+      const dialog = await openGate(page);
+      const field = page.locator("#studio-gate-answer");
+      const question = page.locator('label[for="studio-gate-answer"]');
+      const before = (await question.innerText()).trim();
+      await field.fill("1");
+      await page.locator("#studio-gate-consent").check();
+      await dialog.getByRole("button", { name: "Continue" }).click();
+      await expect(question).not.toHaveText(before);
+      // Long after the 500 ms shake: the words and the field's state are still there.
+      await page.waitForTimeout(1500);
+      const alert = dialog.getByRole("alert");
+      await expect(alert).toHaveText("Not quite — here is a new one.");
+      await expect(field).toHaveAttribute("aria-invalid", "true");
+      await expect(field).toHaveAttribute("aria-describedby", "studio-gate-error");
+      await expect(dialog.locator('[data-studio="gate"]')).not.toHaveClass(/studio-shake/);
+      // A new digit is a new attempt: the alert goes.
+      await field.press("4");
+      await expect(alert).toHaveCount(0);
+      await expect(field).toHaveAttribute("aria-invalid", "false");
+      await expect(field).not.toHaveAttribute("aria-describedby", /.+/);
+    });
+  }
+
+  test("10 · closing the moment gives focus back to 'Finish my story' (Escape and Not now)", async ({ page }) => {
+    await openGate(page);
+    const finish = page.getByRole("button", { name: "Finish my story" });
+    const dialog = page.getByRole("dialog", { name: GATE_TITLE });
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect(finish).toBeFocused();
+
+    // Open it again from the keyboard, then leave by Tab to Not now and Enter.
+    await finish.press("Enter");
+    await expect(dialog).toBeVisible();
+    await expect(page.locator("#studio-gate-answer")).toBeFocused();
+    const notNow = dialog.getByRole("button", { name: "Not now" });
+    await notNow.focus();
+    await page.keyboard.press("Enter");
+    await expect(dialog).toBeHidden();
+    await expect(finish).toBeFocused();
+    expect(await readLibrary(page)).toHaveLength(0);
+  });
+
+  test("10 · the privacy footer meets WCAG AA on the gate", async ({ page }) => {
+    const dialog = await openGate(page);
+    const foot = dialog.getByText(GATE_FOOT, { exact: true });
+    await expect(foot).toBeVisible();
+    const ratio = await foot.evaluate((el) => {
+      const parse = (c: string) => {
+        const m = c.match(/[\d.]+/g)!.map(Number);
+        return { r: m[0], g: m[1], b: m[2], a: m.length > 3 ? m[3] : 1 };
+      };
+      // Composite the gate's fill (and the text) over the Studio's navy.
+      const navy = { r: 10, g: 14, b: 26 };
+      const over = (c: { r: number; g: number; b: number; a: number }, under: typeof navy) => ({
+        r: c.r * c.a + under.r * (1 - c.a),
+        g: c.g * c.a + under.g * (1 - c.a),
+        b: c.b * c.a + under.b * (1 - c.a),
+      });
+      const gate = el.closest('[data-studio="gate"]')!;
+      const bg = over(parse(getComputedStyle(gate).backgroundColor), navy);
+      const fg = over(parse(getComputedStyle(el).color), bg);
+      const lum = ({ r, g, b }: typeof navy) => {
+        const ch = (v: number) => {
+          const s = v / 255;
+          return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+        };
+        return 0.2126 * ch(r) + 0.7152 * ch(g) + 0.0722 * ch(b);
+      };
+      const [hi, lo] = [lum(fg), lum(bg)].sort((x, y) => y - x);
+      return (hi + 0.05) / (lo + 0.05);
+    });
+    expect(ratio, "12px footer text is at least 4.5:1").toBeGreaterThanOrEqual(4.5);
+  });
+
+  test("10 · s04's look: navy scrim, pill actions, a quiet Continue until the tick, no blank paper", async ({
+    page,
+  }) => {
+    await page.setViewportSize(TABLET);
+    const dialog = await openGate(page);
+    await settle(dialog);
+
+    /* the scrim: navy at about .68, not black */
+    const scrim = await page.locator('[data-studio="gate-overlay"]').evaluate((el) => {
+      const m = getComputedStyle(el).backgroundColor.match(/[\d.]+/g)!.map(Number);
+      return { r: m[0], g: m[1], b: m[2], a: m.length > 3 ? m[3] : 1 };
+    });
+    expect(scrim.a).toBeGreaterThanOrEqual(0.66);
+    expect(scrim.a).toBeLessThanOrEqual(0.7);
+    expect(scrim.b, "a navy tint").toBeGreaterThan(scrim.r);
+
+    /* both actions are pills (half their 56px height) */
+    const notNow = dialog.getByRole("button", { name: "Not now" });
+    const go = dialog.getByRole("button", { name: "Continue" });
+    for (const button of [notNow, go]) {
+      const radius = await button.evaluate((el) => parseFloat(getComputedStyle(el).borderTopLeftRadius));
+      expect(radius).toBeGreaterThanOrEqual(28);
+    }
+
+    /* Continue waits quietly: full opacity, no gold gradient, until answer and tick */
+    await answer(page);
+    await expect(go).toBeDisabled();
+    const waiting = await go.evaluate((el) => {
+      const cs = getComputedStyle(el);
+      return { opacity: cs.opacity, image: cs.backgroundImage };
+    });
+    expect(waiting).toEqual({ opacity: "1", image: "none" });
+    await page.locator("#studio-gate-consent").check();
+    await expect(go).toBeEnabled();
+    await expect.poll(() => go.evaluate((el) => getComputedStyle(el).backgroundImage)).toContain("gradient");
+    await expect.poll(() => go.evaluate((el) => getComputedStyle(el).opacity)).toBe("1");
+
+    /* the sheet: the footer follows the Signature band, no blank paper between */
+    await page.evaluate(() => document.fonts.ready);
+    await settle(dialog);
+    const gap = await page.evaluate(() => {
+      const bands = document.querySelectorAll('[data-studio="tape-sheet"] [data-sk="packet-band"]');
+      const last = bands[bands.length - 1].getBoundingClientRect();
+      const foot = document.querySelector('[data-studio="sheet-foot"]')!.getBoundingClientRect();
+      const sheet = document.querySelector('[data-studio="tape-sheet"]')!.getBoundingClientRect();
+      return { gap: foot.top - last.bottom, footBottom: foot.bottom, sheetBottom: sheet.bottom };
+    });
+    expect(gap.gap, "the footer sits under the Signature band").toBeLessThanOrEqual(24);
+    expect(gap.gap).toBeGreaterThanOrEqual(-1);
+    expect(gap.sheetBottom - gap.footBottom, "and the footer ends the sheet").toBeLessThanOrEqual(8);
+  });
 });
 
 /* ======================================================= the modules (node) */

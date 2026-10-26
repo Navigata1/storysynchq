@@ -77,6 +77,14 @@ export interface ParentGateProps {
    */
   onPass: (author: string, consents: ConsentChoice[]) => void;
   onCancel: () => void;
+  /**
+   * The answer "Whose voice is on this tape?" starts on. Default: a child's
+   * (the s04 gate as it opens) — except on a reply (a draft whose manifest
+   * carries `signature.replyTo`), which starts with no answer at all: a reply
+   * can be a grandparent's own voice or a child's, so the grown-up says which
+   * before a consent sentence is offered. `null` asks the same way.
+   */
+  initialGrantor?: ConsentGrantor | null;
 }
 
 interface Challenge {
@@ -93,14 +101,20 @@ function makeChallenge(previous?: Challenge | null): Challenge {
   }
 }
 
-/** One recorded voice's answers: whose voice it is, and whether the grown-up ticked. */
+/**
+ * One recorded voice's answers: whose voice it is (null: not answered yet),
+ * and whether the grown-up ticked.
+ */
 interface VoiceRow {
-  grantedBy: ConsentGrantor;
+  grantedBy: ConsentGrantor | null;
   ticked: boolean;
 }
 
-/** A child's voice, unticked: the s04 gate as it opens. */
-const FRESH_ROW: VoiceRow = { grantedBy: "parent/guardian", ticked: false };
+/** A reply's draft names the tape it answers in `signature.replyTo` (T18). */
+function isReplyDraft(manifest: TapeSheetSource["manifest"]): boolean {
+  const signature = (manifest as { signature?: { replyTo?: unknown } }).signature;
+  return typeof signature?.replyTo === "string" && signature.replyTo.length > 0;
+}
 
 /** The consent sentence for each answer to "Whose voice is on this tape?" (s04, s06). */
 const SENTENCE: Record<ConsentGrantor, string> = {
@@ -112,6 +126,10 @@ const WHOSE_OPTIONS: { value: ConsentGrantor; label: string }[] = [
   { value: "self", label: "Mine — I'm the grown-up speaking" },
   { value: "parent/guardian", label: "A child's — I'm their parent or guardian" },
 ];
+
+/** What the consent box says before any voice has an answer (a reply as it opens). */
+const WHOSE_FIRST = "Choose whose voice it is first.";
+const WHOSE_FIRST_EACH = "Choose whose voice each one is first.";
 
 const SUBLINE =
   "This consent is written into the tape itself, so it travels with the story wherever the file goes.";
@@ -153,14 +171,31 @@ export function ParentGate({
   onAuthorChange,
   onPass,
   onCancel,
+  initialGrantor,
 }: ParentGateProps) {
+  /** A fresh, unticked row: a child's voice (s04), or no answer yet on a reply. */
+  const [freshRow] = React.useState<VoiceRow>(() => ({
+    grantedBy:
+      initialGrantor !== undefined
+        ? initialGrantor
+        : isReplyDraft(sheet.manifest)
+          ? null
+          : "parent/guardian",
+    ticked: false,
+  }));
   const [challenge, setChallenge] = React.useState<Challenge | null>(null);
   const [answer, setAnswer] = React.useState("");
   const [author, setAuthor] = React.useState(defaultAuthor);
   /** One row per voice, by position in `voices`. */
-  const [rows, setRows] = React.useState<VoiceRow[]>(() => voices.map(() => FRESH_ROW));
+  const [rows, setRows] = React.useState<VoiceRow[]>(() => voices.map(() => freshRow));
   const [askedFor, setAskedFor] = React.useState<string[]>(voices);
+  /**
+   * A wrong answer: the alert, aria-invalid and aria-describedby stay until the
+   * grown-up starts typing the new answer — under reduced motion there is no
+   * shake, so the words are the only sign. `shake` is the 500 ms wobble alone.
+   */
   const [wrong, setWrong] = React.useState(false);
+  const [shake, setShake] = React.useState(false);
   /** The gate's own clock: the stamp's date is the date the record will carry. */
   const [today] = React.useState(() => new Date());
   const inputRef = React.useRef<HTMLInputElement | null>(null);
@@ -171,28 +206,58 @@ export function ParentGate({
   // rendering (not in an effect) keeps the answers and the rows in step.
   if (askedFor.join("\n") !== voices.join("\n")) {
     setAskedFor(voices);
-    setRows(renamedInPlace(askedFor, voices) ? rows : voices.map(() => FRESH_ROW));
+    setRows(renamedInPlace(askedFor, voices) ? rows : voices.map(() => freshRow));
   }
 
-  const rowAt = (i: number): VoiceRow => rows[i] ?? FRESH_ROW;
-  const everyVoiceConsented = voices.every((_, i) => rowAt(i).ticked);
-  const grantors = voices.map((_, i) => rowAt(i).grantedBy);
-  const allMine = voices.length > 0 && grantors.every((g) => g === "self");
+  const rowAt = (i: number): VoiceRow => rows[i] ?? freshRow;
+  const everyVoiceConsented = voices.every((_, i) => rowAt(i).grantedBy !== null && rowAt(i).ticked);
+  const answers = voices.map((_, i) => rowAt(i).grantedBy);
+  /** Every voice has an answer to "whose voice". */
+  const everyVoiceAnswered = answers.every((g) => g !== null);
+  /**
+   * At least one voice has an answer — only then is there a consent sentence
+   * for SUBLINE ("This consent…") and the 07 badge to speak of. Before that (a
+   * reply as it opens) the box says what comes first instead.
+   */
+  const anyVoiceAnswered = answers.some((g) => g !== null);
+  /** For the stamp, which only inks once every row is answered and ticked. */
+  const grantors = answers.map((g) => g ?? "parent/guardian");
+  const allMine = voices.length > 0 && answers.every((g) => g === "self");
 
   /** Rewrite one voice's row; the others stay as they are. */
   const updateRow = (index: number, next: (row: VoiceRow) => VoiceRow) =>
     setRows((prev) =>
-      voices.map((_, i) => (i === index ? next(prev[i] ?? FRESH_ROW) : (prev[i] ?? FRESH_ROW))),
+      voices.map((_, i) => (i === index ? next(prev[i] ?? freshRow) : (prev[i] ?? freshRow))),
     );
   const tick = (index: number, on: boolean) => updateRow(index, (row) => ({ ...row, ticked: on }));
   /** A new answer to "whose voice" is a new sentence: its tick is asked for again. */
   const choose = (index: number, grantedBy: ConsentGrantor) =>
     updateRow(index, (row) => (row.grantedBy === grantedBy ? row : { grantedBy, ticked: false }));
 
+  // The control that opened the moment ("Finish my story") gets focus back
+  // when it closes — Escape and Not now; on a pass the publish card takes it.
+  // Read while rendering, before this moment moves focus to the answer.
+  const [opener] = React.useState<HTMLElement | null>(() =>
+    typeof document !== "undefined" && document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null,
+  );
+
   React.useEffect(() => {
     setChallenge(makeChallenge());
     inputRef.current?.focus();
-  }, []);
+    return () => {
+      const active = document.activeElement;
+      if (active && active !== document.body) return;
+      if (opener && opener !== document.body && opener.isConnected) opener.focus();
+    };
+  }, [opener]);
+
+  React.useEffect(() => {
+    if (!shake) return;
+    const id = window.setTimeout(() => setShake(false), 500);
+    return () => window.clearTimeout(id);
+  }, [shake]);
 
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -231,15 +296,15 @@ export function ParentGate({
     if (Number(answer.trim()) === challenge.a * challenge.b) {
       onPass(
         author.trim(),
-        voices.map((voice, i) => ({ voice, grantedBy: rowAt(i).grantedBy })),
+        voices.map((voice, i) => ({ voice, grantedBy: grantors[i] })),
       );
       return;
     }
     setWrong(true);
+    setShake(true);
     setAnswer("");
     setChallenge(makeChallenge(challenge));
     inputRef.current?.focus();
-    window.setTimeout(() => setWrong(false), 500);
   };
 
   /* ------------------------------------------------------------- the sheet */
@@ -277,7 +342,7 @@ export function ParentGate({
     <div
       data-studio="gate-overlay"
       role="presentation"
-      className="studio-fade fixed inset-0 z-[70] flex overflow-y-auto overscroll-contain bg-black/72 backdrop-blur-sm"
+      className="studio-fade fixed inset-0 z-[70] flex overflow-y-auto overscroll-contain bg-[rgba(6,9,16,0.68)] backdrop-blur-sm"
     >
       <div
         ref={dialogRef}
@@ -290,7 +355,7 @@ export function ParentGate({
         <div
           data-studio="gate"
           className={`gate-panel flex flex-col rounded-3xl border border-white/14 bg-[rgba(11,16,32,0.95)] p-5 shadow-[0_50px_90px_-30px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,255,255,0.06)] sm:p-7 ${
-            wrong ? "studio-shake" : ""
+            shake ? "studio-shake" : ""
           }`}
         >
           <p
@@ -332,7 +397,10 @@ export function ParentGate({
                 inputMode="numeric"
                 autoComplete="off"
                 value={answer}
-                onChange={(e) => setAnswer(e.target.value)}
+                onChange={(e) => {
+                  setAnswer(e.target.value);
+                  if (wrong && e.target.value !== answer) setWrong(false);
+                }}
                 aria-invalid={wrong}
                 aria-describedby={wrong ? "studio-gate-error" : undefined}
                 className="sk-focus h-14 w-full rounded-[14px] border border-white/15 bg-black/50 px-5 text-2xl font-semibold tracking-[0.02em] text-white"
@@ -398,7 +466,19 @@ export function ParentGate({
                           compact
                         />
                       ) : null}
-                      {/* The whole row is the target — a checkbox alone is too small. */}
+                      {/* No answer yet (a reply): no sentence to agree to until the grown-up says whose voice it is. */}
+                      {row.grantedBy === null ? (
+                        single ? (
+                          <p
+                            id="studio-gate-whose-first"
+                            data-studio="consent-prompt"
+                            className="flex min-h-[44px] items-center text-[14.5px]/[1.45] font-medium text-ss-fg-2"
+                          >
+                            {WHOSE_FIRST}
+                          </p>
+                        ) : null
+                      ) : (
+                      /* The whole row is the target — a checkbox alone is too small. */
                       <label
                         htmlFor={id}
                         data-studio="consent-row"
@@ -436,23 +516,34 @@ export function ParentGate({
                           </span>
                         </span>
                       </label>
+                      )}
                     </div>
                   );
                 })}
-                <div className={`mt-1.5 flex items-end gap-3 ${single ? "pl-10" : "px-2 pb-1"}`}>
-                  <p className="min-w-0 flex-1 text-xs/[1.45] text-ss-fg-3">{SUBLINE}</p>
-                  {/* The row's twin on the sheet: layer 07, the Signature. */}
-                  <span
-                    aria-hidden="true"
-                    className="mb-px grid size-[22px] flex-none place-items-center rounded-full bg-ss-ink font-ss-mono text-[11px]/none font-semibold tracking-[0.02em] text-ss-paper shadow-[0_0_0_2px_var(--ss-red),0_0_10px_rgba(227,69,47,0.45)]"
+                {anyVoiceAnswered ? (
+                  <div className={`mt-1.5 flex items-end gap-3 ${single ? "pl-10" : "px-2 pb-1"}`}>
+                    <p className="min-w-0 flex-1 text-xs/[1.45] text-ss-fg-3">{SUBLINE}</p>
+                    {/* The row's twin on the sheet: layer 07, the Signature. */}
+                    <span
+                      aria-hidden="true"
+                      className="mb-px grid size-[22px] flex-none place-items-center rounded-full bg-ss-ink font-ss-mono text-[11px]/none font-semibold tracking-[0.02em] text-ss-paper shadow-[0_0_0_2px_var(--ss-red),0_0_10px_rgba(227,69,47,0.45)]"
+                    >
+                      07
+                    </span>
+                  </div>
+                ) : single ? null : (
+                  <p
+                    id="studio-gate-whose-first"
+                    data-studio="consent-prompt"
+                    className="mt-2 px-2 pb-1 text-[13.5px]/[1.45] font-medium text-ss-fg-2"
                   >
-                    07
-                  </span>
-                </div>
+                    {WHOSE_FIRST_EACH}
+                  </p>
+                )}
               </div>
             ) : null}
 
-            {voices.length > 0 ? (
+            {voices.length > 0 && everyVoiceAnswered ? (
               <p
                 data-studio="gate-trust"
                 className="mt-4 font-ss-display text-[18px]/[1.3] font-medium text-ss-label italic"
@@ -473,7 +564,8 @@ export function ParentGate({
                 variant="ghost"
                 type="button"
                 onClick={onCancel}
-                className="w-full justify-center rounded-2xl py-2 text-[16.5px]"
+                shape="pill"
+                className="w-full justify-center py-2 text-[16.5px]"
               />
               <BigButton
                 icon={<Check className="size-[18px]" strokeWidth={2.6} />}
@@ -481,12 +573,17 @@ export function ParentGate({
                 variant="gold"
                 type="submit"
                 disabled={!challenge || !answer.trim() || !everyVoiceConsented}
-                className="w-full justify-center rounded-2xl py-2 text-[16.5px]"
+                // Why it waits, while no voice has an answer yet (a reply as it opens).
+                aria-describedby={voices.length > 0 && !anyVoiceAnswered ? "studio-gate-whose-first" : undefined}
+                shape="pill"
+                // Waiting: a quiet outline, not a dimmed gold slab louder than the consent box.
+                className="w-full justify-center py-2 text-[16.5px] disabled:border-amber-400/25 disabled:bg-white/5 disabled:bg-none disabled:text-ss-fg-3 disabled:opacity-100 disabled:shadow-none"
               />
             </div>
           </form>
 
-          <p className="mt-3.5 text-xs/[1.5] text-ss-fg-4">
+          {/* fg-3, not s04's fg-4: #5d6680 is ≈ 3.3:1 on the gate, under WCAG AA for 12px text. */}
+          <p data-studio="gate-foot" className="mt-3.5 text-xs/[1.5] text-ss-fg-3">
             No trackers, no analytics. Share links are unlisted and random, and deleting the story
             removes the link, the pictures and the recordings.
           </p>
@@ -504,7 +601,8 @@ export function ParentGate({
 interface WhoseVoiceProps {
   index: number;
   label: string;
-  value: ConsentGrantor;
+  /** null: not answered yet — no radio is checked. */
+  value: ConsentGrantor | null;
   onChoose: (index: number, grantedBy: ConsentGrantor) => void;
   /** Inside a several-voice consent box: a quieter label. */
   compact?: boolean;
@@ -514,6 +612,7 @@ interface WhoseVoiceProps {
  * "Whose voice is on this tape?" (s06) — two native radios, so the arrows move
  * inside the group and Tab moves between groups. The child option is the
  * default: the s04 gate is unchanged until a grown-up says it is her own voice.
+ * On a reply neither is chosen until the grown-up picks one.
  */
 function WhoseVoice({ index, label, value, onChoose, compact = false }: WhoseVoiceProps) {
   const labelId = `studio-gate-whose-${index + 1}`;
@@ -640,12 +739,14 @@ function TapeSheet({ rows, recorded, stamp }: TapeSheetProps) {
       >
         What goes into your tape
       </h3>
-      <div className="pt-3 pr-[17px] pl-5">
-        <PacketBands bands={bands} />
+      {/* When the gate stands taller than the sheet, the bands take up the
+          extra paper (sk-packet--fill), so the footer follows the spine. */}
+      <div className="flex flex-1 flex-col pt-3 pr-[17px] pl-5">
+        <PacketBands bands={bands} className="sk-packet--fill" />
       </div>
       <p
         data-studio="sheet-foot"
-        className="mt-auto flex items-center justify-center gap-2 px-4 pt-4 pb-3 font-ss-mono text-[11px]/none font-medium tracking-[0.14em] text-ss-ink-3 uppercase"
+        className="flex items-center justify-center gap-2 px-4 pt-4 pb-3 font-ss-mono text-[11px]/none font-medium tracking-[0.14em] text-ss-ink-3 uppercase"
       >
         <Lock aria-hidden="true" className="size-[13px] flex-none" strokeWidth={2} />
         Nothing has left this device yet.

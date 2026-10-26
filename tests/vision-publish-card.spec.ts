@@ -21,6 +21,9 @@
 //   7. copy     · the right column verbatim, Share where Web Share exists
 //   8. honesty  · no "Next", no "planned"
 //   9. node     · tapeBytes against the packed container; the budget and its formatter
+//  10. M6       · a real modal (named, focused, trapped, Escape); the delete disarms; Copy is
+//                 announced and fails honestly; the link without its scheme, the code whole;
+//                 the QR sticker; phrases that never split at 375
 //
 // The family content is illustrative and lives in tests/fixtures only.
 
@@ -55,6 +58,8 @@ const FINE =
   "Delete removes the pictures, the recordings, the saved copy and the link. Nothing is kept in an archive.";
 const QR_LINE =
   "Grandparents do not need the app, an account, or the file — the camera app opens the story in any browser.";
+/** M6: with no cloud library the QR's sentence says where the link really opens. */
+const DEVICE_QR_LINE = "This code opens the tape on this device only. Another phone needs the .storysync file.";
 const SHARE = "Share the link…";
 /** No cloud library is configured in this environment: today's device-mode sentence. */
 const DEVICE_NOTE =
@@ -574,9 +579,22 @@ test.describe("T16 · the printed tape, landscape", () => {
     await expect(qr).toBeVisible();
     expect((await box(qr)).width).toBeGreaterThanOrEqual(120);
     const qrKicker = right.locator('[data-studio="qr-label"]');
-    await expect(qrKicker).toHaveText("point a phone camera here");
-    expect((await qrKicker.innerText()).trim()).toBe("POINT A PHONE CAMERA HERE");
-    await expect(right.getByText(QR_LINE, { exact: true })).toBeVisible();
+    // M6 (honesty): s05's "point a phone camera here" invites another phone,
+    // which cannot open a device-only link — so with no cloud library the
+    // kicker says where the code works instead.
+    await expect(qrKicker).toHaveText("this device only");
+    expect((await qrKicker.innerText()).trim()).toBe("THIS DEVICE ONLY");
+    await expect(right.getByText(/point a phone camera/i)).toHaveCount(0);
+    // M6 (honesty, s05 "The link, honestly"): this environment has no cloud
+    // library, so the link opens on this device only. The reference's
+    // grandparents sentence ("…opens the story in any browser") belongs to the
+    // cloud card; here the QR's sentence says where the link really opens, and
+    // the device note comes first, right under the link.
+    await expect(right.getByText(QR_LINE, { exact: true })).toHaveCount(0);
+    await expect(right.getByText(/opens the story in any browser/)).toHaveCount(0);
+    await expect(right.getByText(DEVICE_QR_LINE, { exact: true })).toBeVisible();
+    const noteBox = await box(right.getByText(DEVICE_NOTE, { exact: true }));
+    expect(noteBox.y, "the device note leads, above the QR").toBeLessThan((await box(qr)).y);
 
     const share = right.getByRole("button", { name: SHARE });
     await expect(share).toBeVisible();
@@ -656,6 +674,205 @@ test.describe("T16 · the printed tape, landscape", () => {
     await expect(pull).toBeInViewport();
     await expect(page.getByText(FINE, { exact: true })).toBeInViewport();
     await page.screenshot({ path: "docs/vision/evidence/T16-375-end.png", animations: "disabled" });
+  });
+
+  /* ----------------------------------------------------------- 10 · M6 craft */
+
+  for (const viewport of [TABLET, PHONE]) {
+    test(`10 · the ready card is a modal at ${viewport.width}: named, focused, Tab stays in, Escape leaves`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(viewport);
+      await publish(page, { share: true });
+      const dialog = page.getByRole("dialog", { name: READY });
+      await expect(dialog).toBeVisible();
+      await expect(dialog).toHaveAttribute("aria-modal", "true");
+      const inside = () =>
+        page.evaluate(
+          (sel) => document.activeElement?.closest(sel) !== null && document.activeElement !== document.body,
+          SEL.overlay,
+        );
+      // Focus moved in with the card: its heading.
+      await expect(page.getByRole("heading", { name: READY })).toBeFocused();
+      for (let i = 0; i < 14; i += 1) {
+        await page.keyboard.press("Tab");
+        expect(await inside(), `Tab ${i + 1} stays in the card`).toBe(true);
+      }
+      for (let i = 0; i < 8; i += 1) {
+        await page.keyboard.press("Shift+Tab");
+        expect(await inside(), `Shift+Tab ${i + 1} stays in the card`).toBe(true);
+      }
+      // Opaque: nothing of the Studio shows through.
+      const alpha = await page.locator(SEL.overlay).evaluate((el) => {
+        const m = getComputedStyle(el).backgroundColor.match(/[\d.]+/g)!.map(Number);
+        return m.length > 3 ? m[3] : 1;
+      });
+      expect(alpha).toBe(1);
+
+      await page.keyboard.press("Escape");
+      await expect(dialog).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "Finish my story" })).toBeFocused();
+      expect(await readLibrary(page), "leaving deletes nothing").toHaveLength(1);
+    });
+  }
+
+  test("10 · the delete disarms: Escape, moving on, or five seconds; the armed state is announced", async ({
+    page,
+  }) => {
+    await page.setViewportSize(TABLET);
+    await publish(page);
+    const pull = page.getByRole("button", { name: PULL, exact: true });
+    const status = page.locator(SEL.card).getByRole("status").filter({ hasText: "Press again" });
+
+    /* Escape */
+    await pull.click();
+    await expect(page.getByRole("button", { name: AGAIN })).toBeVisible();
+    await expect(status).toHaveText("Press again to delete everything");
+    await page.keyboard.press("Escape");
+    await expect(pull).toBeVisible();
+    await expect(status).toHaveCount(0);
+    await expect(page.getByRole("dialog", { name: READY }), "the first Escape only disarms").toBeVisible();
+
+    /* moving on to another control */
+    await pull.click();
+    await expect(page.getByRole("button", { name: AGAIN })).toBeVisible();
+    await page.getByRole("button", { name: DOWNLOAD }).focus();
+    await expect(pull).toBeVisible();
+
+    /* five seconds */
+    await pull.click();
+    await expect(page.getByRole("button", { name: AGAIN })).toBeVisible();
+    await expect(pull).toBeVisible({ timeout: 7000 });
+    expect(await readLibrary(page), "nothing was deleted").toHaveLength(1);
+  });
+
+  test("10 · Copy says so: 'Link copied' is announced; a refused clipboard selects the link and says how", async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      const w = window as unknown as { __clip: string[]; __refuse: boolean };
+      w.__clip = [];
+      w.__refuse = false;
+      Object.defineProperty(navigator, "clipboard", {
+        configurable: true,
+        value: {
+          writeText: async (text: string) => {
+            if (w.__refuse) throw new DOMException("Denied", "NotAllowedError");
+            w.__clip.push(text);
+          },
+        },
+      });
+    });
+    await page.setViewportSize(TABLET);
+    await publish(page);
+    const card = page.locator(SEL.card);
+    const copy = card.getByRole("button", { name: "Copy", exact: true });
+    await copy.click();
+    await expect(card.getByRole("status").filter({ hasText: "Link copied" })).toHaveText("Link copied");
+    const clip = await page.evaluate(() => (window as unknown as { __clip: string[] }).__clip);
+    expect(clip).toHaveLength(1);
+    expect(clip[0]).toMatch(/^https?:\/\/.+\/read\?story=[0-9a-f]{32}$/);
+
+    await page.evaluate(() => ((window as unknown as { __refuse: boolean }).__refuse = true));
+    await expect(card.getByRole("button", { name: "Copy", exact: true })).toBeVisible({ timeout: 5000 });
+    await card.getByRole("button", { name: "Copy", exact: true }).click();
+    const field = card.locator('[data-studio="share-url"]');
+    await expect(card.locator('[data-studio="copy-hint"]')).toContainText("Press and hold to copy");
+    await expect(field).toBeFocused();
+    await expect(field).toHaveAttribute("aria-describedby", "pc-copy-hint");
+    // Focused, the field shows the whole URL, selected.
+    const selected = await field.evaluate((el: HTMLInputElement) => el.value.slice(el.selectionStart ?? 0, el.selectionEnd ?? 0));
+    expect(selected).toBe(await field.inputValue());
+  });
+
+  for (const viewport of [TABLET, PHONE]) {
+    test(`10 · the link as s05 prints it at ${viewport.width}: no scheme, the code bold and whole`, async ({ page }) => {
+      await page.setViewportSize(viewport);
+      const tape = await publish(page);
+      await page.evaluate(() => document.fonts.ready);
+      await settle(page.locator(SEL.overlay));
+      const display = page.locator('[data-studio="share-url-display"]');
+      await expect(display).toBeVisible();
+      const text = (await display.innerText()).replace(/\s+/g, "");
+      expect(text.startsWith("http"), "no scheme").toBe(false);
+      expect(text.endsWith(`/read?story=${tape.shareCode}`)).toBe(true);
+      const code = display.locator('[data-studio="share-code"]');
+      await expect(code).toHaveText(tape.shareCode!);
+      expect(await code.evaluate((el) => el.tagName)).toBe("B");
+      const look = await code.evaluate((el) => Number(getComputedStyle(el).fontWeight));
+      expect(look).toBeGreaterThanOrEqual(600);
+      // The code is drawn whole, inside the field (one frame).
+      const fit = await page.evaluate(() => {
+        const field = document.querySelector('[data-studio="share-url"]')!.getBoundingClientRect();
+        const c = document.querySelector('[data-studio="share-code"]')!;
+        const rects = Array.from(c.getClientRects());
+        return {
+          field: { left: field.left, right: field.right, top: field.top, bottom: field.bottom },
+          left: Math.min(...rects.map((r) => r.left)),
+          right: Math.max(...rects.map((r) => r.right)),
+          top: Math.min(...rects.map((r) => r.top)),
+          bottom: Math.max(...rects.map((r) => r.bottom)),
+          clipped: c.scrollWidth > c.clientWidth + 1,
+          lines: new Set(rects.map((r) => Math.round(r.top))).size,
+        };
+      });
+      // One line beside the host on a tablet; a 32-hex device code may take two on a phone.
+      expect(fit.lines).toBeLessThanOrEqual(viewport === TABLET ? 1 : 2);
+      expect(fit.right).toBeLessThanOrEqual(fit.field.right + 1);
+      expect(fit.left).toBeGreaterThanOrEqual(fit.field.left - 1);
+      expect(fit.top).toBeGreaterThanOrEqual(fit.field.top - 1);
+      expect(fit.bottom).toBeLessThanOrEqual(fit.field.bottom + 1);
+      expect(fit.clipped).toBe(false);
+      // The field itself still holds the full https URL.
+      expect(await page.locator('[data-studio="share-url"]').inputValue()).toMatch(/^https?:\/\//);
+    });
+  }
+
+  test("10 · under forced colours the printed link steps aside and the field shows the URL", async ({ page }) => {
+    await page.emulateMedia({ forcedColors: "active" });
+    await page.setViewportSize(TABLET);
+    await publish(page);
+    // Forced colours paint the field's text whatever its colour, so the
+    // printed copy over it would double up: it is hidden, the field reads alone.
+    await expect(page.locator('[data-studio="share-url-display"]')).toBeHidden();
+    const field = page.locator('[data-studio="share-url"]');
+    await expect(field).toBeVisible();
+    expect(await field.inputValue()).toMatch(/^https?:\/\/.+\/read\?story=[0-9a-f]+$/);
+  });
+
+  test("10 · the QR is a printed sticker: paper, a 2px ink rule, radius 10", async ({ page }) => {
+    await page.setViewportSize(TABLET);
+    await publish(page);
+    const frame = page.locator('[data-studio="share-qr"]').locator("xpath=..");
+    const look = await frame.evaluate((el) => {
+      const cs = getComputedStyle(el);
+      return { w: cs.borderTopWidth, color: cs.borderTopColor, r: cs.borderTopLeftRadius };
+    });
+    expect(look).toEqual({ w: "2px", color: INK, r: "10px" });
+    const b = await box(frame);
+    expect(b.width).toBeGreaterThanOrEqual(150);
+    expect(b.width).toBeLessThanOrEqual(172);
+  });
+
+  test("10 · at 375 the label's meta and the steps never split a phrase", async ({ page }) => {
+    await page.setViewportSize(PHONE);
+    await publish(page);
+    await page.evaluate(() => document.fonts.ready);
+    await settle(page.locator(SEL.overlay));
+    const rects = await page.evaluate(() => {
+      const details = Array.from(document.querySelectorAll('[data-studio="publish-steps"] [data-studio="step-detail"]'));
+      const groups = Array.from(document.querySelectorAll('[data-sk="tape"] .pc-meta-2 span, [data-sk="tape"] .sk-tape-meta > span > span'));
+      // Lines, not rects: a glyph from a fallback font ("·") is its own rect on the same line.
+      const lines = (el: Element) => new Set(Array.from(el.getClientRects()).map((r) => Math.round(r.top))).size;
+      return {
+        details: details.map((el) => [el.textContent, lines(el)]),
+        groups: groups.map((el) => [el.textContent, lines(el)]),
+      };
+    });
+    expect(rects.details.length).toBe(4);
+    for (const [text, n] of rects.details) expect(n, `"${text}" on one line`).toBe(1);
+    expect(rects.groups.map(([t]) => t)).toContain("LINKED ON THIS DEVICE");
+    for (const [text, n] of rects.groups) expect(n, `"${text}" on one line`).toBe(1);
   });
 });
 
