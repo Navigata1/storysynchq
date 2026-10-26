@@ -1,0 +1,203 @@
+/* ============================================================================
+   "Read it in…" (T22a, s07 right panel `.s7-panel`): a Register A glass panel
+   holding Register B tape chips. Owned here; read-room.css (T20a) is not
+   edited.
+
+     .rin-panel        glass, radius 20, padding 16. At ≥ 1024px it is the
+                       Read Room's right column (the brief's 404px; 472px from
+                       1280px, where every mood blurb holds one line); below
+                       that it stands under the shelves, full width
+     .rin-art          the header picture, 110px tall, radius 12, with its
+                       paper "PAGE N" tab (.rin-art-tab)
+     .rin-heading      Geist 600 17px
+     .rin-target       mono, upper case: the tape it is about
+     .rin-line         Fraunces 500 16px, fg-2: who read it
+     .rin-label        mono 10.5px: "WHAT SHOULD IT FEEL LIKE?"
+     .rin-make         the full-width gold pill, "Make our own copy"
+     .rin-house-row    the house row's ghost "Read it in…", under the demo
+                       tape card (the band's door uses the band's own style)
+
+   Same @layer as read-room.css, so a consumer's Tailwind utility still wins.
+   ========================================================================== */
+
+@layer components {
+  /* the two-column room (read-room.css turns it on for any .rr-aside): this
+     panel takes a fixed column, the shelves the rest (they scroll sideways
+     when they need more). 1024–1279px: the brief's own panel, 404px (s07
+     x708–1112), so at 1140 the shelves keep s07's 660px and the blank tape
+     stands whole; the chips are the brief's 182px and the two longest blurbs
+     wrap (the chip row grows). From 1280px there is room for 472px, where
+     every blurb holds one line. */
+  @media (min-width: 1024px) {
+    .rr-columns:has(> .rr-aside.rin-panel) {
+      grid-template-columns: minmax(0, 1fr) 404px;
+      column-gap: 20px;
+    }
+  }
+  @media (min-width: 1280px) {
+    .rr-columns:has(> .rr-aside.rin-panel) {
+      grid-template-columns: minmax(0, 1fr) 472px;
+    }
+  }
+
+  .rin-panel {
+    display: flex;
+    min-width: 0;
+    align-self: start;
+    flex-direction: column;
+    padding: 16px;
+    border: 1px solid var(--ss-line);
+    border-radius: 20px;
+    background-color: var(--ss-glass);
+    -webkit-backdrop-filter: blur(24px) saturate(1.25);
+    backdrop-filter: blur(24px) saturate(1.25);
+    box-shadow: 0 24px 48px -28px rgba(0, 0, 0, 0.7);
+    /* "Read it in…" scrolls it into view with a little air above */
+    scroll-margin-top: 16px;
+  }
+
+  /* ---------- the header: the tape's own page, no words over it ---------- */
+  .rin-art {
+    position: relative;
+    flex: none;
+    height: 110px;
+    overflow: hidden;
+    border-radius: 12px;
+    background-color: var(--ss-navy-3);
+  }
+  .rin-art::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    pointer-events: none;
+  }
+  .rin-art-img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 50% 40%;
+    user-select: none;
+  }
+  .rin-art-tab {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    padding: 4px 8px 3px;
+    border: 1.5px solid var(--ss-ink);
+    border-radius: 5px;
+    background-color: var(--ss-paper);
+    font-family: var(--ss-mono);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: 0.14em;
+    color: var(--ss-ink);
+  }
+
+  /* ---------- the words ---------- */
+  .rin-heading {
+    margin: 0;
+    border-radius: 6px;
+    font-family: var(--ss-ui);
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    color: var(--ss-fg);
+  }
+  .rin-art + .rin-heading {
+    margin-top: 12px;
+  }
+  .rin-heading:focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  .rin-target {
+    margin: 5px 0 0;
+    font-family: var(--ss-mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    line-height: 1.35;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ss-fg-3);
+    overflow-wrap: anywhere;
+  }
+
+  .rin-line {
+    margin: 6px 0 0;
+    font-family: var(--ss-display);
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 1.3;
+    color: var(--ss-fg-2);
+    text-wrap: pretty;
+  }
+
+  .rin-label {
+    margin: 14px 0 0;
+    font-family: var(--ss-mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    line-height: 1.2;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ss-fg-3);
+  }
+
+  .rin-moods {
+    margin-top: 8px;
+  }
+
+  /* ---------- the door into the Creator: s07 .s7-make, a full-width pill ---------- */
+  .rin-panel > .rin-make {
+    --sk-big-h: 48px;
+    width: 100%;
+    margin-top: 16px;
+    gap: 10px;
+    padding: 8px 22px;
+    border-radius: 999px;
+    font-size: 15.5px;
+    justify-content: center;
+  }
+  .rin-panel > .rin-make .sk-big-icon > svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  /* ---------- the house row's "Read it in…" (the band's own style) ----------
+     It belongs to the demo tape: under the stacked doors it spans the row;
+     from 768px (the doors side by side) it takes the demo card's column, right
+     under it. Air below keeps it apart from the mono footnote. */
+  .rin-house-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    column-gap: 14px;
+    margin-top: 12px;
+    margin-bottom: 10px;
+  }
+  @media (min-width: 768px) {
+    .rin-house-row {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  .rin-house-row > .rin-door {
+    --sk-big-h: 48px;
+    gap: 9px;
+    padding: 8px 18px;
+    border-radius: 14px;
+    font-size: 15px;
+    justify-content: center;
+  }
+
+  /* reduced motion: nothing in the panel moves (the kit's 1ms button
+     transition included) */
+  @media (prefers-reduced-motion: reduce) {
+    .rin-panel > .rin-make {
+      transition: none;
+    }
+  }
+}

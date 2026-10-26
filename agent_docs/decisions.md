@@ -636,3 +636,19 @@ deleting the story forgets it everywhere.**
   - PRIVACY.md "What is stored where" has the row.
 - **Arrival.** The shelf selects the tape stopped in most recently, else the first. The Player reports settled pages
   and the end card through `onPage`; the Read Room alone writes storage.
+
+**2026-10-25 · T22a "Read it in…" (the feeling).**
+- **Panel**: the Read Room's right column at ≥ 1024px, or a block under the shelves below that. The column is the
+  brief's 404px from 1024 to 1279px, so s07's shelf stands whole at 1140, and 472px from 1280px. It is about the
+  selected shelf tape, or the house tape when the shelf is empty or the house row's "Read it in…" asked for it.
+- **Moods**: a kit `MoodTapeChip` radio group, built from native radios, in `MOOD_NAMES` order, with names and blurbs
+  verbatim from `moods.ts` and colours from `--mood-*`. The preselected mood is the target's first-page mood through
+  T10's music plan, else Wonder; a sent tape gets Wonder.
+- **Door**: "Make our own copy" goes to T15's `/studio?open=house|<share code>|<library id>&mood=<Mood>` with
+  `router.push`, so there is no prefetch.
+- **No runtime request from the panel**: the house tape's facts come from a build-time JSON import (as on the landing
+  and `/protocol`). The panel's only network traffic is the house tape's own `/demo/images/` header picture,
+  same-origin, and that picture is `loading="lazy"`.
+- **When it shows**: the panel and its doors are not rendered while a `?story=` or `?demo=1` is opening.
+- **"Who read it"**: the computer when no page carries a recorded voice; otherwise `metadata.narrator`, else
+  "Someone". A sent tape's reference decides by its narrator.

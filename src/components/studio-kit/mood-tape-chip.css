@@ -1,0 +1,181 @@
+/* ============================================================================
+   MoodTapeChip — a mood as a little tape label (brief design_system LOCAL (5);
+   s07 `.s7-moods`, `.s7-mood`, `.s7-contour`).
+
+     .sk-mood-chips       the group: 2 columns, gap 8; one column below 360px
+     .sk-mood-chip        paper, 2px ink border, radius 8, ≥ 48px tall; the
+                          blurb wraps on a narrow chip and the row grows
+       .is-on             label-yellow field, 3px ink border (the padding
+                          gives back the extra px, so nothing shifts)
+     .sk-mood-chip-band   the 5px band of the mood colour across the top
+     .sk-mood-chip-top    icon (the colour mixed into ink) + Fraunces 700 14px
+                          name + the six-dot contour at the right
+     .sk-mood-chip-blurb  11px ink-2 (ink when selected)
+     .sk-mood-chip-input  the native radio, invisible, over the whole chip
+
+   A chip narrower than its longest row (a phone's two columns) moves the
+   contour to the right of the blurb's first line (a container query).
+
+   `--sk-mood` is the chip's mood colour (a `--mood-*` token, set inline).
+   Focus is the kit's one gold ring, around the chip. Reduced motion: the
+   field changes at once.
+   ========================================================================== */
+
+@layer components {
+  .sk-mood-chips {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  @media (max-width: 359.98px) {
+    .sk-mood-chips {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  .sk-mood-chip {
+    --sk-mood: var(--mood-wonder);
+    /* a narrow chip (phones) moves its contour off the name's row */
+    container: sk-mood-chip / inline-size;
+    position: relative;
+    display: flex;
+    min-width: 0;
+    min-height: 48px;
+    flex-direction: column;
+    padding: 9px 6px 2px 7px;
+    border: 2px solid var(--ss-ink);
+    border-radius: 8px;
+    overflow: hidden;
+    background-color: var(--ss-paper);
+    color: var(--ss-ink);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition:
+      background-color 240ms var(--ss-ease),
+      box-shadow 240ms var(--ss-ease);
+  }
+  .sk-mood-chip:hover:not(.is-on) {
+    background-color: var(--ss-paper-2);
+  }
+  .sk-mood-chip.is-on {
+    padding: 8px 5px 1px 6px;
+    border-width: 3px;
+    background-color: var(--ss-label);
+    box-shadow: 0 6px 16px -6px rgba(255, 201, 60, 0.55);
+  }
+  .sk-mood-chip:has(.sk-mood-chip-input:focus-visible) {
+    outline: 3px solid var(--ss-gold);
+    outline-offset: 3px;
+  }
+
+  /* the native radio: invisible, over the whole chip, so a tap anywhere checks it */
+  .sk-mood-chip-input {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    appearance: none;
+    cursor: pointer;
+  }
+
+  .sk-mood-chip-band {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    height: 5px;
+    border-bottom: 1px solid rgba(30, 26, 22, 0.35);
+    background-color: var(--sk-mood);
+  }
+
+  .sk-mood-chip-top {
+    display: flex;
+    min-width: 0;
+    height: 16px;
+    align-items: center;
+    gap: 5px;
+  }
+  .sk-mood-chip-icon {
+    flex: none;
+    width: 14px;
+    height: 14px;
+    color: color-mix(in srgb, var(--sk-mood) 55%, var(--ss-ink));
+  }
+  .sk-mood-chip-name {
+    min-width: 0;
+    overflow: hidden;
+    font-family: var(--ss-display);
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.005em;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  /* the music-box contour: six 5px dots on a 35×15 row */
+  .sk-mood-chip-contour {
+    position: relative;
+    flex: none;
+    width: 35px;
+    height: 15px;
+    margin-left: auto;
+  }
+  .sk-mood-chip-dot {
+    position: absolute;
+    top: calc(var(--y) * 1px);
+    left: calc(var(--x) * 6px);
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background-color: var(--sk-mood);
+    box-shadow: 0 0 0 0.5px rgba(30, 26, 22, 0.35);
+  }
+  .sk-mood-chip.is-on .sk-mood-chip-dot {
+    box-shadow: 0 0 0 0.5px var(--ss-ink);
+  }
+
+  .sk-mood-chip-blurb {
+    margin-top: 3px;
+    font-family: var(--ss-ui);
+    font-size: 11px;
+    font-weight: 400;
+    line-height: 1.2;
+    letter-spacing: -0.016em;
+    color: var(--ss-ink-2);
+    text-wrap: pretty;
+  }
+  .sk-mood-chip.is-on .sk-mood-chip-blurb {
+    color: var(--ss-ink);
+  }
+
+  /* A chip too narrow for icon + the longest name + the contour on one row
+     (two columns on a phone): the contour sits at the right of the blurb's
+     first line instead, and the blurb wraps around it. The name keeps its row. */
+  @container sk-mood-chip (max-width: 152.98px) {
+    .sk-mood-chip-contour {
+      position: absolute;
+      top: 28px;
+      right: 6px;
+      margin: 0;
+    }
+    .sk-mood-chip.is-on .sk-mood-chip-contour {
+      top: 27px;
+    }
+    .sk-mood-chip-blurb::before {
+      content: "";
+      float: right;
+      width: 39px;
+      height: 12px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sk-mood-chip {
+      transition: none;
+    }
+  }
+}

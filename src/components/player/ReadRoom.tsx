@@ -53,8 +53,18 @@
  * that page.
  *
  * At ≥ 1024 px the chooser is a two-column room: `.rr-columns` turns into
- * shelves (≈ 60 %) + a right column as soon as it holds an `.rr-aside` (the
- * "Read it in…" panel, T22a). Until then the shelves span the room.
+ * shelves + a right column holding the "Read it in…" panel (T22a, ReadItIn);
+ * below that the panel stands under the shelves.
+ *
+ * Read it in… (T22a): the panel is about the selected shelf tape, or the house
+ * tape when the shelf is empty. The house row's ghost "Read it in…" points it
+ * at the house tape, the band's at the selected tape (choosing a tape on the
+ * shelf points it back there); either one brings the panel into view (below
+ * 1024 px it scrolls there) and moves focus to its heading. Both share the name
+ * "Read it in…" and are described by the tape they are about (the band's line,
+ * a visually hidden "<title> · <author>" for the house tape). "Make our own
+ * copy" goes to the Creator (T15's `/studio?open=…&mood=…`); the panel itself
+ * fetches nothing.
  *
  * A tape someone sent (a link or a file, never the house tape and never one
  * of your own shelf tapes) ends with "Send a thank-you back" (T18): the reply
@@ -80,6 +90,8 @@ import { BigButton, GlassPanel, Reel, TapeLabel, TAPE } from "@/components/studi
 import { Shelf, ShelfTape } from "@/components/studio-kit/Shelf";
 import { PullTapeIcon } from "@/components/studio-kit/PrintSlot";
 import { Player, type PlayerPlace } from "./Player";
+import { HOUSE_READ_IT_IN, HOUSE_TAPE, ReadItIn } from "./ReadItIn";
+import { sentTarget, shelfTarget, targetLine, type ReadItInTarget } from "./read-it-in";
 import {
   bandLine,
   draftBelongsTo,
@@ -382,6 +394,12 @@ export function ReadRoom() {
   const shelfStart = React.useRef<({ code: string } & ShelfChoice) | null>(null);
   /** Where you stopped in each tape, as last read (the band's resume line). */
   const [places, setPlaces] = React.useState<ResumeStore>(() => sanitizeResume(null));
+  /** "Read it in…" (T22a): the house row asked for the house tape (until a tape is chosen). */
+  const [readHouse, setReadHouse] = React.useState(false);
+  /** Each "Read it in…" press: bring the panel into view and focus its heading. */
+  const [readReveal, setReadReveal] = React.useState(0);
+  const readPanelRef = React.useRef<HTMLElement | null>(null);
+  const readHeadingRef = React.useRef<HTMLHeadingElement | null>(null);
   React.useEffect(() => {
     shelfRef.current = shelf;
     const key = focusNext.current;
@@ -403,6 +421,11 @@ export function ReadRoom() {
   }, [selectedId, shelf]);
 
   const inChooser = state.kind === "chooser" || state.kind === "error";
+  /**
+   * "Read it in…" belongs to the room you pick from: not to the instant a
+   * link or `?demo=1` is about to open its tape (unless that failed).
+   */
+  const offersReadItIn = (!code && !wantsDemo) || state.kind === "error";
   const selected = shelf.find((item) => item.key === selectedId) ?? null;
   const armed = selected?.kind === "own" && armedId === selected.key;
   /** The selected tape's place, when it has one (T21). */
@@ -411,6 +434,16 @@ export function ReadRoom() {
     const { key, total } = placeOf(selected);
     return resumePoint(places, key, total);
   }, [selected, places]);
+  /** The tape the "Read it in…" panel is about: the selected tape, else the house tape. */
+  const readTarget = React.useMemo<ReadItInTarget>(() => {
+    if (readHouse || !selected) return HOUSE_READ_IT_IN;
+    return selected.kind === "sent" ? sentTarget(selected.tape) : shelfTarget(selected.entry);
+  }, [readHouse, selected]);
+  /** Where the panel's tape was left (T21), for its header picture. */
+  const readResumePage = React.useMemo(() => {
+    if (readTarget.kind !== "house") return resumeAt?.page ?? null;
+    return resumePoint(places, tapeKey(HOUSE_TAPE), HOUSE_TAPE.pages.length)?.page ?? null;
+  }, [readTarget, resumeAt, places]);
 
   /* ── the link this tape lives at (SSR-safe: read after mount) ─────────── */
   React.useEffect(() => {
@@ -501,7 +534,30 @@ export function ReadRoom() {
   const select = React.useCallback((id: string) => {
     setSelectedId(id);
     setArmedId(null);
+    // the "Read it in…" panel follows the tape you choose
+    setReadHouse(false);
   }, []);
+
+  /** "Read it in…": point the panel at the house tape or the selected tape, and go there. */
+  const readItIn = React.useCallback((house: boolean) => {
+    setReadHouse(house);
+    setReadReveal((n) => n + 1);
+  }, []);
+  React.useEffect(() => {
+    if (readReveal === 0) return;
+    const panel = readPanelRef.current;
+    const heading = readHeadingRef.current;
+    if (!panel || !heading) return;
+    // ≥ 1024 px the panel is the right column, already in sight: focus is enough
+    let beside = false;
+    try {
+      beside = window.matchMedia("(min-width: 1024px)").matches;
+    } catch {
+      beside = false;
+    }
+    if (!beside) panel.scrollIntoView({ block: "start", behavior: prefersReducedMotion() ? "auto" : "smooth" });
+    heading.focus({ preventScroll: !beside });
+  }, [readReveal]);
 
   /** ← → (and ↑ ↓, Home, End) move the selection; the focus follows it. */
   const onTapeKey = React.useCallback(
@@ -966,7 +1022,7 @@ export function ReadRoom() {
 
                   {selected ? (
                     <div data-shelf="band" className="rr-band">
-                      <p className="rr-band-line">
+                      <p id="rr-band-line" className="rr-band-line">
                         {bandLine(selected.kind === "own" ? selected.entry.label : selected.tape)}
                       </p>
                       {resumeAt ? (
@@ -1017,6 +1073,13 @@ export function ReadRoom() {
                             className={armed ? "rr-band-btn" : "rr-band-btn rr-pull"}
                           />
                         )}
+                        <BigButton
+                          variant="ghost"
+                          label="Read it in…"
+                          aria-describedby="rr-band-line"
+                          onClick={() => readItIn(false)}
+                          className="rr-band-btn rin-door"
+                        />
                       </div>
                     </div>
                   ) : null}
@@ -1048,6 +1111,21 @@ export function ReadRoom() {
                       />
                     </Choice>
                   </div>
+                  {offersReadItIn ? (
+                    <div className="rin-house-row">
+                      <BigButton
+                        variant="ghost"
+                        label="Read it in…"
+                        aria-describedby="rin-house-target"
+                        onClick={() => readItIn(true)}
+                        className="rin-door"
+                      />
+                      {/* which tape this door is about, for a screen reader (the band's door names its tape the same way) */}
+                      <span id="rin-house-target" className="sr-only">
+                        {targetLine(HOUSE_READ_IT_IN)}
+                      </span>
+                    </div>
+                  ) : null}
 
                   <input
                     ref={fileInputRef}
@@ -1069,6 +1147,16 @@ export function ReadRoom() {
                   </p>
                 </section>
               </div>
+
+              {/* ──────────────────────────────────────── READ IT IN… (T22a) */}
+              {offersReadItIn ? (
+                <ReadItIn
+                  target={readTarget}
+                  resumePage={readResumePage}
+                  panelRef={readPanelRef}
+                  headingRef={readHeadingRef}
+                />
+              ) : null}
             </div>
 
             <div
