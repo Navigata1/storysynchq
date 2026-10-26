@@ -1,0 +1,91 @@
+/* ============================================================================
+   ConsentStamp — a tape-red rubber stamp, pressed once (s04).
+
+   Face: 3.5px tape-red frame, radius 10, 2px gap, a 1.5px inner rule at
+   radius 6; Plex Mono 600 lines (15px / 12.5px by default — the consumer may
+   set --sk-stamp-a / --sk-stamp-b); tilted −4°; a fractal-noise mask so the
+   ink is speckled like a real stamp (s04's own mask, inlined as data).
+
+   Motion: inking presses once — 420 ms, ease-out, from a little above the
+   paper down onto it — and never loops. Under reduced motion it just appears.
+   ========================================================================== */
+
+@keyframes sk-stamp-press {
+  0% {
+    opacity: 0;
+    transform: scale(1.4);
+  }
+  55% {
+    opacity: 1;
+    transform: scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@layer components {
+  .sk-consent-stamp {
+    --sk-stamp-a: 15px;
+    --sk-stamp-b: 12.5px;
+    display: inline-block;
+    color: var(--ss-red);
+    transform-origin: 50% 50%;
+    pointer-events: none;
+  }
+
+  .sk-consent-stamp[data-inked="true"] {
+    animation: sk-stamp-press 420ms var(--ss-ease, ease-out) 1 both;
+  }
+
+  .sk-consent-stamp-face {
+    display: block;
+    padding: 2px;
+    border: 3.5px solid currentColor;
+    border-radius: 10px;
+    opacity: 0.92;
+    transform: rotate(-4deg);
+    transform-origin: 50% 50%;
+    -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='80'><filter id='sk-speck'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' seed='7'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -3 2.3'/></filter><rect width='240' height='80' filter='url(%23sk-speck)'/></svg>");
+    mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='80'><filter id='sk-speck'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' seed='7'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -3 2.3'/></filter><rect width='240' height='80' filter='url(%23sk-speck)'/></svg>");
+    -webkit-mask-size: 100% 100%;
+    mask-size: 100% 100%;
+  }
+
+  /* un-inked: nothing to see, nothing to read */
+  .sk-consent-stamp[data-inked="false"] .sk-consent-stamp-face {
+    visibility: hidden;
+    opacity: 0;
+  }
+
+  .sk-consent-stamp-in {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 11px 5px;
+    border: 1.5px solid currentColor;
+    border-radius: 6px;
+    text-shadow: 0 0 0.6px currentColor;
+    -webkit-text-stroke: 0.35px currentColor;
+  }
+
+  .sk-consent-stamp-a {
+    font: 600 var(--sk-stamp-a)/1 var(--ss-mono);
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+  }
+
+  .sk-consent-stamp-b {
+    font: 600 var(--sk-stamp-b)/1 var(--ss-mono);
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sk-consent-stamp[data-inked="true"] {
+      animation: none;
+    }
+  }
+}

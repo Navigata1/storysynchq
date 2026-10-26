@@ -1,0 +1,50 @@
+/* ============================================================================
+   ParentGate — two objects (s04): the gate (Register A) and the sheet
+   "What goes into your tape" (Register B).
+
+   This file is only the two-object layout breakpoint; everything else is
+   Tailwind utilities in ParentGate.tsx.
+
+   - Under 1024px: one column, the sheet after the gate, scrolling inside the
+     overlay (the overlay is the scroller; nothing scrolls sideways).
+   - From 1024px: side by side, 28px apart, centred as a pair, the gate up to
+     520px and the sheet up to 480px, both as tall as the taller.
+
+   `margin: auto` centres the pair in the flex overlay without ever clipping
+   its top when it is taller than the screen.
+   ========================================================================== */
+
+@layer components {
+  .gate-pair {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+    width: 100%;
+    max-width: 552px;
+    min-width: 0;
+    margin: auto;
+    padding: 16px;
+  }
+
+  .gate-pair > .gate-panel,
+  .gate-pair > .gate-sheet {
+    min-width: 0;
+  }
+
+  @media (min-width: 1024px) {
+    .gate-pair {
+      flex-direction: row;
+      justify-content: center;
+      gap: 28px;
+      max-width: none;
+      padding: 16px 24px;
+    }
+    .gate-pair > .gate-panel {
+      flex: 0 1 520px;
+    }
+    .gate-pair > .gate-sheet {
+      flex: 0 1 480px;
+    }
+  }
+}

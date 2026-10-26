@@ -1,0 +1,134 @@
+/* ============================================================================
+   PacketBands — the seven layers as printed bands (brief LOCAL (11), s04).
+
+   A dashed 2px ink spine runs down the left; on it, a 22px ink number chip per
+   layer, centred on its band. Bands: the layer's packet fill, a 2px ink
+   border, radius 8, Fraunces 600 15px names over Geist 12.5px ink-2 values.
+   Signature: a 3.5px tape-red stroke with a soft red halo, a red ring on its
+   chip, and the "V2.1 · DRAFT" tag in red ink. Static: print does not move.
+   ========================================================================== */
+
+@layer components {
+  .sk-packet {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    color: var(--ss-ink);
+  }
+
+  /* the spine the chips sit on */
+  .sk-packet::before {
+    content: "";
+    position: absolute;
+    left: 10px;
+    top: 0;
+    bottom: 0;
+    border-left: 2px dashed var(--ss-ink);
+  }
+
+  .sk-packet-row {
+    position: relative;
+    display: grid;
+    grid-template-columns: 22px minmax(0, 1fr);
+    column-gap: 7px;
+    align-items: center;
+  }
+
+  .sk-packet-num {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--ss-ink);
+    color: var(--ss-paper);
+    font: 600 11px/1 var(--ss-mono);
+    letter-spacing: 0.02em;
+  }
+  .sk-packet-row--sig .sk-packet-num {
+    box-shadow:
+      0 0 0 2px var(--ss-red),
+      0 0 0 4px rgba(227, 69, 47, 0.16);
+  }
+
+  .sk-packet-band {
+    position: relative;
+    min-width: 0;
+    min-height: 66px;
+    padding: 6px 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    border: 2px solid var(--ss-ink);
+    border-radius: 8px;
+    background: var(--sk-band-fill, var(--ss-paper));
+  }
+
+  .sk-packet-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 18px;
+  }
+
+  .sk-packet-name {
+    font: 600 15px/18px var(--ss-display);
+    letter-spacing: -0.005em;
+  }
+
+  /* thumbnails, glyphs and stars go to the right of the name */
+  .sk-packet-aside {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-width: 0;
+  }
+
+  .sk-packet-value {
+    margin: 0;
+    font: 400 12.5px/15px var(--ss-ui);
+    color: var(--ss-ink-2);
+    overflow-wrap: anywhere;
+  }
+
+  /* Signature — the v2.1 draft layer, the one consent is written into */
+  .sk-packet-band--sig {
+    min-height: 128px;
+    padding: 10px 14px;
+    justify-content: flex-start;
+    border: 3.5px solid var(--ss-red);
+    box-shadow:
+      0 0 0 4px rgba(227, 69, 47, 0.12),
+      0 14px 30px -12px rgba(227, 69, 47, 0.5);
+  }
+  .sk-packet-band--sig .sk-packet-value {
+    margin-top: 2px;
+  }
+
+  /* A band with something laid over it (the consent stamp) keeps the foot of
+     the band clear for it, so a long value never runs under the overlay. */
+  .sk-packet-band--overlaid {
+    padding-bottom: var(--sk-band-overlay-h, 66px);
+  }
+
+  .sk-packet-tag {
+    display: inline-flex;
+    align-items: center;
+    height: 18px;
+    padding: 0 6px;
+    border: 1.5px solid var(--ss-red-ink);
+    border-radius: 4px;
+    color: var(--ss-red-ink);
+    font: 600 11px/1 var(--ss-mono);
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+  }
+}

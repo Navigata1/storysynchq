@@ -243,10 +243,17 @@ test.describe("consent · one record per recorded voice", () => {
     await author.fill(TWINKLE.byline);
     await author.focus();
 
+    // T14 (s06): each row first asks whose voice it is — one Tab stop per
+    // radio group, on its default "A child's" — then comes its consent box.
+    const childs = dialog.getByRole("radio", { name: "A child's — I'm their parent or guardian" });
+    await page.keyboard.press("Tab");
+    await expect(childs.nth(0)).toBeFocused();
     await page.keyboard.press("Tab");
     await expect(page.locator("#studio-gate-consent-1")).toBeFocused();
     await page.keyboard.press("Space");
     await expect(page.locator("#studio-gate-consent-1")).toBeChecked();
+    await page.keyboard.press("Tab");
+    await expect(childs.nth(1)).toBeFocused();
     await page.keyboard.press("Tab");
     await expect(page.locator("#studio-gate-consent-2")).toBeFocused();
     await page.keyboard.press("Space");

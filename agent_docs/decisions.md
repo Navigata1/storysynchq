@@ -415,3 +415,12 @@ meanings. The CONSENT row carries its lines as fields (`voice?`, `granted`, `dat
 printed text. The `/protocol` link is not prefetched, so nothing is fetched until a listener
 follows it. Three brief colours were raised for AA contrast (J-card keys 62% ink, "PASS IT ON" in `--ss-red-ink`, the
 privacy line in `--ss-fg-3`). From 880px the card lays out in two columns so a laptop sees all of it.
+
+**2026-10-25 · T14 · The grown-up moment shows what goes into the tape; consent carries its own grantor.**
+- **Two objects.** `ParentGate` is one `role="dialog"` holding two objects: the Register-A gate and a Register-B sheet, "What goes into your tape". They sit side by side from 1024px and in one scrolling column below it.
+- **One source for the sheet.** The sheet's seven rows come only from `src/components/studio/tape-sheet.ts` (pure), so the sheet cannot drift from what Continue writes. A test compares the published manifest with the sheet text captured before Continue.
+- **Kit pieces.** `PacketBands` and `ConsentStamp` are kit pieces (`src/components/studio-kit/`) built by their first consumer. `ConsentStamp` exposes `data-inked`, presses once in 420 ms, is static under reduced motion, and announces once through a polite live region.
+- **Grantor per voice.** Voice consent is now `{ voice, grantedBy }` per recorded voice: `"parent/guardian"` by default, or `"self"` when the grown-up answers "Mine — I'm the grown-up speaking" (s06). `consentRecordsFor(choices, consentDate(now))` writes them. Changing a voice's answer clears its tick.
+- **The byline is the author.** For a tape made in the Studio, the gate's byline is always written to `metadata.author`, an empty one included. A cleared byline no longer leaves the draft's old author on the tape. Re-voiced tapes keep their author (T15).
+- **Pauses as the Player plays them.** The sheet's Behavior row reads pauses the way the Player will: a page without `autoPause` uses `pauseBetweenPages`, else 3 s.
+- **Picture size.** "about N KB" is the mean decoded size of the page pictures, in KiB, to the nearest 10, or the nearest 1 under 5.

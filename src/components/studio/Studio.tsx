@@ -25,7 +25,12 @@ import {
   type SsyncSignature,
 } from "@/lib/storysync/manifest";
 import { buildStorysyncFromStory } from "@/lib/storysync/container";
-import { consentDate, consentRecords, recordedVoices } from "@/lib/storysync/consent";
+import {
+  consentDate,
+  consentRecordsFor,
+  recordedVoices,
+  type ConsentChoice,
+} from "@/lib/storysync/consent";
 import { resolveNarrator } from "@/lib/storysync/narrator";
 import { generateStory } from "@/lib/story-engine";
 import { generateIllustration } from "@/app/page-improvements";
@@ -212,8 +217,8 @@ export default function Studio() {
   const readerRef = React.useRef("");
   const publishedRef = React.useRef<SsyncManifest | null>(null);
   const authorRef = React.useRef("");
-  /** The voices the grown-up consented to — a retry publishes with the same consent. */
-  const consentRef = React.useRef<string[]>([]);
+  /** Each voice and who consented to it — a retry publishes with the same consent. */
+  const consentRef = React.useRef<ConsentChoice[]>([]);
   /** "story by" as it is being typed in the gate; the gate's voice list follows it. */
   const [gateAuthor, setGateAuthor] = React.useState("");
   const cuesRef = React.useRef<StudioCues | null>(null);
@@ -832,10 +837,10 @@ export default function Studio() {
   );
 
   const runPublish = React.useCallback(
-    async (author: string, consentedVoices: string[]) => {
+    async (author: string, consents: ConsentChoice[]) => {
       stopAudio();
       authorRef.current = author;
-      consentRef.current = consentedVoices;
+      consentRef.current = consents;
       setPhase("publishing");
       setPublishError(null);
       setPublishNote(null);
@@ -847,12 +852,12 @@ export default function Studio() {
 
       const base = stateRef.current;
       // A re-voiced tape keeps its author; the gate's byline is the reader,
-      // who becomes the narrator and the consent voice.
+      // who becomes the narrator and the consent voice. Otherwise the byline
+      // IS the author — cleared included — exactly as the gate's sheet said.
       const remix = base.remix ?? null;
-      const source =
-        author && !remix
-          ? { ...base.manifest, metadata: { ...base.manifest.metadata, author } }
-          : base.manifest;
+      const source = !remix
+        ? { ...base.manifest, metadata: { ...base.manifest.metadata, author } }
+        : base.manifest;
 
       try {
         /* 1 — narration codec normalization (the load-bearing publish rule) */
@@ -910,13 +915,16 @@ export default function Studio() {
 
         /* 2 — assemble the manifest, signature layer included */
         markStep("assemble", { state: "active" });
-        // One consent record per recorded voice, dated with the grown-up's own
+        // One consent record per recorded voice, each with its own grantor
+        // (a parent or guardian, or "self"), dated with the grown-up's own
         // calendar day (docs/format-spec.md §7.1). The gate asks for every
         // voice; a voice without consent never leaves the device.
         const voices = recordedVoices(publishedPages, author);
-        if (voices.some((voice) => !consentedVoices.includes(voice))) {
-          throw new Error("Every recorded voice needs a grown-up's consent first.");
-        }
+        const choices: ConsentChoice[] = voices.map((voice) => {
+          const choice = consents.find((c) => c.voice === voice);
+          if (!choice) throw new Error("Every recorded voice needs a grown-up's consent first.");
+          return choice;
+        });
         const hasVoiceInStory = voices.length > 0;
         const now = new Date();
         const credit = remix ? source.metadata.author?.trim() || remix.author : author;
@@ -928,7 +936,7 @@ export default function Studio() {
         // Where a re-voiced tape came from travels with it.
         if (remix) signature.remixOf = remix.of;
         if (hasVoiceInStory) {
-          signature.voiceConsent = consentRecords(voices, "parent/guardian", consentDate(now));
+          signature.voiceConsent = consentRecordsFor(choices, consentDate(now));
         } else {
           // No recorded voice, no consent record — not even one left from an
           // earlier publish of this draft.
@@ -1109,6 +1117,17 @@ export default function Studio() {
   const note = openNote && (openNote.tone === "busy" || openNote.during === state) ? openNote : null;
   /** What the gate's byline starts as: "story by" is the author; "read by" starts empty. */
   const gateDefault = state.remix ? readerRef.current : (state.manifest.metadata.author ?? "");
+  /** The draft the gate's sheet describes ("What goes into your tape"). */
+  const gateSheet = React.useMemo(
+    () => ({
+      manifest: state.manifest,
+      mood: state.mood,
+      musicOn: state.musicOn,
+      remix: state.remix ?? null,
+      defaultTitle: DEFAULT_TITLE,
+    }),
+    [state.manifest, state.mood, state.musicOn, state.remix],
+  );
   const hasVoice = Boolean(page?.text?.audioUrl);
   const canFinish = storyHasContent(state);
   const codecLabel = React.useMemo(() => {
@@ -1501,13 +1520,14 @@ export default function Studio() {
           defaultAuthor={gateDefault}
           bylineLabel={state.remix ? "read by" : "story by"}
           voices={recordedVoices(state.manifest.pages, gateAuthor)}
+          sheet={gateSheet}
           onAuthorChange={setGateAuthor}
           onCancel={() => setPhase("edit")}
-          onPass={(author, consentedVoices) => {
+          onPass={(author, consents) => {
             // A re-voiced tape keeps its author: the byline is the reader.
             if (state.remix) readerRef.current = author;
             else setAuthor(author);
-            void runPublish(author, consentedVoices);
+            void runPublish(author, consents);
           }}
         />
       ) : null}
