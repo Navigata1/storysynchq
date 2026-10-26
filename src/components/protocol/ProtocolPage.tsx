@@ -4,8 +4,10 @@
  * /protocol — the SSYNC format's home in the product (docs/10x-plan.md gap G9).
  *
  * Register A page (calm studio chrome, docs/design-direction.md §2) carrying
- * Register B artifacts: the packet diagram printed on tape paper, the container
- * layout as a printed sheet, and a real cassette label on the download card.
+ * Register B artifacts: the exploded page and the packet diagram printed on
+ * tape paper, and the container layout as a printed sheet. The hero hands over
+ * the demo as a real .storysync (built on this device); beside FIG. 1 the codec
+ * rule, the validator talking and a player you can copy (s08).
  * "Like PDF" is only credible if the spec is a page a developer can read — so
  * everything normative here is the same text as docs/format-spec.md, and every
  * claim links to the schema that enforces it.
@@ -16,12 +18,14 @@ import Link from "next/link";
 import { GlassPanel } from "@/components/studio-kit/kit";
 import { PacketExploded, type ExplodedPlate } from "@/components/studio-kit/PacketExploded";
 import { mimeForAssetPath, packedAssetPath } from "@/lib/storysync/container";
+import type { SsyncManifest } from "@/lib/storysync/manifest";
 import { pageMood } from "@/components/player/music-plan";
 import houseTape from "../../../public/demo/brave-little-star.ssync.json";
 import { PACKET_LAYERS } from "./layers";
 import { packetPlates, type PlateAssetKind, type PlateManifest } from "./plates";
 import { PacketDiagram } from "./PacketDiagram";
 import { DownloadDemo } from "./DownloadDemo";
+import { ProtocolCards } from "./ProtocolCards";
 import "./protocol.css";
 
 const V1_SCHEMA = "/protocol/v1.schema.json";
@@ -84,20 +88,45 @@ const FIG_PAGE_INDEX = 2;
 const FIG_PAGE = HOUSE_TAPE.pages[FIG_PAGE_INDEX];
 
 /**
- * Where "Download the demo as .storysync" puts a page's file: the download
- * fetches the same-origin picture, reads it as a data URL of its served type
- * and lets `buildStorysyncFromStory` name it — so the figure asks the
- * container's own naming rule, with the type that file is served as.
+ * Where "Download the demo as .storysync" puts a file: the download fetches
+ * the same-origin file, reads it as a data URL of its served type and lets
+ * `buildStorysyncFromStory` name it (`base` + that type's extension) — so the
+ * figure and the validator card ask the container's own naming rule, with the
+ * type that file is served as.
  */
-function packedLikeTheDownload(url: string, asset: { pageId: number; kind: PlateAssetKind }): string {
+function packedPath(url: string, base: string): string {
   if (url.startsWith("assets/")) return url;
-  const base = asset.kind === "picture" ? `page-${asset.pageId}` : `narration-${asset.pageId}`;
   return packedAssetPath(url.startsWith("data:") ? url : mimeForAssetPath(url), base);
+}
+
+/** A page's picture or voice, named as the container names it. */
+function packedLikeTheDownload(url: string, asset: { pageId: number; kind: PlateAssetKind }): string {
+  return packedPath(url, asset.kind === "picture" ? `page-${asset.pageId}` : `narration-${asset.pageId}`);
 }
 
 const FIG_PLATES: ExplodedPlate[] = packetPlates(HOUSE_TAPE, FIG_PAGE_INDEX, {
   assetPath: packedLikeTheDownload,
 });
+
+/**
+ * The house tape as the download packs it (T23a's naming): version 2.0, every
+ * file (cover, pictures, any voice) at the path the container writes. The
+ * validator card reads this; nothing is fetched.
+ */
+const PACKED_HOUSE_TAPE: SsyncManifest = (() => {
+  const tape = JSON.parse(JSON.stringify(houseTape)) as SsyncManifest;
+  tape.version = "2.0";
+  if (tape.metadata.coverImage) tape.metadata.coverImage = packedPath(tape.metadata.coverImage, "cover");
+  for (const page of tape.pages) {
+    if (page.illustration?.url) {
+      page.illustration.url = packedLikeTheDownload(page.illustration.url, { pageId: page.id, kind: "picture" });
+    }
+    if (page.text?.audioUrl) {
+      page.text.audioUrl = packedLikeTheDownload(page.text.audioUrl, { pageId: page.id, kind: "voice" });
+    }
+  }
+  return tape;
+})();
 
 const FIG_ART = {
   title: HOUSE_TAPE.metadata.title,
@@ -140,27 +169,26 @@ export function ProtocolPage() {
         {/* ------------------------------------------------------------ hero */}
         <section className="pr-hero" aria-labelledby="pr-title">
           <div className="pr-wrap">
-            <p className="pr-eyebrow sk-font-meta">The SSYNC protocol · version 2.0</p>
-            <h1 id="pr-title" className="pr-h1 sk-font-tape">
-              One file holds the whole storybook.
-            </h1>
-            <p className="pr-lede">
-              SSYNC is to storybooks what PDF is to documents: an open format for immersive,
-              narrated, illustrated, musical reading. It is deliberately <em>not</em> video —
-              still images, layered audio and timing, so a page weighs kilobytes and a voice
-              survives being re-read at any speed.
-            </p>
-            <p className="pr-lede pr-lede--quiet">
-              A <code className="sk-font-meta">.storysync</code> file is a ZIP holding one{" "}
-              <code className="sk-font-meta">manifest.json</code> and its assets. The player is
-              plain web. Nobody needs our servers — or our app — to hear a story.
-            </p>
+            {/* ≥ 1024 px the download takes the hero's right side, beside the
+                kicker and the h1 (s08); below, it follows the lede. */}
+            <div className="pr-hero-head">
+              <p className="pr-eyebrow sk-font-meta">The SSYNC protocol · version 2.0</p>
+              <h1 id="pr-title" className="pr-h1 sk-font-tape">
+                One file holds the whole storybook.
+              </h1>
+              <p className="pr-lede">
+                SSYNC is to storybooks what PDF is to documents: pictures, words, voices, music and
+                timing in one open file. Deliberately not video. The player is plain web — nobody
+                needs our servers, or our app, to hear a story.
+              </p>
+              <DownloadDemo compact />
+            </div>
 
             <ul className="pr-facts">
               {FACTS.map((fact) => (
                 <li key={fact.k} className="pr-fact">
                   <span className="pr-fact-k sk-font-meta">{fact.k}</span>
-                  <span className="pr-fact-v sk-font-meta">{fact.v}</span>
+                  <span className="pr-fact-v">{fact.v}</span>
                 </li>
               ))}
             </ul>
@@ -199,6 +227,7 @@ export function ProtocolPage() {
                   adds a sense.
                 </p>
               </figure>
+              <ProtocolCards className="pr-fig-cards" packedTape={PACKED_HOUSE_TAPE} />
             </div>
           </div>
         </section>
@@ -395,17 +424,6 @@ export function ProtocolPage() {
                 <Arrow />
               </a>
             </div>
-          </div>
-        </section>
-
-        {/* ------------------------------------------------------ take one */}
-        <section className="pr-section pr-section--take" aria-labelledby="pr-take-h">
-          <div className="pr-wrap">
-            <p className="pr-eyebrow sk-font-meta">Hold one in your hand</p>
-            <h2 id="pr-take-h" className="pr-h2 sk-font-tape">
-              The demo tape, as a file
-            </h2>
-            <DownloadDemo />
           </div>
         </section>
       </main>

@@ -17,8 +17,9 @@
  *
  * Seam: the computed styles of the real labels where they render — the Read
  * Room chooser, the Twinkle cover (T00 openTapeInReadRoom), the end card, the
- * publish card (T00 seedStudioDraft → Finish → gate), the landing teaser,
- * /protocol's demo download — and the hero cassette on `/`. No dev route.
+ * publish card (T00 seedStudioDraft → Finish → gate), the landing teaser —
+ * and the hero cassette on `/`. (/protocol's download lost its label in T23b:
+ * s08 draws it as a button.) No dev route.
  *
  * Expected values are literals here, never imported from the source, so the
  * test can fail.
@@ -410,14 +411,18 @@ test.describe("tape stock · TapeLabel matches the reference", () => {
     });
   });
 
-  test("1b · /read chooser: the file and blank tapes keep their accent bands, aligned", async ({
+  // T20a: s07 stands the blank "Make your own" tape on the shelf as a paper
+  // face with a dashed ink border (no label, no band), so the chooser prints
+  // two TapeLabels (the demo, the file door), and the blank is checked as the
+  // shelf's blank face instead.
+  test("1b · /read chooser: the file tape keeps its accent band, aligned; the blank tape is the shelf's dashed face", async ({
     page,
   }) => {
     await page.goto("/read");
     const tapes = page.locator('[data-sk="tape"]');
-    await expect(tapes).toHaveCount(3);
+    await expect(tapes).toHaveCount(2);
     const bands: string[] = [];
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 2; i++) {
       const r = await readTape(tapes.nth(i));
       expectAlignedTape(r, `/read chooser #${i + 1}`, {
         viewportWidth: viewportWidth(page),
@@ -425,9 +430,14 @@ test.describe("tape stock · TapeLabel matches the reference", () => {
       });
       bands.push(r.band!.bg);
     }
-    // the demo tape carries the label yellow; the other two keep their accents
+    // the demo tape carries the label yellow; the file tape keeps its accent
     expect(bands[0]).toBe(LABEL_YELLOW);
-    expect(new Set(bands).size, "accent bands stay distinct").toBe(3);
+    expect(new Set(bands).size, "accent bands stay distinct").toBe(2);
+    const blank = await page.locator(".pl-choice-3").evaluate((el) => {
+      const cs = getComputedStyle(el);
+      return { style: cs.borderTopStyle, width: cs.borderTopWidth, color: cs.borderTopColor };
+    });
+    expect(blank, "the blank tape: a 2px dashed ink border").toEqual({ style: "dashed", width: "2px", color: INK });
   });
 
   test("2 · the Twinkle cover at 375×812: aligned, and no sideways scroll", async ({ page }) => {
@@ -460,16 +470,20 @@ test.describe("tape stock · every TapeLabel consumer at 375×812", () => {
     await page.setViewportSize(PHONE);
   });
 
+  // T20a: the blank tape is the shelf's dashed face (s07), not a TapeLabel; the
+  // three choices are still three, two of them labels.
   test("/read: the three choices", async ({ page }) => {
     await page.goto("/read");
+    await expect(page.locator(".pl-choice")).toHaveCount(3);
     const tapes = page.locator('[data-sk="tape"]');
-    await expect(tapes).toHaveCount(3);
-    for (let i = 0; i < 3; i++) {
+    await expect(tapes).toHaveCount(2);
+    for (let i = 0; i < 2; i++) {
       expectAlignedTape(await readTape(tapes.nth(i)), `/read #${i + 1}`, {
         viewportWidth: PHONE.width,
         author: i === 0,
       });
     }
+    await expect(page.locator(".pl-choice-3")).toBeVisible();
     await expectNoSideScroll(page, "/read");
   });
 
@@ -509,13 +523,20 @@ test.describe("tape stock · every TapeLabel consumer at 375×812", () => {
     await expectNoSideScroll(page, "/");
   });
 
-  test("/protocol: the demo download label", async ({ page }) => {
+  // T23b: s08 draws /protocol's download as the hero's gold button and its
+  // status line, with no tape label, and the old "Hold one in your hand"
+  // section is gone, so /protocol prints no TapeLabel to align any more.
+  test("/protocol: the demo download is the hero's button, with no label", async ({ page }) => {
     await page.goto("/protocol");
-    const tape = page.locator('.pr-take-tape [data-sk="tape"]');
-    await tape.scrollIntoViewIfNeeded();
-    await expect(tape).toContainText("The Brave Little Star");
-    expectAlignedTape(await readTape(tape), "/protocol download", { viewportWidth: PHONE.width });
-    await expectNoSideScroll(page, "/protocol");
+    const button = page.locator('.pr-hero [data-protocol="download-demo"]');
+    await button.scrollIntoViewIfNeeded();
+    await expect(button).toBeVisible();
+    await expect(page.locator('[data-sk="tape"]')).toHaveCount(0);
+    const r = await page.evaluate(() => ({
+      scroll: document.documentElement.scrollWidth,
+      inner: window.innerWidth,
+    }));
+    expect(r.scroll, "/protocol: page scrolls sideways").toBeLessThanOrEqual(r.inner);
   });
 });
 

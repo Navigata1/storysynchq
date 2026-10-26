@@ -530,3 +530,21 @@ privacy line in `--ss-fg-3`). From 880px the card lays out in two columns so a l
   dialog) in place of the restore prompt. Keep my story leaves the draft byte-identical. "Start a new story" and
   "delete everything" clear the reply. Publishing needs no change: the draft's signature is spread into the published
   one, `remixOf` stays tied to a re-voice, and an adult replying for herself consents with T14's `grantedBy: "self"`.
+
+- **2026-10-25 · T23b · /protocol's cards column starts at 68rem (1088 px), not 1024 px.** FIG. 1's printed plates need
+  their full 556 px. Beside the 428 px cards at 1024 px (iPad landscape) the figure got 492 px and its plates broke
+  mid-word. At 68rem `.pr-wrap` reaches its max width, so the figure keeps 556 px from the first width that shows the
+  column. Below that the cards follow the figure in one column. The hero's download keeps its 1024 px breakpoint.
+  `tests/vision-protocol-cards.spec.ts` holds both widths (1024 × 768 and 1088 × 800).
+- **2026-10-25 · T23b · /protocol's "Write your own player" snippet makes the optional layers optional.** *Needs Jon's
+  explicit sign-off: the ticket asked for the reference's exact text, and this entry departs from it.* The page prints
+  the reference's fflate snippet with `page.illustration?.url` and `page.text?.content`. Pictures and words are optional
+  in SSYNC (only `metadata.title` is required), and the house tape's last page has no picture, so the reference's
+  `page.illustration.url` throws on the very tape the page offers for download. The snippet is one constant
+  (`src/components/protocol/snippet.ts`) that `tests/vision-protocol-cards.spec.ts` executes against the demo packed for
+  real, so the page cannot show a player that does not run.
+- **2026-10-25 · T23b · the validator console shows real verdicts, two of them on labelled copies.** `validationReport`
+  (`src/lib/storysync/report.ts`) lays `validateManifest`'s verdict out as PASS / WARN / FAIL lines and never rewrites a
+  sentence. The house tape passes cleanly, so the WARN (timestamp consent date) and the FAIL (a `.webm` narration) come
+  from two hand-edited copies, each prefixed "a hand-edited copy:", in the validator's own words (double quotes kept).
+  This is M5-PRD OQ 3, pending Jon.

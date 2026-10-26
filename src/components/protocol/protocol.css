@@ -26,7 +26,7 @@
     radial-gradient(900px 560px at 6% 26%, rgba(245, 158, 11, 0.09), transparent 60%);
 }
 
-:where(.pr-root) :where(h1, h2, h3, p, ul, ol, li, figure, pre, table) {
+:where(.pr-root) :where(h1, h2, h3, p, ul, ol, li, figure, pre, table, dl, dt, dd) {
   margin: 0;
   padding: 0;
 }
@@ -164,10 +164,6 @@
   color: rgba(209, 213, 219, 0.94);
 }
 
-.pr-lede--quiet {
-  color: rgba(148, 163, 184, 0.88);
-}
-
 .pr-copy {
   margin-top: 0.6rem;
   max-width: 60ch;
@@ -209,8 +205,75 @@
   border-top: 1px solid rgba(255, 255, 255, 0.07);
 }
 
-.pr-section--take {
-  background-color: rgba(4, 7, 14, 0.4);
+/* The hero's head: kicker, h1, lede, then the download (DOM and phone order).
+   ≥ 1024 px the download moves up beside the kicker and h1 (s08). */
+.pr-hero-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "eyebrow" "title" "lede" "take";
+  align-items: start;
+}
+
+.pr-hero-head > * {
+  min-width: 0;
+}
+
+.pr-hero-head > .pr-eyebrow {
+  grid-area: eyebrow;
+}
+
+.pr-hero-head > .pr-h1 {
+  grid-area: title;
+}
+
+.pr-hero-head > .pr-lede {
+  grid-area: lede;
+}
+
+.pr-hero-head > .pr-take {
+  grid-area: take;
+}
+
+/* ≥ 1024 px the hero is s08's header: one compact band (Fraunces 900 h1 on
+   one line where it fits, a 14.5 px lede) so FIG. 1 and its cards are in view
+   under it on a laptop screen. */
+@media (min-width: 1024px) {
+  .pr-hero {
+    padding-block: 1.75rem 1.25rem;
+  }
+
+  .pr-hero-head {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "eyebrow take"
+      "title take"
+      "lede lede";
+    column-gap: 2.5rem;
+  }
+
+  .pr-hero .pr-h1 {
+    max-width: none;
+    margin-top: 0.55rem;
+    font-size: 2.25rem;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+  }
+
+  .pr-hero .pr-lede {
+    max-width: 760px;
+    margin-top: 0.55rem;
+    font-size: 14.5px;
+    line-height: 1.4;
+    text-wrap: pretty;
+  }
+
+  .pr-hero .pr-facts {
+    margin-top: 1.1rem;
+  }
+
+  .pr-hero .pr-links {
+    margin-top: 0.4rem;
+  }
 }
 
 /* ------------------------------------------------------------------ facts */
@@ -234,27 +297,34 @@
   }
 }
 
+/* s08's fact tiles: 44 px of glass, a mono label over a Geist value */
 .pr-fact {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
-  padding: 0.85rem 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  background-color: rgba(255, 255, 255, 0.04);
+  justify-content: center;
+  gap: 4px;
+  min-height: 44px;
+  padding: 0.4rem 14px;
+  border: 1px solid var(--ss-line);
+  border-radius: 10px;
+  background-color: rgba(255, 255, 255, 0.045);
 }
 
 .pr-fact-k {
-  font-size: 10px;
-  letter-spacing: 0.24em;
+  font-weight: 500;
+  font-size: 10.5px;
+  line-height: 1;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: rgba(245, 158, 11, 0.85);
+  color: var(--ss-fg-3);
 }
 
 .pr-fact-v {
-  font-size: 12.5px;
-  line-height: 1.45;
-  color: rgba(226, 232, 240, 0.92);
+  font-family: var(--ss-ui);
+  font-weight: 500;
+  font-size: 13px;
+  line-height: 1.15;
+  color: var(--ss-fg);
 }
 
 /* ------------------------------------------------------------------ links */
@@ -287,8 +357,11 @@
 /* ------------------------------------------------- FIG. 1, taken apart */
 
 /* Right under the hero: the figure grid. Its left column is FIG. 1; the right
-   column (≥ 1024 px, ≈ 428 px) holds the protocol cards when they are there —
-   until then the figure spans the width. */
+   column (≈ 428 px) holds the protocol cards when they are there — until then
+   the figure spans the width. The cards column starts at 68rem (1088 px), where
+   .pr-wrap reaches its max width and FIG. 1 keeps its full 556 px beside it:
+   squeezed narrower (492 px at 1024), the printed plates break mid-word. Below
+   68rem the cards follow the figure in one column. */
 .pr-figs {
   padding-block: 0.5rem clamp(2.5rem, 6vw, 4rem);
 }
@@ -300,7 +373,7 @@
   align-items: start;
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 68rem) {
   .pr-fig-grid:has(> .pr-fig-cards) {
     grid-template-columns: minmax(0, 1fr) minmax(0, 428px);
   }
@@ -344,6 +417,185 @@
   font-size: 13px;
   line-height: 1.3;
   color: var(--ss-fg-2);
+}
+
+/* ----------------------------------------- the cards beside FIG. 1 (s08) */
+
+.pr-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.pr-card-h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-family: var(--ss-ui);
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.2;
+  letter-spacing: 0;
+  color: var(--ss-fg);
+}
+
+.pr-card-i {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  color: var(--ss-fg-3);
+}
+
+/* 1 · the codec rule: glass, three tagged rows */
+.pr-codec {
+  padding: 12px 14px 13px 16px;
+  border-radius: 14px;
+}
+
+.pr-codec-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 9px;
+}
+
+.pr-codec-row {
+  display: grid;
+  grid-template-columns: 66px minmax(0, 1fr);
+  gap: 8px;
+  align-items: baseline;
+}
+
+.pr-codec-tag {
+  font-weight: 600;
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+}
+
+.pr-codec-tag--must {
+  color: var(--ss-gold);
+}
+
+.pr-codec-tag--may {
+  color: var(--ss-fg-2);
+}
+
+.pr-codec-tag--mustnot {
+  color: var(--ss-red);
+}
+
+.pr-codec-text {
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--ss-fg-2);
+  text-wrap: balance;
+}
+
+/* 2 · the validator: a console on the slot black */
+.pr-console {
+  overflow: hidden;
+  border: 1px solid var(--ss-line);
+  border-radius: 12px;
+  background-color: var(--ss-slot);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.pr-console-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  padding: 4px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  font-family: var(--ss-ui);
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.2;
+  color: var(--ss-fg);
+}
+
+.pr-console-bar .pr-card-i {
+  width: 14px;
+  height: 14px;
+}
+
+.pr-log {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 14px 9px;
+}
+
+/* a list, not a scroll region: long lines wrap */
+.pr-log-line {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 6px;
+  font-size: 11.5px;
+  line-height: 1.38;
+  color: var(--ss-fg-2);
+}
+
+.pr-log-tag {
+  font-weight: 600;
+}
+
+.pr-log-tag--pass {
+  color: var(--ss-ok);
+}
+
+.pr-log-tag--warn {
+  color: var(--ss-label);
+}
+
+.pr-log-tag--fail {
+  color: var(--ss-red);
+}
+
+.pr-log-text {
+  overflow-wrap: anywhere;
+}
+
+.pr-log-quote {
+  color: var(--ss-gold-2);
+}
+
+/* 3 · write your own player: a panel holding the snippet */
+.pr-player {
+  padding: 12px 14px;
+  border: 1px solid var(--ss-line);
+  border-radius: 14px;
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02));
+}
+
+.pr-snippet {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  max-width: 100%;
+  margin-top: 8px;
+  padding-block: 2px 4px;
+  border-radius: 4px;
+  /* 11 px: the longest line (58 glyphs, 383 px) fits the 398 px card with room */
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--ss-fg-2);
+  white-space: pre;
+}
+
+.pr-snippet [data-token="keyword"] {
+  color: var(--ss-violet-2);
+}
+
+.pr-snippet [data-token="string"] {
+  color: var(--ss-gold-2);
+}
+
+.pr-snippet [data-token="call"] {
+  color: var(--ss-ok);
 }
 
 /* ----------------------------------------------------- the packet diagram */
@@ -679,6 +931,51 @@
   color: rgba(148, 163, 184, 0.85);
 }
 
+/* compact (s08's hero): the gold pill and its status line, nothing else */
+.pr-take--compact {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 1.4rem;
+}
+
+.pr-take--compact .sk-big {
+  --sk-big-h: 44px;
+  gap: 8px;
+  padding: 0 18px;
+  border-radius: 999px;
+  font-size: 14px;
+  box-shadow:
+    0 10px 24px -14px rgba(245, 158, 11, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+.pr-take--compact .sk-big-icon > svg {
+  width: 16px;
+  height: 16px;
+}
+
+.pr-take--compact .pr-take-status {
+  max-width: 320px;
+  font-size: 12px;
+  line-height: 1.4;
+  letter-spacing: 0;
+  color: var(--ss-fg-3);
+  text-wrap: balance;
+}
+
+@media (min-width: 1024px) {
+  .pr-take--compact {
+    align-items: flex-end;
+    margin-top: 4px;
+  }
+
+  .pr-take--compact .pr-take-status {
+    text-align: right;
+  }
+}
+
 /* ----------------------------------------------------------------- footer */
 
 .pr-footer {
@@ -737,5 +1034,17 @@
   .pr-legend-card:hover {
     border-color: rgba(245, 158, 11, 0.32);
     background-color: rgba(255, 255, 255, 0.07);
+  }
+}
+
+/* The kit button lifts on hover; with reduced motion the hero's stays put. */
+@media (prefers-reduced-motion: reduce) {
+  .pr-take--compact .sk-big {
+    transition: none;
+  }
+
+  .pr-take--compact .sk-big:hover,
+  .pr-take--compact .sk-big:active {
+    transform: none;
   }
 }

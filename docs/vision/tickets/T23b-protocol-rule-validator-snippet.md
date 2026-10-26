@@ -43,7 +43,7 @@ screen.
          "** followed by the validator's own sentence, verbatim (today: `pages[2].text.audioUrl "assets/narration-3.webm"
          uses a draft-only codec — published narration must be AAC/M4A (or WAV fallback)`).
       Tags coloured PASS `--ss-ok`, WARN `--ss-label`, FAIL `--ss-red`; the list is an `ul` (not a scroll region).
-- [ ] **"Write your own player"** card: an `h3` **"Write your own player"** (lucide `Code`), and a code block (class
+- [ ] **"Write your own player"** card: an `h3` **"Write your own player"** (lucide `CodeXml`, s08's `</>` glyph), and a code block (class
       `pr-snippet`, **not** `pr-code`; focusable, `aria-label`, `overflow-x: auto`, scrolls itself at 375 px) whose text is
       exactly:
       ```
