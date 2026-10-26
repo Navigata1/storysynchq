@@ -6,10 +6,15 @@
    className always win. Keyframes stay unlayered, matching studio-kit.
 
    Layout ladder:
-     < 768px   stage-first column; the tool rail becomes a bottom toolbar and
-               the inspector becomes a sheet
-     ≥ 768px   rail returns to the left edge
-     ≥ 1180px  the inspector takes its own column (Advanced only)
+     < 768px   stage-first column; the tool rail becomes a bottom toolbar, a
+               tool card and the inspector become sheets
+     ≥ 768px   rail returns to the left edge, full height; a tool card floats
+               over the Stage. With 600px of height or more the room fits the
+               screen (100dvh): the Stage gives way, nothing scrolls (s03)
+     ≥ 1024px  an open tool card docks in its own column between the rail and
+               the Stage, so it never covers the page it talks about
+     ≥ 1180px  the inspector takes its own column (Advanced only); the title
+               sits centred on the top bar
    ========================================================================== */
 
 @keyframes studio-rise {
@@ -70,24 +75,99 @@
   }
 
   .studio-area-top { grid-area: top; }
-  .studio-area-rail { grid-area: rail; }
+  .studio-area-rail { grid-area: rail; min-height: 0; }
   .studio-area-stage { grid-area: stage; position: relative; min-height: 0; min-width: 0; }
-  .studio-area-film { grid-area: film; }
+  .studio-area-film { grid-area: film; min-width: 0; }
+  /* Where an open tool card lives. Below 1024px it shares the Stage's cell (a
+     floating card, or a sheet that is fixed anyway) and lets taps through. */
+  .studio-area-tool {
+    grid-area: stage;
+    position: relative;
+    min-height: 0;
+    min-width: 0;
+    pointer-events: none;
+  }
+  .studio-area-tool > * { pointer-events: auto; }
   .studio-area-transport {
     grid-area: transport;
     position: relative;
     z-index: 48; /* above both bottom sheets: ● REC / ▶ are always one tap away */
   }
   .studio { --studio-transport-h: calc(88px + env(safe-area-inset-bottom, 0px)); }
+  /* A 375px phone cannot carry four 60px keys, their gaps and the readout:
+     the keys come down to 52px there, so the transport never scrolls the
+     page sideways. */
+  @media (max-width: 399.98px) {
+    .studio-area-transport .sk-transport { --sk-transport-size: 52px; }
+    /* ...and the readout keeps "0:00 / 0:00" on one line inside its 86px
+       (the tighter tracking has to beat the readout's own utility). */
+    .studio-area-transport section[aria-label="Transport"] > :last-child {
+      white-space: nowrap;
+      letter-spacing: 0.06em !important;
+    }
+  }
+
+  /* ------------------------------------------------------------ top bar */
+  .studio-title {
+    display: flex;
+    flex: 1 1 8rem;
+    min-width: 8rem;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .studio-title .studio-title-input {
+    field-sizing: content; /* Chromium; elsewhere the input's size attribute sizes it */
+    max-width: calc(100% - 22px);
+    text-align: center;
+    text-overflow: ellipsis;
+  }
+  /* Between the two groups (below 1180px) the pen keeps clear of SIMPLE.
+     Padding, not margin: the bar wraps exactly where it did before. */
+  @media (max-width: 1179.98px) {
+    .studio-title { padding-right: 12px; }
+  }
+
+  /* "Finish my story" — and, while the mic is live, "after this take" under it */
+  .studio-finish {
+    position: relative;
+    display: flex;
+    transition: transform 300ms var(--ss-ease);
+  }
+  .studio-finish[data-recording="true"] { transform: translateY(-6px); }
+  .studio-finish-note {
+    position: absolute;
+    top: calc(100% + 3px);
+    left: 0;
+    right: 0;
+    font-size: 10.5px;
+    line-height: 1;
+    letter-spacing: 0.1em;
+    text-align: center;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--ss-fg-3);
+    pointer-events: none;
+  }
 
   /* ------------------------------------------------------------ tool rail */
+  /* Three friendly tools, a divider, then a quieter Magic (s03). */
   .studio-rail-list {
+    --sk-big-h: 84px;
     display: flex;
     flex-direction: row;
     gap: 8px;
     padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
   }
   .studio-rail-list > * { flex: 1 1 0; min-width: 0; }
+  .studio-rail-list > .studio-rail-sep {
+    flex: none;
+    align-self: stretch;
+    width: 1px;
+    margin: 12px 2px;
+    background-color: var(--ss-line-2);
+  }
+  .studio-rail-list > .studio-rail-magic { flex: 0 0 60px; }
 
   /* --------------------------------------------------------- tool panel */
   .studio-toolpanel {
@@ -103,6 +183,37 @@
     padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
     animation: studio-rise 300ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
   }
+
+  /* The Voice card's take: the big red button and the lock row. On a phone
+     the button lies on its side to keep the sheet short; docked, it grows to
+     the reference's 132px when the column has the height, and gives way when
+     it does not. */
+  .studio-voice-take {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 2px 0 4px;
+  }
+  .studio-voice-disc { width: 64px; height: 64px; }
+  /* the take and "your voice": one body; docked, it is what scrolls */
+  .studio-voice-body {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+  }
+  /* the record button: disc beside its name on a phone, above it from 768px */
+  .studio-voice-record {
+    flex-direction: row;
+    padding: 8px 16px;
+  }
+  /* side by side, the live ring stands 16px out from the disc: its name
+     steps clear of it during a take */
+  .studio[data-recording="true"] .studio-voice-record > :last-child { margin-left: 8px; }
+  /* "your voice · m:ss" with Listen and Delete: compact keys */
+  .studio-voice-yours { --sk-big-h: 52px; }
 
   /* ---------------------------------------------------------- inspector */
   .studio-inspector {
@@ -127,17 +238,35 @@
       grid-template-areas:
         "top  top"
         "rail stage"
-        "film film"
-        "transport transport";
+        "rail film"
+        "rail transport";
     }
     .studio-rail-list {
+      --sk-big-h: 92px;
       flex-direction: column;
-      width: 118px;
+      align-items: center;
+      width: 116px;
       height: 100%;
-      gap: 10px;
-      padding: 4px 10px 10px;
+      gap: 12px;
+      padding: 20px 12px 12px;
+      overflow-y: auto;
+      scrollbar-width: none;
     }
-    .studio-rail-list > * { flex: 0 0 auto; }
+    .studio-rail-list > * { flex: 0 0 auto; width: 100%; }
+    .studio-rail-list > .studio-rail-sep {
+      width: auto;
+      height: 1px;
+      margin: 4px 12px;
+    }
+    .studio-rail-list > .studio-rail-magic { flex: 0 0 auto; width: 72px; }
+
+    .studio-voice-take { gap: 12px; padding: 8px 0; }
+    .studio-voice-disc { width: 104px; height: 104px; }
+    .studio-voice-record {
+      flex-direction: column;
+      padding: 12px 16px 4px;
+    }
+    .studio[data-recording="true"] .studio-voice-record > :last-child { margin-left: 0; }
 
     .studio-toolpanel {
       position: absolute;
@@ -151,15 +280,118 @@
     }
   }
 
+  /* The room fits the screen: one viewport, no page scroll. The Stage row
+     takes what the chrome leaves; the picture zone inside it gives way. */
+  @media (min-width: 768px) and (min-height: 600px) {
+    .studio {
+      height: 100dvh;
+      min-height: 0;
+    }
+  }
+
+  /* ------------------------------------------------------------ ≥ 1024px */
+  @media (min-width: 1024px) {
+    .studio {
+      grid-template-columns: auto auto minmax(0, 1fr);
+      grid-template-areas:
+        "top  top  top"
+        "rail tool stage"
+        "rail film film"
+        "rail transport transport";
+    }
+    /* The docked column: as tall as the Stage, beside it, never over it. */
+    .studio-area-tool {
+      grid-area: tool;
+      display: flex;
+      padding: 16px 0 16px 12px;
+      pointer-events: auto;
+    }
+    .studio-area-tool:empty { padding: 0; }
+    /* The body takes the card's height between the title and the footnote
+       (never less than its content: on a short screen see below). */
+    .studio-voice-body { flex: 1 1 0; }
+    /* The take sits at the card's foot, the lock row just over the footnote,
+       as s03 sets it; the room above is where the reference draws its (Idea)
+       mascot, left honestly empty. */
+    .studio-voice-take {
+      flex: 1 1 0;
+      min-height: 150px;
+      justify-content: flex-end;
+      container-type: size;
+    }
+    .studio-voice-disc {
+      width: clamp(64px, calc(100cqh - 84px), 132px);
+      height: clamp(64px, calc(100cqh - 84px), 132px);
+    }
+    .studio-toolpanel {
+      position: relative;
+      left: auto;
+      bottom: auto;
+      width: 320px;
+      max-height: none;
+      height: 100%;
+      animation: studio-fade 260ms ease-out both;
+    }
+  }
+
+  /* A short laptop (docked, under 700px tall): the disc lies beside its name
+     again, at 64px, and the body is what scrolls, so the privacy footnote
+     never leaves the card's foot. The body's 8px of inner room keeps a focus
+     ring or the live ring inside its clip. */
+  @media (min-width: 1024px) and (max-height: 699.98px) {
+    .studio-voice-body {
+      min-height: 0;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      margin: 0 -8px;
+      padding: 0 8px;
+    }
+    .studio-voice-take {
+      flex: 0 0 auto;
+      min-height: 0;
+      margin-top: auto; /* at the foot when there is room, as above; safe when there is not */
+      gap: 6px;
+      padding: 6px 0 0;
+      container-type: normal;
+    }
+    .studio-voice-disc { width: 64px; height: 64px; }
+    .studio-voice-record {
+      flex-direction: row;
+      padding: 4px 16px;
+    }
+    .studio-voice-yours { --sk-big-h: 44px; } /* still a 44px target */
+    /* During a take "your voice" is gone and the take fits: the body stops
+       clipping (the live ring's glow is never cut square) and the take
+       breathes, so the ring clears the lock row. */
+    .studio[data-recording="true"] .studio-voice-body {
+      min-height: auto;
+      overflow: visible;
+    }
+    .studio[data-recording="true"] .studio-voice-take {
+      gap: 18px;
+      padding-top: 18px;
+    }
+    .studio[data-recording="true"] .studio-voice-record > :last-child { margin-left: 8px; }
+  }
+
   /* ------------------------------------------------------------ ≥ 1180px */
   @media (min-width: 1180px) {
     .studio {
-      grid-template-columns: auto minmax(0, 1fr) auto;
+      grid-template-columns: auto auto minmax(0, 1fr) auto;
       grid-template-areas:
-        "top  top   top"
-        "rail stage inspector"
-        "film film  film"
-        "transport transport transport";
+        "top  top  top   top"
+        "rail tool stage inspector"
+        "rail film film  film"
+        "rail transport transport transport";
+    }
+    /* the title sits centred on the bar, clear of both ends */
+    .studio-topbar .studio-title {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      max-width: calc(100% - 2 * 410px);
+      min-width: 0;
+      transform: translate(-50%, -50%);
     }
     .studio-inspector {
       position: static;
@@ -191,11 +423,19 @@
       inset 0 1px 0 rgba(255, 255, 255, 0.07);
   }
   .studio-monitor-page {
+    position: relative; /* above the Stage's backdrop light */
     display: flex;
     flex-direction: column;
     min-height: 0;
     flex: 1 1 auto;
     animation: studio-page-in 420ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+  }
+  .studio-monitor[data-recording="true"] {
+    box-shadow:
+      0 40px 90px rgba(0, 0, 0, 0.55),
+      0 0 120px -20px rgba(227, 69, 47, 0.22),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.03),
+      inset 0 1px 0 rgba(255, 255, 255, 0.07);
   }
   .studio-story-text {
     font-family: var(--font-fraunces), Georgia, "Iowan Old Style", serif;
@@ -304,8 +544,19 @@
     cursor: pointer;
   }
 
+  /* ------------------------------------- nothing loops in the Creator */
+  /* Reels turn while the tape moves; nothing else repeats. The kit's record
+     rings pulse elsewhere; in the Studio they hold a frozen frame of the
+     pulse, as the reference draws the live record button. */
+  .studio .sk-big--red:not(:disabled) .sk-big-ring,
+  .studio .sk-transport--rec.is-active:not(:disabled) .sk-transport-ring {
+    animation: none;
+    opacity: 0.55;
+  }
+
   /* ------------------------------------------------- reduced motion: off */
   @media (prefers-reduced-motion: reduce) {
+    .studio-finish { transition: none; }
     .studio-toolpanel,
     .studio-inspector,
     .studio-monitor-page,

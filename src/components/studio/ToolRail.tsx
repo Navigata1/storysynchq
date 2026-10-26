@@ -1,12 +1,15 @@
 "use client";
 
 /**
- * The tool rail: four tools, nothing else. Left edge on a desktop, a bottom
- * toolbar on a phone (studio.css handles the flip). Child-scale targets —
- * --sk-big-h is raised well past the kit default.
+ * The tool rail: three friendly tools first — Photo, Voice, Music — then,
+ * past a divider, a quieter Magic. Magic sits apart on purpose: the voice is
+ * the moat (s03). Left edge on a tablet or desktop, a bottom toolbar on a
+ * phone (studio.css handles the flip). Child-scale targets: the three tools
+ * are 92px tiles.
  */
 
 import * as React from "react";
+import { Camera, Hourglass, Mic, Music, Sparkles, type LucideIcon } from "lucide-react";
 import { BigButton } from "@/components/studio-kit/kit";
 
 export type StudioTool = "photo" | "voice" | "music" | "magic";
@@ -21,41 +24,69 @@ export interface ToolRailProps {
 
 interface ToolSpec {
   id: StudioTool;
-  icon: string;
+  Icon: LucideIcon;
   label: string;
   hint: string;
 }
 
+/** The three friendly tools. */
 const TOOLS: ToolSpec[] = [
-  { id: "photo", icon: "📷", label: "Photo", hint: "Add a picture to this page" },
-  { id: "voice", icon: "🎙", label: "Voice", hint: "Record your voice for this page" },
-  { id: "music", icon: "♪", label: "Music", hint: "Choose the music behind your story" },
-  { id: "magic", icon: "✨", label: "Magic", hint: "Make a story from an idea" },
+  { id: "photo", Icon: Camera, label: "Photo", hint: "Add a picture to this page" },
+  { id: "voice", Icon: Mic, label: "Voice", hint: "Record your voice for this page" },
+  { id: "music", Icon: Music, label: "Music", hint: "Choose the music behind your story" },
 ];
 
+const MAGIC: ToolSpec = { id: "magic", Icon: Sparkles, label: "Magic", hint: "Make a story from an idea" };
+
 export function ToolRail({ active, onSelect, photoBusy, narrated, musicOn }: ToolRailProps) {
+  const magicOn = active === MAGIC.id;
   return (
     <nav
       aria-label="Story tools"
-      className="studio-rail-list border-t border-white/8 bg-black/25 backdrop-blur-xl md:border-t-0 md:border-r md:border-white/8"
-      style={{ "--sk-big-h": "84px" } as React.CSSProperties}
+      className="studio-rail-list border-t border-white/8 bg-black/25 backdrop-blur-xl md:border-t-0 md:border-r md:bg-[#0b0f1d] md:backdrop-blur-none"
     >
-      {TOOLS.map((tool) => {
-        const isActive = active === tool.id;
-        const busy = tool.id === "photo" && photoBusy;
+      {TOOLS.map(({ id, Icon, label, hint }) => {
+        const isActive = active === id;
+        const busy = id === "photo" && photoBusy;
+        const Glyph = busy ? Hourglass : Icon;
         return (
           <BigButton
-            key={tool.id}
-            icon={<span className="text-[26px] leading-none">{busy ? "⏳" : tool.icon}</span>}
-            label={tool.label}
+            key={id}
+            icon={<Glyph className="size-7 md:size-[30px]" strokeWidth={isActive ? 2.4 : 1.9} />}
+            label={label}
             variant={isActive ? "gold" : "ghost"}
             aria-pressed={isActive}
-            title={tool.hint}
-            onClick={() => onSelect(tool.id)}
-            className="w-full flex-col gap-1 rounded-2xl px-2 text-center text-[13px] font-semibold"
+            title={hint}
+            onClick={() => onSelect(id)}
+            className={`studio-rail-tool w-full flex-col gap-2 rounded-[22px] px-2 text-center text-[14px] font-semibold ${
+              isActive ? "" : "text-ss-fg-2"
+            }`}
           />
         );
       })}
+
+      <div role="separator" className="studio-rail-sep" />
+
+      <BigButton
+        icon={
+          <span
+            className={`grid size-11 place-items-center rounded-[14px] border border-dashed ${
+              magicOn ? "border-ss-ink/30" : "border-white/16"
+            }`}
+          >
+            <MAGIC.Icon className="size-[22px]" strokeWidth={1.8} />
+          </span>
+        }
+        label={MAGIC.label}
+        variant={magicOn ? "gold" : "ghost"}
+        aria-pressed={magicOn}
+        title={MAGIC.hint}
+        onClick={() => onSelect(MAGIC.id)}
+        className={`studio-rail-magic min-h-0 flex-col gap-1.5 rounded-[18px] px-1 py-0.5 text-center text-[12px] font-medium ${
+          magicOn ? "" : "border-transparent bg-transparent text-ss-fg-3 backdrop-blur-none hover:bg-white/5"
+        }`}
+      />
+
       <span className="sr-only" aria-live="polite">
         {narrated ? "This page has narration." : "This page has no narration yet."}{" "}
         {musicOn ? "Music bed on." : "Music bed off."}

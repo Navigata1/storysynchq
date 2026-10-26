@@ -351,3 +351,26 @@ asserted the old Space or P bindings.
   render's chip-above-book composition, with T08's ≥ 75 % vh and centring rules intact.
 - **Last page:** CHIME reads "last page" and the foot "the end in N s", because the automatic end does not chime.
 - **Open question for Jon:** should the automatic end chime like a manual "next" on the last page does?
+
+**2026-10-25 · T13a · The room fits the tablet; the Stage borrows the light; only reels loop.**
+- From 768 px wide and 600 px tall the Studio shell is exactly one viewport (`height: 100dvh`). The rail runs the full
+  height beside the Stage, the strip and the Transport (s03). From 1024 px an open tool card docks in its own `tool`
+  column between the rail and the Stage (320 px). Below that it floats (768–1023 px) or is a bottom sheet (phones), as
+  before.
+- The Stage's picture zone is a CSS size container. The photo frame is the largest box of the photo's own aspect ratio
+  that fits with a margin.
+- The Stage's backdrop is the page's own picture (`blur(36px) brightness(.5)`, no Ken Burns). A picture-less page keeps
+  the last picture's light (the Player's rule). That memory is per story (`storyKey` = the draft's `startedAt`), so
+  "Delete everything" leaves no trace of the deleted pictures on screen.
+- `ListeningRing` is a new kit piece. There was no T05d, so this ticket built it to the s03 inset spec. The ring is
+  declared on the wrapper's `box-shadow` and painted over the child by a `::after` that inherits it, clipped to the
+  frame.
+- "Nothing loops in the Creator except reels" (brief): inside `.studio`, the kit's record-ring pulses
+  (`BigButton` red, Transport REC) hold a frozen frame at opacity .55. Other routes keep the kit default.
+- Below 400 px the Studio's transport keys are 52 px, so a 375 px phone does not scroll sideways, and the readout stays on
+  one line (round 1).
+- Round 1: the tool card's container comes right after the rail in the DOM and before `<main>`. Grid areas place it,
+  and z-index 47 keeps a floating card or sheet above the Stage. Tab order is therefore rail → card → Stage, the order
+  the eye reads (WCAG 2.4.3).
+- Round 1: the docked Voice card's take stands at the card's foot (s03). On screens under 700 px tall, the card's body
+  scrolls and the privacy footnote stays pinned at its foot. Nothing in the card clips the live ring during a take.

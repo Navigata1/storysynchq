@@ -13,7 +13,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { FolderOpen } from "lucide-react";
+import { ArrowLeft, Circle, FolderOpen, Pen } from "lucide-react";
 import { BigButton, GlassPanel, ModeToggle, Reel } from "@/components/studio-kit/kit";
 import { blobToDataUrl, dataUrlToBlob } from "@/lib/audio/recorder";
 import { normalizeNarration } from "@/lib/audio/transcode";
@@ -1111,7 +1111,7 @@ export default function Studio() {
     <div className="studio" data-recording={recording ? "true" : "false"}>
       {/* ------------------------------------------------------------ top bar */}
       <header
-        className="studio-area-top flex flex-wrap items-center gap-2 border-b border-white/8 bg-black/35 px-3 py-2 backdrop-blur-xl"
+        className="studio-area-top studio-topbar relative flex flex-wrap items-center gap-2 border-b border-white/8 bg-[#060912]/55 px-3 py-2 backdrop-blur-xl md:min-h-[68px]"
         style={{ "--sk-big-h": "48px" } as React.CSSProperties}
       >
         <Link
@@ -1119,7 +1119,7 @@ export default function Studio() {
           aria-label="Leave the studio"
           className="sk-focus flex h-11 items-center gap-2 rounded-xl border border-white/12 bg-white/5 px-3 text-sm text-white/75 hover:bg-white/10"
         >
-          <span aria-hidden="true">⏏</span>
+          <ArrowLeft aria-hidden="true" className="h-[18px] w-[18px] flex-none" strokeWidth={2} />
           <span className="hidden sm:inline">Exit</span>
         </Link>
 
@@ -1140,30 +1140,44 @@ export default function Studio() {
         <label className="sr-only" htmlFor="studio-title">
           Story title
         </label>
-        <input
-          id="studio-title"
-          value={state.manifest.metadata.title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder={DEFAULT_TITLE}
-          className="studio-title-input sk-focus h-11 min-w-[8rem] flex-1 px-2 text-lg font-semibold text-white"
-          style={{ fontFamily: "var(--font-fraunces), Georgia, serif" }}
-        />
-
-        <div className="flex items-center gap-2">
-          <ModeToggle advanced={advanced} onChange={setAdvanced} />
-          <BigButton
-            icon={<span className="text-[#E3452F]">●</span>}
-            label="Finish my story"
-            variant="gold"
-            disabled={!canFinish || recording}
-            onClick={() => {
-              stopAudio();
-              setTool(null);
-              setGateAuthor(gateDefault);
-              setPhase("gate");
-            }}
-            className="rounded-xl px-4 text-[15px]"
+        {/* The title, centred on the bar (from 1180px), with a faint pen. */}
+        <div data-studio="title" className="studio-title">
+          <input
+            id="studio-title"
+            value={state.manifest.metadata.title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder={DEFAULT_TITLE}
+            // Sizes the input where `field-sizing: content` is not supported.
+            size={Math.max(12, (state.manifest.metadata.title || DEFAULT_TITLE).length)}
+            className="studio-title-input sk-focus h-11 min-w-0 px-2 font-ss-display text-base font-semibold tracking-[-0.01em] text-white sm:text-lg min-[1180px]:text-[22px] min-[1180px]:font-bold"
           />
+          <Pen aria-hidden="true" className="size-4 flex-none text-ss-fg-4" strokeWidth={2} />
+        </div>
+
+        <div className="ml-auto flex items-center gap-2">
+          <ModeToggle advanced={advanced} onChange={setAdvanced} />
+          {/* While the mic is live the story cannot be finished: it waits
+              "after this take". */}
+          <div className="studio-finish" data-recording={recording ? "true" : "false"}>
+            <BigButton
+              icon={<Circle className="size-4 text-[#E3452F]" fill="currentColor" strokeWidth={0} />}
+              label="Finish my story"
+              variant="gold"
+              disabled={!canFinish || recording}
+              onClick={() => {
+                stopAudio();
+                setTool(null);
+                setGateAuthor(gateDefault);
+                setPhase("gate");
+              }}
+              className="rounded-xl px-4 text-[15px] md:min-h-10 md:py-2"
+            />
+            {recording ? (
+              <span data-studio="finish-note" className="studio-finish-note font-ss-mono">
+                after this take
+              </span>
+            ) : null}
+          </div>
         </div>
 
         {/* An autosave that is failing is news at every width — a parent on a
@@ -1196,6 +1210,55 @@ export default function Studio() {
             setTool((prev) => (prev === next ? null : next));
           }}
         />
+      </div>
+
+      {/* ------------------------------------------------------- tool card */}
+      {/* A column between the rail and the Stage from 1024px; a card floating
+          over the Stage below that; a bottom sheet on a phone. It comes right
+          after the rail in the DOM, so Tab goes from the tool that opened it
+          into the card and then on to the Stage, the order the eye reads
+          (WCAG 2.4.3). Grid areas place it; z-index 47 keeps a floating card
+          or a sheet above <main>, which follows it. */}
+      <div className="studio-area-tool">
+        {tool === "voice" ? (
+          <VoicePanel
+            recording={recording}
+            hasVoice={hasVoice}
+            voiceSeconds={currentMeta?.duration ?? audio.clipDuration}
+            recordSeconds={audio.recordSeconds}
+            playing={audio.playing}
+            micError={audio.micError}
+            onToggleRecord={() => void toggleRecord()}
+            onListen={() => (audio.playing ? stopAudio() : void play(activeIndex))}
+            onDelete={deleteRecording}
+            onRetry={() => {
+              clearMicError();
+              void toggleRecord();
+            }}
+            onClose={() => setTool(null)}
+          />
+        ) : null}
+
+        {tool === "music" ? (
+          <MusicPanel
+            mood={state.mood}
+            musicOn={state.musicOn}
+            musicVolume={state.musicVolume}
+            onMood={(mood: MoodName) => setState((prev) => ({ ...prev, mood }))}
+            onToggle={(on) => setState((prev) => ({ ...prev, musicOn: on }))}
+            onVolume={(v) => setState((prev) => ({ ...prev, musicVolume: v }))}
+            onClose={() => setTool(null)}
+          />
+        ) : null}
+
+        {tool === "magic" ? (
+          <MagicPanel
+            busy={magicBusy}
+            willReplace={pages.some((p) => p.text?.content?.trim() || p.illustration?.url)}
+            onGenerate={(prompt, count, look) => void runMagic(prompt, count, look)}
+            onClose={() => setTool(null)}
+          />
+        ) : null}
       </div>
 
       {/* ------------------------------------------------------------ stage */}
@@ -1252,49 +1315,12 @@ export default function Studio() {
           position={audio.position}
           clipDuration={audio.clipDuration}
           photoBusy={photoBusy}
+          mood={state.mood}
+          musicOn={state.musicOn}
+          storyKey={state.startedAt}
           onTextChange={setText}
           onPickPhoto={pickPhoto}
         />
-
-        {tool === "voice" ? (
-          <VoicePanel
-            recording={recording}
-            hasVoice={hasVoice}
-            voiceSeconds={currentMeta?.duration ?? audio.clipDuration}
-            recordSeconds={audio.recordSeconds}
-            playing={audio.playing}
-            micError={audio.micError}
-            onToggleRecord={() => void toggleRecord()}
-            onListen={() => (audio.playing ? stopAudio() : void play(activeIndex))}
-            onDelete={deleteRecording}
-            onRetry={() => {
-              clearMicError();
-              void toggleRecord();
-            }}
-            onClose={() => setTool(null)}
-          />
-        ) : null}
-
-        {tool === "music" ? (
-          <MusicPanel
-            mood={state.mood}
-            musicOn={state.musicOn}
-            musicVolume={state.musicVolume}
-            onMood={(mood: MoodName) => setState((prev) => ({ ...prev, mood }))}
-            onToggle={(on) => setState((prev) => ({ ...prev, musicOn: on }))}
-            onVolume={(v) => setState((prev) => ({ ...prev, musicVolume: v }))}
-            onClose={() => setTool(null)}
-          />
-        ) : null}
-
-        {tool === "magic" ? (
-          <MagicPanel
-            busy={magicBusy}
-            willReplace={pages.some((p) => p.text?.content?.trim() || p.illustration?.url)}
-            onGenerate={(prompt, count, look) => void runMagic(prompt, count, look)}
-            onClose={() => setTool(null)}
-          />
-        ) : null}
       </main>
 
       {/* -------------------------------------------------------- inspector */}

@@ -1,0 +1,79 @@
+/* ============================================================================
+   ListeningRing — the tape-red ring around the thing being told (s03).
+
+   The wrapper carries the whole ring in its own box-shadow: a faint outer halo
+   plus the s03 inset pair (3px tape-red line, 80px red glow at 35%). Its
+   ::after inherits that shadow and clips away the outer part, so the inset
+   ring paints OVER the child (an opaque photo would otherwise hide it).
+
+   Static by design — nothing in the Creator loops. The ring eases in and out
+   (ease-out, 300ms); under reduced motion it simply appears.
+   ========================================================================== */
+
+@layer components {
+  .sk-listening-ring {
+    --sk-lr-red: var(--ss-red, #e3452f);
+    --sk-lr-radius: 10px;
+    position: relative;
+    border-radius: var(--sk-lr-radius);
+    box-shadow: none;
+    transition: box-shadow 300ms var(--ss-ease, ease-out);
+  }
+
+  .sk-listening-ring::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: inherit;
+    clip-path: inset(0 round var(--sk-lr-radius));
+    pointer-events: none;
+  }
+
+  .sk-listening-ring[data-active="true"] {
+    box-shadow:
+      0 0 0 6px rgba(227, 69, 47, 0.14),
+      0 0 60px 4px rgba(227, 69, 47, 0.3),
+      inset 0 0 0 3px var(--sk-lr-red),
+      inset 0 0 80px rgba(227, 69, 47, 0.35);
+  }
+
+  /* "Listening… 0:05" — straddles the bottom edge, centred. */
+  .sk-listening-pill {
+    position: absolute;
+    left: 50%;
+    bottom: -15px;
+    z-index: 1;
+    transform: translateX(-50%);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 30px;
+    padding: 0 14px 0 12px;
+    border-radius: 999px;
+    white-space: nowrap;
+    background: var(--sk-lr-red);
+    color: #fff;
+    font: 600 13px/1 var(--ss-ui);
+    font-variant-numeric: tabular-nums;
+    box-shadow:
+      0 8px 22px -6px rgba(227, 69, 47, 0.8),
+      0 0 0 3px rgba(5, 7, 13, 0.6);
+  }
+
+  /* the live dot is a frozen frame, never a pulse */
+  .sk-listening-dot {
+    flex: none;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sk-listening-ring {
+      transition: none;
+    }
+  }
+}
