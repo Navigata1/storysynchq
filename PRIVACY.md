@@ -50,6 +50,8 @@ That fact shapes the product, not just this document.
 | Story text, images, narration audio (saved) | Supabase (user's row) or localStorage fallback | Only after parental gate | "Delete story" (removes all assets + share code) |
 | Share code | Supabase | Only after parental gate | Deleting the story |
 | Account email | Supabase auth | On sign-up (an adult action) | Account deletion |
+| Tapes sent to you: link code, title, maker, narrator, page count, length — never pictures, words or voices | this browser's localStorage | when you open someone else's link | 'Take it off this shelf', or clearing browser data |
+| When you last looked at the shelf (one timestamp) | this browser's localStorage | each visit to /read | clearing browser data |
 
 ## Phase 3 commitments (designed now, enforced then)
 

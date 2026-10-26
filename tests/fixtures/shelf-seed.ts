@@ -1,13 +1,18 @@
 /**
  * Shelf seeds for the Read Room's "YOUR TAPES" (T20a; T20b and T21 extend it).
  *
- *   seedShelf(page, { library, draft? })  writes this device's `ssync-library`
+ *   seedShelf(page, { library, draft?, sent?, previousVisit? })
+ *                                         writes this device's `ssync-library`
  *                                         and, optionally, the Studio's saved
- *                                         draft — ONCE per browser context
+ *                                         draft, the Sent-to-you list (T20b) and
+ *                                         the previous shelf visit (T20b) —
+ *                                         ONCE per browser context
  *   shelfRow(story, code, createdAt)      one library row with a fixed save time
  *   pictureLessTape(title, author?)       a synthetic tape with words and no picture
  *   publishedDraft(id, code)              the Creator's draft of a tape that was
  *                                         published as library row `id`
+ *   sentRow(facts, code, runtime, addedAt)  one Sent-to-you reference, built from
+ *                                         a fixture's facts (T20b)
  *
  * "Once per browser context": the init script runs before the app on every
  * document of every page in the context, and a marker key in localStorage
@@ -21,8 +26,10 @@
 import type { Page } from "@playwright/test";
 import type { SsyncManifest } from "../../src/lib/storysync/manifest";
 import type { StudioState } from "../../src/components/studio/types";
+import { SENT_KEY, SHELF_VISIT_KEY, type SentTape } from "../../src/components/player/sent-to-you";
 import { libraryRow, READER_LIBRARY_KEY, type ReaderLibraryRow } from "./reader-tapes";
 import { DRAFT_KEY, studioDraftState } from "./helpers";
+import type { TapeFacts } from "./tapes";
 
 /** The marker that makes a seed run once per browser context. */
 export const SHELF_SEED_MARKER = "ssync-test-shelf-seeded";
@@ -32,12 +39,19 @@ export interface ShelfSeed {
   library: readonly ReaderLibraryRow[];
   /** The Studio's saved state; written as the draft envelope (v1). */
   draft?: StudioState;
+  /** Tapes sent to you (T20b): written as the `{ v: 1, tapes }` envelope. */
+  sent?: readonly SentTape[];
+  /** The previous look at the shelf (T20b), an ISO time. Absent: never visited. */
+  previousVisit?: string;
 }
 
 /** Write the shelf's storage before the app's code runs, once per browser context. */
-export async function seedShelf(page: Page, { library, draft }: ShelfSeed): Promise<void> {
+export async function seedShelf(
+  page: Page,
+  { library, draft, sent, previousVisit }: ShelfSeed,
+): Promise<void> {
   await page.context().addInitScript(
-    ({ marker, libraryKey, libraryJson, draftKey, draftJson }) => {
+    ({ marker, libraryKey, libraryJson, draftKey, draftJson, sentKey, sentJson, visitKey, visit }) => {
       try {
         if (window.localStorage.getItem(marker)) return;
         window.localStorage.setItem(libraryKey, libraryJson);
@@ -45,6 +59,8 @@ export async function seedShelf(page: Page, { library, draft }: ShelfSeed): Prom
           const envelope = { v: 1, savedAt: new Date().toISOString(), state: JSON.parse(draftJson) };
           window.localStorage.setItem(draftKey, JSON.stringify(envelope));
         }
+        if (sentJson) window.localStorage.setItem(sentKey, sentJson);
+        if (visit) window.localStorage.setItem(visitKey, visit);
         window.localStorage.setItem(marker, "1");
       } catch {
         /* opaque origins (about:blank) have no storage; the next document seeds */
@@ -56,8 +72,29 @@ export async function seedShelf(page: Page, { library, draft }: ShelfSeed): Prom
       libraryJson: JSON.stringify(library),
       draftKey: DRAFT_KEY,
       draftJson: draft ? JSON.stringify(draft) : "",
+      sentKey: SENT_KEY,
+      sentJson: sent ? JSON.stringify({ v: 1, tapes: sent }) : "",
+      visitKey: SHELF_VISIT_KEY,
+      visit: previousVisit ?? "",
     },
   );
+}
+
+/**
+ * One Sent-to-you reference for a fixture tape, the way the Read Room keeps it:
+ * the link code and the label facts (title, maker, narrator, page count, the
+ * "~m:ss" runtime) and when it arrived. Never a picture, words or a voice.
+ */
+export function sentRow(facts: TapeFacts, code: string, runtime: string, addedAt: string): SentTape {
+  return {
+    code,
+    title: facts.title,
+    author: facts.byline,
+    narrator: facts.narrator,
+    pages: facts.pages.length,
+    runtime,
+    addedAt,
+  };
 }
 
 /** A library row with a fixed save time, so the shelf order is the test's. */

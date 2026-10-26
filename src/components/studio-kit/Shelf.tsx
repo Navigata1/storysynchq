@@ -23,7 +23,12 @@
  *       `pulling`   tilts 8deg and rises 30px over 420ms, the kit TapeRibbon
  *                   loop spilling below, an empty dashed slot left behind
  *       `leaving`   fades off the shelf (the consumer removes it after)
- *       `stamp`     a slot at the face's top-right for a stamp (T20b's NEW)
+ *       `stamp`     a slot at the face's top-right for a stamp
+ *       `newStamp`  T20b's tape-red "NEW" in that slot (`data-stamp="new"`):
+ *                   2px tape-red border and ink on paper, mono 600, −6°
+ *       `ledgeLabel` a mono label under the ledge, below this tape (T20b's
+ *                   "SENT TO YOU"); `ledgeLabelId` lets the face be
+ *                   described by it
  *   - `variant="blank"`: "Make your own" — paper, a 2px dashed ink border,
  *     lucide Plus on a label-yellow disc, mono "BLANK TAPE · YOUR VOICE · YOUR
  *     PICTURES". Never selected.
@@ -101,6 +106,12 @@ export interface ShelfTapeProps extends Omit<React.ButtonHTMLAttributes<HTMLButt
   leaving?: boolean;
   /** Drawn at the face's top-right (a stamp). */
   stamp?: React.ReactNode;
+  /** The tape-red "NEW" stamp in the stamp slot (wins over `stamp`). */
+  newStamp?: boolean;
+  /** A mono label under the ledge, below this tape (upper case by CSS). */
+  ledgeLabel?: React.ReactNode;
+  /** Id for the ledge label, so the face can be described by it. */
+  ledgeLabelId?: string;
   /** `data-tape-id` on the face. */
   tapeId?: string;
 }
@@ -116,6 +127,9 @@ export const ShelfTape = React.forwardRef<HTMLButtonElement, ShelfTapeProps>(fun
     pulling = false,
     leaving = false,
     stamp,
+    newStamp = false,
+    ledgeLabel,
+    ledgeLabelId,
     tapeId,
     className,
     type = "button",
@@ -194,9 +208,22 @@ export const ShelfTape = React.forwardRef<HTMLButtonElement, ShelfTapeProps>(fun
         </span>
         <span className="sk-shelf-screw sk-shelf-screw--l" aria-hidden="true" />
         <span className="sk-shelf-screw sk-shelf-screw--r" aria-hidden="true" />
-        {stamp ? <span className="sk-shelf-stamp">{stamp}</span> : null}
+        {newStamp ? (
+          <span className="sk-shelf-stamp">
+            <span className="sk-shelf-new" data-stamp="new">
+              NEW
+            </span>
+          </span>
+        ) : stamp ? (
+          <span className="sk-shelf-stamp">{stamp}</span>
+        ) : null}
         {children}
       </button>
+      {ledgeLabel ? (
+        <span className="sk-shelf-ledge-label" data-sk="shelf-ledge-label" id={ledgeLabelId}>
+          {ledgeLabel}
+        </span>
+      ) : null}
     </div>
   );
 });

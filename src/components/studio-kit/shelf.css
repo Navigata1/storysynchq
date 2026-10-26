@@ -402,6 +402,44 @@
     right: 2px;
     z-index: 3;
   }
+  /* T20b's NEW (s07 .ss-stamp.s7-new): tape-red ink and a 2px tape-red border
+     on paper, mono 600 11px tracked, tilted −6° */
+  .sk-shelf-new {
+    display: block;
+    padding: 3px 5px 2px 6px;
+    border: 2px solid var(--ss-red);
+    border-radius: 7px;
+    background-color: var(--ss-paper);
+    color: var(--ss-red);
+    font-family: var(--ss-mono);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    transform: rotate(-6deg);
+    box-shadow: 0 4px 8px -4px rgba(0, 0, 0, 0.6);
+  }
+
+  /* T20b's "SENT TO YOU": a mono label under the ledge, below its tape (s07
+     .s7-sent's place; a plain label, not a status chip) */
+  .sk-shelf-ledge-label {
+    position: absolute;
+    left: 2px;
+    /* the slot's foot is the ledge's top: 8px of ledge, then the label */
+    top: calc(100% + 15px);
+    z-index: 1;
+    font-family: var(--ss-mono);
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.2;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--ss-fg-2);
+    pointer-events: none;
+  }
 
   /* ---------- the blank tape: "Make your own" ------------------------------- */
   .sk-shelf-face.sk-shelf-face--blank {

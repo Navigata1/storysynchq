@@ -25,6 +25,18 @@
  * tapes) and again whenever the room comes back to the chooser. Nothing is
  * fetched for it except, when signed in, the grown-up's own cloud library.
  *
+ * Sent to you (T20b): a tape opened from someone else's link (`?story=` that
+ * resolves to a tape that is not in this device's library nor, signed in, in
+ * the cloud library) is remembered on this device before its cover shows, as
+ * its link code and label facts only (sent-to-you.ts). Those references stand
+ * first on the same ledge, NEW ones first, each labelled "SENT TO YOU" under
+ * the ledge. Their band plays them by their link (never from a stored copy)
+ * and "Take it off this shelf" forgets the reference; only the maker can
+ * delete the tape. A remembered link that resolves to nothing offers the
+ * same. NEW: on mount the room reads the previous shelf visit and writes this
+ * one; a sent tape that arrived after the previous visit is stamped NEW for
+ * this whole visit.
+ *
  * At ≥ 1024 px the chooser is a two-column room: `.rr-columns` turns into
  * shelves (≈ 60 %) + a right column as soon as it holds an `.rr-aside` (the
  * "Read it in…" panel, T22a). Until then the shelves span the room.
@@ -62,6 +74,22 @@ import {
   SHELF_LIBRARY_KEY,
   type ShelfEntry,
 } from "./shelf";
+import {
+  forgetSent,
+  isNewSince,
+  isOwnTape,
+  libraryIdOf,
+  orderSent,
+  ownKeys,
+  rememberSent,
+  sanitizeSent,
+  SENT_KEY,
+  sentFacts,
+  sentMetaLines,
+  serializeSent,
+  SHELF_VISIT_KEY,
+  type SentTape,
+} from "./sent-to-you";
 import "./player.css";
 import "./read-room.css";
 
@@ -78,11 +106,23 @@ type Origin = "share" | "demo" | "file" | "shelf";
 type RoomState =
   | { kind: "chooser" }
   | { kind: "loading"; what: string }
-  | { kind: "missing"; code: string }
+  | { kind: "missing"; code: string; remembered: boolean }
   | { kind: "error"; message: string }
   | { kind: "ready"; manifest: SsyncManifest; origin: Origin; shelfId?: string; tapeUrl?: string };
 
-type ShelfStatus = { kind: "none" } | { kind: "pulled"; n: number } | { kind: "kept"; message: string };
+type ShelfStatus =
+  | { kind: "none" }
+  | { kind: "pulled"; n: number }
+  | { kind: "kept"; message: string }
+  | { kind: "taken-off"; n: number };
+
+/** One tape on the ledge: your own, or a reference to one sent to you. */
+type ShelfItem =
+  | { kind: "own"; key: string; entry: ShelfEntry }
+  | { kind: "sent"; key: string; tape: SentTape; isNew: boolean };
+
+/** A sent tape's place on the shelf (never an own tape's id). */
+const sentKey = (code: string) => `sent:${code}`;
 
 function Kicker({ children }: { children: React.ReactNode }) {
   return <p className="rr-kicker m-0">{children}</p>;
@@ -114,8 +154,8 @@ function Choice({
   );
 }
 
-/** This device's library and, with a signed-in grown-up, their cloud library. */
-async function readShelf(): Promise<ShelfEntry[]> {
+/** This device's library rows and, with a signed-in grown-up, their cloud library rows. */
+async function readLibraries(): Promise<{ device: unknown[]; cloud: unknown[] }> {
   let raw: string | null = null;
   try {
     raw = window.localStorage.getItem(SHELF_LIBRARY_KEY);
@@ -131,7 +171,69 @@ async function readShelf(): Promise<ShelfEntry[]> {
       cloud = [];
     }
   }
-  return mergeShelf(parseLibrary(raw), cloud);
+  return { device: parseLibrary(raw), cloud };
+}
+
+/** The tapes sent to you that this device remembers (never throws). */
+function readSent(): SentTape[] {
+  try {
+    return sanitizeSent(window.localStorage.getItem(SENT_KEY));
+  } catch {
+    return [];
+  }
+}
+
+/** Keep the list; an empty list leaves nothing behind. */
+function writeSent(list: readonly SentTape[]): void {
+  try {
+    if (list.length === 0) window.localStorage.removeItem(SENT_KEY);
+    else window.localStorage.setItem(SENT_KEY, serializeSent(list));
+  } catch {
+    /* no storage: nothing is remembered */
+  }
+}
+
+/** Take a reference off this shelf (the tape itself is the maker's to delete). */
+function forgetSentCode(code: string): void {
+  const list = readSent();
+  if (list.some((tape) => tape.code === code)) writeSent(forgetSent(list, code));
+}
+
+/**
+ * The shelf: tapes sent to you (NEW first, then newest), then this device's
+ * library and, with a signed-in grown-up, their cloud library. A reference
+ * whose code turned out to be yours is not shown as sent.
+ */
+async function readShelf(previousVisit: string | null): Promise<ShelfItem[]> {
+  const { device, cloud } = await readLibraries();
+  const own = ownKeys([...device, ...cloud]);
+  const sent = orderSent(
+    readSent().filter((tape) => !isOwnTape({ code: tape.code }, own.ids, own.codes)),
+    previousVisit,
+  );
+  return [
+    ...sent.map(
+      (tape): ShelfItem => ({ kind: "sent", key: sentKey(tape.code), tape, isNew: isNewSince(tape, previousVisit) }),
+    ),
+    ...mergeShelf(device, cloud).map((entry): ShelfItem => ({ kind: "own", key: entry.id, entry })),
+  ];
+}
+
+/**
+ * A tape opened by its link: remember it as sent to you, unless it is yours
+ * (its row is in this device's library or, signed in, your cloud library).
+ * Only the code and the label facts are kept. Never throws.
+ */
+async function rememberIfSent(code: string, manifest: SsyncManifest): Promise<void> {
+  try {
+    const { device, cloud } = await readLibraries();
+    const rows = [...device, ...cloud];
+    const own = ownKeys(rows);
+    if (isOwnTape({ id: libraryIdOf(code, manifest, rows), code }, own.ids, own.codes)) return;
+    writeSent(rememberSent(readSent(), sentFacts(code, manifest), new Date()));
+  } catch {
+    /* remembering is a convenience: the tape still plays */
+  }
 }
 
 /** Wipe the Studio's saved draft when it is this tape; any other draft stays. */
@@ -163,8 +265,23 @@ export function ReadRoom() {
   const [shareUrl, setShareUrl] = React.useState<string | undefined>(undefined);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
+  /* ── NEW: the previous look at the shelf, read once; this visit written ─ */
+  const previousVisit = React.useRef<string | null>(null);
+  const visited = React.useRef(false);
+  React.useEffect(() => {
+    if (visited.current) return;
+    visited.current = true;
+    try {
+      previousVisit.current = window.localStorage.getItem(SHELF_VISIT_KEY);
+      window.localStorage.setItem(SHELF_VISIT_KEY, new Date().toISOString());
+    } catch {
+      previousVisit.current = null;
+    }
+  }, []);
+
   /* ── the shelf ─────────────────────────────────────────────────────────── */
-  const [shelf, setShelf] = React.useState<ShelfEntry[]>([]);
+  const [shelf, setShelf] = React.useState<ShelfItem[]>([]);
+  /** The selected tape's shelf key (an own tape's id, or `sent:<code>`). */
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   /** "Pull the tape out" pressed once, for this tape: the next press deletes. */
   const [armedId, setArmedId] = React.useState<string | null>(null);
@@ -173,14 +290,21 @@ export function ReadRoom() {
   const faceRefs = React.useRef(new Map<string, HTMLButtonElement>());
   const timers = React.useRef<number[]>([]);
   /** The shelf as last rendered, for the pull-out's "who is next". */
-  const shelfRef = React.useRef<ShelfEntry[]>([]);
+  const shelfRef = React.useRef<ShelfItem[]>([]);
+  /** A face to focus once the shelf has re-rendered (after a take-off). */
+  const focusNext = React.useRef<string | null>(null);
+  /** The code of a sent tape this visit opened from the shelf: Close comes back here. */
+  const openedFromShelf = React.useRef<string | null>(null);
   React.useEffect(() => {
     shelfRef.current = shelf;
+    const key = focusNext.current;
+    focusNext.current = null;
+    if (key) faceRefs.current.get(key)?.focus();
   }, [shelf]);
 
   const inChooser = state.kind === "chooser" || state.kind === "error";
-  const selected = shelf.find((entry) => entry.id === selectedId) ?? null;
-  const armed = selected !== null && armedId === selected.id;
+  const selected = shelf.find((item) => item.key === selectedId) ?? null;
+  const armed = selected?.kind === "own" && armedId === selected.key;
 
   /* ── the link this tape lives at (SSR-safe: read after mount) ─────────── */
   React.useEffect(() => {
@@ -202,10 +326,17 @@ export function ReadRoom() {
     setState({ kind: "loading", what: "Finding that tape" });
     // One resolver for "what tape does this code mean" (the Creator's
     // ?open=<code> asks the same one): the cloud first, then this device.
-    void loadTapeByCode(code).then((found) => {
+    void loadTapeByCode(code).then(async (found) => {
       if (cancelled) return;
-      if (!found) setState({ kind: "missing", code });
-      else setState({ kind: "ready", manifest: found, origin: "share" });
+      if (!found) {
+        // a remembered link that resolves to nothing can be taken off the shelf
+        setState({ kind: "missing", code, remembered: readSent().some((tape) => tape.code === code) });
+        return;
+      }
+      // someone else's tape stays on this shelf (its link, not the tape)
+      await rememberIfSent(code, found);
+      if (cancelled) return;
+      setState({ kind: "ready", manifest: found, origin: "share" });
     });
     return () => {
       cancelled = true;
@@ -216,13 +347,13 @@ export function ReadRoom() {
   React.useEffect(() => {
     if (!inChooser || code || wantsDemo) return;
     let cancelled = false;
-    void readShelf().then((entries) => {
+    void readShelf(previousVisit.current).then((items) => {
       if (cancelled) return;
       // a pull-out's line belongs to the visit it happened in
       setStatus({ kind: "none" });
-      setShelf(entries);
+      setShelf(items);
       setSelectedId((current) =>
-        current && entries.some((entry) => entry.id === current) ? current : (entries[0]?.id ?? null),
+        current && items.some((item) => item.key === current) ? current : (items[0]?.key ?? null),
       );
     });
     return () => {
@@ -255,7 +386,7 @@ export function ReadRoom() {
   /** ← → (and ↑ ↓, Home, End) move the selection; the focus follows it. */
   const onTapeKey = React.useCallback(
     (event: React.KeyboardEvent<HTMLButtonElement>, id: string) => {
-      const ids = shelf.map((entry) => entry.id).filter((x) => x !== pulling?.id);
+      const ids = shelf.map((item) => item.key).filter((x) => x !== pulling?.id);
       const at = ids.indexOf(id);
       if (at < 0 || ids.length === 0) return;
       let next: string | undefined;
@@ -288,16 +419,16 @@ export function ReadRoom() {
               ? `That tape is still on the shelf. ${error.message}`
               : "That tape is still on the shelf. Try again.",
         });
-        void readShelf().then(setShelf);
+        void readShelf(previousVisit.current).then(setShelf);
         return;
       }
       forgetDraftOf(entry.id);
       setStatus((current) => ({ kind: "pulled", n: current.kind === "pulled" ? current.n + 1 : 1 }));
 
       const leave = () => {
-        const ids = shelfRef.current.map((x) => x.id);
+        const ids = shelfRef.current.map((x) => x.key);
         setSelectedId((sel) => (sel === entry.id ? nextAfter(ids, entry.id) : sel));
-        setShelf((current) => current.filter((x) => x.id !== entry.id));
+        setShelf((current) => current.filter((x) => x.key !== entry.id));
         setPulling((current) => (current?.id === entry.id ? null : current));
       };
       if (reduce) {
@@ -313,22 +444,45 @@ export function ReadRoom() {
   );
 
   const onPull = React.useCallback(() => {
-    if (!selected || pulling?.id === selected.id) return;
-    if (armed) void pullOut(selected);
-    else setArmedId(selected.id);
+    if (selected?.kind !== "own" || pulling?.id === selected.key) return;
+    if (armed) void pullOut(selected.entry);
+    else setArmedId(selected.key);
   }, [selected, pulling, armed, pullOut]);
 
   const playSelected = React.useCallback(() => {
-    if (!selected || pulling?.id === selected.id) return;
-    const manifest = normalizeTapeManifest(selected.manifest) ?? selected.manifest;
+    if (!selected || pulling?.id === selected.key) return;
     setArmedId(null);
+    if (selected.kind === "sent") {
+      // a tape sent to you plays from its link, never from a stored copy
+      openedFromShelf.current = selected.tape.code;
+      router.push(`/read?story=${encodeURIComponent(selected.tape.code)}`);
+      return;
+    }
+    const { entry } = selected;
+    const manifest = normalizeTapeManifest(entry.manifest) ?? entry.manifest;
     setState({
       kind: "ready",
       manifest,
       origin: "shelf",
-      shelfId: selected.id,
-      tapeUrl: selected.label.shareUrl,
+      shelfId: entry.id,
+      tapeUrl: entry.label.shareUrl,
     });
+  }, [selected, pulling, router]);
+
+  /* ── take a sent tape off this shelf: the reference only, at once ─────── */
+  const takeOff = React.useCallback(() => {
+    if (selected?.kind !== "sent") return;
+    const key = selected.key;
+    forgetSentCode(selected.tape.code);
+    const next = nextAfter(
+      shelfRef.current.map((item) => item.key).filter((x) => x !== pulling?.id),
+      key,
+    );
+    focusNext.current = next;
+    setShelf((current) => current.filter((item) => item.key !== key));
+    setSelectedId(next);
+    setArmedId(null);
+    setStatus((current) => ({ kind: "taken-off", n: current.kind === "taken-off" ? current.n + 1 : 1 }));
   }, [selected, pulling]);
 
   /* ── the demo tape ────────────────────────────────────────────────────── */
@@ -374,7 +528,22 @@ export function ReadRoom() {
     void openDemo();
   }, [code, wantsDemo, demoParam, openDemo]);
 
+  /** Leave a link this visit opened from the shelf: back to the shelf it came from. */
+  const backToShelf = React.useCallback(() => {
+    setState({ kind: "chooser" });
+    if (code && openedFromShelf.current === code) {
+      openedFromShelf.current = null;
+      router.back();
+    } else {
+      router.replace("/read");
+    }
+  }, [code, router]);
+
   const exitPlayer = React.useCallback(() => {
+    if (code && openedFromShelf.current === code) {
+      backToShelf();
+      return;
+    }
     if (code) {
       router.push("/");
       return;
@@ -382,9 +551,16 @@ export function ReadRoom() {
     // Leaving the demo has to clear ?demo=1, or the room re-threads the tape.
     if (wantsDemo) router.replace("/read");
     setState({ kind: "chooser" });
-  }, [code, wantsDemo, router]);
+  }, [code, wantsDemo, router, backToShelf]);
 
   const makeYourOwn = React.useCallback(() => router.push("/studio"), [router]);
+
+  /** A remembered link that resolves to nothing: forget it, back to the chooser. */
+  const takeOffMissing = React.useCallback(() => {
+    if (state.kind !== "missing") return;
+    forgetSentCode(state.code);
+    backToShelf();
+  }, [state, backToShelf]);
 
   /* ── "Send a thank-you back" — a tape someone sent: a link or a file ──── */
   const answered =
@@ -481,6 +657,14 @@ export function ReadRoom() {
                 className="flex-1 justify-center"
               />
             </div>
+            {state.remembered ? (
+              <BigButton
+                label="Take it off this shelf"
+                variant="ghost"
+                onClick={takeOffMissing}
+                className="justify-center sm:self-start"
+              />
+            ) : null}
           </div>
         ) : null}
 
@@ -518,16 +702,50 @@ export function ReadRoom() {
                   <Shelf label="Your tapes shelf" className="rr-shelf">
                     {shelf.length > 0 ? (
                       <div role="radiogroup" aria-label="Your tapes" className="rr-shelf-group">
-                        {shelf.map((entry) => {
-                          const isSelected = entry.id === selectedId;
+                        {shelf.map((item) => {
+                          const isSelected = item.key === selectedId;
+                          const faceRef = (el: HTMLButtonElement | null) => {
+                            if (el) faceRefs.current.set(item.key, el);
+                            else faceRefs.current.delete(item.key);
+                          };
+                          if (item.kind === "sent") {
+                            const { tape } = item;
+                            const metaId = `rr-meta-sent-${tape.code}`;
+                            const sentId = `rr-sent-${tape.code}`;
+                            return (
+                              <ShelfTape
+                                key={item.key}
+                                ref={faceRef}
+                                tapeId={tape.code}
+                                data-sent="true"
+                                role="radio"
+                                aria-checked={isSelected}
+                                aria-label={item.isNew ? `${tape.title}, new` : tape.title}
+                                aria-describedby={`${metaId} ${sentId}`}
+                                tabIndex={isSelected ? 0 : -1}
+                                title={tape.title}
+                                metaId={metaId}
+                                meta={sentMetaLines(tape).map((line, i) => (
+                                  <React.Fragment key={i}>
+                                    {i > 0 ? <span className="sk-shelf-meta-sep"> · </span> : null}
+                                    <span className="sk-shelf-meta-line">{line}</span>
+                                  </React.Fragment>
+                                ))}
+                                newStamp={item.isNew}
+                                ledgeLabel="Sent to you"
+                                ledgeLabelId={sentId}
+                                selected={isSelected}
+                                onClick={() => select(item.key)}
+                                onKeyDown={(event) => onTapeKey(event, item.key)}
+                              />
+                            );
+                          }
+                          const { entry } = item;
                           const metaId = `rr-meta-${entry.id}`;
                           return (
                             <ShelfTape
-                              key={entry.id}
-                              ref={(el) => {
-                                if (el) faceRefs.current.set(entry.id, el);
-                                else faceRefs.current.delete(entry.id);
-                              }}
+                              key={item.key}
+                              ref={faceRef}
                               tapeId={entry.id}
                               role="radio"
                               aria-checked={isSelected}
@@ -577,12 +795,20 @@ export function ReadRoom() {
                       </span>
                     ) : status.kind === "kept" ? (
                       <span className="rr-status-line">{status.message}</span>
+                    ) : status.kind === "taken-off" ? (
+                      <span key={`taken-off-${status.n}`} className="rr-status-line">
+                        <span>
+                          <b>Taken off this shelf.</b> Only the person who made it can delete the tape itself.
+                        </span>
+                      </span>
                     ) : null}
                   </p>
 
                   {selected ? (
                     <div data-shelf="band" className="rr-band">
-                      <p className="rr-band-line">{bandLine(selected.label)}</p>
+                      <p className="rr-band-line">
+                        {bandLine(selected.kind === "own" ? selected.entry.label : selected.tape)}
+                      </p>
                       <div className="rr-band-actions">
                         <BigButton
                           variant="gold"
@@ -591,13 +817,23 @@ export function ReadRoom() {
                           onClick={playSelected}
                           className="rr-band-btn"
                         />
-                        <BigButton
-                          variant={armed ? "red" : "ghost"}
-                          icon={<PullTapeIcon className="h-[21px] w-[24px]" />}
-                          label={armed ? "Tap again to delete everything" : "Pull the tape out"}
-                          onClick={onPull}
-                          className={armed ? "rr-band-btn" : "rr-band-btn rr-pull"}
-                        />
+                        {selected.kind === "sent" ? (
+                          // not yours to delete: forget the reference, at once
+                          <BigButton
+                            variant="ghost"
+                            label="Take it off this shelf"
+                            onClick={takeOff}
+                            className="rr-band-btn"
+                          />
+                        ) : (
+                          <BigButton
+                            variant={armed ? "red" : "ghost"}
+                            icon={<PullTapeIcon className="h-[21px] w-[24px]" />}
+                            label={armed ? "Tap again to delete everything" : "Pull the tape out"}
+                            onClick={onPull}
+                            className={armed ? "rr-band-btn" : "rr-band-btn rr-pull"}
+                          />
+                        )}
                       </div>
                     </div>
                   ) : null}

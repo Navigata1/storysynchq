@@ -579,3 +579,26 @@ the Player's.
   1180×820 and the room never scrolls.
 - A docked column under 700 px tall shows no card: the take alone needs nearly all of it, and the Stage beside it
   already shows the same words.
+
+**2026-10-25 · T20b · Sent to you keeps a link, not a tape; NEW means "received since your last look at the shelf".**
+
+- **What is kept.** A tape opened from someone else's link stays on this device's shelf as a reference:
+  `ssync-sent-to-you` = `{ v: 1, tapes: [{ code, title, author, narrator?, pages, runtime, addedAt }] }`, capped at 30
+  (the oldest arrival goes), sanitized on every read (an entry with any other field is dropped whole). Never
+  pictures, words, voices or URLs. The maker's delete therefore still removes every copy: the reference just resolves
+  to nothing.
+- **Yours or sent.** A resolved tape is yours, and never remembered, when its id or code is in this device's
+  library or, signed in, in your cloud library. Cloud rows carry no code, so for them the match is the tape's
+  identity: `metadata.created` to the ms, title, page count and Signature. The decision is made before the cover
+  shows, and nothing is sent to decide it.
+- **On the shelf.** References stand first on the same "Your tapes" ledge (NEW first, then newest), as radios with
+  `data-sent`, no picture, the meta "FROM <AUTHOR> · N PAGE(S) · ~m:ss" and "SENT TO YOU" under the ledge.
+  - "Play this tape" opens `/read?story=<code>`, and Close returns to the shelf.
+  - "Take it off this shelf" forgets the reference in one press, with the line "Taken off this shelf. Only the
+    person who made it can delete the tape itself."
+  - A remembered dead link's missing state offers the same button.
+- **NEW.** `ssync-shelf-visit` (one ISO time) is read once per visit on mount and rewritten. A reference added
+  strictly after the previous visit is stamped NEW for the whole visit. Own tapes are never stamped.
+- **Kit.** `ShelfTape` gains `newStamp` (tape-red NEW, −6°, in T20a's stamp slot) and `ledgeLabel` / `ledgeLabelId`
+  (a mono label under the ledge).
+- **PRIVACY.md** gains the two "What is stored where" rows.
