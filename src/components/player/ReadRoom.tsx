@@ -37,6 +37,21 @@
  * one; a sent tape that arrived after the previous visit is stamped NEW for
  * this whole visit.
  *
+ * Where you stopped (T21): the Player reports each settled page and the end
+ * card; the room keeps one page number per tape on this device (resume.ts,
+ * stored through resume-store.ts, `ssync-resume`) and forgets it when the end
+ * card shows, when the tape is pulled out (every key it could be under, the
+ * same helper the Studio's delete uses) and when a sent tape is taken off the
+ * shelf. Every door keys the same tape the same way: a link passes its
+ * `?story=` code (a tape someone sent is known by that code alone, as the
+ * shelf knows it), a shelf tape its library share code (else created +
+ * title), the demo and files the tape alone. On the shelf the band offers the
+ * place ("You stopped at page N.", "Pick up where you left off", "Start
+ * again": once that tape has begun again the old place is forgotten) and the
+ * tape stopped in most recently is selected on arrival; a link, the demo or a
+ * file offers it on the cover instead. Nothing about the listening is kept but
+ * that page.
+ *
  * At ≥ 1024 px the chooser is a two-column room: `.rr-columns` turns into
  * shelves (≈ 60 %) + a right column as soon as it holds an `.rr-aside` (the
  * "Read it in…" panel, T22a). Until then the shelves span the room.
@@ -64,7 +79,7 @@ import { clearDraft, DRAFT_KEY } from "@/components/studio/draft";
 import { BigButton, GlassPanel, Reel, TapeLabel, TAPE } from "@/components/studio-kit/kit";
 import { Shelf, ShelfTape } from "@/components/studio-kit/Shelf";
 import { PullTapeIcon } from "@/components/studio-kit/PrintSlot";
-import { Player } from "./Player";
+import { Player, type PlayerPlace } from "./Player";
 import {
   bandLine,
   draftBelongsTo,
@@ -90,8 +105,20 @@ import {
   SHELF_VISIT_KEY,
   type SentTape,
 } from "./sent-to-you";
+import {
+  clearTape,
+  codeKey,
+  latestResumed,
+  recordPage,
+  resumePoint,
+  sanitizeResume,
+  tapeKey,
+  type ResumeStore,
+} from "./resume";
+import { forgetPlaces, placeKeysOfTape, readResume, writeResume } from "./resume-store";
 import "./player.css";
 import "./read-room.css";
+import "./resume.css";
 
 /** Kraft/manila — the tape someone handed you on a file. */
 const KRAFT_LABEL = "#DFD2B8";
@@ -108,7 +135,26 @@ type RoomState =
   | { kind: "loading"; what: string }
   | { kind: "missing"; code: string; remembered: boolean }
   | { kind: "error"; message: string }
-  | { kind: "ready"; manifest: SsyncManifest; origin: Origin; shelfId?: string; tapeUrl?: string };
+  | ({ kind: "ready"; manifest: SsyncManifest; origin: Origin; shelfId?: string; tapeUrl?: string } & Place);
+
+/**
+ * Where a ready tape's place is kept (T21), and where it opens: `startPage`
+ * when the shelf chose it, else `resumePage` for the cover to offer.
+ * `startOver`: the shelf's "Start again" — the old place is forgotten once the
+ * tape has begun.
+ */
+interface Place {
+  placeKey: string | null;
+  startPage?: number;
+  resumePage?: number;
+  startOver?: boolean;
+}
+
+/** What the shelf chose for the tape it opens: the page, and whether to start over. */
+interface ShelfChoice {
+  page: number;
+  startOver: boolean;
+}
 
 type ShelfStatus =
   | { kind: "none" }
@@ -222,18 +268,55 @@ async function readShelf(previousVisit: string | null): Promise<ShelfItem[]> {
 /**
  * A tape opened by its link: remember it as sent to you, unless it is yours
  * (its row is in this device's library or, signed in, your cloud library).
- * Only the code and the label facts are kept. Never throws.
+ * Only the code and the label facts are kept. True when the tape is someone
+ * else's (the shelf knows it by this code alone). Never throws.
  */
-async function rememberIfSent(code: string, manifest: SsyncManifest): Promise<void> {
+async function rememberIfSent(code: string, manifest: SsyncManifest): Promise<boolean> {
   try {
     const { device, cloud } = await readLibraries();
     const rows = [...device, ...cloud];
     const own = ownKeys(rows);
-    if (isOwnTape({ id: libraryIdOf(code, manifest, rows), code }, own.ids, own.codes)) return;
+    if (isOwnTape({ id: libraryIdOf(code, manifest, rows), code }, own.ids, own.codes)) return false;
     writeSent(rememberSent(readSent(), sentFacts(code, manifest), new Date()));
+    return true;
   } catch {
     /* remembering is a convenience: the tape still plays */
+    return false;
   }
+}
+
+/* ── where you stopped (T21): one page number per tape, this device only ──
+   (the storage half, and every key a deleted tape could be under, is
+   ./resume-store.ts, shared with the Studio's delete) */
+
+/**
+ * A tape about to open: the key its place is kept under and where it starts.
+ * The shelf chooses the start page; any other door offers a remembered place.
+ */
+function placeFor(manifest: SsyncManifest, placeKey: string | null, chosen?: ShelfChoice): Place {
+  if (chosen) return { placeKey, startPage: chosen.page, ...(chosen.startOver ? { startOver: true } : {}) };
+  const point = resumePoint(readResume(), placeKey, manifest.pages.length);
+  return point ? { placeKey, resumePage: point.page } : { placeKey };
+}
+
+/** An own tape as the Player opens it. */
+function playableOf(entry: ShelfEntry): SsyncManifest {
+  return normalizeTapeManifest(entry.manifest) ?? entry.manifest;
+}
+
+/** A shelf tape's place key and page count (a sent tape is known by its link). */
+function placeOf(item: ShelfItem): { key: string | null; total: number } {
+  if (item.kind === "sent") return { key: codeKey(item.tape.code), total: item.tape.pages };
+  const manifest = playableOf(item.entry);
+  return { key: tapeKey(manifest, item.entry.shareCode), total: manifest.pages.length };
+}
+
+/** The shelf tape stopped in most recently, or null. */
+function resumedItem(items: readonly ShelfItem[], store: ResumeStore): string | null {
+  const places = items.map(placeOf);
+  const key = latestResumed(store, places);
+  const at = key ? places.findIndex((place) => place.key === key) : -1;
+  return at >= 0 ? items[at].key : null;
 }
 
 /** Wipe the Studio's saved draft when it is this tape; any other draft stays. */
@@ -295,6 +378,10 @@ export function ReadRoom() {
   const focusNext = React.useRef<string | null>(null);
   /** The code of a sent tape this visit opened from the shelf: Close comes back here. */
   const openedFromShelf = React.useRef<string | null>(null);
+  /** What the shelf chose for a sent tape it opened by its link (T21). */
+  const shelfStart = React.useRef<({ code: string } & ShelfChoice) | null>(null);
+  /** Where you stopped in each tape, as last read (the band's resume line). */
+  const [places, setPlaces] = React.useState<ResumeStore>(() => sanitizeResume(null));
   React.useEffect(() => {
     shelfRef.current = shelf;
     const key = focusNext.current;
@@ -302,9 +389,28 @@ export function ReadRoom() {
     if (key) faceRefs.current.get(key)?.focus();
   }, [shelf]);
 
+  /* The selected tape stays in sight on its own ledge: on arrival it may be
+     the tape stopped in most recently, far along a phone's shelf (T21). Only
+     the shelf scrolls, sideways; the page never moves. */
+  React.useEffect(() => {
+    const el = selectedId ? faceRefs.current.get(selectedId) : undefined;
+    const scroller = el?.closest<HTMLElement>('[data-sk="shelf"]');
+    if (!el || !scroller) return;
+    const face = el.getBoundingClientRect();
+    const view = scroller.getBoundingClientRect();
+    if (face.left >= view.left && face.right <= view.right) return;
+    scroller.scrollLeft += face.left - view.left - (view.width - face.width) / 2;
+  }, [selectedId, shelf]);
+
   const inChooser = state.kind === "chooser" || state.kind === "error";
   const selected = shelf.find((item) => item.key === selectedId) ?? null;
   const armed = selected?.kind === "own" && armedId === selected.key;
+  /** The selected tape's place, when it has one (T21). */
+  const resumeAt = React.useMemo(() => {
+    if (!selected) return null;
+    const { key, total } = placeOf(selected);
+    return resumePoint(places, key, total);
+  }, [selected, places]);
 
   /* ── the link this tape lives at (SSR-safe: read after mount) ─────────── */
   React.useEffect(() => {
@@ -329,14 +435,23 @@ export function ReadRoom() {
     void loadTapeByCode(code).then(async (found) => {
       if (cancelled) return;
       if (!found) {
+        // the shelf's choice was for this tape: it never applies to a later one
+        shelfStart.current = null;
         // a remembered link that resolves to nothing can be taken off the shelf
         setState({ kind: "missing", code, remembered: readSent().some((tape) => tape.code === code) });
         return;
       }
       // someone else's tape stays on this shelf (its link, not the tape)
-      await rememberIfSent(code, found);
+      const sent = await rememberIfSent(code, found);
       if (cancelled) return;
-      setState({ kind: "ready", manifest: found, origin: "share" });
+      // a sent tape the shelf opened starts where the shelf chose
+      const shelf = shelfStart.current;
+      const chosen = shelf?.code === code ? { page: shelf.page, startOver: shelf.startOver } : undefined;
+      shelfStart.current = null;
+      // someone else's tape is kept under its link code, the key its shelf face
+      // and "Take it off this shelf" use, whatever link the tape itself names
+      const placeKey = sent ? codeKey(code) : tapeKey(found, code);
+      setState({ kind: "ready", manifest: found, origin: "share", ...placeFor(found, placeKey, chosen) });
     });
     return () => {
       cancelled = true;
@@ -349,11 +464,16 @@ export function ReadRoom() {
     let cancelled = false;
     void readShelf(previousVisit.current).then((items) => {
       if (cancelled) return;
+      const stored = readResume();
       // a pull-out's line belongs to the visit it happened in
       setStatus({ kind: "none" });
       setShelf(items);
+      setPlaces(stored);
+      // on arrival: the tape stopped in most recently, else the first
       setSelectedId((current) =>
-        current && items.some((item) => item.key === current) ? current : (items[0]?.key ?? null),
+        current && items.some((item) => item.key === current)
+          ? current
+          : (resumedItem(items, stored) ?? items[0]?.key ?? null),
       );
     });
     return () => {
@@ -423,6 +543,7 @@ export function ReadRoom() {
         return;
       }
       forgetDraftOf(entry.id);
+      setPlaces(forgetPlaces(placeKeysOfTape(entry.manifest, entry)));
       setStatus((current) => ({ kind: "pulled", n: current.kind === "pulled" ? current.n + 1 : 1 }));
 
       const leave = () => {
@@ -449,31 +570,42 @@ export function ReadRoom() {
     else setArmedId(selected.key);
   }, [selected, pulling, armed, pullOut]);
 
-  const playSelected = React.useCallback(() => {
-    if (!selected || pulling?.id === selected.key) return;
-    setArmedId(null);
-    if (selected.kind === "sent") {
-      // a tape sent to you plays from its link, never from a stored copy
-      openedFromShelf.current = selected.tape.code;
-      router.push(`/read?story=${encodeURIComponent(selected.tape.code)}`);
-      return;
-    }
-    const { entry } = selected;
-    const manifest = normalizeTapeManifest(entry.manifest) ?? entry.manifest;
-    setState({
-      kind: "ready",
-      manifest,
-      origin: "shelf",
-      shelfId: entry.id,
-      tapeUrl: entry.label.shareUrl,
-    });
-  }, [selected, pulling, router]);
+  /**
+   * Open the selected tape's cover; Tap to Begin starts at `page` (the shelf
+   * chose it). `startOver` ("Start again") forgets the old place once begun.
+   */
+  const playSelected = React.useCallback(
+    (page = 1, startOver = false) => {
+      if (!selected || pulling?.id === selected.key) return;
+      setArmedId(null);
+      const chosen: ShelfChoice = { page, startOver };
+      if (selected.kind === "sent") {
+        // a tape sent to you plays from its link, never from a stored copy
+        openedFromShelf.current = selected.tape.code;
+        shelfStart.current = { code: selected.tape.code, ...chosen };
+        router.push(`/read?story=${encodeURIComponent(selected.tape.code)}`);
+        return;
+      }
+      const { entry } = selected;
+      const manifest = playableOf(entry);
+      setState({
+        kind: "ready",
+        manifest,
+        origin: "shelf",
+        shelfId: entry.id,
+        tapeUrl: entry.label.shareUrl,
+        ...placeFor(manifest, tapeKey(manifest, entry.shareCode), chosen),
+      });
+    },
+    [selected, pulling, router],
+  );
 
   /* ── take a sent tape off this shelf: the reference only, at once ─────── */
   const takeOff = React.useCallback(() => {
     if (selected?.kind !== "sent") return;
     const key = selected.key;
     forgetSentCode(selected.tape.code);
+    setPlaces(forgetPlaces([codeKey(selected.tape.code)]));
     const next = nextAfter(
       shelfRef.current.map((item) => item.key).filter((x) => x !== pulling?.id),
       key,
@@ -493,7 +625,7 @@ export function ReadRoom() {
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const manifest = normalizeTapeManifest(await response.json());
       if (!manifest) throw new Error("no pages");
-      setState({ kind: "ready", manifest, origin: "demo" });
+      setState({ kind: "ready", manifest, origin: "demo", ...placeFor(manifest, tapeKey(manifest)) });
     } catch {
       setState({
         kind: "error",
@@ -507,7 +639,8 @@ export function ReadRoom() {
     setState({ kind: "loading", what: "Unwinding the tape" });
     try {
       const bytes = new Uint8Array(await file.arrayBuffer());
-      setState({ kind: "ready", manifest: loadStorysyncToStory(bytes), origin: "file" });
+      const manifest = loadStorysyncToStory(bytes);
+      setState({ kind: "ready", manifest, origin: "file", ...placeFor(manifest, tapeKey(manifest)) });
     } catch (error) {
       setState({
         kind: "error",
@@ -559,8 +692,32 @@ export function ReadRoom() {
   const takeOffMissing = React.useCallback(() => {
     if (state.kind !== "missing") return;
     forgetSentCode(state.code);
+    forgetPlaces([codeKey(state.code)]);
     backToShelf();
   }, [state, backToShelf]);
+
+  /* ── where you stopped: each settled page, cleared by the end card ────── */
+  const ready = state.kind === "ready" ? state : null;
+  /** The opened tape whose "Start again" has already forgotten its old place. */
+  const startedOver = React.useRef<RoomState | null>(null);
+  const keepPlace = React.useCallback(
+    (place: PlayerPlace) => {
+      if (!ready || !ready.placeKey) return;
+      const { placeKey } = ready;
+      const store = readResume();
+      let next = store;
+      // "Start again": the first report is the tape begun again at page 1
+      if (ready.startOver && startedOver.current !== ready) {
+        startedOver.current = ready;
+        next = clearTape(next, placeKey);
+      }
+      next = place.ended
+        ? clearTape(next, placeKey)
+        : recordPage(next, placeKey, place.index, place.total, new Date());
+      if (next !== store) writeResume(next);
+    },
+    [ready],
+  );
 
   /* ── "Send a thank-you back" — a tape someone sent: a link or a file ──── */
   const answered =
@@ -594,6 +751,9 @@ export function ReadRoom() {
         onReply={answered ? sendReply : undefined}
         replyName={replyName}
         shareUrl={state.origin === "share" ? shareUrl : state.origin === "shelf" ? state.tapeUrl : undefined}
+        startPage={state.startPage}
+        resumePage={state.resumePage}
+        onPage={keepPlace}
       />
     );
   }
@@ -809,14 +969,37 @@ export function ReadRoom() {
                       <p className="rr-band-line">
                         {bandLine(selected.kind === "own" ? selected.entry.label : selected.tape)}
                       </p>
+                      {resumeAt ? (
+                        <p className="rr-band-resume" data-shelf="resume">
+                          You stopped at page {resumeAt.page}.
+                        </p>
+                      ) : null}
                       <div className="rr-band-actions">
-                        <BigButton
-                          variant="gold"
-                          icon={<Play className="size-[16px]" strokeWidth={2.4} fill="currentColor" />}
-                          label="Play this tape"
-                          onClick={playSelected}
-                          className="rr-band-btn"
-                        />
+                        {resumeAt ? (
+                          <>
+                            <BigButton
+                              variant="gold"
+                              icon={<Play className="size-[16px]" strokeWidth={2.4} fill="currentColor" />}
+                              label="Pick up where you left off"
+                              onClick={() => playSelected(resumeAt.page)}
+                              className="rr-band-btn"
+                            />
+                            <BigButton
+                              variant="ghost"
+                              label="Start again"
+                              onClick={() => playSelected(1, true)}
+                              className="rr-band-btn"
+                            />
+                          </>
+                        ) : (
+                          <BigButton
+                            variant="gold"
+                            icon={<Play className="size-[16px]" strokeWidth={2.4} fill="currentColor" />}
+                            label="Play this tape"
+                            onClick={() => playSelected()}
+                            className="rr-band-btn"
+                          />
+                        )}
                         {selected.kind === "sent" ? (
                           // not yours to delete: forget the reference, at once
                           <BigButton

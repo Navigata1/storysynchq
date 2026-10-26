@@ -781,5 +781,12 @@ test("T12 · end card · nothing new is fetched, counted or stored", async ({ pa
   await page.waitForTimeout(1500);
 
   expect(requests, `the end card fetched: ${requests.join(", ")}`).toEqual([]);
-  expect(await snapshot()).toEqual(before);
+  // T21: finishing the tape forgets where you stopped (`ssync-resume`, the last
+  // page). The end card removes that one place and stores nothing new.
+  const { ["ssync-resume"]: place, ...rest } = before.local;
+  expect(JSON.parse(place ?? "null")?.tapes?.[`code:${shareCode}`], "the last page was the place").toMatchObject({
+    page: TWINKLE.pages.length,
+    of: TWINKLE.pages.length,
+  });
+  expect(await snapshot()).toEqual({ ...before, local: rest });
 });

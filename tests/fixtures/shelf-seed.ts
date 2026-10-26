@@ -1,11 +1,12 @@
 /**
  * Shelf seeds for the Read Room's "YOUR TAPES" (T20a; T20b and T21 extend it).
  *
- *   seedShelf(page, { library, draft?, sent?, previousVisit? })
+ *   seedShelf(page, { library, draft?, sent?, previousVisit?, resume? })
  *                                         writes this device's `ssync-library`
  *                                         and, optionally, the Studio's saved
- *                                         draft, the Sent-to-you list (T20b) and
- *                                         the previous shelf visit (T20b) —
+ *                                         draft, the Sent-to-you list (T20b),
+ *                                         the previous shelf visit (T20b) and
+ *                                         the places you stopped (T21) —
  *                                         ONCE per browser context
  *   shelfRow(story, code, createdAt)      one library row with a fixed save time
  *   pictureLessTape(title, author?)       a synthetic tape with words and no picture
@@ -13,6 +14,7 @@
  *                                         published as library row `id`
  *   sentRow(facts, code, runtime, addedAt)  one Sent-to-you reference, built from
  *                                         a fixture's facts (T20b)
+ *   resumeAt(page, of, at)                one remembered place (T21)
  *
  * "Once per browser context": the init script runs before the app on every
  * document of every page in the context, and a marker key in localStorage
@@ -27,6 +29,7 @@ import type { Page } from "@playwright/test";
 import type { SsyncManifest } from "../../src/lib/storysync/manifest";
 import type { StudioState } from "../../src/components/studio/types";
 import { SENT_KEY, SHELF_VISIT_KEY, type SentTape } from "../../src/components/player/sent-to-you";
+import { RESUME_KEY, type ResumeEntry } from "../../src/components/player/resume";
 import { libraryRow, READER_LIBRARY_KEY, type ReaderLibraryRow } from "./reader-tapes";
 import { DRAFT_KEY, studioDraftState } from "./helpers";
 import type { TapeFacts } from "./tapes";
@@ -43,15 +46,20 @@ export interface ShelfSeed {
   sent?: readonly SentTape[];
   /** The previous look at the shelf (T20b), an ISO time. Absent: never visited. */
   previousVisit?: string;
+  /**
+   * Where you stopped in each tape (T21), by tape key (`code:<share code>` or
+   * `t:<created>|<title>`): written as the `{ v: 1, tapes }` envelope.
+   */
+  resume?: Readonly<Record<string, ResumeEntry>>;
 }
 
 /** Write the shelf's storage before the app's code runs, once per browser context. */
 export async function seedShelf(
   page: Page,
-  { library, draft, sent, previousVisit }: ShelfSeed,
+  { library, draft, sent, previousVisit, resume }: ShelfSeed,
 ): Promise<void> {
   await page.context().addInitScript(
-    ({ marker, libraryKey, libraryJson, draftKey, draftJson, sentKey, sentJson, visitKey, visit }) => {
+    ({ marker, libraryKey, libraryJson, draftKey, draftJson, sentKey, sentJson, visitKey, visit, resumeKey, resumeJson }) => {
       try {
         if (window.localStorage.getItem(marker)) return;
         window.localStorage.setItem(libraryKey, libraryJson);
@@ -61,6 +69,7 @@ export async function seedShelf(
         }
         if (sentJson) window.localStorage.setItem(sentKey, sentJson);
         if (visit) window.localStorage.setItem(visitKey, visit);
+        if (resumeJson) window.localStorage.setItem(resumeKey, resumeJson);
         window.localStorage.setItem(marker, "1");
       } catch {
         /* opaque origins (about:blank) have no storage; the next document seeds */
@@ -76,6 +85,8 @@ export async function seedShelf(
       sentJson: sent ? JSON.stringify({ v: 1, tapes: sent }) : "",
       visitKey: SHELF_VISIT_KEY,
       visit: previousVisit ?? "",
+      resumeKey: RESUME_KEY,
+      resumeJson: resume ? JSON.stringify({ v: 1, tapes: resume }) : "",
     },
   );
 }
@@ -95,6 +106,11 @@ export function sentRow(facts: TapeFacts, code: string, runtime: string, addedAt
     runtime,
     addedAt,
   };
+}
+
+/** One remembered place (T21): stopped at 1-based `page` of `of`, at an ISO time. */
+export function resumeAt(page: number, of: number, at: string): ResumeEntry {
+  return { page, of, at };
 }
 
 /** A library row with a fixed save time, so the shelf order is the test's. */

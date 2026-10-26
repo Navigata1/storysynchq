@@ -31,6 +31,14 @@
  * thank-you back" on a tape someone sent, T18), and the QR of the share link
  * when there is one.
  *
+ * Where you stopped (s07, T21): the Read Room may hand in a start page (the
+ * shelf chose it: "Pick up where you left off" / "Start again") or a place to
+ * offer (a link, the demo, a file): then the cover prints "You stopped at page
+ * N." with a ghost "Pick up where you left off" under Tap to Begin — that tap
+ * is the same audio unlock and opens on page N; Tap to Begin stays page 1.
+ * Once begun, each settled page and the end card are reported through
+ * `onPage` (the Read Room keeps the place; this file stores nothing).
+ *
  * Rules this file exists to honour:
  *   1. The tap on "Tap to Begin" is the iOS audio unlock. Nothing plays before.
  *   2. The manifest is the source of truth. v1 documents play; unknown fields
@@ -70,6 +78,7 @@ import { EndCard } from "./EndCard";
 import "./player.css";
 import "./spread.css";
 import "./deck.css";
+import "./resume.css";
 
 /* ────────────────────────────────────────────────────────────── constants */
 
@@ -306,14 +315,57 @@ export interface PlayerProps {
    * phone without anyone typing a code.
    */
   shareUrl?: string;
+  /**
+   * The page (1-based) Tap to Begin opens on, when the shelf chose it (T21:
+   * "Pick up where you left off" → N, "Start again" → 1). Default page 1.
+   */
+  startPage?: number;
+  /**
+   * A remembered place (1-based) to offer on the cover when nobody chose a
+   * start page (a link, the demo, a file): "You stopped at page N." and
+   * "Pick up where you left off". Ignored outside page 2…last.
+   */
+  resumePage?: number;
+  /**
+   * Each settled page once the tape has begun (0-based `index` of `total`),
+   * and the end card (`ended: true`). Never called on the cover.
+   */
+  onPage?: (place: PlayerPlace) => void;
 }
 
-export function Player({ manifest, onExit, onMakeYourOwn, onReply, replyName, shareUrl }: PlayerProps) {
+/** Where the tape is, as the Player reports it (T21). */
+export interface PlayerPlace {
+  index: number;
+  total: number;
+  ended: boolean;
+}
+
+/** A 1-based page as a 0-based index inside the tape, or null. */
+function pageIndex(page: number | undefined, total: number, min: number): number | null {
+  if (typeof page !== "number" || !Number.isInteger(page) || page < min || page > total) return null;
+  return page - 1;
+}
+
+export function Player({
+  manifest,
+  onExit,
+  onMakeYourOwn,
+  onReply,
+  replyName,
+  shareUrl,
+  startPage,
+  resumePage,
+  onPage,
+}: PlayerProps) {
   const pages = manifest.pages;
   const total = pages.length;
+  /* T21: where Tap to Begin opens (the shelf's choice), and the place the
+     cover offers when nobody chose (page 2 onward). Fixed for this mount. */
+  const [startIndex] = React.useState(() => pageIndex(startPage, total, 1) ?? 0);
+  const [offerIndex] = React.useState(() => (startPage === undefined ? pageIndex(resumePage, total, 2) : null));
 
   const [started, setStarted] = React.useState(false);
-  const [index, setIndex] = React.useState(0);
+  const [index, setIndex] = React.useState(startIndex);
   const [turn, setTurn] = React.useState<{ phase: "idle" | "out" | "in"; dir: "next" | "prev" }>({
     phase: "idle",
     dir: "next",
@@ -347,7 +399,7 @@ export function Player({ manifest, onExit, onMakeYourOwn, onReply, replyName, sh
   /** How far the voice is through a page, 0–1 (./tape-position): the clip's
    *  clock, the lit word, 1 once the voice or a wordless page's beat is done.
    *  It belongs to its page — a value for any other page reads as 0. */
-  const [inPage, setInPage] = React.useState<{ page: number; f: number }>({ page: 0, f: 0 });
+  const [inPage, setInPage] = React.useState<{ page: number; f: number }>({ page: startIndex, f: 0 });
   const speechAvailable = React.useSyncExternalStore(noSubscribe, speechOnDevice, speechOnServer);
 
   const engineRef = React.useRef<DualBusAudioEngine | null>(null);
@@ -363,7 +415,7 @@ export function Player({ manifest, onExit, onMakeYourOwn, onReply, replyName, sh
   /* The page a turn is heading for. Rapid presses inside the turn animation
      advance from HERE, not from the stale rendered index — a child mashing
      "next" (or anyone holding →) must never see the page freeze. */
-  const targetRef = React.useRef(0);
+  const targetRef = React.useRef(startIndex);
   const timingRef = React.useRef(1);
   const reducedRef = React.useRef(false);
   const choicesRef = React.useRef<ViewerChoices>({});
@@ -537,19 +589,44 @@ export function Player({ manifest, onExit, onMakeYourOwn, onReply, replyName, sh
     setBg((b) => (b.cur === image ? b : { cur: image, prev: b.cur, n: b.n + 1 }));
   }, [image]);
 
+  /** A page comes on screen at its own beginning: the tape's place in it is 0. */
+  const enterPage = React.useCallback((next: number) => {
+    setIndex(next);
+    setInPage({ page: next, f: 0 });
+  }, []);
+
   /* ── the tap that unlocks everything (iOS rule, non-negotiable) ──────── */
-  const begin = React.useCallback(() => {
-    // Every audio step below is optional. The two setState calls at the end are
-    // not: this tap opens the story, with sound or without it.
-    unlockAudio();
-    const el = audioRef.current;
-    if (el && !attachedRef.current) {
-      if (withEngine((engine) => engine.attachNarrationElement(el))) attachedRef.current = true;
-    }
-    if (!cueCtxRef.current) cueCtxRef.current = openCueContext();
-    setStarted(true);
-    setShowUi(true);
-  }, [unlockAudio, withEngine]);
+  const begin = React.useCallback(
+    (at?: number) => {
+      // Every audio step below is optional. The setState calls at the end are
+      // not: this tap opens the story, with sound or without it.
+      unlockAudio();
+      const el = audioRef.current;
+      if (el && !attachedRef.current) {
+        if (withEngine((engine) => engine.attachNarrationElement(el))) attachedRef.current = true;
+      }
+      if (!cueCtxRef.current) cueCtxRef.current = openCueContext();
+      // "Pick up where you left off" (T21): the same tap, on the page left
+      if (typeof at === "number" && at !== targetRef.current) {
+        targetRef.current = at;
+        enterPage(at);
+      }
+      setStarted(true);
+      setShowUi(true);
+    },
+    [unlockAudio, withEngine, enterPage],
+  );
+
+  /* ── where the tape is, for the Read Room's resume (T21): each settled
+     page once begun, then the end card. Nothing before Tap to Begin. ──── */
+  const onPageRef = React.useRef(onPage);
+  React.useEffect(() => {
+    onPageRef.current = onPage;
+  }, [onPage]);
+  React.useEffect(() => {
+    if (!started) return;
+    onPageRef.current?.({ index, total, ended });
+  }, [started, index, total, ended]);
 
   /* ── music bed: page.music decides, and "no music" means silence ─────── */
   React.useEffect(() => {
@@ -594,12 +671,6 @@ export function Player({ manifest, onExit, onMakeYourOwn, onReply, replyName, sh
     if (!cueOn) return;
     if (playPageTurnCue(cueCtxRef.current)) setCuesFired((n) => n + 1);
   }, [cueOn]);
-
-  /** A page comes on screen at its own beginning: the tape's place in it is 0. */
-  const enterPage = React.useCallback((next: number) => {
-    setIndex(next);
-    setInPage({ page: next, f: 0 });
-  }, []);
 
   const goTo = React.useCallback(
     (dir: "next" | "prev") => {
@@ -1503,10 +1574,22 @@ export function Player({ manifest, onExit, onMakeYourOwn, onReply, replyName, sh
               icon="✨"
               label="Tap to Begin"
               variant="gold"
-              onClick={begin}
+              onClick={() => begin()}
               className="w-full justify-center text-xl"
               style={{ "--sk-big-h": "88px" } as React.CSSProperties}
             />
+            {/* T21: the place this tape was left, offered (never chosen for you) */}
+            {offerIndex !== null ? (
+              <div className="pl-resume" data-pl="resume">
+                <p className="pl-resume-line">You stopped at page {offerIndex + 1}.</p>
+                <BigButton
+                  label="Pick up where you left off"
+                  variant="ghost"
+                  onClick={() => begin(offerIndex)}
+                  className="pl-resume-btn w-full justify-center"
+                />
+              </div>
+            ) : null}
             <p className="pl-cover-note">Best with the lights low and the sound up</p>
           </div>
         </div>

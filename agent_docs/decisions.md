@@ -602,3 +602,37 @@ the Player's.
 - **Kit.** `ShelfTape` gains `newStamp` (tape-red NEW, −6°, in T20a's stamp slot) and `ledgeLabel` / `ledgeLabelId`
   (a mono label under the ledge).
 - **PRIVACY.md** gains the two "What is stored where" rows.
+
+**2026-10-25 · T21 · Resume keeps one page number per tape, on this device; the shelf chooses, every other door offers;
+deleting the story forgets it everywhere.**
+
+- **What is kept.** `ssync-resume` = `{ v: 1, tapes: { <key>: { page, of, at } } }`:
+  - 1-based, page 2 onward;
+  - capped at 50 tapes, with the least recently stopped dropped;
+  - sanitized on every read (any other field drops the entry).
+  Nothing else about reading is stored or sent: no history, no "heard", no counts, no weekdays.
+- **The key.**
+  - `code:<code>` from the tape's own `signature.shareUrl` `?story=`, else from the code it was opened by (a link's
+    `?story=`, a shelf tape's library share code);
+  - else `t:<metadata.created>|<metadata.title>`;
+  - no key (not remembered) when a tape has none of these.
+  - A sent tape on the shelf is `code:<its code>`, the key its link produces.
+- **Who decides where it opens.**
+  - The shelf always chooses: "Pick up where you left off" → N, "Start again" and "Play this tape" → 1. Its cover
+    offers nothing.
+  - A link, the house tape and a file offer a valid place on the cover ("You stopped at page N." + a ghost "Pick up
+    where you left off", which is the same audio-unlock tap). Tap to Begin is always page 1.
+  - A place whose `of` differs from the tape's page count is stale and never offered.
+- **Forgetting.**
+  - The end card clears the place.
+  - Deleting a story clears every key any copy of it could be under: its link codes, `code:<library id>`, and
+    `t:<created>|<title>`, both as stored and as played. This applies to the shelf's pull-out and to the Studio's
+    "Pull the tape out — delete everything". One shared, SSR-safe helper does it,
+    `src/components/player/resume-store.ts`, and `resume.ts` stays pure.
+  - "Take it off this shelf" clears the sent tape's `code:` key. A tape someone sent is kept under that link code
+    at every door.
+  - "Start again" clears the old place once the tape has begun.
+  - Clearing browser data clears it all.
+  - PRIVACY.md "What is stored where" has the row.
+- **Arrival.** The shelf selects the tape stopped in most recently, else the first. The Player reports settled pages
+  and the end card through `onPage`; the Read Room alone writes storage.

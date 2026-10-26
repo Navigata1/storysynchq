@@ -1,0 +1,74 @@
+/* ============================================================================
+   Resume — "You stopped at page N." (T21, s07). Owned here; player.css and
+   read-room.css are not edited.
+
+     .pl-resume        the cover gate's offer, under Tap to Begin: the line and
+                       a ghost "Pick up where you left off" (the same unlock)
+     .rr-band-resume   the shelf band's line (s07 .s7-feat__h: Fraunces 700
+                       22px, paper), between the mono label line and the
+                       buttons
+
+   On a short phone (≤ 600px tall, e.g. 320×568) the cover with the offer
+   tightens its rhythm so the whole gate, note included, fits one screen; the
+   ghost stays a 48px target. Without the offer the cover is player.css's.
+
+   Nothing here moves: the offer arrives with the cover's own entrance (which
+   player.css already stills under reduced motion), and the band's line is
+   text. Same @layer as player.css, so a consumer's Tailwind utility wins.
+   ========================================================================== */
+
+@layer components {
+  /* the cover: Tap to Begin (88px gold), then the offer (the line belongs to
+     its button, so they sit closer to each other than to Tap to Begin), then
+     the note */
+  .pl-resume {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .pl-resume-line {
+    margin: 0;
+    font-family: var(--ss-display);
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    text-align: center;
+    color: var(--ss-paper);
+  }
+
+  .pl-resume > .pl-resume-btn {
+    --sk-big-h: 56px;
+    padding: 10px 18px;
+    border-radius: 14px;
+    font-size: 16px;
+  }
+
+  /* a short phone: the same gate, closer together (only with the offer) */
+  @media (max-height: 600px) {
+    .pl-cover-inner:has(> .pl-resume) {
+      gap: 14px;
+    }
+
+    .pl-resume {
+      gap: 6px;
+    }
+
+    .pl-resume > .pl-resume-btn {
+      --sk-big-h: 48px;
+    }
+  }
+
+  /* the shelf band (s07 .s7-feat__h) */
+  .rr-band-resume {
+    margin: 8px 0 0;
+    font-family: var(--ss-display);
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    color: var(--ss-paper);
+  }
+}

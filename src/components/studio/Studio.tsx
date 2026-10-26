@@ -45,6 +45,7 @@ import {
   type BookInput,
 } from "@/lib/cloud-storage";
 import { getUser, signIn, signUp } from "@/lib/supabase";
+import { forgetPlaces, placeKeysOfStories, placeKeysOfTape } from "@/components/player/resume-store";
 
 import Stage from "./Stage";
 import ToolRail, { type StudioTool } from "./ToolRail";
@@ -1203,8 +1204,15 @@ export default function Studio() {
 
   const deleteEverything = async () => {
     stopAudio();
-    const { published, publishedIds } = stateRef.current;
+    const { manifest, published, publishedIds } = stateRef.current;
     const ids = Array.from(new Set([...(published ? [published.id] : []), ...publishedIds]));
+    // Where anyone stopped in this tape on this device (T21) goes with it:
+    // every key a copy could be remembered under, read before the rows go.
+    forgetPlaces([
+      ...placeKeysOfStories(ids),
+      ...placeKeysOfTape(publishedRef.current ?? manifest, { shareCode: published?.shareCode }),
+      ...placeKeysOfTape(manifest, {}),
+    ]);
     await deleteBooks(ids);
     clearDraft();
     publishedRef.current = null;

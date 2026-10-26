@@ -52,6 +52,7 @@ That fact shapes the product, not just this document.
 | Account email | Supabase auth | On sign-up (an adult action) | Account deletion |
 | Tapes sent to you: link code, title, maker, narrator, page count, length — never pictures, words or voices | this browser's localStorage | when you open someone else's link | 'Take it off this shelf', or clearing browser data |
 | When you last looked at the shelf (one timestamp) | this browser's localStorage | each visit to /read | clearing browser data |
+| Where you stopped in each tape (a page number) | this browser's localStorage | as you read | finishing the tape, pulling it out or deleting the story, taking it off the shelf, or clearing browser data |
 
 ## Phase 3 commitments (designed now, enforced then)
 
