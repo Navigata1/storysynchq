@@ -196,24 +196,57 @@ test.describe("deck status · the countdown and the foot line (node)", () => {
   });
 
   test("the foot line: the page's hold, counting down during it, cue ready or off", () => {
+    // M6 (honesty): before the hold on a page with a voice, the wait runs from
+    // the voice's last word — the foot says so, on the same branch as the
+    // CHIME row's "after the voice"; "next page in N s" only while it counts.
     expect(deckStatus(WORDS, tape(), flags({ holdTotalS: 3 }), DUCK_DEPTH_DB).foot).toBe(
-      "next page in 3 s · turn cue ready",
+      "turns 3 s after the voice · turn cue ready",
+    );
+    expect(deckStatus(WORDS, tape(), flags({ narrating: true, holdTotalS: 3 }), DUCK_DEPTH_DB).foot).toBe(
+      "turns 3 s after the voice · turn cue ready",
     );
     expect(deckStatus(WORDS, tape(), flags({ narrating: true, holdTotalS: 4 }), DUCK_DEPTH_DB).foot).toBe(
-      "next page in 4 s · turn cue ready",
+      "turns 4 s after the voice · turn cue ready",
     );
+    expect(deckStatus(RECORDED, NARRATED, flags({ holdTotalS: 4 }), DUCK_DEPTH_DB).foot).toBe(
+      "turns 4 s after the voice · turn cue ready",
+    );
+    // a pause mid-voice: the voice picks up again first, then the hold
+    expect(
+      deckStatus(WORDS, tape(), flags({ paused: true, holdTotalS: 4 }), DUCK_DEPTH_DB).foot,
+    ).toBe("turns 4 s after the voice · turn cue ready");
+    // the hold is running: the countdown
+    expect(
+      deckStatus(WORDS, tape(), flags({ holdTotalS: 3, holdRemainingS: 2.2 }), DUCK_DEPTH_DB).foot,
+    ).toBe("next page in 3 s · turn cue ready");
     expect(
       deckStatus(WORDS, tape(), flags({ holdTotalS: 4, holdRemainingS: 2.4 }), DUCK_DEPTH_DB).foot,
     ).toBe("next page in 3 s · turn cue ready");
+    // no voice to wait for (a picture-only page, a device with no speech): the whole hold
+    expect(deckStatus(PICTURE_ONLY, tape(), flags({ holdTotalS: 3 }), DUCK_DEPTH_DB).foot).toBe(
+      "next page in 3 s · turn cue ready",
+    );
     // whole seconds, rounded up
+    expect(
+      deckStatus(WORDS, tape(), flags({ speechAvailable: false, holdTotalS: 1.5 }), DUCK_DEPTH_DB).foot,
+    ).toBe("next page in 2 s · turn cue ready");
     expect(deckStatus(WORDS, tape(), flags({ holdTotalS: 1.5 }), DUCK_DEPTH_DB).foot).toBe(
-      "next page in 2 s · turn cue ready",
+      "turns 2 s after the voice · turn cue ready",
     );
     const noCue = tape({ settings: { autoPlay: true, pageTurnSound: false } });
     expect(deckStatus(WORDS, noCue, flags({ holdTotalS: 3 }), DUCK_DEPTH_DB).foot).toBe(
+      "turns 3 s after the voice · turn cue off",
+    );
+    expect(deckStatus(WORDS, noCue, flags({ holdTotalS: 3, holdRemainingS: 3 }), DUCK_DEPTH_DB).foot).toBe(
       "next page in 3 s · turn cue off",
     );
     expect(deckStatus(WORDS, tape(), flags({ lastPage: true, holdTotalS: 5 }), DUCK_DEPTH_DB).foot).toBe(
+      "the end 5 s after the voice",
+    );
+    expect(
+      deckStatus(WORDS, tape(), flags({ lastPage: true, holdTotalS: 5, holdRemainingS: 4.5 }), DUCK_DEPTH_DB).foot,
+    ).toBe("the end in 5 s");
+    expect(deckStatus(PICTURE_ONLY, tape(), flags({ lastPage: true, holdTotalS: 5 }), DUCK_DEPTH_DB).foot).toBe(
       "the end in 5 s",
     );
   });

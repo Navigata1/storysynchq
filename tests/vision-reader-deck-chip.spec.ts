@@ -171,8 +171,13 @@ test.describe("T09a · the deck chip (desktop)", () => {
     expect(lit.loops).toBe(0);
     expect(lit.animationName).toBe("none");
 
+    // M6 honesty: mid-voice the foot never claims a countdown that is not running
+    const turnLine = page.locator('[data-pl="turn-line"]');
+    await expect(turnLine).toHaveText(/^turns \d+ s after the voice · turn cue ready$/, { useInnerText: true });
+
     // the voice finishes: the bars go dim and the chime counts down to the turn
     await page.evaluate(() => (window as unknown as { __endUtterance(): void }).__endUtterance());
+    await expect(turnLine).toHaveText(/^next page in [1-3] s · turn cue ready$/, { useInnerText: true });
     await expect(wave).toHaveAttribute("data-speaking", "false");
     await expect
       .poll(() => wave.evaluate((el) => getComputedStyle(el.querySelector("rect")!).fill))
@@ -253,10 +258,11 @@ test.describe("T09a · the deck chip (desktop)", () => {
     const root = page.locator(ROOT);
     await expect(root).toHaveAttribute("data-page", "1");
 
-    // before the hold: the foot line names the page's whole hold, the ring is empty
+    // before the hold: the foot line names the page's whole hold, counted from
+    // the voice's last word (M6 honesty: no "next page in" before it runs), the ring is empty
     const foot = page.locator(FOOT);
     await expect(foot).toHaveCount(1);
-    await expect(foot).toHaveText("next page in 4 s · turn cue ready", { useInnerText: true });
+    await expect(foot).toHaveText("turns 4 s after the voice · turn cue ready", { useInnerText: true });
     expect(Number(await page.locator('[data-pl="turn-ring"]').getAttribute("data-share"))).toBe(0);
 
     // during the hold the ring holds the elapsed share
@@ -270,7 +276,7 @@ test.describe("T09a · the deck chip (desktop)", () => {
 
     // the page turns itself, and the new page starts its own hold from the top
     await expect(root).toHaveAttribute("data-page", "2", { timeout: 8000 });
-    await expect(foot).toHaveText("next page in 4 s · turn cue ready", { useInnerText: true });
+    await expect(foot).toHaveText("turns 4 s after the voice · turn cue ready", { useInnerText: true });
 
     type Seen = { text: string; page: string; t: number };
     const seen = await page.evaluate(() => {
@@ -296,6 +302,7 @@ test.describe("T09a · the deck chip (desktop)", () => {
     }
     const feet = seen.feet.filter((s) => s.page === "1").map((s) => s.text);
     expect(feet).toEqual([
+      "turns 4 s after the voice · turn cue ready",
       "next page in 4 s · turn cue ready",
       "next page in 3 s · turn cue ready",
       "next page in 2 s · turn cue ready",
@@ -303,7 +310,7 @@ test.describe("T09a · the deck chip (desktop)", () => {
     ]);
   });
 
-  test("countdown tape · pausing stops the clock: 'CHIME · paused', the foot line back to the whole hold", async ({
+  test("countdown tape · pausing stops the clock: 'CHIME · paused', the foot line back to the whole hold after the voice", async ({
     page,
   }) => {
     test.setTimeout(60000);
@@ -313,7 +320,8 @@ test.describe("T09a · the deck chip (desktop)", () => {
     await expect(chime).toHaveText(/^CHIME · next turn in 0:0[1-4]$/, { timeout: 8000, useInnerText: true });
     await page.keyboard.press(" ");
     await expect(chime).toHaveText("CHIME · paused", { useInnerText: true });
-    await expect(page.locator(FOOT)).toHaveText("next page in 4 s · turn cue ready", { useInnerText: true });
+    // play picks the voice up again before the hold restarts (M6 honesty)
+    await expect(page.locator(FOOT)).toHaveText("turns 4 s after the voice · turn cue ready", { useInnerText: true });
     await page.waitForTimeout(4500);
     await expect(page.locator(ROOT)).toHaveAttribute("data-page", "1");
   });
@@ -323,7 +331,9 @@ test.describe("T09a · the deck chip (desktop)", () => {
     await seedReaderTapes(page, t09aRows());
     await begin(page, `/read?story=${NO_CUE_CODE}`);
     await expect(row(page, "chime")).toHaveText("CHIME · off", { useInnerText: true });
-    await expect(page.locator(FOOT)).toHaveText(/^next page in [1-3] s · turn cue off$/, { useInnerText: true });
+    await expect(page.locator(FOOT)).toHaveText(/^(next page in [1-3] s|turns 3 s after the voice) · turn cue off$/, {
+      useInnerText: true,
+    });
   });
 
   test("manual tape · 'CHIME · when you turn the page' and no foot line", async ({ page }) => {

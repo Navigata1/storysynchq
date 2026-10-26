@@ -51,7 +51,7 @@
  */
 
 import * as React from "react";
-import { Lock, Music, Settings, X } from "lucide-react";
+import { Lock, Music, Settings, Sparkles, X } from "lucide-react";
 import type { SsyncManifest, SsyncPage } from "@/lib/storysync/manifest";
 import { DUCK_DEPTH_DB, DualBusAudioEngine } from "@/lib/audio/engine";
 import type { MoodName } from "@/lib/audio/moods";
@@ -108,6 +108,36 @@ function cx(...parts: Array<string | false | null | undefined>): string {
 const noSubscribe = () => () => {};
 const speechOnDevice = () => typeof window !== "undefined" && !!window.speechSynthesis;
 const speechOnServer = () => true;
+
+/* The viewport's shape (width / height), for the phone full-bleed fit below.
+   0 on the server: no fit is decided before the client knows its screen. */
+const subscribeResize = (onChange: () => void) => {
+  window.addEventListener("resize", onChange);
+  return () => window.removeEventListener("resize", onChange);
+};
+const viewportAspect = () => (window.innerHeight > 0 ? window.innerWidth / window.innerHeight : 0);
+const viewportAspectOnServer = () => 0;
+
+/**
+ * A full-bleed picture covers the screen until the crop gets extreme: once
+ * the screen is narrower than 0.7 of the picture's own shape (a square
+ * drawing on a portrait phone shows less than half its width; a portrait
+ * tablet, 0.75, keeps its mild crop), the picture fits the width from the top
+ * instead, over the room's blurred light, and the words sit under it. A
+ * per-page focal point would be a format change.
+ */
+const PORTRAIT_FIT_BELOW = 0.7;
+
+/** Chrome a keyboard is standing on: the idle timer never hides it. */
+function keyboardInChrome(): boolean {
+  const el = document.activeElement as HTMLElement | null;
+  if (!el || !el.closest?.(".pl-chrome, .pl-deck")) return false;
+  try {
+    return el.matches(":focus-visible");
+  } catch {
+    return true;
+  }
+}
 
 /** A page's hold before the automatic turn: its own `autoPause` (else the
  *  tape's default pause) × the timing multiplier, never under MIN_HOLD_MS. */
@@ -401,6 +431,7 @@ export function Player({
    *  It belongs to its page — a value for any other page reads as 0. */
   const [inPage, setInPage] = React.useState<{ page: number; f: number }>({ page: startIndex, f: 0 });
   const speechAvailable = React.useSyncExternalStore(noSubscribe, speechOnDevice, speechOnServer);
+  const aspect = React.useSyncExternalStore(subscribeResize, viewportAspect, viewportAspectOnServer);
 
   const engineRef = React.useRef<DualBusAudioEngine | null>(null);
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
@@ -1036,13 +1067,23 @@ export function Player({
     };
   }, [started, ended, index, pages, highlightOn]);
 
-  /* ── auto-hiding chrome ─────────────────────────────────────────────── */
+  /* ── auto-hiding chrome ─────────────────────────────────────────────────
+     A pointer, a touch or focus arriving anywhere in the room wakes it (Tab
+     onto a hidden chip shows the chip — WCAG 2.4.7), and the idle timer never
+     hides chrome a keyboard is standing on: it looks again a beat later. */
   const wake = React.useCallback(() => setShowUi(true), []);
 
   React.useEffect(() => {
     if (uiTimerRef.current) clearTimeout(uiTimerRef.current);
     if (!started || ended || sheetOpen || paused || !showUi) return;
-    uiTimerRef.current = setTimeout(() => setShowUi(false), UI_IDLE_MS);
+    const idle = () => {
+      if (keyboardInChrome()) {
+        uiTimerRef.current = setTimeout(idle, UI_IDLE_MS);
+        return;
+      }
+      setShowUi(false);
+    };
+    uiTimerRef.current = setTimeout(idle, UI_IDLE_MS);
     return () => {
       if (uiTimerRef.current) clearTimeout(uiTimerRef.current);
     };
@@ -1144,6 +1185,9 @@ export function Player({
   const isSpread = book && !!image && !!content;
   const isSingle = book && !isSpread && (!!image || !!content);
   const ratio = image ? artRatio[image] : undefined;
+  const full = !book && isFullBleed && !!image;
+  /* a phone's full-bleed page: fit the picture's width once the crop gets extreme */
+  const portraitFit = full && !!ratio && aspect > 0 && aspect < PORTRAIT_FIT_BELOW * ratio;
   const kicker = `PAGE ${index + 1}${mood ? ` · ${mood.toUpperCase()}` : ""}`;
 
   /* The deck's three sounds (./deck-status): read off the manifest and the
@@ -1197,6 +1241,7 @@ export function Player({
       data-view={!started ? "cover" : ended ? "end" : "page"}
       data-layout={wide ? "spread" : "stacked"}
       onMouseMove={wake}
+      onFocus={wake}
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
@@ -1233,12 +1278,13 @@ export function Player({
             "pl-page",
             isSpread && "is-spread",
             isSingle && "is-single",
-            !book && isFullBleed && image && "is-full",
+            full && "is-full",
+            portraitFit && "is-portrait-fit",
             !image && "is-textonly",
             turn.phase !== "idle" && `is-${turn.phase}`,
             `is-${turn.dir}`,
           )}
-          style={book && ratio ? ({ "--pl-art-ratio": ratio } as React.CSSProperties) : undefined}
+          style={(book || full) && ratio ? ({ "--pl-art-ratio": ratio } as React.CSSProperties) : undefined}
         >
           {isTitlePage ? (
             <div className="pl-title-page">
@@ -1313,8 +1359,10 @@ export function Player({
                 <div className="pl-picture">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
+                    ref={noteArt}
                     src={image}
                     alt={page?.illustration?.alt || `Picture for page ${index + 1}`}
+                    onLoad={(event) => noteArt(event.currentTarget)}
                   />
                 </div>
               ) : null}
@@ -1331,13 +1379,18 @@ export function Player({
           )}
         </div>
 
-        {/* tap zones — labelled buttons, not mystery hotspots. `data-pl-nav`
-            keeps the arrow keys alive after one is tapped (see the key handler). */}
+        {/* tap zones — big edge targets for a hand. Out of the tab order and
+            hidden from assistive tech: the transport (on every layout) and the
+            arrow keys are the keyboard and screen-reader path, so nobody tabs
+            through "Previous page" twice. `data-pl-nav` keeps the arrow keys
+            alive after one is tapped (see the key handler). */}
         <button
           type="button"
           data-pl-nav=""
           className="pl-zone pl-zone--prev"
           aria-label="Previous page"
+          aria-hidden="true"
+          tabIndex={-1}
           onClick={() => goTo("prev")}
           disabled={index === 0}
         />
@@ -1345,6 +1398,8 @@ export function Player({
           type="button"
           data-pl-nav=""
           className="pl-zone pl-zone--next"
+          aria-hidden="true"
+          tabIndex={-1}
           aria-label={index >= total - 1 ? "Finish the story" : "Next page"}
           onClick={() => goTo("next")}
         />
@@ -1571,7 +1626,7 @@ export function Player({
               />
             </div>
             <BigButton
-              icon="✨"
+              icon={<Sparkles aria-hidden="true" focusable="false" strokeWidth={2.2} className="size-6" />}
               label="Tap to Begin"
               variant="gold"
               onClick={() => begin()}

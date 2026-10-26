@@ -16,8 +16,10 @@
  *           no melody (no sound on this device · off · none on this page).
  *   CHIME   off · when you turn the page · paused · last page · after the
  *           voice · next turn in m:ss (⌈remaining⌉, during the hold).
- *   foot    "next page in N s · turn cue ready|off" (null when the tape does
- *           not turn its own pages).
+ *   foot    "turns N s after the voice · turn cue ready|off" until the hold
+ *           starts on a voiced page, then "next page in N s · …" counting
+ *           down; on the last page "the end N s after the voice" / "the end
+ *           in N s" (null when the tape does not turn its own pages).
  */
 
 import { pageMood, type MusicPlanManifest } from "./music-plan";
@@ -130,13 +132,22 @@ export function deckStatus(
             ? "CHIME · after the voice"
             : `CHIME · next turn in ${formatCountdown(remaining)}`;
 
-  /* the foot of the text page — the hold, in whole seconds */
+  /* the foot of the text page — the hold, in whole seconds. Until the hold
+     starts on a page with a voice, the wait runs from the voice's last word,
+     so the foot says that rather than a countdown that is not running yet
+     (the same branch as the CHIME row's "after the voice"). */
   const n = wholeSeconds(remaining);
+  const afterVoice = flags.narrating || (!holding && voiced);
+  const cue = `turn cue ${cueOn ? "ready" : "off"}`;
   const foot = !autoPlay
     ? null
     : flags.lastPage
-      ? `the end in ${n} s`
-      : `next page in ${n} s · turn cue ${cueOn ? "ready" : "off"}`;
+      ? afterVoice
+        ? `the end ${n} s after the voice`
+        : `the end in ${n} s`
+      : afterVoice
+        ? `turns ${n} s after the voice · ${cue}`
+        : `next page in ${n} s · ${cue}`;
 
   const total = flags.holdTotalS;
   const holdShare =

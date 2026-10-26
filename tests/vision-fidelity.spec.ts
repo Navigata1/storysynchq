@@ -530,18 +530,35 @@ test.describe("T25 · vision fidelity sweep", () => {
     await expectClean(page, errors, where);
     await evidenceShot(page, "s05-reader-390x844.png");
 
-    // 6:15 pm: Grandma is on page 3, Mia's voice playing, the pill on top
+    // 6:15 pm: Grandma is on page 3 at Largest, Mia's voice on "window.", the
+    // chrome idled out — nothing on top but the pill with the mic and "Mia"
     await tapToBegin(page);
+    await page.getByRole("button", { name: "Reading options" }).click();
+    const sheet = page.getByRole("dialog", { name: "Reading options" });
+    await sheet.getByRole("radiogroup", { name: "Text size" }).getByRole("radio", { name: "Largest" }).click();
+    await page.keyboard.press("Escape");
+    await expect(sheet).toHaveCount(0);
     await page.keyboard.press("ArrowRight");
     await page.keyboard.press("ArrowRight");
-    await expect(page.locator(".pl-root")).toHaveAttribute("data-page", "3");
+    const root = page.locator(".pl-root");
+    await expect(root).toHaveAttribute("data-page", "3");
     await expect(page.locator(".pl-page")).not.toHaveClass(/is-(out|in)\b/, { timeout: 5000 });
     const chip = page.getByRole("group", { name: "Now playing" });
     await expect(chip.locator(".pl-deck-read")).toHaveText("03 / 05");
     await expect(page.locator(".pl-page")).toContainText("I was scared of the dark.");
-    await wake(page);
+    await page.mouse.move(1, 1);
+    await expect(page.locator(".pl-chrome--top")).toHaveClass(/is-hidden/, { timeout: 15000 });
+    await expect(page.locator(".pl-word.is-now")).toHaveText(/window/, { timeout: 20000 });
+    await expect(chip).toContainText("Mia");
+    await expect(chip.locator('[data-pl="deck-mic"]')).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    const fontPx = await page
+      .locator('[data-pl="prose"]')
+      .evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+    expect(fontPx, `${where}: Largest text`).toBeGreaterThanOrEqual(26);
     await expectClean(page, errors, `${where} page 3`);
     await evidenceShot(page, "s05-reader-390x844-page3.png");
+    await expect(root).toHaveAttribute("data-page", "3");
   });
 
   /* ----------------------------------------------------------- s06 end card */

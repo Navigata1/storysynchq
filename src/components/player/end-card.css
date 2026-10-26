@@ -18,7 +18,10 @@
   [data-pl="end"].pl-end {
     padding: clamp(16px, 4vw, 40px);
     padding-bottom: max(clamp(16px, 4vw, 40px), env(safe-area-inset-bottom, 0px));
-    background-color: rgba(6, 9, 16, 0.62);
+    /* s06.html: the reference's .5 base under its own gradient; the Player's
+       vignette softens while the card is up (player.css) so the blurred last
+       picture still lights the room instead of the dims stacking up */
+    background-color: rgba(6, 9, 16, 0.5);
     background-image: linear-gradient(
       180deg,
       rgba(6, 9, 16, 0.25) 0%,
@@ -254,6 +257,17 @@
     line-height: 1.45;
     letter-spacing: 0;
     color: var(--ss-ink-2);
+  }
+  /* the code is one unbroken line of its own (EndCard urlWithBreaks): 32 hex
+     at 11px is ≈ 211px in a ≈ 232px column at 390 */
+  [data-pl="end"] .pl-qr-code {
+    white-space: nowrap;
+  }
+  /* …and at 10.5px below 385px (≈ 202px in ≈ 217px at 375), as the heading */
+  @media (max-width: 384.98px) {
+    [data-pl="end"] .pl-qr-url {
+      font-size: 10.5px;
+    }
   }
 
   /* ---------- the line a parent most needs ------------------------------- */

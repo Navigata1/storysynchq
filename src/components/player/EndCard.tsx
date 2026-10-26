@@ -86,20 +86,36 @@ const FOCUSABLE = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1
 const UNNAMED_VOICES: ReadonlySet<string> = new Set([BROWSER_VOICE, UNNAMED_RECORDED_VOICE]);
 
 /**
- * The share URL with a break opportunity after its origin, so the host is
- * never split mid-name. A real share code (32 hex) is wider than the row, so
- * the rest still wraps where the browser finds room (after "read?" at 390) —
- * not the reference's two-line "host/" · "read?story=…". The text is the
- * exact URL: <wbr> adds no characters.
+ * The share URL set the way the reference sets it (s06 `.s06-qrrow__u`): the
+ * host never split mid-name, "read?story=" never stranded, and the code (32
+ * hex for a minted link) whole on a line of its own (`.pl-qr-code`, nowrap) —
+ * never a three-character orphan. Break opportunities only: <wbr> adds no
+ * characters, so the text is still the exact URL.
  */
-function urlWithBreak(url: string): React.ReactNode {
+function urlWithBreaks(url: string): React.ReactNode {
   const cut = url.indexOf("/", url.indexOf("//") + 2);
   if (cut < 0 || cut === url.length - 1) return url;
+  const head = url.slice(0, cut + 1);
+  const rest = url.slice(cut + 1);
+  const code = /^(.*?[?&]story=)([^&#]+)$/.exec(rest);
+  if (!code) {
+    return (
+      <>
+        {head}
+        <wbr />
+        {rest}
+      </>
+    );
+  }
   return (
     <>
-      {url.slice(0, cut + 1)}
+      {head}
       <wbr />
-      {url.slice(cut + 1)}
+      {code[1]}
+      <wbr />
+      <span className="pl-qr-code" data-pl="qr-code">
+        {code[2]}
+      </span>
     </>
   );
 }
@@ -378,7 +394,7 @@ export function EndCard({
                 <p className="pl-qr-title">
                   <b>PASS IT ON</b> · POINT A PHONE AT THIS
                 </p>
-                <p className="pl-qr-url">{urlWithBreak(shareUrl)}</p>
+                <p className="pl-qr-url">{urlWithBreaks(shareUrl)}</p>
               </div>
             </div>
           ) : null}

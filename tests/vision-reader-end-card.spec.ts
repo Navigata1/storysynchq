@@ -771,7 +771,7 @@ test("T12 · end card · nothing new is fetched, counted or stored", async ({ pa
     const url = req.url();
     if (url.startsWith("data:") || url.startsWith("blob:")) return;
     // the dev server's own hot-reload traffic is not the page fetching anything
-    if (/\/_next\/|__nextjs|webpack-hmr|turbopack/.test(url)) return;
+    if (/\/_next\/|__nextjs|webpack-hmr|turbopack|[?&]_rsc=/.test(url)) return;
     requests.push(url);
   });
 

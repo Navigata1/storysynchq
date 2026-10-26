@@ -222,9 +222,23 @@
   .pl-root[data-layout="spread"] .pl-chrome--bottom {
     padding-bottom: max(10px, env(safe-area-inset-bottom, 0px));
   }
+  /* the reference's 200 × 48 pill: three keys spread across it */
   .pl-root[data-layout="spread"] .pl-transport {
-    gap: 16px;
-    padding: 3px 18px;
+    box-sizing: border-box;
+    width: 200px;
+    height: 48px;
+    justify-content: space-between;
+    gap: 0;
+    padding: 2px 10px;
+  }
+  /* the discs stay the reference's 32 / 40 px; each key's hit area is 44 px,
+     the same touch rule the chips follow (a landscape tablet is a spread too) */
+  .pl-root[data-layout="spread"] .pl-transport .sk-transport::before {
+    content: "";
+    position: absolute;
+    /* measured from the padding box: the key's 1px border, plus 1px to spare */
+    inset: calc((var(--sk-transport-size) - 44px) / 2 - 2px);
+    border-radius: 999px;
   }
   .pl-root[data-layout="spread"] .pl-transport .sk-transport {
     --sk-transport-size: 32px;
@@ -261,9 +275,14 @@
   }
   /* while a voice is speaking the paper key carries the lamp's glow */
   .pl-root[data-layout="spread"] .pl-transport .sk-transport.is-active {
-    box-shadow:
-      0 0 0 2px rgba(245, 158, 11, 0.55),
-      0 6px 22px -4px rgba(255, 201, 60, 0.7);
+    box-shadow: 0 6px 22px -4px rgba(255, 201, 60, 0.7);
+  }
+  /* "Music on" is the one lit chip: gold-tinted glass (s02), not just a gold line */
+  .pl-root[data-layout="spread"] .pl-chip[aria-pressed="true"] {
+    background-color: rgba(245, 158, 11, 0.18);
+  }
+  .pl-root[data-layout="spread"] .pl-chip[aria-pressed="true"]:hover {
+    background-color: rgba(245, 158, 11, 0.26);
   }
   /* the strip of tape runs along the bottom edge of the room */
   .pl-root[data-layout="spread"] .pl-progress {
