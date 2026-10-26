@@ -4,9 +4,14 @@ import fs from 'fs';
 // Remote CI/agent environments pre-install Chromium outside Playwright's
 // registry; use it when present so tests run without `playwright install`.
 const preinstalledChromium = '/opt/pw-browsers/chromium';
-const launchOptions = fs.existsSync(preinstalledChromium)
-  ? { executablePath: preinstalledChromium }
-  : undefined;
+// The headless shell (CI) hints glyphs fully and rounds each advance to a whole
+// pixel: 11px Plex Mono set 7px a glyph instead of 6.6, so tight layouts that
+// fit in a real browser overflowed on the runner. Unhinted keeps fractional
+// advances, as desktop and phone browsers set them.
+const launchOptions = {
+  args: ['--font-render-hinting=none'],
+  ...(fs.existsSync(preinstalledChromium) ? { executablePath: preinstalledChromium } : {}),
+};
 
 export default defineConfig({
   testDir: './tests',
