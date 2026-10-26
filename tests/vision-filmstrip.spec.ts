@@ -385,7 +385,14 @@ test.describe("T13b · Snap the next drawing", () => {
   test("keyboard: Enter on the focused tile adds a page and opens the camera", async ({ page }) => {
     await openTwinkle(page);
     await snap(page).focus();
-    const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.keyboard.press("Enter")]);
+    // ask for the chooser first and make one round trip to the page before the
+    // key: pressed straight after focus(), Enter added the page but the chooser
+    // went unobserved in ~half of mobile runs (the mouse path above already
+    // makes its own round trips before it clicks)
+    const chooserPromise = page.waitForEvent("filechooser");
+    await page.evaluate(() => document.activeElement?.textContent);
+    await page.keyboard.press("Enter");
+    const chooser = await chooserPromise;
     expect(await chooser.element().getAttribute("accept")).toBe("image/*");
     await expect(strip(page).getByRole("button", { name: "Page 6, selected", exact: true })).toHaveCount(1);
   });
