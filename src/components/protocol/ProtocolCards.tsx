@@ -20,8 +20,9 @@ import { addedLines, validationReport, type ReportLine } from "@/lib/storysync/r
 import { PLAYER_SNIPPET, snippetTokens } from "./snippet";
 
 const CODEC_RULE: Array<{ tag: string; tone: "must" | "may" | "mustnot"; text: string }> = [
-  { tag: "MUST", tone: "must", text: "Narration is AAC-LC in M4A, mono, 48 kHz, about 96 kbps." },
-  { tag: "MAY", tone: "may", text: "Fall back to 16-bit WAV, 16 kHz mono. The only fallback." },
+  // U+00A0 between a number and its unit: "16 / kHz" never parts at a line break.
+  { tag: "MUST", tone: "must", text: "Narration is AAC-LC in M4A, mono, 48\u00a0kHz, about 96\u00a0kbps." },
+  { tag: "MAY", tone: "may", text: "Fall back to 16-bit WAV, 16\u00a0kHz mono. The only fallback." },
   { tag: "MUST NOT", tone: "mustnot", text: "Opus, WebM or Ogg. Drafts only, never a published tape." },
 ];
 

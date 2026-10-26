@@ -47,6 +47,24 @@
   padding-inline: clamp(1.15rem, 5vw, 2.5rem);
 }
 
+/* ≥ 1140 px the page is s08's laptop: content x32–1108 (1076 px), so FIG. 1
+   gets the brief's x32–660 beside the 428 px cards (x680–1108). Below, the
+   68rem column and its gutters hold (T23b: the cards column starts at 68rem). */
+@media (min-width: 1140px) {
+  .pr-wrap {
+    max-width: 1140px;
+    padding-inline: 32px;
+  }
+}
+
+/* Keyboard focus never lands under the sticky bar (WCAG 2.2 SC 2.4.11): the
+   browser's own focus and anchor scrolls stop 60 px down (the 48 px bar + 12).
+   ProtocolPage's focus handler covers a stop already in view under the bar,
+   which Chrome does not scroll at all. */
+html:has(.pr-root) {
+  scroll-padding-top: 60px;
+}
+
 .pr-arrow {
   display: block;
   width: 1.05em;
@@ -56,25 +74,25 @@
 
 /* -------------------------------------------------------------------- bar */
 
+/* s08: solid navy, 48 px, one bottom line — nothing scrolls through it */
 .pr-bar {
   position: sticky;
   top: 0;
   z-index: 20;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  background-color: rgba(10, 14, 26, 0.82);
-  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--ss-line);
+  background-color: var(--ss-navy);
 }
 
 .pr-bar-inner {
   display: flex;
-  /* Below ~340px the three destinations cannot share a line; wrapping keeps
+  /* Below ~330px the three destinations cannot share a line; wrapping keeps
      every one of them (and every 44px target) instead of pushing the document
      sideways. */
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 0 1rem;
-  min-height: 60px;
+  min-height: 48px;
 }
 
 .pr-back,
@@ -82,28 +100,56 @@
   display: inline-flex;
   align-items: center;
   min-height: 44px;
-  padding-inline: 0.35rem;
   border-radius: 8px;
-  font-size: 11px;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
   white-space: nowrap;
-  color: rgba(203, 213, 225, 0.85);
 }
 
-/* one line on a phone, without dropping any destination */
-@media (max-width: 520px) {
-  .pr-back,
-  .pr-bar-link {
-    font-size: 10px;
-    letter-spacing: 0.1em;
-    padding-inline: 0.15rem;
-  }
+/* "← [tape] StorySyncHQ": mono 12 px fg-2, the arrow in fg-3 */
+.pr-back {
+  gap: 8px;
+  padding-inline: 0.15rem;
+  font-weight: 500;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--ss-fg-2);
+}
 
-  .pr-bar-nav {
-    flex-wrap: wrap;
-    gap: 0 0.9rem;
-  }
+.pr-back-arrow {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--ss-fg-3);
+}
+
+.pr-back-icon {
+  flex: none;
+  display: block;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+}
+
+/* "Play a story · Make a story": Geist 13 px fg-3, a 3 px dot between */
+.pr-bar-nav {
+  display: flex;
+  align-items: center;
+  gap: 0 10px;
+}
+
+.pr-bar-link {
+  padding-inline: 0.15rem;
+  font-family: var(--ss-ui);
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--ss-fg-3);
+}
+
+.pr-bar-dot {
+  flex: none;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background-color: var(--ss-fg-4);
 }
 
 .pr-back:hover,
@@ -111,10 +157,22 @@
   color: var(--pr-gold);
 }
 
-.pr-bar-nav {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem 1.35rem;
+/* one line on a phone, at s08's type sizes, with room to spare: tighter
+   spacing, never smaller text, and every target still 44 px tall */
+@media (max-width: 520px) {
+  .pr-back {
+    gap: 6px;
+    letter-spacing: 0.02em;
+  }
+
+  .pr-back,
+  .pr-bar-link {
+    padding-inline: 0;
+  }
+
+  .pr-bar-nav {
+    gap: 0 8px;
+  }
 }
 
 /* ------------------------------------------------------------------- type */
@@ -984,33 +1042,48 @@
   background-color: rgba(4, 7, 14, 0.5);
 }
 
+/* s08: the creed, a centred mono line; the links, smaller, beneath it.
+   fg-3, not the brief's fg-4 (≈ 3.4:1): the creed reads at AA. */
 .pr-footer-inner {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  justify-content: space-between;
-  align-items: flex-start;
-}
-
-@media (min-width: 768px) {
-  .pr-footer-inner {
-    flex-direction: row;
-    align-items: center;
-  }
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .pr-footer-note {
-  max-width: 52ch;
-  font-size: 0.85rem;
-  line-height: 1.55;
-  color: rgba(148, 163, 184, 0.72);
+  max-width: none;
+  font-size: 11px;
+  line-height: 1.65;
+  letter-spacing: 0.04em;
+  text-align: center;
+  text-wrap: balance;
+  color: var(--ss-fg-3);
 }
 
 .pr-footer-links {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   align-items: center;
-  gap: 0.25rem 1.4rem;
+  gap: 0 1.4rem;
+}
+
+.pr-footer-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding-inline: 0.15rem;
+  border-radius: 8px;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--ss-fg-3);
+}
+
+.pr-footer-link:hover {
+  color: var(--pr-gold);
 }
 
 /* ============================================================================
@@ -1020,6 +1093,7 @@
 @media (prefers-reduced-motion: no-preference) {
   .pr-back,
   .pr-bar-link,
+  .pr-footer-link,
   .pr-link,
   .pr-inline-link {
     transition:

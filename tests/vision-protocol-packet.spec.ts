@@ -317,13 +317,30 @@ test.describe("T23a · /protocol FIG. 1 (E2E)", () => {
     // …and the Visual plate's path is the one the real pack writes.
     expect(printed[1]).toBe(packetPlates(packHouseTapeForReal(), PAGE_3)[1].value);
 
-    // Empty plates say so in ink-3 italic.
+    // Empty plates say so in pencil italic: one pencil colour, not the plates'
+    // ink, and AA (≥ 4.5:1) on the plate's own fill. (M6: ink-3 #8b8073 was
+    // pinned here and measured 3.0–3.5:1 on the fills; the ratio is the rule.)
+    const pencil = await plates.evaluateAll((els) => {
+      const rgb = (c: string) => (c.match(/[\d.]+/g) ?? []).slice(0, 3).map(Number);
+      const lum = (c: number[]) =>
+        c
+          .map((v) => v / 255)
+          .map((s) => (s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4)))
+          .reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0);
+      return els.map((el) => {
+        const value = el.querySelector<HTMLElement>('[data-plate="value"]')!;
+        const cs = getComputedStyle(value);
+        const fill = getComputedStyle(el.querySelector<HTMLElement>('[data-plate="backing"]')!).backgroundColor;
+        const [hi, lo] = [lum(rgb(cs.color)), lum(rgb(fill))].sort((a, b) => b - a);
+        return { style: cs.fontStyle, color: cs.color, ratio: (hi + 0.05) / (lo + 0.05) };
+      });
+    });
     for (const i of [3, 6]) {
-      const value = plates.nth(i).locator('[data-plate="value"]');
-      await expect(value).toHaveCSS("font-style", "italic");
-      await expect(value).toHaveCSS("color", "rgb(139, 128, 115)");
+      expect(pencil[i].style).toBe("italic");
+      expect(pencil[i].ratio, `plate ${i + 1}'s note on its fill`).toBeGreaterThanOrEqual(4.5);
     }
-    await expect(plates.nth(0).locator('[data-plate="value"]')).not.toHaveCSS("color", "rgb(139, 128, 115)");
+    expect(pencil[3].color).toBe(pencil[6].color);
+    expect(pencil[0].color).not.toBe(pencil[3].color);
 
     // 02's thumbnail is the same-origin page picture, decorative.
     const thumb = plates.nth(1).locator("img");

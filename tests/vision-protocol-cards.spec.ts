@@ -449,7 +449,8 @@ test.describe("T23b · /protocol cards (E2E)", () => {
         const cs = getComputedStyle(dt);
         return {
           tag: dt.textContent?.trim(),
-          text: el.querySelector("dd")!.textContent?.trim(),
+          // U+00A0 keeps a number with its unit; the copy is the reference's
+          text: el.querySelector("dd")!.textContent?.replace(/\u00a0/g, " ").trim(),
           color: cs.color,
           size: cs.fontSize,
           mono: cs.fontFamily.toLowerCase().includes("plex") || cs.fontFamily.toLowerCase().includes("mono"),

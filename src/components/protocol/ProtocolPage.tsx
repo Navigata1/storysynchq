@@ -15,6 +15,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { GlassPanel } from "@/components/studio-kit/kit";
 import { PacketExploded, type ExplodedPlate } from "@/components/studio-kit/PacketExploded";
 import { mimeForAssetPath, packedAssetPath } from "@/lib/storysync/container";
@@ -56,7 +57,13 @@ const FACTS: Array<{ k: string; v: string }> = [
   { k: "Runtime", v: "Plain web · no server required" },
 ];
 
-const CONTAINER_TREE = `the-brave-little-star.storysync
+/**
+ * An example archive, not the demo download: it shows a voice in each permitted
+ * codec (the download of the house tape holds only its manifest and pictures —
+ * the browser voice reads it), so its root is a generic name, never the
+ * download's own filename.
+ */
+const CONTAINER_TREE = `my-story.storysync
 ├── manifest.json            REQUIRED · SSYNC v2 manifest (UTF-8 JSON)
 └── assets/                  all bundled media, flat
     ├── cover.jpg
@@ -146,18 +153,62 @@ const LADDER: Array<{ source: string; action: string }> = [
   },
 ];
 
+/** The app icon (public/icons): the same cassette the landing nav and the favicon carry. */
+const ICON_SRC = "/icons/icon-96x96.png";
+
+/**
+ * Keyboard focus never hides under the sticky bar (WCAG 2.2 SC 2.4.11).
+ * `scroll-padding-top` (protocol.css) covers the scrolls the browser makes, but
+ * Chrome does not scroll a focused element that is already inside the viewport
+ * — even when it sits wholly under the bar — and it ignores scroll-padding when
+ * it checks. So one frame after keyboard focus, a stop whose top is under the
+ * bar is scrolled to sit just below it. Instant: a jump, never an animation.
+ */
+function useFocusClearOfBar(rootRef: React.RefObject<HTMLDivElement | null>) {
+  React.useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    let frame = 0;
+    const onFocusIn = (event: FocusEvent) => {
+      const el = event.target;
+      const bar = root.querySelector(".pr-bar");
+      if (!(el instanceof HTMLElement) || !bar || bar.contains(el)) return;
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        if (document.activeElement !== el || !el.matches(":focus-visible")) return;
+        const clear = bar.getBoundingClientRect().bottom + 12;
+        const top = el.getBoundingClientRect().top;
+        if (top < clear) window.scrollBy({ top: top - clear, behavior: "auto" });
+      });
+    };
+    root.addEventListener("focusin", onFocusIn);
+    return () => {
+      cancelAnimationFrame(frame);
+      root.removeEventListener("focusin", onFocusIn);
+    };
+  }, [rootRef]);
+}
+
 export function ProtocolPage() {
+  const rootRef = React.useRef<HTMLDivElement>(null);
+  useFocusClearOfBar(rootRef);
+
   return (
-    <div className="pr-root sk-font-ui">
+    <div ref={rootRef} className="pr-root sk-font-ui">
       <header className="pr-bar">
         <div className="pr-wrap pr-bar-inner">
+          {/* s08: "← StorySyncHQ" with the tape glyph; the arrow and the icon are decoration */}
           <Link className="pr-back sk-font-meta sk-focus" href="/">
-            ← StorySyncHQ
+            <ArrowLeft className="pr-back-arrow" aria-hidden="true" focusable="false" />
+            {/* eslint-disable-next-line @next/next/no-img-element -- an 18 px app icon; no optimisation pipeline yet (CLAUDE.md §3) */}
+            <img className="pr-back-icon" src={ICON_SRC} alt="" width={18} height={18} decoding="async" />
+            StorySyncHQ
           </Link>
-          <nav className="pr-bar-nav sk-font-meta" aria-label="Product">
+          <nav className="pr-bar-nav" aria-label="Product">
             <Link className="pr-bar-link sk-focus" href="/read">
               Play a story
             </Link>
+            <i className="pr-bar-dot" aria-hidden="true" />
             <Link className="pr-bar-link sk-focus" href="/studio">
               Make a story
             </Link>
@@ -287,7 +338,7 @@ export function ProtocolPage() {
                     {CONTAINER_TREE}
                   </pre>
                   <figcaption className="pr-sheet-cap sk-font-meta">
-                    Fig. 2 — the archive layout
+                    Fig. 3 — the archive layout (an example)
                   </figcaption>
                 </figure>
               </div>
@@ -430,18 +481,18 @@ export function ProtocolPage() {
 
       <footer className="pr-footer">
         <div className="pr-wrap pr-footer-inner">
-          <p className="pr-footer-note">
+          <p className="pr-footer-note sk-font-meta">
             SSYNC v2.0 · the spec, the schema and the reader are all open. Write your own player
             — the format outlives the app.
           </p>
           <nav className="pr-footer-links sk-font-meta" aria-label="Footer">
-            <Link className="pr-bar-link sk-focus" href="/">
+            <Link className="pr-footer-link sk-focus" href="/">
               Home
             </Link>
-            <a className="pr-bar-link sk-focus" href={SPEC_URL} target="_blank" rel="noreferrer">
+            <a className="pr-footer-link sk-focus" href={SPEC_URL} target="_blank" rel="noreferrer">
               Specification
             </a>
-            <a className="pr-bar-link sk-focus" href={GITHUB_URL} target="_blank" rel="noreferrer">
+            <a className="pr-footer-link sk-focus" href={GITHUB_URL} target="_blank" rel="noreferrer">
               GitHub
             </a>
           </nav>

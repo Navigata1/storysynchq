@@ -19,6 +19,12 @@
     --sk-px-edge: 12px;
     /* tape-paper dashes: visible on the studio's navy (the reference's tint) */
     --sk-px-connector: rgba(255, 253, 246, 0.42);
+    /* pencil for the empty plates' notes: ink-3 (#8b8073) is only 3.0–3.5:1 on
+       the layer fills; this darker pencil is 4.7–5.5:1 on all seven (AA). */
+    --sk-px-pencil: #6b6157;
+
+    /* the readouts' one-line rule (below) asks how wide the stack is */
+    container: sk-px / inline-size;
 
     position: relative;
     display: flex;
@@ -181,7 +187,7 @@
   /* a layer this page does not use, said in pencil */
   .sk-px-file--empty {
     font: italic 400 12.5px/1.25 var(--ss-display);
-    color: var(--ss-ink-3);
+    color: var(--sk-px-pencil);
   }
 
   /* 01 · the mini label line */
@@ -419,6 +425,34 @@
       top: -15px;
       right: auto;
       left: 132px;
+    }
+  }
+
+  /* A stack ≥ 600 px wide (FIG. 1 beside the cards at ≥ 1140 px, or alone from
+     768 px) prints each readout as designed: the head line and the tail line
+     never wrap inside a clause — a tail too long for its plate ends in an
+     ellipsis (the whole value stays in the DOM, read by assistive tech) — and a
+     pencil note takes at most two lines. Narrower (1088–1139 px, 556 px) the
+     readouts wrap between words, as T23b requires. */
+  @container sk-px (min-width: 600px) {
+    .sk-px-file {
+      overflow-wrap: normal;
+    }
+    .sk-px-line,
+    .sk-px-tail {
+      white-space: nowrap;
+    }
+    .sk-px-tail {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .sk-px-file--empty {
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
+      overflow: hidden;
     }
   }
 }
