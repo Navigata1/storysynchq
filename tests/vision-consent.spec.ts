@@ -194,9 +194,16 @@ test.describe("consent · one record per recorded voice", () => {
       const sentence = rows.nth(i).getByText(CONSENT_SENTENCE, { exact: true });
       await expect(sentence).toBeVisible();
       expect(await name.evaluate((el) => getComputedStyle(el).fontFamily)).toMatch(/mono/i);
-      const nameBox = (await name.boundingBox())!;
-      const sentenceBox = (await sentence.boundingBox())!;
-      expect(nameBox.y + nameBox.height).toBeLessThanOrEqual(sentenceBox.y + 1);
+      // Both edges are read in one frame: the sheet may still be rising
+      // (studio-rise), and two separate boundingBox() calls can straddle it.
+      const [nameBottom, sentenceTop] = await rows.nth(i).evaluate((row, text) => {
+        const voice = row.querySelector('[data-studio="consent-voice"]')!;
+        const line = [...row.querySelectorAll("span")].find(
+          (s) => s.textContent?.replace(/\s+/g, " ").trim() === text,
+        )!;
+        return [voice.getBoundingClientRect().bottom, line.getBoundingClientRect().top];
+      }, CONSENT_SENTENCE);
+      expect(nameBottom).toBeLessThanOrEqual(sentenceTop + 1);
     }
     // The promise is said once, beneath the last row.
     await expect(dialog.getByText(CONSENT_SUBLINE, { exact: true })).toHaveCount(1);

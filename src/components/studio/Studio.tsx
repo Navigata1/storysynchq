@@ -1111,7 +1111,7 @@ export default function Studio() {
     <div className="studio" data-recording={recording ? "true" : "false"}>
       {/* ------------------------------------------------------------ top bar */}
       <header
-        className="studio-area-top studio-topbar relative flex flex-wrap items-center gap-2 border-b border-white/8 bg-[#060912]/55 px-3 py-2 backdrop-blur-xl md:min-h-[68px]"
+        className="studio-area-top studio-topbar relative flex flex-wrap items-center gap-2 border-b border-white/8 bg-[#060912]/55 px-3 py-2 backdrop-blur-xl md:min-h-[68px] md:flex-nowrap"
         style={{ "--sk-big-h": "48px" } as React.CSSProperties}
       >
         <Link
@@ -1140,8 +1140,11 @@ export default function Studio() {
         <label className="sr-only" htmlFor="studio-title">
           Story title
         </label>
-        {/* The title, centred on the bar (from 1180px), with a faint pen. */}
-        <div data-studio="title" className="studio-title">
+        {/* The title, centred on the bar (from 1180px), with a faint pen. From
+            768px the bar stays one row and the title is what gives way (its
+            ellipsis): the row has ~10px to spare at 768, so a font that renders
+            a hair wider must not push SIMPLE and Finish onto a second row. */}
+        <div data-studio="title" className="studio-title md:min-w-0">
           <input
             id="studio-title"
             value={state.manifest.metadata.title}
