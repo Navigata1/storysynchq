@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { shareLinkRow } from "./share-code";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
@@ -112,20 +113,9 @@ export async function deleteStorybook(id: string) {
   if (error) throw error;
 }
 
-export async function getPublicStorybooks(genre?: string, search?: string) {
-  if (!supabase) return [];
-  let query = supabase
-    .from("storybooks")
-    .select("id, title, author, genre, age_range, page_count, description, cover_image_url, view_count, created_at")
-    .eq("is_public", true)
-    .order("created_at", { ascending: false })
-    .limit(50);
-  if (genre && genre !== "All") query = query.eq("genre", genre);
-  if (search) query = query.ilike("title", `%${search}%`);
-  const { data } = await query;
-  return data || [];
-}
-
+// The app never lists other people's stories; it reaches a shared one by its
+// code (PRIVACY.md rule 4). Exact match, no length check: 64-bit codes made
+// before codes were 128-bit keep resolving until their story is deleted.
 export async function getStorybookByShareCode(code: string) {
   if (!supabase) return null;
   const { data: link } = await supabase
@@ -142,11 +132,15 @@ export async function getStorybookByShareCode(code: string) {
   return data;
 }
 
+/**
+ * Insert a share link carrying an explicit 128-bit code (`shareLinkRow`), so
+ * the link is 32 hex whatever the column default is (migration 001's is 64-bit).
+ */
 export async function createShareLink(storybookId: string) {
   if (!supabase) throw new Error("Supabase not configured");
   const { data, error } = await supabase
     .from("shared_links")
-    .insert({ storybook_id: storybookId })
+    .insert(shareLinkRow(storybookId))
     .select()
     .single();
   if (error) throw error;
@@ -157,7 +151,7 @@ export async function createShareLink(storybookId: string) {
 
 export async function uploadMedia(file: Blob, path: string) {
   if (!supabase) throw new Error("Supabase not configured");
-  const { data, error } = await supabase.storage.from("storybook-media").upload(path, file);
+  const { error } = await supabase.storage.from("storybook-media").upload(path, file);
   if (error) throw error;
   const { data: urlData } = supabase.storage.from("storybook-media").getPublicUrl(path);
   return urlData.publicUrl;

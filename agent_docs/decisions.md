@@ -424,3 +424,27 @@ privacy line in `--ss-fg-3`). From 880px the card lays out in two columns so a l
 - **The byline is the author.** For a tape made in the Studio, the gate's byline is always written to `metadata.author`, an empty one included. A cleared byline no longer leaves the draft's old author on the tape. Re-voiced tapes keep their author (T15).
 - **Pauses as the Player plays them.** The sheet's Behavior row reads pauses the way the Player will: a page without `autoPause` uses `pauseBetweenPages`, else 3 s.
 - **Picture size.** "about N KB" is the mean decoded size of the page pictures, in KiB, to the nearest 10, or the nearest 1 under 5.
+
+**2026-10-25 · T02 · One share-code minter, 128 bits, never weakened; migration 002 is HITL.**
+
+- **One minter.** Every share link, on the device and in the cloud, is minted by `mintShareCode()` in
+  `src/lib/share-code.ts`: 16 bytes from `crypto.getRandomValues`, as 32 lowercase hex characters.
+- **No fallback.** Without a CSPRNG, or with one that fails when asked, it throws `ShareCodeError`. `shareBook`
+  catches only that error and reports "Making the link: this browser cannot make a private link safely. Download the
+  .storysync file instead." A guessable link to a child's voice is worse than no link. Local story ids may still fall
+  back to a non-secret value, because ids are not links.
+- **Explicit cloud codes.** The cloud insert writes `shareLinkRow(storybookId)`, so links never depend on the column
+  default.
+- **Old links keep working.** Cloud links made before share codes became 128-bit used 64-bit codes. They resolve by
+  exact match, with no length check, until their story is deleted (PRIVACY.md rule 4). The cutoff is this change,
+  not a calendar date: until it deploys, new cloud links still take the 64-bit column default.
+- **No gallery query.** The unused public query `getPublicStorybooks` is deleted, so `src/` has no query that lists
+  other people's stories.
+- **Migration 002 is HITL and pending.** `supabase/migrations/002_share_code_128bit.sql` only changes
+  `shared_links.share_code`'s default to `encode(gen_random_bytes(16), 'hex')` and changes no row. Jon applies it to
+  production; it is optional for the app.
+- **Raised, not fixed** (M0-PRD Open Questions):
+  - **OQ1, RLS enumeration.** The broad SELECT policies on `shared_links` and `storybooks` still let anyone holding the
+    anon key list share codes and published stories. Proposed fix: T02b (migration 003 plus a by-code RPC).
+  - **OQ3, counter columns.** `shared_links.views` and `storybooks.view_count` now have no reader or writer in `src/`.
+    Dropping them needs Jon's yes.

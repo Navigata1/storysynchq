@@ -23,7 +23,8 @@ That fact shapes the product, not just this document.
 
 4. **Unlisted, unguessable share links.** Share codes are random and unlisted. A shared
    story is reachable only by someone holding the link. Share links can be revoked by
-   deleting the story.
+   deleting the story. Cloud links made before share codes became 128-bit used 64-bit
+   codes; they keep working until the story is deleted, and every new link is 128-bit.
 
    **What "public" means on a published story.** A story you finish is stored with
    `is_public: true`, and that flag is easy to misread. It does not mean listed,
