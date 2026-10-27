@@ -360,17 +360,25 @@ test.describe("consent · one record per recorded voice", () => {
     await expect(go).toBeDisabled();
     await expect(go).toHaveAccessibleDescription("Choose whose voice each one is first.");
 
-    /* one answer: its sentence, and now the promise beneath it */
+    /* one answer: its sentence, and now the promise beneath it — while the
+       other voice still has no answer, the line saying what comes first stays,
+       and Continue still says why it waits (M6: it used to vanish here) */
     const childs = dialog.getByRole("radio", { name: "A child's — I'm their parent or guardian" });
     const mine = dialog.getByRole("radio", { name: "Mine — I'm the grown-up speaking" });
     await childs.nth(0).check();
-    await expect(prompt).toHaveCount(0);
     await expect(dialog.getByText(CONSENT_SUBLINE, { exact: true })).toBeVisible();
     await expect(dialog.locator('input[type="checkbox"]')).toHaveCount(1);
+    await expect(prompt, "voice 2 is still unanswered").toHaveText("Choose whose voice each one is first.");
+    await expect(prompt).toBeVisible();
+    await expect(go).toHaveAccessibleDescription("Choose whose voice each one is first.");
     await dialog.locator("#studio-gate-consent-1").check();
     await expect(go, "the second voice has no answer yet").toBeDisabled();
+    await expect(go).toHaveAccessibleDescription("Choose whose voice each one is first.");
 
+    /* every voice answered: the line goes, and so does the description */
     await mine.nth(1).check();
+    await expect(prompt).toHaveCount(0);
+    await expect(go).toHaveAccessibleDescription("");
     await dialog.locator("#studio-gate-consent-2").check();
     await expect(go).toBeEnabled();
     const tape = await continueAndWait(page);

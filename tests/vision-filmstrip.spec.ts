@@ -454,6 +454,8 @@ test.describe("T13b · the mood lane", () => {
       expect(await s.getAttribute("style")).toContain("--mood-calm");
     }
     expect(await lane.locator(SEL.laneLabel).innerText()).toBe("CALM · GENTLE MUSIC ADDED FOR YOU");
+    // M6: the label's icon is the mood's own (a moon for Calm), as on the Stage.
+    await expect(lane.locator(SEL.laneLabel).locator("svg.lucide-moon")).toHaveCount(1);
 
     const toggle = card.getByRole("switch", { name: "Play music behind the story" });
     await toggle.click();
@@ -515,6 +517,8 @@ test.describe("T13b · phone", () => {
 
   test("375×812: the move controls stay in reach and the Snap tile reads in full", async ({ page }) => {
     await openTwinkle(page, { viewport: PHONE });
+    // M6: on a phone they rest folded behind one "move" key; opened, each is a 44px target.
+    await strip(page).getByRole("button", { name: "Move or delete this page" }).click();
     for (const name of MOVES) {
       const b = await box(strip(page).getByRole("button", { name, exact: true }));
       expect(b.right, `${name} on screen`).toBeLessThanOrEqual(PHONE.width);
@@ -527,6 +531,57 @@ test.describe("T13b · phone", () => {
       return text ? text.scrollWidth <= text.clientWidth + 1 && el.scrollHeight <= el.clientHeight + 1 : false;
     });
     expect(fits, "the Snap words fit their tile").toBe(true);
+  });
+});
+
+test.describe("M6 · a phone's strip: the move controls rest folded", () => {
+  test("375×812: at rest one 44px 'move' key, clear of the selected frame; opened, three 44px keys; Escape folds", async ({
+    page,
+  }) => {
+    for (const pageNumber of [1, 3, 5]) {
+      await openTwinkle(page, { viewport: PHONE, pageNumber });
+      const toggle = strip(page).getByRole("button", { name: "Move or delete this page" });
+      await expect(toggle).toHaveAttribute("aria-expanded", "false");
+      for (const name of MOVES) await expect(strip(page).getByRole("button", { name, exact: true })).toHaveCount(0);
+      await settle(page);
+      const rest = await page.evaluate(() => {
+        const r = (el: Element) => el.getBoundingClientRect().toJSON() as DOMRect;
+        const moves = document.querySelector('[data-studio="film-moves"]')!;
+        const current = document.querySelector('[data-page-index][aria-current="true"]')!;
+        const film = document.querySelector('[data-studio="film-scroll"]')!;
+        return { moves: r(moves), current: r(current), film: r(film), overflow: document.documentElement.scrollWidth - window.innerWidth };
+      });
+      expect(rest.moves.width, "the folded housing is small").toBeLessThanOrEqual(56);
+      expect(rest.moves.height).toBeGreaterThanOrEqual(44);
+      expect(rest.moves.width / rest.film.width, "it covers little of the strip").toBeLessThan(0.2);
+      expect(rest.current.right, `page ${pageNumber}: the selected frame is clear of it`).toBeLessThanOrEqual(rest.moves.left + 0.5);
+      expect(rest.overflow).toBeLessThanOrEqual(0);
+    }
+
+    const toggle = strip(page).getByRole("button", { name: "Move or delete this page" });
+    await toggle.focus();
+    await expect(toggle).toHaveText("move");
+    await page.keyboard.press("Enter");
+    await expect(toggle).toHaveAttribute("aria-expanded", "true");
+    for (const name of MOVES) {
+      const b = await box(strip(page).getByRole("button", { name, exact: true }));
+      expect(b.width, `${name} a 44 px target`).toBeGreaterThanOrEqual(44);
+      expect(b.height, `${name} a 44 px target`).toBeGreaterThanOrEqual(44);
+      expect(b.right, `${name} on screen`).toBeLessThanOrEqual(PHONE.width);
+    }
+    // Tab goes from the key into what it opened, in the order drawn.
+    await page.keyboard.press("Tab");
+    await expect(strip(page).getByRole("button", { name: "Move this page earlier", exact: true })).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await expect(toggle).toBeFocused();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
+  });
+
+  test("from 768px there is no fold: the three keys show and no 'move' key", async ({ page }) => {
+    await openTwinkle(page, { viewport: { width: 768, height: 1024 } });
+    await expect(strip(page).getByRole("button", { name: "Move or delete this page" })).toHaveCount(0);
+    for (const name of MOVES) await expect(strip(page).getByRole("button", { name, exact: true })).toBeVisible();
   });
 });
 

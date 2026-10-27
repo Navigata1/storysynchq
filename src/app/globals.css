@@ -54,6 +54,9 @@
   --ss-foot-2: #24211f;
   --ss-slot: #05070d;
 
+  /* A story's words on the dark Stage: the reference's cream (.ss-story) */
+  --ss-cream: #f3e6c8;
+
   /* The eight canonical moods (src/lib/audio/moods.ts) */
   --mood-wonder: #f5b544;
   --mood-adventure: #f28c38;
@@ -128,6 +131,7 @@
   --color-ss-foot-1: var(--ss-foot-1);
   --color-ss-foot-2: var(--ss-foot-2);
   --color-ss-slot: var(--ss-slot);
+  --color-ss-cream: var(--ss-cream);
 
   --color-mood-wonder: var(--mood-wonder);
   --color-mood-adventure: var(--mood-adventure);

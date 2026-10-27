@@ -14,8 +14,11 @@
      ≥ 1024px  an open tool card docks in its own column between the rail and
                the Stage, so it never covers the page it talks about; the
                transport becomes s03's inset deck on the strip's column
-     ≥ 1180px  the inspector takes its own column (Advanced only); the title
-               sits centred on the top bar
+     ≥ 1180px  the inspector takes its own column (Advanced only), the room's
+               full height beside the Stage, strip and transport (s09); the
+               title sits centred on the top bar
+   Below 640px the top bar is one quiet row (s06 phone 2): Exit, the title,
+   "More" (Simple/Advanced, Open a tape) and a compact Finish.
    ========================================================================== */
 
 @keyframes studio-rise {
@@ -76,6 +79,13 @@
   }
 
   .studio-area-top { grid-area: top; }
+
+  /* The publish card, portalled to <body> so the room can be inert behind
+     it: it keeps the room's ink. */
+  .studio-modal-host {
+    --sk-ink: rgba(255, 255, 255, 0.78);
+    color: #e9f0fa;
+  }
   .studio-area-rail { grid-area: rail; min-height: 0; }
   .studio-area-stage { grid-area: stage; position: relative; min-height: 0; min-width: 0; }
   .studio-area-film { grid-area: film; min-width: 0; }
@@ -188,6 +198,57 @@
      Padding, not margin: the bar wraps exactly where it did before. */
   @media (max-width: 1179.98px) {
     .studio-title { padding-right: 12px; }
+  }
+
+  /* "More" (a phone only): Simple/Advanced and "Open a tape" in one small
+     panel under the bar. From 640px it is no panel at all — its contents sit
+     on the bar, in the same order, exactly as before. */
+  .studio-bar-more { display: contents; }
+  @media (max-width: 639.98px) {
+    /* the bar (and its panel) above the Stage and the sheets */
+    .studio-area-top {
+      position: relative;
+      z-index: 49;
+    }
+    .studio-bar-more {
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 12px;
+      display: none;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 10px;
+      width: min(240px, calc(100vw - 24px));
+      padding: 12px;
+      border-radius: 16px;
+      border: 1px solid var(--ss-line-2);
+      background-color: rgba(11, 16, 32, 0.97);
+      box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.7);
+    }
+    .studio-bar-more[data-open="true"] {
+      display: flex;
+      animation: studio-fade 200ms ease-out both;
+    }
+    .studio-bar-more [data-sk="mode"] { align-self: center; }
+    /* one quiet row: Exit · the title, centred, giving way first · Finish */
+    .studio-topbar .studio-title {
+      flex: 1 1 0;
+      min-width: 0;
+      padding-right: 0;
+    }
+    /* "after this take" is read with Finish (aria-describedby), not drawn */
+    .studio-finish[data-recording="true"] { transform: none; }
+    .studio-finish-note {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
   }
 
   /* "Finish my story" — and, while the mic is live, "after this take" under it */
@@ -371,6 +432,21 @@
     animation: studio-rise 300ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
   }
 
+  /* An inspector slider: its name with the reading at the right, the range
+     under them (a sheet); from 1180px one row, s09's `.s9-sl`. */
+  .studio-insp-slider {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "name  value"
+      "range range";
+    align-items: center;
+    column-gap: 10px;
+  }
+  .studio-insp-slider-name { grid-area: name; }
+  .studio-insp-slider-value { grid-area: value; text-align: right; }
+  .studio-insp-slider-range { grid-area: range; }
+
   /* ------------------------------------------------------------- ≥ 768px */
   @media (min-width: 768px) {
     .studio {
@@ -550,11 +626,13 @@
   @media (min-width: 1180px) {
     .studio {
       grid-template-columns: auto auto minmax(0, 1fr) auto;
+      /* The inspector runs the room's full height (s09): the strip and the
+         transport keep to the Stage's columns, beside it, never under it. */
       grid-template-areas:
         "top  top  top   top"
         "rail tool stage inspector"
-        "rail film film  film"
-        "rail transport transport transport";
+        "rail film film  inspector"
+        "rail transport transport inspector";
     }
     /* the title sits centred on the bar, clear of both ends */
     .studio-topbar .studio-title {
@@ -569,6 +647,7 @@
       position: static;
       grid-area: inspector;
       width: 366px;
+      min-height: 0;
       max-height: none;
       height: 100%;
       border-radius: 0;
@@ -577,10 +656,31 @@
       animation: studio-fade 260ms ease-out both;
     }
     .studio-inspector-close { display: none; }
+    /* s09's density: label · slider · reading on one row */
+    .studio-insp-slider {
+      grid-template-columns: 132px minmax(0, 1fr) 44px;
+      grid-template-areas: "name range value";
+      margin-bottom: 8px;
+    }
+    .studio-insp-slider-name { white-space: nowrap; }
     /* s03's title: Fraunces 700 at 22px. The `min-[1180px]:text-[22px]`
        utility on the input sorts before `sm:text-lg` and silently loses to it;
        a layered rule can only beat a utility as !important. */
     .studio-topbar .studio-title .studio-title-input { font-size: 22px !important; }
+  }
+  /* Advanced up to 1440px: the inspector's full-height column leaves the
+     transport the Stage's width, so its readout folds in two (time over
+     page, as below 1024px) and both sides narrow alike, keys still centred. */
+  @media (min-width: 1180px) and (max-width: 1439.98px) {
+    .studio[data-advanced="true"] .studio-transport-side { width: 120px; }
+    .studio[data-advanced="true"] .studio-transport-readout {
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 3px;
+      font-size: 12px;
+      line-height: 1.2;
+    }
+    .studio[data-advanced="true"] .studio-transport-sep { display: none; }
   }
 
   /* ------------------------------------------------------------- the stage */
@@ -616,12 +716,11 @@
   /* The page's words in the reference's cream (.ss-story #F3E6C8), set as
      balanced lines in a measure no wider than the Player's (~640px). */
   .studio-story-text {
-    --studio-cream: #f3e6c8;
     font-family: var(--font-fraunces), Georgia, "Iowan Old Style", serif;
     font-size: clamp(1.05rem, 1.15vw + 0.85rem, 1.6rem);
     line-height: 1.55;
     letter-spacing: 0.002em;
-    color: var(--studio-cream);
+    color: var(--ss-cream);
     text-wrap: balance;
     white-space: pre-wrap;
   }
@@ -691,7 +790,8 @@
      rings pulse elsewhere; in the Studio they hold a frozen frame of the
      pulse, as the reference draws the live record button (the Transport's
      live REC is the stop square in a still ring, "transport" above). */
-  .studio .sk-big--red:not(:disabled) .sk-big-ring {
+  .studio .sk-big--red:not(:disabled) .sk-big-ring,
+  .studio-modal-host .sk-big--red:not(:disabled) .sk-big-ring {
     animation: none;
     opacity: 0.55;
   }

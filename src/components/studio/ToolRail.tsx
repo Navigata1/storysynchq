@@ -75,6 +75,7 @@ export function ToolRail({ active, onSelect, photoBusy, narrated, musicOn, recor
             variant={isActive ? "gold" : "ghost"}
             aria-pressed={isActive}
             aria-disabled={waiting ? true : undefined}
+            data-studio-tool={id}
             data-waiting={waiting ? "true" : undefined}
             title={waiting ? WAIT_HINT : hint}
             onClick={() => select(id)}

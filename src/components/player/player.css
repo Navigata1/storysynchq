@@ -532,7 +532,7 @@
   }
   .pl-word.is-past {
     /* warm cream, not white: the words already spoken keep the lamp's colour (s02) */
-    color: #f3e6c8;
+    color: var(--ss-cream);
   }
   /* Not yet spoken: dimmer, cooler — but never under 4.5:1 on the darkest
      scrim a phone's 18-19px prose sits on (the reference's .42 is a

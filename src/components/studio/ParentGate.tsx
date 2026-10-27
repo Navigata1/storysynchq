@@ -122,6 +122,15 @@ const SENTENCE: Record<ConsentGrantor, string> = {
   self: "This is my own voice, and I'm happy to share it.",
 };
 
+/** Both answers, for the room the one-voice consent box keeps. */
+const GRANTORS: ConsentGrantor[] = ["parent/guardian", "self"];
+
+/** The trust line under the consent box: the grown-up's own voice, or a child's. */
+const TRUST_LINES = [
+  "Your voice never goes anywhere without you.",
+  "Your child's voice never goes anywhere without you.",
+] as const;
+
 const WHOSE_OPTIONS: { value: ConsentGrantor; label: string }[] = [
   { value: "self", label: "Mine — I'm the grown-up speaking" },
   { value: "parent/guardian", label: "A child's — I'm their parent or guardian" },
@@ -444,9 +453,33 @@ export function ParentGate({
             {voices.length > 0 ? (
               <div
                 className={`rounded-[18px] border border-amber-400/30 bg-amber-500/[0.08] ${
-                  single ? "mt-3 p-3 pl-3" : "mt-4 p-2"
+                  single ? "mt-3 grid grid-cols-1 grid-rows-[auto_auto] p-3 pl-3" : "mt-4 p-2"
                 }`}
               >
+                {/* One voice: the box keeps the room its answered state needs
+                    (either sentence, and the line under it), so choosing whose
+                    voice it is moves nothing below (a reply opens unanswered).
+                    Drawn by nothing, read by nothing: the words are CSS content
+                    on an invisible, aria-hidden twin. */}
+                {single ? (
+                  <div aria-hidden="true" data-studio="consent-reserve" className="invisible col-start-1 row-span-2 row-start-1">
+                    <span className="grid">
+                      {GRANTORS.map((g) => (
+                        <span key={g} className="col-start-1 row-start-1 flex min-h-[44px] items-start gap-3">
+                          <span className="mt-px size-7 flex-none" />
+                          <span
+                            data-ghost={SENTENCE[g]}
+                            className="min-w-0 pt-0.5 text-[14.5px]/[1.45] font-medium before:content-[attr(data-ghost)]"
+                          />
+                        </span>
+                      ))}
+                    </span>
+                    <span className="mt-1.5 flex items-end gap-3 pl-10">
+                      <span data-ghost={SUBLINE} className="min-w-0 flex-1 text-xs/[1.45] before:content-[attr(data-ghost)]" />
+                      <span className="mb-px size-[22px] flex-none" />
+                    </span>
+                  </div>
+                ) : null}
                 {voices.map((voice, i) => {
                   // One voice keeps the reference control (and its id) exactly;
                   // several each carry their name over their own sentence.
@@ -455,7 +488,7 @@ export function ParentGate({
                   return (
                     <div
                       key={i}
-                      className={!single && i > 0 ? "mt-2 border-t border-amber-400/15 pt-3" : ""}
+                      className={single ? "col-start-1 row-start-1" : i > 0 ? "mt-2 border-t border-amber-400/15 pt-3" : ""}
                     >
                       {!single ? (
                         <WhoseVoice
@@ -520,8 +553,21 @@ export function ParentGate({
                     </div>
                   );
                 })}
+                {/* Several voices: while any is still unanswered, the box says
+                    what comes first (and Continue says why it waits). */}
+                {!single && !everyVoiceAnswered ? (
+                  <p
+                    id="studio-gate-whose-first"
+                    data-studio="consent-prompt"
+                    className="mt-2 px-2 pb-1 text-[13.5px]/[1.45] font-medium text-ss-fg-2"
+                  >
+                    {WHOSE_FIRST_EACH}
+                  </p>
+                ) : null}
                 {anyVoiceAnswered ? (
-                  <div className={`mt-1.5 flex items-end gap-3 ${single ? "pl-10" : "px-2 pb-1"}`}>
+                  <div
+                    className={`mt-1.5 flex items-end gap-3 ${single ? "col-start-1 row-start-2 self-start pl-10" : "px-2 pb-1"}`}
+                  >
                     <p className="min-w-0 flex-1 text-xs/[1.45] text-ss-fg-3">{SUBLINE}</p>
                     {/* The row's twin on the sheet: layer 07, the Signature. */}
                     <span
@@ -531,27 +577,32 @@ export function ParentGate({
                       07
                     </span>
                   </div>
-                ) : single ? null : (
-                  <p
-                    id="studio-gate-whose-first"
-                    data-studio="consent-prompt"
-                    className="mt-2 px-2 pb-1 text-[13.5px]/[1.45] font-medium text-ss-fg-2"
-                  >
-                    {WHOSE_FIRST_EACH}
-                  </p>
-                )}
+                ) : null}
               </div>
             ) : null}
 
-            {voices.length > 0 && everyVoiceAnswered ? (
-              <p
-                data-studio="gate-trust"
-                className="mt-4 font-ss-display text-[18px]/[1.3] font-medium text-ss-label italic"
-              >
-                {allMine
-                  ? "Your voice never goes anywhere without you."
-                  : "Your child's voice never goes anywhere without you."}
-              </p>
+            {voices.length > 0 ? (
+              // One voice: the trust line's room is kept before it is said (as the box's above).
+              <div className={single ? "mt-4 grid" : everyVoiceAnswered ? "mt-4" : ""}>
+                {single
+                  ? TRUST_LINES.map((line) => (
+                      <span
+                        key={line}
+                        aria-hidden="true"
+                        data-ghost={line}
+                        className="invisible col-start-1 row-start-1 font-ss-display text-[18px]/[1.3] font-medium italic before:content-[attr(data-ghost)]"
+                      />
+                    ))
+                  : null}
+                {everyVoiceAnswered ? (
+                  <p
+                    data-studio="gate-trust"
+                    className="col-start-1 row-start-1 font-ss-display text-[18px]/[1.3] font-medium text-ss-label italic"
+                  >
+                    {allMine ? TRUST_LINES[0] : TRUST_LINES[1]}
+                  </p>
+                ) : null}
+              </div>
             ) : null}
 
             <div
@@ -573,8 +624,8 @@ export function ParentGate({
                 variant="gold"
                 type="submit"
                 disabled={!challenge || !answer.trim() || !everyVoiceConsented}
-                // Why it waits, while no voice has an answer yet (a reply as it opens).
-                aria-describedby={voices.length > 0 && !anyVoiceAnswered ? "studio-gate-whose-first" : undefined}
+                // Why it waits, while any voice has no answer yet (a reply as it opens).
+                aria-describedby={voices.length > 0 && !everyVoiceAnswered ? "studio-gate-whose-first" : undefined}
                 shape="pill"
                 // Waiting: a quiet outline, not a dimmed gold slab louder than the consent box.
                 className="w-full justify-center py-2 text-[16.5px] disabled:border-amber-400/25 disabled:bg-white/5 disabled:bg-none disabled:text-ss-fg-3 disabled:opacity-100 disabled:shadow-none"

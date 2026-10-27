@@ -9,6 +9,10 @@
  *
  *   a link exists      → the link, a QR a phone camera can read, the system
  *                        share sheet where there is one, and the .storysync file
+ *   a device-only link → the link and Copy, and what it really reaches (this
+ *                        device); no QR and no share sheet, since no other
+ *                        phone can open it — the .storysync file is how the
+ *                        story travels
  *   saved on device    → say exactly that, and hand over the file
  *   cloud needs a login → offer the sign-in, never the words "storage is full"
  *
@@ -31,7 +35,7 @@
 
 import * as React from "react";
 import QRCode from "qrcode";
-import { Check, Copy, Download, Lock, ScanLine, Share, Timer, Undo2, X } from "lucide-react";
+import { Check, Copy, Download, Heart, Lock, ScanLine, Share, Timer, Undo2, X } from "lucide-react";
 import { BigButton, GlassPanel, Reel, TapeLabel } from "@/components/studio-kit/kit";
 import { LayerChips } from "@/components/studio-kit/LayerChips";
 import type { PacketLayer } from "@/components/studio-kit/PacketBands";
@@ -64,7 +68,23 @@ export interface PublishCardProps {
   madeInLabel: string;
   codecLabel: string;
   shareUrl: string | null;
+  /**
+   * The link is the cloud library's (any browser opens it). False: a link
+   * kept on this device, which opens nowhere else.
+   */
   cloud: boolean;
+  /**
+   * A thank-you (T18): whom it goes back to, so the card keeps the end card's
+   * promise ("It goes back to <name>"). `name` is absent when the answered
+   * tape named nobody. Null for any other story.
+   */
+  reply?: { name?: string } | null;
+  /**
+   * Where focus goes when the card closes and nothing else claimed it:
+   * "Finish my story". The room behind the card is inert while it is open, so
+   * focus can only be handed back once it closes.
+   */
+  returnFocusTo?: React.RefObject<HTMLElement | null>;
   note: string | null;
   error: string | null;
   /** Page 1's picture as published, printed on the label. None when page 1 has none. */
@@ -345,6 +365,8 @@ export function PublishCard({
   codecLabel,
   shareUrl,
   cloud,
+  reply = null,
+  returnFocusTo,
   note,
   error,
   firstPicture,
@@ -423,10 +445,12 @@ export function PublishCard({
     () => () => {
       const active = document.activeElement;
       if (active && active !== document.body) return;
-      const opener = openerRef.current;
-      if (opener && opener.isConnected) opener.focus();
+      // The room was inert as the card opened, so the opener may never have
+      // had focus: "Finish my story" (returnFocusTo) is the fallback.
+      const opener = openerRef.current?.isConnected ? openerRef.current : (returnFocusTo?.current ?? null);
+      opener?.focus();
     },
-    [],
+    [returnFocusTo],
   );
 
   // Escape: disarm the delete first; otherwise leave (never mid-print).
@@ -490,7 +514,7 @@ export function PublishCard({
 
   React.useEffect(() => {
     let cancelled = false;
-    if (!shareUrl) {
+    if (!shareUrl || !cloud) {
       setQr(null);
       return;
     }
@@ -505,7 +529,7 @@ export function PublishCard({
     return () => {
       cancelled = true;
     };
-  }, [shareUrl]);
+  }, [shareUrl, cloud]);
 
   const copy = async () => {
     setConfirmDelete(false);
@@ -529,7 +553,7 @@ export function PublishCard({
 
   const share = async () => {
     setConfirmDelete(false);
-    if (!shareUrl) return;
+    if (!shareUrl || !cloud) return;
     try {
       await navigator.share({
         title,
@@ -639,6 +663,22 @@ export function PublishCard({
           Made in {madeInLabel}
         </p>
       </div>
+      {reply ? (
+        <p
+          data-studio="reply-back"
+          className="mt-2.5 flex items-start gap-2 text-[14.5px]/[1.45] text-ss-fg-2"
+        >
+          <Heart aria-hidden="true" className="mt-[3px] size-4 flex-none text-ss-violet-2" strokeWidth={2.2} />
+          <span>
+            <b className="font-semibold text-white">
+              {reply.name ? `Send it back to ${reply.name}` : "Send it back"}
+            </b>
+            {shareUrl && cloud
+              ? " — share the private link."
+              : " — download the .storysync file and hand it over."}
+          </span>
+        </p>
+      ) : null}
       <FinishedSteps steps={steps} />
     </>
   );
@@ -698,9 +738,9 @@ export function PublishCard({
   );
 
   const link = shareUrl ? splitShareUrl(shareUrl) : null;
-  // With no cloud library the link opens on this device only: the card says so
-  // before it offers the QR, and never promises "any browser" (s05 "The link,
-  // honestly").
+  // With no cloud library the link opens on this device only: the card says so,
+  // offers no QR or share sheet for it, and never promises "any browser" (s05
+  // "The link, honestly"). The .storysync file is how that story travels.
   const deviceNote = (
     <p data-studio="device-note" className="mt-3 text-[13px]/[1.45] text-pretty text-ss-fg-3">
       Unlisted and unguessable — and with no cloud library configured it opens the tape on this
@@ -773,58 +813,60 @@ export function PublishCard({
           ) : null}
           {cloud ? null : deviceNote}
 
-          <div className="pc-qr mt-5 flex flex-col items-center gap-4 rounded-[18px] border-2 border-ss-ink bg-ss-paper p-4 text-ss-ink shadow-[0_24px_40px_-24px_rgba(0,0,0,0.8)] sm:flex-row sm:gap-[22px] sm:p-5">
-            {/* The printed sticker (s05 .ss-qr): paper, 10px in, a 2px ink rule, radius 10. */}
-            <span
-              data-studio="qr-frame"
-              className="block flex-none rounded-[10px] border-2 border-ss-ink bg-ss-paper p-2.5"
-            >
-              {qr ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={qr}
-                  data-studio="share-qr"
-                  alt={`QR code that opens ${title}`}
-                  width={136}
-                  height={136}
-                  className="block size-[136px]"
-                />
-              ) : (
-                <span className="block size-[136px] bg-black/5" aria-hidden="true" />
-              )}
-            </span>
-            <div className="min-w-0">
-              <p
-                data-studio="qr-label"
-                className="flex items-center gap-2 font-ss-mono text-[12px]/[1.2] font-medium tracking-[0.16em] text-ss-ink-2 uppercase"
-              >
-                <ScanLine aria-hidden="true" className="size-[15px] flex-none" strokeWidth={2} />
-                {/* s05's kicker invites another phone; with no cloud library no other phone can open it. */}
-                {cloud ? "point a phone camera here" : "this device only"}
-              </p>
-              <p className="mt-2.5 text-[16px]/[1.45] text-pretty text-ss-ink-2">
-                {cloud
-                  ? "Grandparents do not need the app, an account, or the file — the camera app opens the story in any browser."
-                  : "This code opens the tape on this device only. Another phone needs the .storysync file."}
-              </p>
-            </div>
-          </div>
-
-          {canShare ? (
-            <BigButton
-              icon={<Share className="size-[18px]" strokeWidth={2.2} />}
-              label="Share the link…"
-              variant="violet"
-              onClick={() => void share()}
-              className="pc-share min-h-[60px] w-full justify-center text-[16px]"
-            />
-          ) : null}
-
+          {/* The QR and the share sheet send the link to another phone, which
+              only the cloud library's link can reach. */}
           {cloud ? (
-            <p className="mt-3 text-[13px]/[1.45] text-pretty text-ss-fg-3">
-              Unlisted and unguessable. Only someone holding this link can open the story — deleting
-              the story revokes it.
-            </p>
+            <>
+              <div className="pc-qr mt-5 flex flex-col items-center gap-4 rounded-[18px] border-2 border-ss-ink bg-ss-paper p-4 text-ss-ink shadow-[0_24px_40px_-24px_rgba(0,0,0,0.8)] sm:flex-row sm:gap-[22px] sm:p-5">
+                {/* The printed sticker (s05 .ss-qr): paper, 10px in, a 2px ink rule, radius 10. */}
+                <span
+                  data-studio="qr-frame"
+                  className="block flex-none rounded-[10px] border-2 border-ss-ink bg-ss-paper p-2.5"
+                >
+                  {qr ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={qr}
+                      data-studio="share-qr"
+                      alt={`QR code that opens ${title}`}
+                      width={136}
+                      height={136}
+                      className="block size-[136px]"
+                    />
+                  ) : (
+                    <span className="block size-[136px] bg-black/5" aria-hidden="true" />
+                  )}
+                </span>
+                <div className="min-w-0">
+                  <p
+                    data-studio="qr-label"
+                    className="flex items-center gap-2 font-ss-mono text-[12px]/[1.2] font-medium tracking-[0.16em] text-ss-ink-2 uppercase"
+                  >
+                    <ScanLine aria-hidden="true" className="size-[15px] flex-none" strokeWidth={2} />
+                    point a phone camera here
+                  </p>
+                  <p className="mt-2.5 text-[16px]/[1.45] text-pretty text-ss-ink-2">
+                    Grandparents do not need the app, an account, or the file — the camera app opens the
+                    story in any browser.
+                  </p>
+                </div>
+              </div>
+
+              {canShare ? (
+                <BigButton
+                  icon={<Share className="size-[18px]" strokeWidth={2.2} />}
+                  label="Share the link…"
+                  variant="violet"
+                  onClick={() => void share()}
+                  className="pc-share min-h-[60px] w-full justify-center text-[16px]"
+                />
+              ) : null}
+
+              <p className="mt-3 text-[13px]/[1.45] text-pretty text-ss-fg-3">
+                Unlisted and unguessable. Only someone holding this link can open the story — deleting
+                the story revokes it.
+              </p>
+            </>
           ) : null}
         </>
       ) : (

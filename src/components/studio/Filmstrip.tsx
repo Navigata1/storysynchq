@@ -8,7 +8,8 @@
  * carries a static red dot. The last tile snaps the next drawing: it adds a
  * page and opens the camera. On the right, the controls that move or pull the
  * selected page; while the mic is live they give way to one locked "move"
- * pill. Under the frames runs the mood lane, one segment per page in that
+ * pill. On a phone (< 768px) they rest folded into one 44px "move" key
+ * (aria-expanded) that opens them, so the housing never covers the strip. Under the frames runs the mood lane, one segment per page in that
  * page's mood colour, with the current page's mood named at its right end
  * ("WONDER · GENTLE MUSIC ADDED FOR YOU").
  *
@@ -22,6 +23,7 @@ import { Camera, ChevronLeft, ChevronRight, Lock, Mic, Pen, Star, Trash2, type L
 import type { MoodName } from "@/lib/audio/moods";
 import type { SsyncPage } from "@/lib/storysync/manifest";
 import { TapeRibbon } from "@/components/studio-kit/TapeRibbon";
+import { MOOD_ICON } from "@/components/studio-kit/MoodTapeChip";
 import "./filmstrip.css";
 
 const LOCKED_TITLE = "Finish the recording first";
@@ -109,6 +111,10 @@ export function Filmstrip({
   onSnapNext,
 }: FilmstripProps) {
   const stripRef = React.useRef<HTMLDivElement | null>(null);
+  /** The phone's folded move controls are open (below 768px; ignored above). */
+  const [movesOpen, setMovesOpen] = React.useState(false);
+  const movesToggleRef = React.useRef<HTMLButtonElement | null>(null);
+  const housingId = React.useId();
 
   // Keep the selected frame in view when the transport turns the page
   // (a glide, or a cut under reduced motion).
@@ -144,6 +150,8 @@ export function Filmstrip({
   const laneMoods = pages.map((_, index) => moods[index] ?? null);
   const hasLane = laneMoods.some((mood) => mood !== null);
   const currentMood = laneMoods[activeIndex] ?? null;
+  /** The lane names the mood with its own icon (MoodTapeChip's set), like the Stage. */
+  const LaneIcon = currentMood ? (MOOD_ICON[currentMood] ?? Star) : Star;
 
   return (
     <section aria-label="Pages" className="studio-film">
@@ -209,26 +217,55 @@ export function Filmstrip({
                   move
                 </button>
               ) : (
-                <div className="studio-move-housing">
-                  <StripButton
-                    label="Move this page earlier"
-                    Icon={ChevronLeft}
-                    onClick={() => onMove(activeIndex, -1)}
-                    disabled={activeIndex <= 0}
-                  />
-                  <StripButton
-                    label="Move this page later"
-                    Icon={ChevronRight}
-                    onClick={() => onMove(activeIndex, 1)}
-                    disabled={activeIndex >= pages.length - 1}
-                  />
-                  <StripButton
-                    label="Delete this page"
-                    Icon={Trash2}
-                    onClick={() => onDelete(activeIndex)}
-                    disabled={pages.length <= 1}
-                  />
-                </div>
+                <>
+                  {/* A phone's strip is narrow: the keys rest folded behind "move". */}
+                  <button
+                    ref={movesToggleRef}
+                    type="button"
+                    aria-label="Move or delete this page"
+                    title="Move or delete this page"
+                    aria-expanded={movesOpen}
+                    aria-controls={housingId}
+                    data-studio="film-moves-toggle"
+                    onClick={() => setMovesOpen((open) => !open)}
+                    className="studio-move-toggle sk-focus"
+                  >
+                    move
+                  </button>
+                  <div
+                    id={housingId}
+                    className="studio-move-housing"
+                    data-open={movesOpen ? "true" : "false"}
+                    onKeyDown={(event) => {
+                      if (event.key !== "Escape" || !movesOpen) return;
+                      // Folded again, focus back on its key (a wide strip has no fold: nothing to do).
+                      const toggle = movesToggleRef.current;
+                      if (!toggle || toggle.getClientRects().length === 0) return;
+                      event.stopPropagation();
+                      setMovesOpen(false);
+                      toggle.focus();
+                    }}
+                  >
+                    <StripButton
+                      label="Move this page earlier"
+                      Icon={ChevronLeft}
+                      onClick={() => onMove(activeIndex, -1)}
+                      disabled={activeIndex <= 0}
+                    />
+                    <StripButton
+                      label="Move this page later"
+                      Icon={ChevronRight}
+                      onClick={() => onMove(activeIndex, 1)}
+                      disabled={activeIndex >= pages.length - 1}
+                    />
+                    <StripButton
+                      label="Delete this page"
+                      Icon={Trash2}
+                      onClick={() => onDelete(activeIndex)}
+                      disabled={pages.length <= 1}
+                    />
+                  </div>
+                </>
               )}
             </div>
           </div>
@@ -252,7 +289,7 @@ export function Filmstrip({
                   className="studio-lane-label"
                   style={{ "--lane-mood": moodToken(currentMood) } as React.CSSProperties}
                 >
-                  <Star aria-hidden="true" className="studio-lane-icon" strokeWidth={2} />
+                  <LaneIcon aria-hidden="true" className="studio-lane-icon" strokeWidth={2} />
                   {`${currentMood} · gentle music added for you`}
                 </span>
               ) : null}

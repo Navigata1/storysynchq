@@ -244,7 +244,11 @@ async function openTwinkle(page: Page): Promise<void> {
 
 async function setAdvanced(page: Page, on: boolean): Promise<void> {
   const mode = page.locator('[data-sk="mode"] [role="switch"]');
-  if ((await mode.getAttribute("aria-checked")) !== String(on)) await mode.click();
+  if ((await mode.getAttribute("aria-checked")) !== String(on)) {
+    // A phone (< 640px) keeps Simple/Advanced behind the bar's "More" key (M6, s06 phone 2).
+    if (!(await mode.isVisible())) await page.locator('[data-studio="bar-more"]').click();
+    await mode.click();
+  }
   await expect(mode).toHaveAttribute("aria-checked", String(on));
   if (on) await expect(page.locator("#insp-autopause")).toBeVisible();
   else await expect(page.locator("#insp-autopause")).toHaveCount(0);
@@ -661,7 +665,9 @@ test.describe("T24b · every width: the field in the Inspector (the phone's shee
     // The two actions side by side, inside the row, their words never clipped.
     expect(Math.abs(geo.forPage.top - geo.forEvery.top)).toBeLessThanOrEqual(1);
     expect(geo.forEvery.right).toBeLessThanOrEqual(geo.row.right + 0.5);
-    expect(geo.forPage.height).toBeGreaterThanOrEqual(44);
+    // 44px on a sheet (touch); docked from 1180px (s09's density, M6) the column's controls are 36px.
+    const docked = (page.viewportSize()?.width ?? 0) >= 1180;
+    expect(geo.forPage.height).toBeGreaterThanOrEqual(docked ? 36 : 44);
     expect(geo.pageLines).toBeLessThanOrEqual(0);
     if (testInfo.project.name === "mobile") {
       await page.locator('[data-studio="feeling-row"]').scrollIntoViewIfNeeded();

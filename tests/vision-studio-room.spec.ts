@@ -623,6 +623,102 @@ test.describe("T13a · the listening ring", () => {
     await page.getByRole("switch", { name: "Play music behind the story" }).click();
     await expect(right).toHaveText("music off");
     await expect(right.locator("svg.lucide-star")).toHaveCount(0);
+
+    // M6 (s09): the icon is the mood's own, as MoodTapeChip draws it — a moon for Calm.
+    await page.getByRole("switch", { name: "Play music behind the story" }).click();
+    await page.locator('[data-studio="tool-card"]').getByRole("radio", { name: /^Calm\b/ }).click();
+    await expect(right).toHaveText("Calm · music on");
+    await expect(right.locator("svg.lucide-moon")).toHaveCount(1);
+    await expect(right.locator("svg.lucide-star")).toHaveCount(0);
+  });
+});
+
+/* ============================================================ s09 inspector */
+
+test.describe("M6 · s09 the Advanced inspector", () => {
+  test.beforeEach(({}, testInfo) => {
+    test.skip(testInfo.project.name !== "desktop", "the docked inspector is a desktop column");
+  });
+
+  for (const viewport of [{ width: 1290, height: 900 }, TABLET]) {
+    test(`${viewport.width}×${viewport.height}: the inspector runs the full height beside the Stage, strip and transport`, async ({
+      page,
+    }) => {
+      await openTwinkle(page, { viewport });
+      const mode = page.locator('[data-sk="mode"] [role="switch"]');
+      await mode.click();
+      await expect(page.locator("#insp-autopause")).toBeVisible();
+      await settle(page);
+      const g = await page.evaluate(() => {
+        const r = (sel: string) => document.querySelector(sel)!.getBoundingClientRect().toJSON() as DOMRect;
+        return {
+          insp: r('[aria-label="Inspector"]'),
+          bar: r(".studio-topbar"),
+          film: r('[data-studio="film-scroll"]'),
+          transport: r('[data-studio="transport"]'),
+          readout: r('[data-studio="transport-readout"]'),
+          stage: r('[data-studio="stage"]'),
+          vh: window.innerHeight,
+          overflow: document.documentElement.scrollWidth - window.innerWidth,
+        };
+      });
+      expect(Math.abs(g.insp.top - g.bar.bottom), "from the top bar").toBeLessThanOrEqual(1);
+      expect(Math.abs(g.insp.bottom - g.vh), "to the foot of the room").toBeLessThanOrEqual(1);
+      for (const [name, b] of [["strip", g.film], ["transport", g.transport], ["Stage", g.stage]] as const) {
+        expect(b.right, `the ${name} keeps left of the inspector`).toBeLessThanOrEqual(g.insp.left + 0.5);
+      }
+      expect(g.readout.right, "the readout stays inside the transport").toBeLessThanOrEqual(g.transport.right + 0.5);
+      expect(g.overflow).toBeLessThanOrEqual(0);
+    });
+  }
+
+  test("1290×900: s09's density, legible headings and notes, and the music bed as a switch", async ({ page }) => {
+    await openTwinkle(page, { viewport: { width: 1290, height: 900 } });
+    await page.locator('[data-sk="mode"] [role="switch"]').click();
+    const insp = page.locator('[aria-label="Inspector"]');
+    await expect(insp).toBeVisible();
+    await settle(page);
+
+    // a slider is one row: its name, the range, the reading
+    const row = await page.evaluate(() => {
+      const range = document.querySelector("#insp-autopause")!.getBoundingClientRect();
+      const name = document.querySelector('label[for="insp-autopause"]')!.getBoundingClientRect();
+      return { range: range.top + range.height / 2, name: name.top + name.height / 2, nameRight: name.right, rangeLeft: range.left };
+    });
+    expect(Math.abs(row.range - row.name), "name and range on one row").toBeLessThanOrEqual(4);
+    expect(row.nameRight).toBeLessThanOrEqual(row.rangeLeft);
+    await expect(page.locator("#insp-autopause")).toHaveAccessibleName("auto pause");
+    await expect(page.locator("#insp-autopause")).toHaveAttribute("aria-valuetext", /s$/);
+    // controls 36px docked
+    for (const sel of ["#insp-page-mood", "#insp-mood", "#insp-feeling"]) {
+      const h = (await page.locator(sel).boundingBox())!.height;
+      expect(h, `${sel} is 36px docked`).toBeGreaterThanOrEqual(32);
+      expect(h).toBeLessThanOrEqual(37);
+    }
+
+    // AA: headings, labels and notes in --ss-fg-3 (#8d96ad), not white at 35–45 %
+    const FG3 = "rgb(141, 150, 173)";
+    const colours = await insp.evaluate((aside) => {
+      const pick = (el: Element | null) => (el ? getComputedStyle(el).color : "missing");
+      return {
+        heading: pick(aside.querySelector("h3")),
+        label: pick(aside.querySelector('label[for="insp-autopause"]')),
+        feeling: pick(aside.querySelector('label[for="insp-feeling"]')),
+        level: pick(aside.querySelector("#insp-level-voices-note")),
+        multiplier: pick(Array.from(aside.querySelectorAll("p")).find((p) => p.textContent?.startsWith("Accessibility control")) ?? null),
+      };
+    });
+    expect(colours).toEqual({ heading: FG3, label: FG3, feeling: FG3, level: FG3, multiplier: FG3 });
+
+    // the music bed: T17's switch
+    const bed = page.getByRole("switch", { name: "Music bed" });
+    await expect(bed).toBeChecked();
+    await bed.focus();
+    await page.keyboard.press("Space");
+    await expect(bed).not.toBeChecked();
+    await expect(page.locator('[data-studio="stage-status-music"]')).toHaveText("music off");
+    await page.keyboard.press("Space");
+    await expect(bed).toBeChecked();
   });
 });
 

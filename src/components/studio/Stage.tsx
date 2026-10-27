@@ -18,6 +18,7 @@
 
 import * as React from "react";
 import { Camera, Hourglass, Mic, Play, Star } from "lucide-react";
+import { MOOD_ICON } from "@/components/studio-kit/MoodTapeChip";
 import { Reel } from "@/components/studio-kit/kit";
 import { ListeningRing } from "@/components/studio-kit/ListeningRing";
 import type { SsyncPage } from "@/lib/storysync/manifest";
@@ -88,6 +89,8 @@ export function Stage({
   // The photo's own shape, so the frame (and its ring) hug the picture. Until
   // the picture has told us its shape the frame waits unseen (stage.css
   // `[data-shape="pending"]`), so a landscape photo never flashes square first.
+  /** The status row's mood icon: the mood's own (MoodTapeChip's set), Star if unknown. */
+  const MoodIcon = MOOD_ICON[mood] ?? Star;
   const [shape, setShape] = React.useState<{ url: string; ratio: number } | null>(null);
   const shapeKnown = Boolean(image && shape && shape.url === image);
   const ratio = shapeKnown && shape ? shape.ratio : 1;
@@ -254,8 +257,10 @@ export function Stage({
               </span>
               <span data-studio="stage-status-music" className="inline-flex items-center gap-[7px]">
                 {musicOn ? (
-                  <Star
+                  // The mood's own icon (the reference sprite's): a moon for Calm, a cloud for Hush.
+                  <MoodIcon
                     aria-hidden="true"
+                    data-mood-icon={mood}
                     className="size-3 flex-none"
                     style={{ color: `var(--mood-${mood.toLowerCase()})` }}
                   />

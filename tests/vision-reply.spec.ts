@@ -448,7 +448,8 @@ test.describe("T18 · the reply opens in the Creator", () => {
     expect(draft.state.mood).toBe("Wonder");
     expect(draft.state.manifest.pages).toHaveLength(1);
     expect(draft.state.manifest.signature).toEqual({ replyTo: link });
-    expect(draft.state.reply).toEqual({ title: TWINKLE.title });
+    // M6: whom it goes back to rides with the chip, for the publish card's "Send it back to Mia".
+    expect(draft.state.reply).toEqual({ title: TWINKLE.title, name: "Mia" });
     expect(JSON.stringify(draft.state.manifest)).not.toContain(TWINKLE.title);
     expect(draft.state.remix ?? null).toBeNull();
 
@@ -482,6 +483,9 @@ test.describe("T18 · the reply opens in the Creator", () => {
     await end.getByRole("button", { name: SEND }).focus();
     await page.keyboard.press("Enter");
     await expectReplyCreator(page);
+    // M6: a keyboard starts at the reply's first step, the Photo tool — not at <body>,
+    // and never the title field (which would raise a phone's keyboard).
+    await expect(page.locator('nav[aria-label="Story tools"]').getByRole("button", { name: "Photo" })).toBeFocused();
 
     await page.locator('input[type="file"][accept="image/*"]').setInputFiles(FIXTURE_PATHS["goodnight-mia"].pictures[0]);
     await expect(frames(page).locator("img")).toHaveCount(1, { timeout: 15000 });
@@ -494,6 +498,8 @@ test.describe("T18 · the reply opens in the Creator", () => {
     await expect(page.getByRole("button", { name: /^Page 1, has voice/ })).toBeVisible();
 
     await publishAsGrownUp(page, "Grandma Rose", { unanswered: true });
+    // The card keeps the end card's promise ("It goes back to Mia").
+    await expect(page.locator('[data-studio="reply-back"]')).toContainText("Send it back to Mia");
     const tape = await replyRow(page);
     expect(tape.pages).toHaveLength(1);
     expect(tape.pages[0].text?.audioCodec).toBe("aac");
@@ -510,6 +516,7 @@ test.describe("T18 · the reply opens in the Creator", () => {
   test("a tape opened from a file with no shareUrl: the chip still shows, and the reply has no replyTo", async ({
     page,
   }) => {
+    await stubMicrophone(page);
     await openTapeInReadRoom(page, "twinkle");
     const end = await walkToEnd(page);
     await expect(end.getByText(LINE_MIA, { exact: true })).toBeVisible();
@@ -521,7 +528,16 @@ test.describe("T18 · the reply opens in the Creator", () => {
     expect(draft.state.manifest).not.toHaveProperty("signature");
 
     await page.locator("#studio-page-text").fill("Thank you for the story.");
-    await publishAsGrownUp(page, "Grandma Rose");
+    // M6: no link to reply to is still a reply: with a voice on it, the gate presumes
+    // no grantor (the Studio passes initialGrantor={null}; there is no replyTo to detect).
+    await page.locator('[data-sk="transport"][data-kind="rec"]').click();
+    await expect(page.locator(".studio[data-recording='true']")).toHaveCount(1);
+    await page.getByRole("button", { name: /^Stop —/ }).click();
+    await expect(page.locator(".studio[data-recording='true']")).toHaveCount(0, { timeout: 10000 });
+    await publishAsGrownUp(page, "Grandma Rose", { unanswered: true });
+    await expect(page.locator('[data-studio="reply-back"]')).toHaveText(
+      "Send it back to Mia — download the .storysync file and hand it over.",
+    );
     const tape = await replyRow(page);
     expect(tape.signature ?? {}).not.toHaveProperty("replyTo");
     expect(tape.signature ?? {}).not.toHaveProperty("remixOf");
@@ -578,5 +594,133 @@ test.describe("T18 · the reply opens in the Creator", () => {
     await expect(chip(page)).toHaveCount(0);
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await expect(page).toHaveURL(/\/studio$/);
+  });
+});
+
+/* ====================================================================== M6 */
+
+test.describe("M6 · the reply on a phone (s06 phone 2)", () => {
+  test.setTimeout(150000);
+  const PHONE = { width: 390, height: 844 };
+
+  async function replyOnPhone(page: Page, baseURL: string | undefined): Promise<void> {
+    await page.setViewportSize(PHONE);
+    await stubMicrophone(page);
+    const { code } = await seedTwinkle(page, baseURL);
+    const end = await walkToEnd(page, `/read?story=${code}`);
+    await end.getByRole("button", { name: SEND }).click();
+    await expectReplyCreator(page);
+    await page.evaluate(() => document.fonts.ready);
+  }
+
+  test("390: one quiet row — a labelled Exit, the centred Fraunces title, a compact gold Finish; the rest behind More", async ({
+    page,
+    baseURL,
+  }) => {
+    await replyOnPhone(page, baseURL);
+    const finish = page.getByRole("button", { name: "Finish my story" });
+    const more = page.getByRole("button", { name: "More" });
+    const exit = page.getByRole("link", { name: "Leave the studio" });
+    await expect(exit).toHaveText("Exit");
+    await expect(finish).toHaveText("Finish", { useInnerText: true });
+    await expect(more).toHaveAttribute("aria-expanded", "false");
+    // Behind More until asked for: no switch, no "Open a tape" on the bar.
+    await expect(page.getByRole("switch", { name: "Advanced mode" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Open a tape" })).toHaveCount(0);
+
+    const g = await page.evaluate(() => {
+      const r = (el: Element | null) => el!.getBoundingClientRect().toJSON() as DOMRect;
+      const title = document.querySelector("#studio-title")!;
+      return {
+        bar: r(document.querySelector(".studio-topbar")),
+        exit: r(document.querySelector('a[aria-label="Leave the studio"]')),
+        title: r(title),
+        more: r(document.querySelector('[data-studio="bar-more"]')),
+        finish: r(document.querySelector('button[aria-label="Finish my story"]')),
+        chip: r(document.querySelector('[data-studio="reply-to"]')),
+        titleFont: getComputedStyle(title).fontFamily.toLowerCase(),
+        titleSize: getComputedStyle(title).fontSize,
+        overflow: document.documentElement.scrollWidth - window.innerWidth,
+      };
+    });
+    expect(g.bar.height, "one row, about 50px").toBeLessThanOrEqual(56);
+    for (const [name, b] of [["Exit", g.exit], ["title", g.title], ["More", g.more], ["Finish", g.finish]] as const) {
+      expect(b.top, `${name} on the one row`).toBeGreaterThanOrEqual(g.bar.top - 0.5);
+      expect(b.bottom, `${name} on the one row`).toBeLessThanOrEqual(g.bar.bottom + 0.5);
+    }
+    expect(g.exit.right).toBeLessThanOrEqual(g.title.left);
+    expect(g.title.right).toBeLessThanOrEqual(g.more.left);
+    expect(g.more.right).toBeLessThanOrEqual(g.finish.left);
+    expect(g.finish.right).toBeLessThanOrEqual(PHONE.width);
+    expect(g.finish.height, "a compact Finish").toBeLessThanOrEqual(40);
+    expect(g.finish.height).toBeGreaterThanOrEqual(32);
+    expect(g.more.height, "More is a 44px target").toBeGreaterThanOrEqual(44);
+    expect(g.titleFont).toContain("fraunces");
+    expect(g.titleSize).toBe("17px");
+    expect(g.chip.top - g.bar.bottom, "the chip right under the bar").toBeLessThanOrEqual(12);
+    expect(g.overflow, "no sideways scroll").toBeLessThanOrEqual(0);
+
+    // More opens a small panel: Simple/Advanced and Open a tape, keyboard first.
+    await more.focus();
+    await page.keyboard.press("Enter");
+    await expect(more).toHaveAttribute("aria-expanded", "true");
+    const toggle = page.getByRole("switch", { name: "Advanced mode" });
+    await expect(toggle).toBeVisible();
+    await expect(page.getByRole("button", { name: "Open a tape" })).toBeVisible();
+    await page.keyboard.press("Tab");
+    await expect(toggle).toBeFocused();
+    const ring = await toggle.evaluate((el) => getComputedStyle(el).outlineStyle);
+    expect(ring).toBe("solid");
+    await page.keyboard.press("Escape");
+    await expect(more).toHaveAttribute("aria-expanded", "false");
+    await expect(more).toBeFocused();
+    // Choosing Advanced closes the panel and gives focus back to More.
+    await more.click();
+    await toggle.click();
+    await expect(more).toHaveAttribute("aria-expanded", "false");
+    await expect(page.locator("#insp-autopause")).toBeVisible();
+    await expect(more).toBeFocused();
+    await page.getByRole("button", { name: "Close inspector" }).click();
+
+    // Mid-take Finish waits, and says why to a screen reader (the note is not drawn on a phone).
+    await page.locator('[data-sk="transport"][data-kind="rec"]').click();
+    await expect(page.locator(".studio[data-recording='true']")).toHaveCount(1);
+    await expect(finish).toBeDisabled();
+    await expect(finish).toHaveAccessibleDescription("after this take");
+    const bar = await page.locator(".studio-topbar").boundingBox();
+    expect(bar!.height, "still one row mid-take").toBeLessThanOrEqual(56);
+    await page.getByRole("button", { name: /^Stop —/ }).click();
+    await expect(page.locator(".studio[data-recording='true']")).toHaveCount(0, { timeout: 10000 });
+    await expect(finish).toBeEnabled();
+  });
+
+  test("390: the reply's gate holds its height when the first answer to 'whose voice' is chosen", async ({
+    page,
+    baseURL,
+  }) => {
+    await replyOnPhone(page, baseURL);
+    await page.locator("#studio-page-text").fill("Thank you for the story.");
+    await page.locator('[data-sk="transport"][data-kind="rec"]').click();
+    await expect(page.locator(".studio[data-recording='true']")).toHaveCount(1);
+    await page.getByRole("button", { name: /^Stop —/ }).click();
+    await expect(page.locator(".studio[data-recording='true']")).toHaveCount(0, { timeout: 10000 });
+    const close = page.getByRole("button", { name: "Close Voice" });
+    if (await close.isVisible()) await close.click();
+    await page.getByRole("button", { name: "Finish my story" }).click();
+    const dialog = page.getByRole("dialog", { name: "A grown-up moment" });
+    await expect(dialog).toBeVisible({ timeout: 15000 });
+    await page.locator("#studio-gate-author").fill("Grandma Rose");
+    const measure = () =>
+      page.evaluate(() => ({
+        gate: document.querySelector('[data-studio="gate"]')!.getBoundingClientRect().height,
+        sheet: document.querySelector('[data-studio="tape-sheet"]')!.getBoundingClientRect().top,
+      }));
+    await page.waitForTimeout(400);
+    const before = await measure();
+    await dialog.getByRole("radio", { name: MINE }).check();
+    await expect(dialog.getByRole("checkbox", { name: "This is my own voice, and I'm happy to share it." })).toBeVisible();
+    const after = await measure();
+    expect(Math.abs(after.gate - before.gate), "the gate does not jump").toBeLessThanOrEqual(12);
+    expect(Math.abs(after.sheet - before.sheet), "the sheet below stays put").toBeLessThanOrEqual(12);
   });
 });

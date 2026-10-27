@@ -71,11 +71,15 @@ export function loadDraft(): { state: StudioState; savedAt: string } | null {
   }
 }
 
-/** A stored reply record, if it is one: `{ title }` with a non-empty string. */
+/**
+ * A stored reply record, if it is one: `{ title }` with a non-empty string,
+ * and `name` (whom it goes back to) when that is a non-empty string too.
+ */
 function replyRecord(value: unknown): ReplyRecord | undefined {
   if (!value || typeof value !== "object") return undefined;
-  const title = (value as { title?: unknown }).title;
-  return typeof title === "string" && title.trim() ? { title } : undefined;
+  const { title, name } = value as { title?: unknown; name?: unknown };
+  if (typeof title !== "string" || !title.trim()) return undefined;
+  return typeof name === "string" && name.trim() ? { title, name: name.trim() } : { title };
 }
 
 /** True when nothing a child made is in the state — no pictures, words, voice. */

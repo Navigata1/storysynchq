@@ -222,7 +222,11 @@ async function openTwinkle(page: Page): Promise<void> {
 
 async function setAdvanced(page: Page, on: boolean): Promise<void> {
   const mode = page.locator('[data-sk="mode"] [role="switch"]');
-  if ((await mode.getAttribute("aria-checked")) !== String(on)) await mode.click();
+  if ((await mode.getAttribute("aria-checked")) !== String(on)) {
+    // A phone (< 640px) keeps Simple/Advanced behind the bar's "More" key (M6, s06 phone 2).
+    if (!(await mode.isVisible())) await page.locator('[data-studio="bar-more"]').click();
+    await mode.click();
+  }
   await expect(mode).toHaveAttribute("aria-checked", String(on));
   if (on) await expect(page.locator("#insp-autopause")).toBeVisible();
   else await expect(page.locator("#insp-autopause")).toHaveCount(0);

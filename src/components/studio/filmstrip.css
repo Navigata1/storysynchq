@@ -26,7 +26,7 @@
     --film-snap-w: 104px;
     --film-gap: 10px;
     --film-inset: 12px;
-    /* what the pinned move controls cover at the right end */
+    /* what the pinned move controls cover at the right end (a phone: 64px) */
     --film-moves-w: 160px;
     padding: 4px 12px 2px;
   }
@@ -262,6 +262,41 @@
     /* frames that scroll under it pass into its shadow */
     box-shadow: -14px 0 18px -10px rgba(5, 7, 13, 0.9);
   }
+  /* The phone's fold: one 44px "move" key; the housing opens beside it.
+     From 768px the key is gone and the housing always shows. */
+  .studio-move-toggle { display: none; }
+  @media (max-width: 767.98px) {
+    .studio-film {
+      /* the folded key is all the strip's end carries at rest */
+      --film-moves-w: 64px;
+    }
+    .studio-film-moves { gap: 6px; }
+    .studio-move-toggle {
+      display: inline-flex;
+      flex: none;
+      align-items: center;
+      justify-content: center;
+      width: 52px;
+      height: 44px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background-color: #0d1120;
+      box-shadow: -14px 0 18px -10px rgba(5, 7, 13, 0.9);
+      font: 500 13px/1 var(--ss-ui);
+      color: var(--ss-fg-2);
+      cursor: pointer;
+      transition: border-color 200ms ease-out, color 200ms ease-out;
+    }
+    .studio-move-toggle:hover { color: #fff; border-color: rgba(255, 255, 255, 0.28); }
+    .studio-move-toggle[aria-expanded="true"] {
+      border-color: rgba(245, 158, 11, 0.6);
+      color: var(--ss-gold-2);
+    }
+    /* open, the keys ride beside their key (in the order Tab takes them),
+       over the frames scrolling past */
+    .studio-move-housing[data-open="false"] { display: none; }
+  }
+
   /* mid-take: one quiet locked pill (s03) */
   .studio-move-locked {
     display: inline-flex;
@@ -325,7 +360,8 @@
   /* ------------------------------------------------- reduced motion: off */
   @media (prefers-reduced-motion: reduce) {
     .studio-thumb,
-    .studio-snap { transition: none; }
+    .studio-snap,
+    .studio-move-toggle { transition: none; }
     .studio-thumb:not(:disabled):hover { transform: none; }
   }
 }

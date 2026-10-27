@@ -217,6 +217,8 @@ async function closeInspector(page: Page): Promise<void> {
 
 async function openAdvanced(page: Page): Promise<void> {
   const mode = page.locator('[data-sk="mode"] [role="switch"]');
+  // A phone (< 640px) keeps Simple/Advanced behind the bar's "More" key (M6, s06 phone 2).
+  if (!(await mode.isVisible())) await page.locator('[data-studio="bar-more"]').click();
   await mode.click();
   await expect(mode).toHaveAttribute("aria-checked", "true");
   await expect(page.locator("#insp-autopause")).toBeVisible();
@@ -396,8 +398,11 @@ test.describe("T17 · evening out each voice (studio)", () => {
 
     const texts = await stepTexts(page);
     expect(texts[0]).toBe(`${STEP} · 5/5`);
+    // M6: the voices step says what each take became — the reference's words
+    // when all five are AAC, "· WAV" where this browser has no AAC encoder.
+    const codecs = (await readLibrary(page))[0].ssyncData.pages.map((p) => p.text?.audioCodec);
     expect(texts.slice(1)).toEqual([
-      "Converting voices to AAC · 5/5",
+      codecs.every((c) => c === "aac") ? "Converting voices to AAC · 5/5" : "Converting voices · 5/5 · WAV",
       "Assembling the SSYNC manifest · 5 pages",
       "Saving your tape · this device",
     ]);
@@ -487,7 +492,8 @@ test.describe("T17 · evening out each voice (studio)", () => {
     await expect(items).toHaveCount(4);
     // Each item is a status glyph, then "label · detail".
     await expect(items.first()).toContainText(new RegExp(`${STEP} · [1-4]/5$`), { timeout: 15000 });
-    await expect(items.nth(1)).toContainText("Converting voices to AAC");
+    // "to AAC" while every take so far is AAC; once one falls back to WAV, no AAC claim (M6).
+    await expect(items.nth(1)).toContainText(/Converting voices( to AAC · [0-5]\/5| · [0-5]\/5 · (WAV|\d AAC · \d WAV))$/);
     await page.screenshot({ path: evidencePath("T17-publishing.png"), animations: "disabled" });
 
     await expect(page.getByRole("heading", { name: READY })).toBeVisible({ timeout: 60000 });

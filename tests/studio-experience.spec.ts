@@ -1,7 +1,7 @@
 // E2E for the redesigned digital-studio experience: landing doors, the
 // receiving room (/read) with its cover gate, and the studio (/studio).
 
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 
 test.describe("New experience", () => {
   test("landing renders the hero and both doors", async ({ page }) => {
@@ -36,13 +36,17 @@ test.describe("New experience", () => {
     await page.goto("/studio");
     // Dismiss a restore prompt if a stale draft exists (clean contexts won't have one).
     const modeToggle = page.locator('[data-sk="mode"]');
+    // On a phone (< 640px, M6) Simple/Advanced waits behind the bar's "More" key.
+    await openMoreOnPhone(page);
     await expect(modeToggle.first()).toBeVisible({ timeout: 10000 });
+    await expect(modeToggle.first().getByRole("switch")).toHaveAttribute("aria-checked", "false");
     await expect(page.locator('[data-sk="transport"]').first()).toBeVisible();
   });
 
   test("advanced toggle reveals the inspector", async ({ page }) => {
     await page.goto("/studio");
     const toggle = page.locator('[data-sk="mode"]').first();
+    await openMoreOnPhone(page);
     await expect(toggle).toBeVisible({ timeout: 10000 });
     await toggle.click();
     // Inspector shows protocol-level detail (manifest/codec readouts).
@@ -55,3 +59,14 @@ test.describe("New experience", () => {
     await expect(classicLink).toBeVisible();
   });
 });
+
+/** A phone's top bar (< 640px, M6, s06 phone 2) keeps Simple/Advanced behind "More". */
+async function openMoreOnPhone(page: Page): Promise<void> {
+  await expect(page.locator('[data-sk="transport"]').first()).toBeVisible({ timeout: 10000 });
+  if ((page.viewportSize()?.width ?? 0) >= 640) return;
+  const more = page.locator('[data-studio="bar-more"]');
+  await expect(async () => {
+    if ((await more.getAttribute("aria-expanded")) !== "true") await more.click();
+    await expect(more).toHaveAttribute("aria-expanded", "true", { timeout: 1000 });
+  }).toPass({ timeout: 10000 });
+}

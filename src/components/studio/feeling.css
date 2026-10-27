@@ -8,8 +8,8 @@
 
      .feeling-label  mono 10.5px, the Inspector's label voice
      .feeling-input  dashed white/18 border on black/30, italic words; 44px
-                     tall like every other Inspector control (touch on the
-                     phone's sheet)
+                     tall like every Inspector control on a sheet (touch),
+                     36px in the docked column from 1180px (s09)
      .feeling-pill   the mood's lucide icon and name, outlined in its
                      --mood-* colour (set as --c) on a 20% fill; empty (no
                      input) it takes no room and draws nothing, but stays
@@ -31,7 +31,7 @@
     line-height: 1.2;
     letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.45);
+    color: var(--ss-fg-3); /* ≈ 6:1 on the inspector; white at 45 % was ≈ 4.4:1 */
   }
 
   .feeling-line {
@@ -107,6 +107,12 @@
   }
   .feeling-note:empty {
     margin: 0;
+  }
+
+  /* Docked (s09, from 1180px) the row is as dense as the rest of the column:
+     36px; a sheet keeps 44px. */
+  @media (min-width: 1180px) {
+    .feeling-input { height: 36px; }
   }
 
   .feeling-actions {

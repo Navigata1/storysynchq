@@ -77,6 +77,15 @@ export const LOCAL = {
   slot: "#05070d",
 } as const;
 
+/**
+ * A story's words where they sit on the dark Stage, in the Studio and the
+ * Player (`--ss-cream`, the reference's `.ss-story` #F3E6C8). Its own group:
+ * it is not one of the brief's LOCAL additions.
+ */
+export const STORY = {
+  cream: "#F3E6C8",
+} as const;
+
 /** The eight canonical moods' fixed colours (brief design_system; moods.ts names). */
 export const MOOD_COLOR: Record<MoodName, string> = {
   Wonder: "#f5b544",

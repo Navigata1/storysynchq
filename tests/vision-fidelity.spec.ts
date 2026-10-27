@@ -504,8 +504,11 @@ test.describe("T25 · vision fidelity sweep", () => {
       await expect(page.locator('[data-studio="made-in"]')).toHaveText("Made in 7:48");
       await expect(page.locator('[data-sk="size-meter"]')).toContainText(/MB OF 15 MB/i);
       await expect(page.locator('[data-studio="share-url"]')).toHaveValue(new RegExp(`/read\\?story=${code}$`));
-      await expect(page.locator('[data-studio="share-qr"]')).toBeVisible();
-      await expect(page.getByRole("button", { name: "Share the link…" })).toBeVisible();
+      // device mode (no cloud library in tests): the link opens on this device
+      // only, so the card offers no QR and no share sheet (M6 honesty fix)
+      await expect(page.locator('[data-studio="share-qr"]')).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "Share the link…" })).toHaveCount(0);
+      await expect(page.locator('[data-studio="device-note"]')).toBeVisible();
       await expect(page.getByRole("button", { name: "Pull the tape out — delete everything", exact: true })).toBeVisible();
       if (size === TABLET) {
         await expectInView(page, page.locator('[data-studio="publish-left"]'), `${where}: left column`);

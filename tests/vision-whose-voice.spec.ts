@@ -500,6 +500,8 @@ test.describe("T22b · the name in the draft", () => {
     await page.getByRole("button", { name: "Close Voice" }).click();
 
     const button = page.getByRole("button", { name: "Open a tape" });
+    // On a phone (< 640px, M6) it waits behind the bar's "More" key.
+    if (!(await button.isVisible())) await page.getByRole("button", { name: "More" }).click();
     const chooser = page.waitForEvent("filechooser");
     await button.click();
     await (await chooser).setFiles(FIXTURE_PATHS.twinkle.tape);

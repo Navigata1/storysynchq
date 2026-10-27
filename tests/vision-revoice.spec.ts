@@ -185,12 +185,28 @@ async function readLibrary(page: Page): Promise<Array<{ shareCode?: string; ssyn
   return page.evaluate((key) => JSON.parse(window.localStorage.getItem(key) || "[]"), LIBRARY_KEY);
 }
 
+/**
+ * "Open a tape" as the room shows it: on the bar, or on a phone (< 640px,
+ * M6) behind the bar's "More" key, opened first.
+ */
+async function openTapeButton(page: Page): Promise<Locator> {
+  const button = page.getByRole("button", { name: "Open a tape" });
+  const more = page.locator('[data-studio="bar-more"]');
+  await expect(button.or(more).first()).toBeVisible();
+  if (!(await button.isVisible())) {
+    await expect(async () => {
+      await more.click();
+      await expect(button).toBeVisible({ timeout: 1000 });
+    }).toPass({ timeout: 20000 });
+  }
+  return button;
+}
+
 /** Hand a file to the Studio's "Open a tape" control, through the real button. */
 async function openTapeFile(page: Page, file: string | { name: string; mimeType: string; buffer: Buffer }) {
-  const button = page.getByRole("button", { name: "Open a tape" });
-  await expect(button).toBeVisible();
   // A click before React hydrates opens no chooser; retry until one opens.
   await expect(async () => {
+    const button = await openTapeButton(page);
     const chooser = page.waitForEvent("filechooser", { timeout: 2000 });
     await button.click();
     await (await chooser).setFiles(file);
@@ -450,14 +466,20 @@ test.describe("the Creator opens a tape", () => {
   }) => {
     const origin = new URL(baseURL!).origin;
     await page.goto("/studio");
-    const button = page.getByRole("button", { name: "Open a tape" });
+    const phone = (page.viewportSize()?.width ?? 0) < 640;
+    const button = await openTapeButton(page);
     await expect(button).toBeVisible();
 
-    // Right after Exit, with the reference icon and a hidden .storysync input.
-    const order = await page.locator("header").evaluate((header) =>
-      Array.from(header.children).map((el) => el.getAttribute("aria-label") ?? el.id ?? ""),
-    );
-    expect(order.indexOf("Open a tape")).toBe(order.indexOf("Leave the studio") + 1);
+    if (!phone) {
+      // Right after Exit, with the reference icon and a hidden .storysync input.
+      const order = await page.locator("header").evaluate((header) =>
+        Array.from(header.children).map((el) => el.getAttribute("aria-label") ?? el.id ?? ""),
+      );
+      expect(order.indexOf("Open a tape")).toBe(order.indexOf("Leave the studio") + 1);
+    } else {
+      // M6 (s06 phone 2): a phone's bar is one row; it waits in the "More" panel.
+      expect(await button.evaluate((el) => Boolean(el.closest('[data-studio="bar-more-panel"]')))).toBe(true);
+    }
     await expect(button.locator("svg.lucide-folder-open")).toHaveCount(1);
     const input = page.locator('[data-studio="open-tape-input"]');
     await expect(input).toHaveAttribute("type", "file");
@@ -648,8 +670,19 @@ test.describe("never lose a story by accident", () => {
     await expect(frames(page)).toHaveCount(5);
 
     // Keyboard only: focus "Open a tape" and press Enter for the file chooser.
+    // On a phone (M6) it waits behind "More": Enter opens the panel, Tab twice
+    // passes Simple/Advanced, and focus comes back to More when the question closes.
+    const phone = (page.viewportSize()?.width ?? 0) < 640;
+    const more = page.getByRole("button", { name: "More" });
+    if (phone) {
+      await more.focus();
+      await page.keyboard.press("Enter");
+      await expect(more).toHaveAttribute("aria-expanded", "true");
+      await page.keyboard.press("Tab");
+      await page.keyboard.press("Tab");
+    }
     const opener = page.getByRole("button", { name: "Open a tape" });
-    await opener.focus();
+    if (!phone) await opener.focus();
     await expect(opener).toBeFocused();
     const chooser = page.waitForEvent("filechooser");
     await page.keyboard.press("Enter");
@@ -675,7 +708,7 @@ test.describe("never lose a story by accident", () => {
     await expect(dialog).toBeHidden();
     await expect(page.locator("#studio-title")).toHaveValue(GOODNIGHT_MIA.title);
     expect(await frameNames(page)).toEqual(["Page 1"]);
-    await expect(page.getByRole("button", { name: "Open a tape" })).toBeFocused();
+    await expect(phone ? more : page.getByRole("button", { name: "Open a tape" })).toBeFocused();
   });
 
   test("behind the dialog nothing moves: a backdrop click keeps focus inside, and arrow keys do not turn pages", async ({

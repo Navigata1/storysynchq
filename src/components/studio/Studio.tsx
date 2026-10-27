@@ -12,8 +12,9 @@
  */
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
-import { ArrowLeft, Circle, FolderOpen, Heart, Pen } from "lucide-react";
+import { ArrowLeft, Circle, FolderOpen, Heart, MoreHorizontal, Pen } from "lucide-react";
 import { BigButton, GlassPanel, ModeToggle, Reel } from "@/components/studio-kit/kit";
 import { blobToDataUrl, dataUrlToBlob } from "@/lib/audio/recorder";
 import { normalizeNarration } from "@/lib/audio/transcode";
@@ -88,6 +89,8 @@ import {
   pickCoverImage,
   storyHasContent,
   updatePage,
+  VOICES_TO_AAC,
+  voicesStepText,
   type MoodName,
   type RecordingMeta,
   type StudioState,
@@ -197,6 +200,7 @@ function useMediaQuery(query: string): boolean {
     () => false,
   );
 }
+const noSubscribe = () => () => {};
 const UID_KEY = "ssync-studio-uid";
 
 function localUserId(): string {
@@ -222,7 +226,7 @@ function slugify(title: string): string {
 const STEP_TEMPLATE: PublishStep[] = [
   // First because it happens first: each voice is evened out on its way to AAC (T17).
   { id: "level", label: "Evening out each voice", state: "pending" },
-  { id: "voices", label: "Converting voices to AAC", state: "pending" },
+  { id: "voices", label: VOICES_TO_AAC, state: "pending" },
   { id: "assemble", label: "Assembling the SSYNC manifest", state: "pending" },
   { id: "save", label: "Saving your tape", state: "pending" },
 ];
@@ -319,6 +323,32 @@ export default function Studio() {
   stateRef.current = state;
   const activeIndexRef = React.useRef(activeIndex);
   activeIndexRef.current = activeIndex;
+  /** The room: everything behind the publish card (inert while it is open). */
+  const roomRef = React.useRef<HTMLDivElement | null>(null);
+  /** "Finish my story"'s holder: the publish card hands focus back to it. */
+  const finishRef = React.useRef<HTMLButtonElement | null>(null);
+  /** The phone bar's "More" key, and whether its little panel is open. */
+  const moreRef = React.useRef<HTMLButtonElement | null>(null);
+  const [barMenu, setBarMenu] = React.useState(false);
+  /**
+   * Where focus goes back to after the "Open <title>?" question: the bar's
+   * "Open a tape", or on a phone (where it waits in a closed panel) "More".
+   */
+  const tapeOpenerRef = React.useMemo<React.RefObject<HTMLElement | null>>(
+    () => ({
+      get current(): HTMLElement | null {
+        const bar = openButtonRef.current;
+        return bar && bar.getClientRects().length > 0 ? bar : moreRef.current;
+      },
+    }),
+    [],
+  );
+  /** document.body exists (after mount): the publish card is portalled there. */
+  const portalReady = React.useSyncExternalStore(
+    noSubscribe,
+    () => true,
+    () => false,
+  );
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const tapeInputRef = React.useRef<HTMLInputElement | null>(null);
   const openButtonRef = React.useRef<HTMLButtonElement | null>(null);
@@ -463,6 +493,10 @@ export default function Studio() {
    */
   const replaceStory = React.useCallback(
     (next: StudioState, announcement: string) => {
+      // A take running under the old story is cancelled, never filed on the
+      // new one: the announcement says it was not kept. (A take still
+      // starting is dropped by the engine, which says so itself.)
+      const discarded = recordingRef.current;
       stopAudio();
       // Never a microphone left open under a story that is gone.
       cancelRecording();
@@ -484,7 +518,9 @@ export default function Studio() {
       setPendingReply(null);
       setRestore(null);
       setBoot("ready");
-      setAnnouncement(announcement);
+      setAnnouncement(
+        discarded ? `${announcement} The recording in progress was stopped and not kept.` : announcement,
+      );
     },
     [cancelRecording, stopAudio],
   );
@@ -531,10 +567,18 @@ export default function Studio() {
             metadata: { ...fresh.manifest.metadata, title: seed.title },
             ...(seed.replyTo ? { signature: { replyTo: seed.replyTo } } : {}),
           },
-          reply: { title: seed.chipTitle },
+          reply: { title: seed.chipTitle, ...(seed.name ? { name: seed.name } : {}) },
         },
         `Reply to ${seed.chipTitle}: one page for your picture, your words and your voice.`,
       );
+      // The reply's first step is its picture: a keyboard starts there, not at
+      // the top of the document. Never the title field, which would raise a
+      // phone's keyboard over the page.
+      window.requestAnimationFrame(() => {
+        roomRef.current
+          ?.querySelector<HTMLElement>('[data-studio-tool="photo"]')
+          ?.focus({ preventScroll: true });
+      });
     },
     [replaceStory],
   );
@@ -1166,6 +1210,13 @@ export default function Studio() {
         let even = 0;
         /** Takes left exactly as recorded (no AAC encoder for an AAC take, or not decodable). */
         let leftAsRecorded = 0;
+        /** What each take was published as: the step says what really happened. */
+        let asAac = 0;
+        let asWav = 0;
+        const voicesStep = (): Partial<PublishStep> => {
+          const codec = voicesStepText(done, total, asAac, asWav);
+          return { label: codec.label, detail: codec.detail };
+        };
         const levelDetail = () =>
           !levelOn
             ? "off"
@@ -1198,9 +1249,11 @@ export default function Studio() {
               // Already normalized by an earlier publish — decoding and
               // re-encoding it would only lose quality and time.
               if (levelOn) even += 1;
+              if (original.text?.audioCodec === "aac") asAac += 1;
+              else asWav += 1;
               done += 1;
               markStep("level", { detail: levelDetail() });
-              markStep("voices", { detail: `${done}/${total}` });
+              markStep("voices", voicesStep());
             } else {
               const blob = await dataUrlToBlob(url);
               // A clip published with levelling off is already AAC or WAV; it
@@ -1225,6 +1278,8 @@ export default function Studio() {
                   : new Blob([normalized.blob], { type: normalized.mimeType });
               next.text.audioUrl = await blobToDataUrl(clean);
               next.text.audioCodec = normalized.codec;
+              if (normalized.codec === "aac") asAac += 1;
+              else asWav += 1;
               // Keep the draft meta in step with what is now on the page, so a
               // second publish sees AAC/WAV and passes it straight through.
               nextRecordings[String(newId)] = {
@@ -1234,7 +1289,7 @@ export default function Studio() {
               };
               done += 1;
               markStep("level", { detail: levelDetail() });
-              markStep("voices", { detail: `${done}/${total}` });
+              markStep("voices", voicesStep());
             }
           }
           publishedPages.push(next);
@@ -1242,7 +1297,7 @@ export default function Studio() {
         // Levelling never fails a publish: a take it could not touch is
         // published as recorded, and the step says how many.
         markStep("level", { state: "done", detail: levelDetail() });
-        markStep("voices", { state: "done", detail: total ? `${done}/${total}` : "no recordings" });
+        markStep("voices", { state: "done", ...(total ? voicesStep() : { detail: "no recordings" }) });
 
         /* 2 — assemble the manifest, signature layer included */
         markStep("assemble", { state: "active" });
@@ -1420,6 +1475,31 @@ export default function Studio() {
     setAnnouncement("Everything deleted.");
   };
 
+  /* The phone bar's "More" panel closes on Escape, or on a tap anywhere else. */
+  React.useEffect(() => {
+    if (!barMenu) return;
+    const onPointer = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (moreRef.current?.contains(target)) return;
+      if (document.getElementById("studio-bar-more")?.contains(target)) return;
+      setBarMenu(false);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setBarMenu(false);
+      if (document.activeElement === document.body || document.activeElement === moreRef.current) {
+        moreRef.current?.focus();
+      }
+    };
+    document.addEventListener("pointerdown", onPointer);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onPointer);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [barMenu]);
+
   /* ------------------------------------------------------------- keyboard */
 
   const playOrStopRef = React.useRef(playOrStop);
@@ -1496,7 +1576,6 @@ export default function Studio() {
    * them), so the photo shrinks or grows but stays whole, in its ring, with
    * its pill.
    */
-  const roomRef = React.useRef<HTMLDivElement | null>(null);
   React.useEffect(() => {
     const room = roomRef.current;
     if (!transportAside || !room) return;
@@ -1576,6 +1655,8 @@ export default function Studio() {
     [state.manifest, state.mood, state.pageMoods, state.musicOn, state.remix],
   );
   const hasVoice = Boolean(page?.text?.audioUrl);
+  /** The publish card is up: the room behind it is inert. */
+  const cardOpen = phase === "publishing" || phase === "published";
   const canFinish = storyHasContent(state);
   const codecLabel = React.useMemo(() => {
     const codecs = new Set(
@@ -1606,24 +1687,32 @@ export default function Studio() {
       className="studio"
       data-recording={recording ? "true" : "false"}
       data-take-sheet={transportAside ? "true" : undefined}
+      data-advanced={advanced ? "true" : undefined}
+      // The publish card is a modal: the room behind it takes no focus, no
+      // tap and is not read (the card is rendered outside it, below).
+      inert={cardOpen}
     >
       {/* ------------------------------------------------------------ top bar */}
       {/* The top row of the room: the bar, and under it, on a reply, its chip. */}
       <div className="studio-area-top min-w-0">
         <header
-          className="studio-topbar relative flex flex-wrap items-center gap-2 border-b border-white/8 bg-[#060912]/55 px-3 py-2 backdrop-blur-xl md:min-h-[68px] md:flex-nowrap"
+          className={`studio-topbar relative flex flex-wrap items-center gap-2 border-b border-white/8 bg-[#060912]/55 px-3 py-2 backdrop-blur-xl max-sm:py-[3px] md:min-h-[68px] md:flex-nowrap ${
+            draftNote ? "" : "max-sm:flex-nowrap"
+          }`}
           style={{ "--sk-big-h": "48px" } as React.CSSProperties}
         >
           <Link
             href="/"
             aria-label="Leave the studio"
-            className="sk-focus flex h-11 items-center gap-2 rounded-xl border border-white/12 bg-white/5 px-3 text-sm text-white/75 hover:bg-white/10"
+            className="sk-focus flex h-11 flex-none items-center gap-2 rounded-xl border border-white/12 bg-white/5 px-3 text-sm text-white/75 hover:bg-white/10"
           >
             <ArrowLeft aria-hidden="true" className="h-[18px] w-[18px] flex-none" strokeWidth={2} />
-            <span className="hidden sm:inline">Exit</span>
+            {/* Labelled at every width (s06 phone 2 prints "Exit"). */}
+            <span>Exit</span>
           </Link>
 
-          {/* Any tape, the house tape included, opens here to be re-voiced. */}
+          {/* Any tape, the house tape included, opens here to be re-voiced.
+              On a phone it waits in "More" (below), so the bar stays one row. */}
           <button
             ref={openButtonRef}
             type="button"
@@ -1631,7 +1720,7 @@ export default function Studio() {
             aria-label="Open a tape"
             aria-busy={opening || undefined}
             data-studio="open-tape"
-            className="sk-focus flex h-11 items-center gap-2 rounded-xl border border-white/12 bg-white/5 px-3 text-sm text-white/75 hover:bg-white/10"
+            className="sk-focus flex h-11 items-center gap-2 rounded-xl border border-white/12 bg-white/5 px-3 text-sm text-white/75 hover:bg-white/10 max-sm:hidden"
           >
             <FolderOpen aria-hidden="true" className="h-[18px] w-[18px] flex-none" strokeWidth={1.8} />
             <span className="hidden sm:inline">Open a tape</span>
@@ -1652,31 +1741,97 @@ export default function Studio() {
               placeholder={DEFAULT_TITLE}
               // Sizes the input where `field-sizing: content` is not supported.
               size={Math.max(12, (state.manifest.metadata.title || DEFAULT_TITLE).length)}
-              className="studio-title-input sk-focus h-11 min-w-0 px-2 font-ss-display text-base font-semibold tracking-[-0.01em] text-white sm:text-lg min-[1180px]:text-[22px] min-[1180px]:font-bold"
+              className="studio-title-input sk-focus h-11 min-w-0 px-2 font-ss-display text-[17px] font-semibold tracking-[-0.01em] text-white sm:text-lg min-[1180px]:text-[22px] min-[1180px]:font-bold"
             />
             <Pen aria-hidden="true" className="size-4 flex-none text-ss-fg-4" strokeWidth={2} />
           </div>
 
-          <div className="ml-auto flex items-center gap-2">
-            <ModeToggle advanced={advanced} onChange={setAdvanced} />
+          <div className="ml-auto flex flex-none items-center gap-2 max-sm:ml-0 max-sm:gap-1.5">
+            {/* A phone's bar is one quiet row (s06 phone 2): Simple/Advanced and
+                "Open a tape" wait behind one compact key. From 640px the panel
+                is not a panel at all: its contents sit on the bar as before. */}
+            <button
+              ref={moreRef}
+              type="button"
+              aria-label="More"
+              title="More: Simple or Advanced, open a tape"
+              aria-expanded={barMenu}
+              aria-controls="studio-bar-more"
+              data-studio="bar-more"
+              onClick={() => setBarMenu((open) => !open)}
+              className="sk-focus grid size-11 flex-none place-items-center rounded-xl border border-white/12 bg-white/5 text-white/75 hover:bg-white/10 aria-expanded:border-amber-400/50 aria-expanded:bg-white/10 sm:hidden"
+            >
+              <MoreHorizontal aria-hidden="true" className="size-5" strokeWidth={2} />
+            </button>
+            <div
+              id="studio-bar-more"
+              data-studio="bar-more-panel"
+              data-open={barMenu ? "true" : "false"}
+              className="studio-bar-more"
+              onKeyDown={(event) => {
+                if (event.key !== "Escape" || !barMenu) return;
+                event.stopPropagation();
+                setBarMenu(false);
+                moreRef.current?.focus();
+              }}
+            >
+              <ModeToggle
+                advanced={advanced}
+                onChange={(next) => {
+                  setAdvanced(next);
+                  // On a phone the choice is made: the panel closes, focus back on More.
+                  if (barMenu) {
+                    setBarMenu(false);
+                    moreRef.current?.focus();
+                  }
+                }}
+              />
+              {/* The phone's own "Open a tape" (the bar's is hidden there). */}
+              <button
+                type="button"
+                onClick={() => {
+                  setBarMenu(false);
+                  moreRef.current?.focus();
+                  pickTape();
+                }}
+                aria-busy={opening || undefined}
+                data-studio="open-tape-more"
+                className="sk-focus flex h-11 w-full items-center gap-2 rounded-xl border border-white/12 bg-white/5 px-3 text-sm text-white/80 hover:bg-white/10 sm:hidden"
+              >
+                <FolderOpen aria-hidden="true" className="h-[18px] w-[18px] flex-none" strokeWidth={1.8} />
+                Open a tape
+              </button>
+            </div>
             {/* While the mic is live the story cannot be finished: it waits
-                "after this take". */}
+                "after this take". On a phone the key is a compact "Finish" (its
+                name is still "Finish my story") and the note is read, not drawn. */}
             <div className="studio-finish" data-recording={recording ? "true" : "false"}>
-              <BigButton
-                icon={<Circle className="size-4 text-[#E3452F]" fill="currentColor" strokeWidth={0} />}
-                label="Finish my story"
-                variant="gold"
+              <button
+                ref={finishRef}
+                type="button"
+                data-sk="big"
+                data-variant="gold"
+                aria-label="Finish my story"
+                aria-describedby={recording ? "studio-finish-note" : undefined}
                 disabled={!canFinish || recording}
                 onClick={() => {
                   stopAudio();
                   setTool(null);
+                  setBarMenu(false);
                   setGateAuthor(gateDefault);
                   setPhase("gate");
                 }}
-                className="rounded-xl px-4 text-[15px] md:min-h-10 md:py-2"
-              />
+                className="sk-big sk-focus sk-font-ui sk-big--gold rounded-xl px-4 text-[15px] max-sm:min-h-9 max-sm:gap-1.5 max-sm:px-3 max-sm:py-0 max-sm:text-[14px] max-sm:shadow-none md:min-h-10 md:py-2"
+              >
+                <span className="sk-big-icon" aria-hidden="true">
+                  <Circle className="size-4 text-[#E3452F]" fill="currentColor" strokeWidth={0} />
+                </span>
+                <span className="sk-big-label">
+                  Finish<span className="max-sm:hidden"> my story</span>
+                </span>
+              </button>
               {recording ? (
-                <span data-studio="finish-note" className="studio-finish-note font-ss-mono">
+                <span id="studio-finish-note" data-studio="finish-note" className="studio-finish-note font-ss-mono">
                   after this take
                 </span>
               ) : null}
@@ -2001,7 +2156,7 @@ export default function Studio() {
       {pendingOpen ? (
         <OpenTapeDialog
           title={pendingOpen.tape.manifest.metadata.title}
-          returnFocusTo={openButtonRef}
+          returnFocusTo={tapeOpenerRef}
           onKeep={() => {
             const { saved } = pendingOpen;
             setPendingOpen(null);
@@ -2016,7 +2171,7 @@ export default function Studio() {
           title={pendingReply.seed.chipTitle}
           heading={`Reply to ${pendingReply.seed.chipTitle}?`}
           confirmLabel="Start the reply"
-          returnFocusTo={openButtonRef}
+          returnFocusTo={tapeOpenerRef}
           onKeep={() => {
             setPendingReply(null);
             keepSavedDraft(pendingReply.saved);
@@ -2028,6 +2183,9 @@ export default function Studio() {
       {phase === "gate" ? (
         <ParentGate
           defaultAuthor={gateDefault}
+          // A thank-you can be a grown-up's own voice or a child's: no answer
+          // is chosen for the grown-up, with or without a link to reply to.
+          initialGrantor={state.reply ? null : undefined}
           bylineLabel={state.remix ? "read by" : "story by"}
           voices={recordedVoices(state.manifest.pages, gateAuthor)}
           sheet={gateSheet}
@@ -2042,33 +2200,43 @@ export default function Studio() {
         />
       ) : null}
 
-      {phase === "publishing" || phase === "published" ? (
-        <PublishCard
-          {...printed}
-          phase={phase === "publishing" ? "publishing" : "published"}
-          steps={steps}
-          title={(publishedRef.current ?? state.manifest).metadata.title}
-          author={(publishedRef.current ?? state.manifest).metadata.author ?? ""}
-          pageCount={(publishedRef.current ?? state.manifest).pages.length}
-          durationLabel={formatClock(estimateStorySeconds(state))}
-          madeInLabel={madeInLabel}
-          codecLabel={codecLabel}
-          shareUrl={shareUrl}
-          cloud={isCloudEnabled()}
-          note={publishNote}
-          error={publishError}
-          authOffer={authOffer}
-          authBusy={authBusy}
-          authError={authError}
-          authReady={authReady}
-          onAuth={(mode, email, password, name) => void handleAuth(mode, email, password, name)}
-          onMakeLink={() => void makeLink()}
-          onDownload={downloadTape}
-          onDeleteEverything={() => void deleteEverything()}
-          onBack={() => setPhase("edit")}
-          onRetry={() => void runPublish(authorRef.current, consentRef.current)}
-        />
-      ) : null}
+      {/* The publish card lives outside the room (portalled to <body>), so
+          the room can be inert behind it while the card stays live. */}
+      {cardOpen && portalReady
+        ? createPortal(
+            <div className="studio-modal-host">
+              <PublishCard
+                {...printed}
+                phase={phase === "publishing" ? "publishing" : "published"}
+                steps={steps}
+                title={(publishedRef.current ?? state.manifest).metadata.title}
+                author={(publishedRef.current ?? state.manifest).metadata.author ?? ""}
+                pageCount={(publishedRef.current ?? state.manifest).pages.length}
+                durationLabel={formatClock(estimateStorySeconds(state))}
+                madeInLabel={madeInLabel}
+                codecLabel={codecLabel}
+                shareUrl={shareUrl}
+                // Whether the link is the cloud library's; a device-only link gets no QR or share sheet.
+                cloud={state.published ? state.published.cloud : isCloudEnabled()}
+                reply={state.reply ? { name: state.reply.name } : null}
+                returnFocusTo={finishRef}
+                note={publishNote}
+                error={publishError}
+                authOffer={authOffer}
+                authBusy={authBusy}
+                authError={authError}
+                authReady={authReady}
+                onAuth={(mode, email, password, name) => void handleAuth(mode, email, password, name)}
+                onMakeLink={() => void makeLink()}
+                onDownload={downloadTape}
+                onDeleteEverything={() => void deleteEverything()}
+                onBack={() => setPhase("edit")}
+                onRetry={() => void runPublish(authorRef.current, consentRef.current)}
+              />
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }

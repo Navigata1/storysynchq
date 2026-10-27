@@ -18,7 +18,8 @@
 //   4. steps    · the finished steps, with the publishing phase's details
 //   5. meter    · the decoded bytes of the library tape, "<x.y> MB OF 15 MB"
 //   6. delete   · "Pull the tape out — delete everything", two taps, every copy gone
-//   7. copy     · the right column verbatim, Share where Web Share exists
+//   7. copy     · the right column verbatim; Share where Web Share exists and the link is the
+//                 cloud library's (M6: a device-only link gets no QR and no share sheet)
 //   8. honesty  · no "Next", no "planned"
 //   9. node     · tapeBytes against the packed container; the budget and its formatter
 //  10. M6       · a real modal (named, focused, trapped, Escape); the delete disarms; Copy is
@@ -37,6 +38,7 @@ import {
   tapeSizeValueText,
 } from "../src/lib/storysync/tape-size";
 import { LIBRARY_KEY, DRAFT_KEY, restoreDraft, seedStudioDraft } from "./fixtures/helpers";
+import { VOICES_TO_AAC, voicesStepText } from "../src/components/studio/types";
 import { TWINKLE, loadTape } from "./fixtures/tapes";
 import { evidencePath } from "./fixtures/evidence";
 
@@ -44,13 +46,31 @@ import { evidencePath } from "./fixtures/evidence";
 
 const READY = "Your tape is ready";
 const LAYERS = ["Metadata", "Visual", "Text", "Voice", "Sound", "Behavior", "Signature"];
-const STEPS = [
-  // T17 adds the real step, first because it happens first ("planned · Next" in s05).
-  "Evening out each voice · 5/5",
-  "Converting voices to AAC · 5/5",
-  "Assembling the SSYNC manifest · 5 pages",
-  "Saving your tape · this device",
-];
+/**
+ * The finished steps (T17 adds the real step, first because it happens first:
+ * "planned · Next" in s05). The voices step says what really happened (M6):
+ * the reference's "Converting voices to AAC · 5/5" when every take became
+ * AAC; where this browser has no AAC encoder and the takes fell back to WAV
+ * (the one permitted fallback), "Converting voices · 5/5 · WAV", agreeing
+ * with the label's codec.
+ */
+function expectedSteps(codecs: Array<string | undefined>): string[] {
+  const aac = codecs.filter((c) => c === "aac").length;
+  const wav = codecs.filter((c) => c === "wav").length;
+  const n = codecs.length;
+  const voices =
+    wav === 0
+      ? `Converting voices to AAC · ${n}/${n}`
+      : aac === 0
+        ? `Converting voices · ${n}/${n} · WAV`
+        : `Converting voices · ${n}/${n} · ${aac} AAC · ${wav} WAV`;
+  return [
+    "Evening out each voice · 5/5",
+    voices,
+    "Assembling the SSYNC manifest · 5 pages",
+    "Saving your tape · this device",
+  ];
+}
 const DOWNLOAD = "Download the .storysync file";
 const BACK = "Back to the studio";
 const PULL = "Pull the tape out — delete everything";
@@ -61,6 +81,8 @@ const QR_LINE =
   "Grandparents do not need the app, an account, or the file — the camera app opens the story in any browser.";
 /** M6: with no cloud library the QR's sentence says where the link really opens. */
 const DEVICE_QR_LINE = "This code opens the tape on this device only. Another phone needs the .storysync file.";
+/** The QR's kicker when there is a cloud link (s05). */
+const QR_KICKER = "point a phone camera here";
 const SHARE = "Share the link…";
 /** No cloud library is configured in this environment: today's device-mode sentence. */
 const DEVICE_NOTE =
@@ -279,15 +301,17 @@ test.describe("T16 · the printed tape, landscape", () => {
     const card = page.locator(SEL.card);
     const url = card.locator('[data-studio="share-url"]');
     const copy = card.getByRole("button", { name: "Copy", exact: true });
-    const share = card.getByRole("button", { name: SHARE });
     const download = card.getByRole("button", { name: DOWNLOAD });
     const back = card.getByRole("button", { name: BACK });
     const pull = card.getByRole("button", { name: PULL, exact: true });
+    // M6: a device-only link (no cloud library here) has no share sheet, even
+    // where Web Share exists: no other phone can open it.
+    await expect(card.getByRole("button", { name: SHARE })).toHaveCount(0);
     // One column: the link first (it comes first on screen), then the file and the delete.
     // Two columns: down the left column, then down the right.
     const orders: Array<[{ width: number; height: number }, Locator[]]> = [
-      [PHONE, [url, copy, share, download, back, pull]],
-      [TABLET, [download, back, pull, url, copy, share]],
+      [PHONE, [url, copy, download, back, pull]],
+      [TABLET, [download, back, pull, url, copy]],
     ];
     for (const [viewport, expected] of orders) {
       await page.setViewportSize(viewport);
@@ -456,11 +480,12 @@ test.describe("T16 · the printed tape, landscape", () => {
 
   test("4 · the ready card carries the finished steps and their details", async ({ page }) => {
     await page.setViewportSize(TABLET);
-    await publish(page);
+    const tape = await publish(page);
     const steps = page.locator(SEL.card).locator(SEL.steps);
     const items = steps.locator("li");
     await expect(items).toHaveCount(4);
-    expect((await items.allInnerTexts()).map((t) => t.replace(/\s+/g, " ").trim())).toEqual(STEPS);
+    const codecs = tape.ssyncData.pages.map((p) => p.text?.audioCodec);
+    expect((await items.allInnerTexts()).map((t) => t.replace(/\s+/g, " ").trim())).toEqual(expectedSteps(codecs));
     expect(await items.evaluateAll((els) => els.map((el) => el.getAttribute("data-state")))).toEqual([
       "done",
       "done",
@@ -576,32 +601,24 @@ test.describe("T16 · the printed tape, landscape", () => {
     await expect(copy.locator("svg.lucide-copy")).toHaveCount(1);
     expect(await copy.evaluate((el) => getComputedStyle(el).borderTopColor)).toMatch(/^rgba?\(245, 158, 11/);
 
-    const qr = right.locator('[data-studio="share-qr"]');
-    await expect(qr).toBeVisible();
-    expect((await box(qr)).width).toBeGreaterThanOrEqual(120);
-    const qrKicker = right.locator('[data-studio="qr-label"]');
-    // M6 (honesty): s05's "point a phone camera here" invites another phone,
-    // which cannot open a device-only link — so with no cloud library the
-    // kicker says where the code works instead.
-    await expect(qrKicker).toHaveText("this device only");
-    expect((await qrKicker.innerText()).trim()).toBe("THIS DEVICE ONLY");
-    await expect(right.getByText(/point a phone camera/i)).toHaveCount(0);
     // M6 (honesty, s05 "The link, honestly"): this environment has no cloud
-    // library, so the link opens on this device only. The reference's
-    // grandparents sentence ("…opens the story in any browser") belongs to the
-    // cloud card; here the QR's sentence says where the link really opens, and
-    // the device note comes first, right under the link.
+    // library, so the link opens on this device only. A QR and a share sheet
+    // would send it to another phone, which cannot open it: neither is
+    // offered (Web Share is stubbed here, so the share sheet could show). The
+    // device note says where the link opens; the .storysync file is how the
+    // story travels.
+    await expect(right.locator('[data-studio="share-qr"]')).toHaveCount(0);
+    await expect(right.locator('[data-studio="qr-frame"]')).toHaveCount(0);
+    await expect(right.locator('[data-studio="qr-label"]')).toHaveCount(0);
+    await expect(right.getByText(new RegExp(QR_KICKER, "i"))).toHaveCount(0);
     await expect(right.getByText(QR_LINE, { exact: true })).toHaveCount(0);
+    await expect(right.getByText(DEVICE_QR_LINE, { exact: true })).toHaveCount(0);
     await expect(right.getByText(/opens the story in any browser/)).toHaveCount(0);
-    await expect(right.getByText(DEVICE_QR_LINE, { exact: true })).toBeVisible();
-    const noteBox = await box(right.getByText(DEVICE_NOTE, { exact: true }));
-    expect(noteBox.y, "the device note leads, above the QR").toBeLessThan((await box(qr)).y);
-
-    const share = right.getByRole("button", { name: SHARE });
-    await expect(share).toBeVisible();
-    await expect(share).toHaveAttribute("data-variant", "violet");
-    await expect(share.locator("svg.lucide-share")).toHaveCount(1);
+    await expect(page.getByRole("button", { name: SHARE })).toHaveCount(0);
     await expect(right.getByText(DEVICE_NOTE, { exact: true })).toBeVisible();
+    const noteBox = await box(right.getByText(DEVICE_NOTE, { exact: true }));
+    expect(noteBox.y, "the device note sits under the link").toBeGreaterThan((await box(url)).y);
+    await expect(page.getByRole("button", { name: DOWNLOAD })).toBeVisible();
 
     await page.screenshot({ path: evidencePath("T16.png"), animations: "disabled" });
   });
@@ -666,7 +683,7 @@ test.describe("T16 · the printed tape, landscape", () => {
     await card.evaluate((el) => (el.scrollTop = 0));
     await page.screenshot({ path: evidencePath("T16-375.png"), animations: "disabled", fullPage: false });
     // The column scrolls inside the overlay; the link, then the meter, the file and the delete.
-    const middle = page.getByRole("button", { name: SHARE });
+    const middle = page.getByText(DEVICE_NOTE, { exact: true });
     await middle.scrollIntoViewIfNeeded();
     await expect(middle).toBeInViewport();
     await page.screenshot({ path: evidencePath("T16-375-link.png"), animations: "disabled" });
@@ -844,6 +861,10 @@ test.describe("T16 · the printed tape, landscape", () => {
   test("10 · the QR is a printed sticker: paper, a 2px ink rule, radius 10", async ({ page }) => {
     await page.setViewportSize(TABLET);
     await publish(page);
+    // The QR belongs to the cloud library's link only (M6); in device mode
+    // there is none to measure (see "M6 · device mode" below).
+    const meta = await page.locator(SEL.overlay).locator(SEL.label).first().innerText();
+    test.skip(!/SHARED UNLISTED/.test(meta), "no cloud library here: a device-only link has no QR");
     const frame = page.locator('[data-studio="share-qr"]').locator("xpath=..");
     const look = await frame.evaluate((el) => {
       const cs = getComputedStyle(el);
@@ -874,6 +895,77 @@ test.describe("T16 · the printed tape, landscape", () => {
     for (const [text, n] of rects.details) expect(n, `"${text}" on one line`).toBe(1);
     expect(rects.groups.map(([t]) => t)).toContain("LINKED ON THIS DEVICE");
     for (const [text, n] of rects.groups) expect(n, `"${text}" on one line`).toBe(1);
+  });
+});
+
+/* ======================================================================== */
+
+test.describe("M6 · the ready card tells the truth about the link and the codec", () => {
+  test.setTimeout(120000);
+
+  for (const viewport of [TABLET, PHONE]) {
+    test(`device mode at ${viewport.width}: no QR and no share sheet for a link only this device opens; the file is the way`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(viewport);
+      // Web Share exists here, so only the device-mode rule can keep the sheet away.
+      await publish(page, { share: true });
+      const right = page.locator(SEL.right);
+      await expect(page.locator(SEL.overlay).locator(SEL.label).first()).toContainText("LINKED ON THIS DEVICE");
+      await expect(right.locator('[data-studio="share-url"]')).toHaveValue(/\/read\?story=[0-9a-f]{32}$/);
+      await expect(right.getByRole("button", { name: "Copy", exact: true })).toBeVisible();
+      await expect(right.getByText(DEVICE_NOTE, { exact: true })).toBeVisible();
+      await expect(page.locator('[data-studio="share-qr"], [data-studio="qr-frame"], [data-studio="qr-label"]')).toHaveCount(0);
+      await expect(page.getByRole("img", { name: /QR code/ })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: SHARE })).toHaveCount(0);
+      await expect(page.getByText(/point a phone camera|any browser/i)).toHaveCount(0);
+      await expect(page.getByRole("button", { name: DOWNLOAD })).toBeVisible();
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+      expect(overflow, "no sideways scroll").toBeLessThanOrEqual(0);
+    });
+  }
+
+  test("no AAC encoder: the voices step says WAV, as the label does, and never claims AAC", async ({ page }) => {
+    // A browser without a WebCodecs AAC encoder (Firefox, many Linux builds).
+    await page.addInitScript(() => {
+      delete (window as unknown as { AudioEncoder?: unknown }).AudioEncoder;
+    });
+    await page.setViewportSize(TABLET);
+    const tape = await publish(page);
+    expect(tape.ssyncData.pages.map((p) => p.text?.audioCodec)).toEqual(["wav", "wav", "wav", "wav", "wav"]);
+    const items = page.locator(SEL.card).locator(SEL.steps).locator("li");
+    await expect(items.nth(1)).toHaveText("Converting voices · 5/5 · WAV");
+    await expect(page.locator(SEL.card).locator(SEL.steps)).not.toContainText("to AAC");
+    await expect(page.locator(SEL.overlay).locator(SEL.label).first()).toContainText("WAV");
+  });
+
+  test("the voices step, worded from what each take became (node)", () => {
+    // Every take AAC: the reference's words, verbatim.
+    expect(voicesStepText(5, 5, 5, 0)).toEqual({ label: "Converting voices to AAC", detail: "5/5" });
+    expect(voicesStepText(2, 5, 2, 0)).toEqual({ label: "Converting voices to AAC", detail: "2/5" });
+    // Any fallback: no AAC claim, and the detail names what was written.
+    expect(voicesStepText(5, 5, 0, 5)).toEqual({ label: "Converting voices", detail: "5/5 · WAV" });
+    expect(voicesStepText(5, 5, 3, 2)).toEqual({ label: "Converting voices", detail: "5/5 · 3 AAC · 2 WAV" });
+    expect(VOICES_TO_AAC).toBe("Converting voices to AAC");
+  });
+
+  test("the room behind the card is inert while it is open, and live again after", async ({ page }) => {
+    await page.setViewportSize(TABLET);
+    await publish(page);
+    const state = () =>
+      page.evaluate(() => {
+        const room = document.querySelector(".studio") as HTMLElement & { inert: boolean };
+        const overlay = document.querySelector('[data-studio="publish-overlay"]');
+        return { inert: room.inert, cardInRoom: overlay ? room.contains(overlay) : null };
+      });
+    expect(await state()).toEqual({ inert: true, cardInRoom: false });
+    // Nothing in the room takes focus, even when asked directly.
+    await page.locator("#studio-title").evaluate((el: HTMLElement) => el.focus());
+    await expect(page.locator("#studio-title")).not.toBeFocused();
+    await page.getByRole("button", { name: BACK }).click();
+    await expect(page.getByRole("dialog", { name: READY })).toHaveCount(0);
+    expect(await state()).toEqual({ inert: false, cardInRoom: null });
+    await expect(page.getByRole("button", { name: "Finish my story" })).toBeFocused();
   });
 });
 
