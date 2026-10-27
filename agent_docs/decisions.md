@@ -696,3 +696,41 @@ deleting the story forgets it everywhere.**
   ("Page 3 is Hush now." / "Every page is Hush now.").
 - **T24b · Inspector keyboard order** is now page mood → story mood → `#insp-feeling` → its two buttons (when enabled)
   → T17's switch, following s09's row order.
+
+**2026-10-27 · M6 · fidelity sweep fixes (critic panel → judge → adversarial verify → fix → independent review)**
+- **M6 · kit BigButton gains an opt-in `shape="pill"`.** foundation.css draws `.ss-btn` as a 999px pill; the kit's
+  16px BigButton stays the default (two-line doors), and Press play and the gate's actions opt into the pill.
+- **M6 · the landing's visible doors-section head is removed** (supersedes T06's deviation): s01 lets the doors peek in
+  at the fold; below 768px the hero drops its min-height so the doors follow the scroll hint.
+- **M6 · phone full-bleed portrait-fit.** When the screen is narrower than 0.7 × the picture's own aspect, a full-bleed
+  page fits the picture's width from the top over a mirrored, blurred foot of the same drawing, and the words sit under
+  it. A per-page focal point would be a format change.
+- **M6 · the deck foot never promises a turn mid-voice.** With a voice still speaking the foot says the page turns
+  "3 s after the voice", not "next page in 3 s".
+- **M6 · the cover gate blurs its own copy of the first drawing once** (s05: blur 22, brightness .5) instead of
+  stacking a second blur on the room; high contrast keeps the plain dim.
+- **M6 · /protocol.** One "Fig. 1" (the exploded packet); the older PacketDiagram keeps manifest order without a figure
+  number. Scroll padding follows the sticky bar's measured height (`--pr-bar-h`).
+- **M6 · gate.** The footer uses fg-3 (AA); a wrong answer's alert and `aria-invalid` stay until the parent types; a
+  reply's gate opens with no grantor chosen (`initialGrantor={null}`); the multi-voice prompt and Continue's
+  `aria-describedby` stay until every recorded voice has an answer.
+- **M6 · publish honesty.** The voices step names what each take became ("Converting voices to AAC · n/n" verbatim only
+  when every take is AAC; "· WAV" or "· a AAC · b WAV" otherwise). In device mode (no cloud library) the card offers no
+  QR and no share sheet, because the link opens on this device only; the device note and Download remain. The ready card
+  is a modal portalled to `<body>` with the Studio root `inert`. A reply's card says "Send it back to <name>".
+- **M6 · nothing interrupts or leaks into a take.** Mid-take, Magic and Photo wait (aria-disabled, announced); play()
+  refuses while recording (Play, Listen and Space share one handler); a take whose story changes while the microphone is
+  starting is cancelled and announced; replaceStory/deleteEverything cancel any open recording. Draft codec line under
+  Stop reports the negotiated mime, never a browser name.
+- **M6 · phone Studio.** Below 640px the bar is one row (labelled Exit, title, a "More" popover holding Simple/Advanced
+  and Open a tape, compact Finish keeping the name "Finish my story"). During a take the Voice sheet is opaque, keeps
+  the photo whole above it, and is the only Stop. The filmstrip's move controls fold behind a 44px "move" key.
+- **M6 · s09 Inspector** runs the full height beside the strip and transport; docked rows are denser (36px controls,
+  `aria-valuetext` on sliders); headings and notes use fg-3; Music bed is a `role=switch`; mood icons follow the mood.
+- **M6 · Read Room at ≥1024px** follows s07.html's own panel geometry (440px, 12px padding, 42px button) so the Read it
+  in… panel fits the first screen; the resume band holds its four actions on one row (icon-only pull at 1024–1139px,
+  still named).
+- **M6 · shared `--ss-cream` (#F3E6C8)** for spoken read-along words and Stage words.
+- **M6 · tests never rewrite tracked files.** Pictures go to test-results unless `VISION_EVIDENCE=1` (hand-back packet)
+  or `UPDATE_SCREENSHOTS=1` (legacy tests/screenshots); every no-send check uses `watchSends` (ignores Next internals and
+  `?_rsc=` route prefetches).
