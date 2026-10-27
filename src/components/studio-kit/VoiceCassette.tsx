@@ -21,7 +21,7 @@
  * One cassette is a native radio (visually hidden, over the whole cassette)
  * inside its label, so a group of them is one tab stop and the arrows move the
  * check. Its accessible name is the name, plus ", reading now" when it reads
- * today ("Browser voice, reading now", "Mia", "Someone new"); everything drawn
+ * today ("Browser voice, reading now", "Auntie", "Someone new"); everything drawn
  * is decoration for it. Focus is the kit's gold ring around the shell. Motion
  * and its reduced state live in voice-cassette.css.
  */

@@ -331,6 +331,29 @@ test.describe("vision fixtures · files (node)", () => {
     expect(scanned).toBe(2);
     expect(hits, `illustrative content in the product:\n${hits.join("\n")}`).toEqual([]);
   });
+
+  test("guard: the narrator's first name is no example in src/ or public/, comments included", () => {
+    // Comments reach readers of the code too: an example names nobody from the
+    // fixtures' cast. (publish-card.css quotes s05's title, "Grandma's iPhone",
+    // which names no fixture character.)
+    const name = new RegExp(`\\b${TWINKLE.narrator}\\b`);
+    const hits: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) walk(full);
+        else if (entry.isFile() && /\.(tsx?|css|json|md|html|js)$/.test(entry.name)) {
+          fs.readFileSync(full, "utf8")
+            .split("\n")
+            .forEach((line, i) => {
+              if (name.test(line)) hits.push(`${path.relative(REPO_ROOT, full)}:${i + 1}`);
+            });
+        }
+      }
+    };
+    for (const root of ["src", "public"]) walk(path.join(REPO_ROOT, root));
+    expect(hits, `"${TWINKLE.narrator}" in the product:\n${hits.join("\n")}`).toEqual([]);
+  });
 });
 
 /* ------------------------------------------------------ helpers, in Node */

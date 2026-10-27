@@ -111,10 +111,67 @@ export function Filmstrip({
   onSnapNext,
 }: FilmstripProps) {
   const stripRef = React.useRef<HTMLDivElement | null>(null);
-  /** The phone's folded move controls are open (below 768px; ignored above). */
-  const [movesOpen, setMovesOpen] = React.useState(false);
+  /**
+   * The phone's folded move controls are open (below 768px; ignored above),
+   * held as the id of the page they were opened for: they fold again when
+   * another page is selected (a move keeps the same page selected, so they
+   * stay open for the next nudge).
+   */
+  const activeId = pages[activeIndex]?.id ?? null;
+  const [movesOpenFor, setMovesOpenFor] = React.useState<SsyncPage["id"] | null>(null);
+  const movesOpen = movesOpenFor !== null && movesOpenFor === activeId;
+  const setMovesOpen = React.useCallback(
+    (open: boolean | ((was: boolean) => boolean)) =>
+      setMovesOpenFor((was) => {
+        const next = typeof open === "function" ? open(was !== null && was === activeId) : open;
+        return next ? activeId : null;
+      }),
+    [activeId],
+  );
   const movesToggleRef = React.useRef<HTMLButtonElement | null>(null);
+  const housingRef = React.useRef<HTMLDivElement | null>(null);
   const housingId = React.useId();
+
+  // A fold that closes under the keyboard (another page selected, or this
+  // one deleted) hands focus back to its key, never to <body>.
+  const wasOpen = React.useRef(false);
+  React.useLayoutEffect(() => {
+    if (wasOpen.current && !movesOpen) {
+      const housing = housingRef.current;
+      const active = document.activeElement;
+      const toggle = movesToggleRef.current;
+      if (housing && active instanceof Node && housing.contains(active) && toggle?.getClientRects().length) {
+        toggle.focus({ preventScroll: true });
+      }
+    }
+    wasOpen.current = movesOpen;
+  }, [movesOpen]);
+
+  // Open, the fold closes on a tap anywhere else (pointerdown outside its key
+  // and its keys).
+  React.useEffect(() => {
+    if (!movesOpen) return;
+    const onPointer = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (movesToggleRef.current?.contains(target) || housingRef.current?.contains(target)) return;
+      setMovesOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointer);
+    return () => document.removeEventListener("pointerdown", onPointer);
+  }, [movesOpen, setMovesOpen]);
+
+  /**
+   * ...and when focus moves on past it (Tab out of the keys, or back before
+   * "move"). Only a focus that lands somewhere else counts: a tap that
+   * focuses nothing is the pointerdown's to judge.
+   */
+  const closeMovesOnLeave = (event: React.FocusEvent<HTMLElement>) => {
+    const next = event.relatedTarget as Node | null;
+    if (!movesOpen || !next) return;
+    if (movesToggleRef.current?.contains(next) || housingRef.current?.contains(next)) return;
+    setMovesOpen(false);
+  };
 
   // Keep the selected frame in view when the transport turns the page
   // (a glide, or a cut under reduced motion).
@@ -228,13 +285,16 @@ export function Filmstrip({
                     aria-controls={housingId}
                     data-studio="film-moves-toggle"
                     onClick={() => setMovesOpen((open) => !open)}
+                    onBlur={closeMovesOnLeave}
                     className="studio-move-toggle sk-focus"
                   >
                     move
                   </button>
                   <div
+                    ref={housingRef}
                     id={housingId}
                     className="studio-move-housing"
+                    onBlur={closeMovesOnLeave}
                     data-open={movesOpen ? "true" : "false"}
                     onKeyDown={(event) => {
                       if (event.key !== "Escape" || !movesOpen) return;

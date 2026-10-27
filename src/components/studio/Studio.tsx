@@ -289,6 +289,20 @@ function humanizeAuthError(err: unknown): string {
   return "That did not work. Check the email and password and try again.";
 }
 
+/**
+ * Test seam for the ready card's cloud presentation (the QR, the share sheet,
+ * the unlisted note), which no test environment has a cloud library to reach:
+ * `window.__ssyncTestCloud = true` shows the card as the cloud library's link.
+ * It changes what the card shows, never where the tape is saved, and a
+ * production build compiles it away (NODE_ENV is inlined): there it is always
+ * `undefined`.
+ */
+function testCloudOverride(): boolean | undefined {
+  if (process.env.NODE_ENV === "production" || typeof window === "undefined") return undefined;
+  const value = (window as Window & { __ssyncTestCloud?: unknown }).__ssyncTestCloud;
+  return typeof value === "boolean" ? value : undefined;
+}
+
 export default function Studio() {
   const [state, setState] = React.useState<StudioState>(() => blankState());
   const [activeIndex, setActiveIndexState] = React.useState(0);
@@ -1472,10 +1486,33 @@ export default function Studio() {
     setActiveIndexState(0);
     setTool(null);
     setPhase("edit");
-    setAnnouncement("Everything deleted.");
+    // The live region sits in the room, which is inert until this render
+    // lands: the words are written a frame later, once it is live again, so a
+    // screen reader hears them. Focus starts over where a story starts — the
+    // Photo tool — never on <body> (the blank story's Finish is disabled).
+    setAnnouncement("");
+    window.requestAnimationFrame(() => {
+      roomRef.current
+        ?.querySelector<HTMLElement>('[data-studio-tool="photo"]')
+        ?.focus({ preventScroll: true });
+      setAnnouncement("Everything deleted.");
+    });
   };
 
   /* The phone bar's "More" panel closes on Escape, or on a tap anywhere else. */
+  /**
+   * ...and when focus moves on past it (Tab to Finish or the Photo tool), so
+   * an open panel never sits over the top of the Stage. Only a focus that
+   * lands somewhere else counts: a tap that focuses nothing (Safari does not
+   * focus a tapped button) is the pointerdown's to judge, below.
+   */
+  const closeBarMenuOnLeave = (event: React.FocusEvent<HTMLElement>) => {
+    const next = event.relatedTarget as Node | null;
+    if (!barMenu || !next) return;
+    if (moreRef.current?.contains(next)) return;
+    if (document.getElementById("studio-bar-more")?.contains(next)) return;
+    setBarMenu(false);
+  };
   React.useEffect(() => {
     if (!barMenu) return;
     const onPointer = (event: PointerEvent) => {
@@ -1759,6 +1796,7 @@ export default function Studio() {
               aria-controls="studio-bar-more"
               data-studio="bar-more"
               onClick={() => setBarMenu((open) => !open)}
+              onBlur={closeBarMenuOnLeave}
               className="sk-focus grid size-11 flex-none place-items-center rounded-xl border border-white/12 bg-white/5 text-white/75 hover:bg-white/10 aria-expanded:border-amber-400/50 aria-expanded:bg-white/10 sm:hidden"
             >
               <MoreHorizontal aria-hidden="true" className="size-5" strokeWidth={2} />
@@ -1768,6 +1806,7 @@ export default function Studio() {
               data-studio="bar-more-panel"
               data-open={barMenu ? "true" : "false"}
               className="studio-bar-more"
+              onBlur={closeBarMenuOnLeave}
               onKeyDown={(event) => {
                 if (event.key !== "Escape" || !barMenu) return;
                 event.stopPropagation();
@@ -2217,7 +2256,7 @@ export default function Studio() {
                 codecLabel={codecLabel}
                 shareUrl={shareUrl}
                 // Whether the link is the cloud library's; a device-only link gets no QR or share sheet.
-                cloud={state.published ? state.published.cloud : isCloudEnabled()}
+                cloud={testCloudOverride() ?? (state.published ? state.published.cloud : isCloudEnabled())}
                 reply={state.reply ? { name: state.reply.name } : null}
                 returnFocusTo={finishRef}
                 note={publishNote}

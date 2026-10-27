@@ -377,7 +377,7 @@ function parsePrompt(raw: string): ParsedPrompt {
     }
   }
 
-  // Extract traits for characters ("brave Mia", "little Jake", "a kind princess")
+  // Extract traits for characters ("brave fox", "little bear", "a kind princess")
   const traitWords = [
     "brave", "kind", "clever", "smart", "shy", "bold", "gentle", "fierce",
     "curious", "tiny", "little", "big", "tall", "young", "old", "wise",

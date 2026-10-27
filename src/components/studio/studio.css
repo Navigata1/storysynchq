@@ -656,9 +656,11 @@
       animation: studio-fade 260ms ease-out both;
     }
     .studio-inspector-close { display: none; }
-    /* s09's density: label · slider · reading on one row */
+    /* s09's density: label · slider · reading on one row. The name column
+       fits "TIMING MULTIPLIER" (nowrap, ~142px in Plex Mono) and so keeps
+       8+ px clear of its track with the 10px column gap. */
     .studio-insp-slider {
-      grid-template-columns: 132px minmax(0, 1fr) 44px;
+      grid-template-columns: 144px minmax(0, 1fr) 44px;
       grid-template-areas: "name range value";
       margin-bottom: 8px;
     }
@@ -806,6 +808,7 @@
     .studio-printing,
     .studio-rise,
     .studio-fade,
+    .studio-bar-more,
     .studio-busy {
       animation: none !important;
     }
