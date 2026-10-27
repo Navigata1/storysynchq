@@ -185,11 +185,20 @@ export function Stage({
                 labelProps={{ "data-studio": "listening-pill" }}
                 className="stage-frame stage-frame--blank"
               >
+                {/* Mid-take the camera waits (it can take the microphone, and a
+                    new picture would change the page being told): the key
+                    stays where it is, dimmed, and says why. */}
                 <button
                   type="button"
                   onClick={onPickPhoto}
-                  disabled={photoBusy}
-                  className="sk-focus flex h-full w-full cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-white/18 bg-white/[0.03] p-6 text-center transition-colors duration-300 ease-out hover:border-amber-400/50 hover:bg-amber-500/[0.06] disabled:cursor-wait"
+                  disabled={photoBusy || recording}
+                  data-studio="stage-add-picture"
+                  title={recording ? "Finish the recording first" : undefined}
+                  className={`sk-focus flex h-full w-full flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-white/18 bg-white/[0.03] p-6 text-center transition-colors duration-300 ease-out motion-reduce:transition-none ${
+                    recording
+                      ? "cursor-not-allowed opacity-50"
+                      : "cursor-pointer hover:border-amber-400/50 hover:bg-amber-500/[0.06] disabled:cursor-wait"
+                  }`}
                 >
                   {photoBusy ? (
                     <Hourglass aria-hidden="true" className="size-11 text-white/70" strokeWidth={1.6} />
@@ -199,7 +208,9 @@ export function Stage({
                   <span className="text-base font-semibold text-white/85">
                     {photoBusy ? "Getting your picture ready…" : "Add a picture"}
                   </span>
-                  <span className="text-sm text-white/45">Take a photo of your drawing</span>
+                  <span className="text-sm text-white/45">
+                    {recording ? "Finish the recording first" : "Take a photo of your drawing"}
+                  </span>
                 </button>
               </ListeningRing>
             )}

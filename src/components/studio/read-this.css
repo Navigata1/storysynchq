@@ -214,6 +214,15 @@
     }
   }
 
+  /* The phone take sheet (studio.css "the take sheet"): the picture being
+     read stays whole above the sheet, so long words give way first — the
+     card stops at about a quarter of the screen and its words scroll. */
+  @media (max-width: 767.98px) {
+    .studio[data-take-sheet="true"] .studio-voice-body[data-reading="true"] > .read-this {
+      max-height: 26dvh;
+    }
+  }
+
   /* A short docked column: the take needs what little there is. */
   @media (min-width: 1024px) and (max-height: 699.98px) {
     .read-this { display: none; }

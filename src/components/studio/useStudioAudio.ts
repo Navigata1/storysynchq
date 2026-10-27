@@ -15,7 +15,12 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DualBusAudioEngine } from "@/lib/audio/engine";
-import { NarrationRecorder, blobToDataUrl, type MicPermissionError } from "@/lib/audio/recorder";
+import {
+  NarrationRecorder,
+  blobToDataUrl,
+  pickRecordingMime,
+  type MicPermissionError,
+} from "@/lib/audio/recorder";
 import type { MoodName } from "@/lib/audio/moods";
 import { StudioCues } from "./cues";
 import { effectiveMood } from "./page-moods";
@@ -26,6 +31,19 @@ export interface UseStudioAudioArgs {
   activeIndexRef: { current: number };
   onSelectPage: (index: number) => void;
   onRecorded: (pageId: number, dataUrl: string, mimeType: string, duration: number) => void;
+  /**
+   * Which story is on the Stage: the Studio bumps it whenever the story is
+   * replaced (Magic, an opened tape, a reply, Delete everything). A take
+   * started on one story is never filed onto the next one's page of the same
+   * id — it is dropped, and `onTakeDropped` says so.
+   */
+  storyGenerationRef?: { current: number };
+  /**
+   * "stopped": a take finished after its story was replaced. "starting": the
+   * story changed (or the page went) while the microphone was still starting,
+   * so the take was cancelled before a word was kept.
+   */
+  onTakeDropped?: (when: "starting" | "stopped") => void;
 }
 
 export interface StudioAudio {
@@ -47,6 +65,19 @@ export interface StudioAudio {
   subscribeLevel: (listener: (level: number) => void) => () => void;
   /** The page id a take is being recorded onto, captured at record START. */
   recordingPageId: number | null;
+  /**
+   * The mime type the recorder negotiated for the take now running (null when
+   * none runs, or when the browser chose its own default). Read, never
+   * assumed: the Voice card's codec line reports exactly this.
+   */
+  takeMime: string | null;
+  /**
+   * True from the moment a take is asked for (before the microphone
+   * permission resolves) until it stops: anything that would change the page
+   * under a take reads this, not `recording`, which turns true only once the
+   * microphone is open.
+   */
+  takeLiveRef: { current: boolean };
   micError: MicPermissionError | null;
   clearMicError: () => void;
   unlock: () => Promise<void>;
@@ -82,6 +113,8 @@ export function useStudioAudio({
   activeIndexRef,
   onSelectPage,
   onRecorded,
+  storyGenerationRef,
+  onTakeDropped,
 }: UseStudioAudioArgs): StudioAudio {
   const engineRef = useRef<DualBusAudioEngine | null>(null);
   const recorderRef = useRef<NarrationRecorder | null>(null);
@@ -95,12 +128,19 @@ export function useStudioAudio({
   const lastSrcRef = useRef<string | null>(null);
   /** The page a take belongs to — read at START, never at stop. */
   const recordPageIdRef = useRef<number | null>(null);
+  /** The story generation a take started on (see `storyGenerationRef`). */
+  const recordGenerationRef = useRef<number | null>(null);
+  /** A take asked for, the microphone not yet open. */
+  const startingRef = useRef(false);
+  /** A take starting or running (see `takeLiveRef` above). */
+  const takeLiveRef = useRef(false);
   const levelListeners = useRef(new Set<(level: number) => void>());
 
   const [playing, setPlaying] = useState(false);
   const [narrating, setNarrating] = useState(false);
   const [recording, setRecording] = useState(false);
   const [recordingPageId, setRecordingPageId] = useState<number | null>(null);
+  const [takeMime, setTakeMime] = useState<string | null>(null);
   const [position, setPosition] = useState(0);
   const [clipDuration, setClipDuration] = useState(0);
   const [recordSeconds, setRecordSeconds] = useState(0);
@@ -314,6 +354,10 @@ export function useStudioAudio({
 
   const play = useCallback(
     async (fromIndex?: number) => {
+      // The microphone is open: the page's old voice, the browser voice or
+      // the bed would land in the take. Every caller (Play, Listen, Space)
+      // comes through here, so this is the one guard that covers them all.
+      if (recorderRef.current?.isRecording) return;
       const index = fromIndex ?? activeIndexRef.current;
       await unlock();
       playingRef.current = true;
@@ -370,36 +414,63 @@ export function useStudioAudio({
       // started talking. Reading the active page at STOP attributed a take to
       // whatever page happened to be selected by then.
       const pageId = recordPageIdRef.current;
+      const generation = recordGenerationRef.current;
       try {
         const result = await recorder.stop();
         cues.recordStop();
         const dataUrl = await blobToDataUrl(result.blob);
         const exists = stateRef.current.manifest.pages.some((p) => p.id === pageId);
-        if (pageId !== null && exists) {
+        // A story replaced mid-take has its own page 1, 2, 3…: the take was
+        // told for the old one and is dropped, never filed on a stranger.
+        const sameStory = !storyGenerationRef || generation === storyGenerationRef.current;
+        if (pageId !== null && exists && sameStory) {
           onRecorded(pageId, dataUrl, result.mimeType, result.duration);
+        } else if (pageId !== null && !sameStory) {
+          onTakeDropped?.("stopped");
         }
       } catch {
         setMicError("unknown");
       } finally {
         recordPageIdRef.current = null;
+        recordGenerationRef.current = null;
+        takeLiveRef.current = false;
+        setTakeMime(null);
         setRecording(false);
         setRecordingPageId(null);
         setRecordSeconds(0);
       }
       return;
     }
+    // A second tap while the microphone is still starting is the same take.
+    if (startingRef.current) return;
 
-    stop();
-    await unlock();
+    // The page and the story the take belongs to are read at the TAP, before
+    // the (possibly long) microphone permission wait, and checked after it.
+    startingRef.current = true;
+    takeLiveRef.current = true;
     const page = stateRef.current.manifest.pages[activeIndexRef.current];
+    const generation = storyGenerationRef?.current ?? null;
+    stop();
     try {
+      await unlock();
       await recorder.start();
-      recordPageIdRef.current = page?.id ?? null;
+      const stillThere =
+        page !== undefined && stateRef.current.manifest.pages.some((p) => p.id === page.id);
+      const sameStory = !storyGenerationRef || generation === storyGenerationRef.current;
+      if (!stillThere || !sameStory) {
+        recorder.cancel();
+        takeLiveRef.current = false;
+        onTakeDropped?.("starting");
+        return;
+      }
+      recordPageIdRef.current = page.id;
+      recordGenerationRef.current = generation;
+      setTakeMime(pickRecordingMime() ?? null);
       recStartRef.current = performance.now();
       setRecordSeconds(0);
       setMicError(null);
       setRecording(true);
-      setRecordingPageId(page?.id ?? null);
+      setRecordingPageId(page.id);
       void cues.unlock();
       cues.recordStart();
     } catch (err) {
@@ -408,15 +479,24 @@ export function useStudioAudio({
           ? (err as MicPermissionError)
           : "unknown";
       recordPageIdRef.current = null;
+      recordGenerationRef.current = null;
+      takeLiveRef.current = false;
+      setTakeMime(null);
       setMicError(code);
       setRecording(false);
       setRecordingPageId(null);
+    } finally {
+      startingRef.current = false;
     }
-  }, [activeIndexRef, cues, onRecorded, stateRef, stop, unlock]);
+  }, [activeIndexRef, cues, onRecorded, onTakeDropped, stateRef, stop, storyGenerationRef, unlock]);
 
   const cancelRecording = useCallback(() => {
     recorderRef.current?.cancel();
     recordPageIdRef.current = null;
+    recordGenerationRef.current = null;
+    // A take still starting is caught by the story check after the permission.
+    takeLiveRef.current = startingRef.current;
+    setTakeMime(null);
     setRecording(false);
     setRecordingPageId(null);
     setRecordSeconds(0);
@@ -500,6 +580,8 @@ export function useStudioAudio({
     narrating,
     recording,
     recordingPageId,
+    takeMime,
+    takeLiveRef,
     position,
     clipDuration,
     recordSeconds,

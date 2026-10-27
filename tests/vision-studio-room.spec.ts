@@ -263,8 +263,8 @@ test.describe("T13a · the room fits the tablet", () => {
     await openTwinkle(page, { viewport: PHONE });
     const readout = page.locator(`${SEL.transport} > :last-child`);
     // M6: a voice length the transport does not know reads "—", not a made-up
-    // "0:00" (it was "0:00 / 0:00"); W2b passes page 3's own 0:06.
-    await expect(readout).toContainText(/0:00 \/ (—|0:06)/);
+    // "0:00"; page 3's is known (the take measured 6.4 s), so it reads 0:06.
+    await expect(readout).toContainText("0:00 / 0:06");
     for (const line of await readout.locator(":scope > *").all()) {
       const { height, lineHeight } = await line.evaluate((el) => ({
         height: el.getBoundingClientRect().height,
@@ -1271,11 +1271,11 @@ test.describe("M6 · s03 the transport is a deck", () => {
     await expect(readout(page)).toContainText("pg 1/");
     await expect(readout(page)).not.toContainText("/ 0:00");
     await expect(readout(page)).toContainText("0:00 / —");
-    // Twinkle page 3 has a voice: never `/ 0:00` (its length, 0:06, once the
-    // Studio passes the page's own duration — W2b; a dash until then)
+    // Twinkle page 3 has a voice: never `/ 0:00`, never a dash — its own
+    // length, 0:06 (the Studio passes the page's measured duration).
     await openTwinkle(page, { viewport: TABLET });
     await expect(readout(page)).not.toContainText("/ 0:00");
-    await expect(readout(page)).toHaveText(/^0:00 \/ (—|0:06) · pg 3\/5$/);
+    await expect(readout(page)).toHaveText(/^0:00 \/ 0:06 · pg 3\/5$/);
   });
 
   for (const viewport of [TABLET, PHONE]) {
@@ -1295,6 +1295,27 @@ test.describe("M6 · s03 the transport is a deck", () => {
       await stopTake(page);
     }
   });
+  }
+});
+
+test.describe("M6 · the Voice card's footnote is legible", () => {
+  for (const viewport of [TABLET, PHONE]) {
+    test(`${viewport.width}×${viewport.height}: the privacy footnote passes WCAG AA (4.5:1), idle and mid-take`, async ({ page }) => {
+      await openTwinkle(page, { viewport });
+      const where = `${viewport.width}×${viewport.height}`;
+      await tool(page, "Voice").click();
+      const footnote = page.locator(SEL.card).getByText(FOOTNOTE, { exact: true });
+      await expect(footnote).toBeVisible();
+      await settle(page);
+      const idle = await contrastOf(footnote);
+      expect(idle, `${where} idle: ${idle.toFixed(2)}:1`).toBeGreaterThanOrEqual(4.5);
+      await startTake(page);
+      await expect(footnote).toBeVisible();
+      await settle(page);
+      const live = await contrastOf(footnote);
+      expect(live, `${where} recording: ${live.toFixed(2)}:1`).toBeGreaterThanOrEqual(4.5);
+      await stopTake(page);
+    });
   }
 });
 

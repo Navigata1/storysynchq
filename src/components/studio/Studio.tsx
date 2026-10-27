@@ -71,7 +71,7 @@ import { effectiveMood, moodsForLane, prunePageMoods, publishedMusic, renumberPa
 import PublishCard, { type AuthMode, type PublishCardProps, type PublishStep } from "./PublishCard";
 import { layerPresence } from "./tape-sheet";
 import { tapeBytes } from "@/lib/storysync/tape-size";
-import { MagicPanel, MusicPanel, VoicePanel, type MagicLook } from "./ToolPanels";
+import { MagicPanel, MusicPanel, VoicePanel, codecLine, type MagicLook } from "./ToolPanels";
 import { useStudioAudio } from "./useStudioAudio";
 import type { StudioCues } from "./cues";
 import { clearDraft, loadDraft, saveDraft } from "./draft";
@@ -81,6 +81,7 @@ import {
   blankManifest,
   blankPage,
   blankState,
+  codecBadge,
   estimateStorySeconds,
   formatClock,
   nextPageId,
@@ -176,6 +177,26 @@ interface OpenNote {
 }
 
 const AUTOSAVE_MS = 900;
+
+/** Below 768px the room is a phone's: the tool card is a bottom sheet. */
+const PHONE_QUERY = "(max-width: 767.98px)";
+
+/** A media query, read after mount (false on the server and the first paint). */
+function useMediaQuery(query: string): boolean {
+  const subscribe = React.useCallback(
+    (onChange: () => void) => {
+      const list = window.matchMedia?.(query);
+      list?.addEventListener("change", onChange);
+      return () => list?.removeEventListener("change", onChange);
+    },
+    [query],
+  );
+  return React.useSyncExternalStore(
+    subscribe,
+    () => window.matchMedia?.(query).matches ?? false,
+    () => false,
+  );
+}
 const UID_KEY = "ssync-studio-uid";
 
 function localUserId(): string {
@@ -278,6 +299,8 @@ export default function Studio() {
   const [opening, setOpening] = React.useState(false);
   const [photoBusy, setPhotoBusy] = React.useState(false);
   const [magicBusy, setMagicBusy] = React.useState(false);
+  /** Magic's idea, kept here so a take that sets Magic aside never loses it. */
+  const [magicPrompt, setMagicPrompt] = React.useState("");
   const [draftNote, setDraftNote] = React.useState<string | null>(null);
   const [steps, setSteps] = React.useState<PublishStep[]>(STEP_TEMPLATE);
   const [publishError, setPublishError] = React.useState<string | null>(null);
@@ -319,6 +342,24 @@ export default function Studio() {
   const [gateAuthor, setGateAuthor] = React.useState("");
   const cuesRef = React.useRef<StudioCues | null>(null);
   const recordingRef = React.useRef(false);
+  /**
+   * Which story is on the Stage, bumped whenever the whole story is replaced.
+   * A take that started on one story is never filed onto another's page.
+   */
+  const storyGenerationRef = React.useRef(0);
+  /** The engine's "a take is asked for or running" flag (set once the hook exists). */
+  const takeLiveSource = React.useRef<{ current: boolean } | null>(null);
+  /**
+   * A take is starting (the microphone permission may still be pending) or
+   * running. Everything that would change the page under a take asks this,
+   * not `recording`, which turns true only once the microphone is open.
+   */
+  const takeLive = React.useCallback(
+    () => recordingRef.current || Boolean(takeLiveSource.current?.current),
+    [],
+  );
+  /** A phone (< 768px): the Voice sheet covers the foot of the room there. */
+  const phone = useMediaQuery(PHONE_QUERY);
 
   const pages = state.manifest.pages;
   const page: SsyncPage | undefined = pages[activeIndex];
@@ -359,7 +400,7 @@ export default function Studio() {
    * against the wrong page, so while the mic is live the tape does not move.
    */
   const setActive = React.useCallback((index: number, options?: { silent?: boolean }) => {
-    if (recordingRef.current) {
+    if (takeLive()) {
       setAnnouncement("Finish the recording before turning the page.");
       return;
     }
@@ -368,6 +409,14 @@ export default function Studio() {
     activeIndexRef.current = clamped;
     setActiveIndexState(clamped);
     if (changed && !options?.silent) cuesRef.current?.pageTurn();
+  }, [takeLive]);
+
+  const dropTake = React.useCallback((when: "starting" | "stopped") => {
+    setAnnouncement(
+      when === "starting"
+        ? "The story changed while the microphone was starting, so nothing was recorded."
+        : "That recording was for the story before this one, so it was not kept.",
+    );
   }, []);
 
   const audio = useStudioAudio({
@@ -375,6 +424,8 @@ export default function Studio() {
     activeIndexRef,
     onSelectPage: setActive,
     onRecorded: handleRecorded,
+    storyGenerationRef,
+    onTakeDropped: dropTake,
   });
   const {
     setMusicActive,
@@ -382,11 +433,13 @@ export default function Studio() {
     stop: stopAudio,
     play,
     toggleRecord,
+    cancelRecording,
     clearMicError,
     recording,
   } = audio;
   cuesRef.current = audio.cues;
   recordingRef.current = recording;
+  takeLiveSource.current = audio.takeLiveRef;
 
   /* --------------------------------------------------------- draft restore */
 
@@ -411,6 +464,9 @@ export default function Studio() {
   const replaceStory = React.useCallback(
     (next: StudioState, announcement: string) => {
       stopAudio();
+      // Never a microphone left open under a story that is gone.
+      cancelRecording();
+      storyGenerationRef.current += 1;
       setState(next);
       publishedRef.current = null;
       authorRef.current = "";
@@ -430,7 +486,7 @@ export default function Studio() {
       setBoot("ready");
       setAnnouncement(announcement);
     },
-    [stopAudio],
+    [cancelRecording, stopAudio],
   );
 
   /**
@@ -692,7 +748,7 @@ export default function Studio() {
 
   /** Adds a blank page and selects it; refuses (false) mid-take. */
   const addPage = (): boolean => {
-    if (recording) {
+    if (takeLive()) {
       setAnnouncement("Finish the recording before adding a page.");
       return false;
     }
@@ -709,7 +765,7 @@ export default function Studio() {
 
   const movePage = (index: number, direction: -1 | 1) => {
     const target = index + direction;
-    if (recording || target < 0 || target >= pages.length) return;
+    if (takeLive() || target < 0 || target >= pages.length) return;
     setState((prev) => {
       const next = [...prev.manifest.pages];
       const [moved] = next.splice(index, 1);
@@ -722,7 +778,7 @@ export default function Studio() {
   };
 
   const deletePage = (index: number) => {
-    if (recording || pages.length <= 1) return;
+    if (takeLive() || pages.length <= 1) return;
     stopAudio();
     const victim = pages[index];
     setState((prev) => {
@@ -768,9 +824,30 @@ export default function Studio() {
 
   /* ----------------------------------------------------------------- photo */
 
+  /**
+   * The camera can take the microphone, and a new picture would change the
+   * page under the take: mid-take the picture waits, and says why.
+   */
   const pickPhoto = () => {
+    if (takeLive()) {
+      setAnnouncement("Finish the recording before adding a picture.");
+      return;
+    }
     clearMicError();
     fileInputRef.current?.click();
+  };
+
+  /**
+   * Play, Listen and Space all come here. Mid-take nothing plays: the page's
+   * old voice, the browser voice or the bed would land in the open mic.
+   */
+  const playOrStop = (fromIndex?: number) => {
+    if (takeLive()) {
+      setAnnouncement("Finish the recording before playing the story.");
+      return;
+    }
+    if (audio.playing) stopAudio();
+    else void play(fromIndex);
   };
 
   /** The strip's last tile: a new page, then the camera, in one tap (s03). */
@@ -814,7 +891,7 @@ export default function Studio() {
   /* ------------------------------------------------- open a tape (a file) */
 
   const pickTape = () => {
-    if (recording) {
+    if (takeLive()) {
       setAnnouncement("Finish the recording before opening a tape.");
       return;
     }
@@ -833,7 +910,16 @@ export default function Studio() {
 
   /* ----------------------------------------------------------------- magic */
 
+  const MAGIC_WAITS = "Finish the recording before making a new story.";
+  const MAGIC_SET_ASIDE =
+    "Your recording comes first: the new story was not made. Your idea is still in Magic for after the take.";
+
   const runMagic = async (prompt: string, pageCountWanted: number, look: MagicLook) => {
+    // A new story mid-take would replace the page the take is being told on.
+    if (takeLive()) {
+      setAnnouncement(MAGIC_WAITS);
+      return;
+    }
     setMagicBusy(true);
     stopAudio();
     try {
@@ -862,6 +948,15 @@ export default function Studio() {
         // let the "Writing…" label paint between pages
         await new Promise((resolve) => window.setTimeout(resolve, 0));
       }
+      // A take asked for while the pages were being written keeps its story
+      // (even while the microphone permission is still pending); the idea
+      // stays in the Magic card for after the take.
+      if (takeLive()) {
+        setAnnouncement(MAGIC_SET_ASIDE);
+        return;
+      }
+      setMagicPrompt("");
+      storyGenerationRef.current += 1;
       setState((prev) => ({
         ...prev,
         recordings: {},
@@ -1310,6 +1405,8 @@ export default function Studio() {
     ]);
     await deleteBooks(ids);
     clearDraft();
+    cancelRecording();
+    storyGenerationRef.current += 1;
     publishedRef.current = null;
     setShareUrl(null);
     setPublishNote(null);
@@ -1324,6 +1421,9 @@ export default function Studio() {
   };
 
   /* ------------------------------------------------------------- keyboard */
+
+  const playOrStopRef = React.useRef(playOrStop);
+  playOrStopRef.current = playOrStop;
 
   React.useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -1352,19 +1452,103 @@ export default function Studio() {
         setActive(activeIndexRef.current + 1);
       } else if (event.key === " ") {
         event.preventDefault();
-        if (audio.playing) stopAudio();
-        else void play();
+        playOrStopRef.current();
       } else if (event.key === "Escape") {
         setTool(null);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [audio.playing, pendingOpen, pendingReply, phase, play, restore, setActive, stopAudio]);
+  }, [pendingOpen, pendingReply, phase, restore, setActive, stopAudio]);
 
   /* ----------------------------------------------------------------- derived */
 
   const currentMeta = page ? state.recordings[String(page.id)] : undefined;
+  /**
+   * The page's real voice length for the readout: the playing clip's own
+   * length while it plays, else what the take measured (a 6.4 s take reads
+   * 0:06), else unknown (a dash). Never the last clip of another page.
+   */
+  const pageDuration =
+    (audio.playing && audio.clipDuration > 0 ? audio.clipDuration : 0) ||
+    (page?.text?.audioUrl ? (currentMeta?.duration ?? 0) : 0);
+  /**
+   * The Voice card's codec line: during a take what the recorder negotiated;
+   * after it, what this page's voice is (draft or published).
+   */
+  const voiceCodec = recording
+    ? audio.takeMime !== null
+      ? codecLine(codecBadge("take", undefined, { mimeType: audio.takeMime, duration: 0 }))
+      : null
+    : page?.text?.audioUrl
+      ? codecLine(codecBadge(page.text.audioUrl, page.text.audioCodec, currentMeta))
+      : null;
+  /**
+   * A phone mid-take with the Voice sheet open: the sheet's Stop is the only
+   * Stop, so the transport underneath recedes and takes no focus or tap.
+   */
+  const transportAside = phone && recording && tool === "voice";
+
+  /*
+   * The take sheet never covers the picture being read: the Stage's picture
+   * zone takes exactly the room above the sheet's top (studio.css "the take
+   * sheet"; the Stage's words under the sheet give way, READ THIS carries
+   * them), so the photo shrinks or grows but stays whole, in its ring, with
+   * its pill.
+   */
+  const roomRef = React.useRef<HTMLDivElement | null>(null);
+  React.useEffect(() => {
+    const room = roomRef.current;
+    if (!transportAside || !room) return;
+    const sheet = room.querySelector<HTMLElement>('[data-studio="tool-card"]');
+    const zone = room.querySelector<HTMLElement>('[data-studio="stage-zone"]');
+    const monitor = room.querySelector<HTMLElement>('[data-studio="stage"]');
+    if (!sheet || !zone || !monitor) return;
+    const fit = () => {
+      // Down to the sheet's top, never past the Stage's own foot.
+      const floor = Math.min(sheet.getBoundingClientRect().top, monitor.getBoundingClientRect().bottom);
+      const cap = floor - zone.getBoundingClientRect().top - 12;
+      room.style.setProperty("--studio-zone-cap", `${Math.max(120, Math.floor(cap))}px`);
+    };
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(sheet);
+    // the sheet rises 20px as it opens: measure again where it lands
+    sheet.addEventListener("animationend", fit);
+    window.addEventListener("resize", fit);
+    return () => {
+      observer.disconnect();
+      sheet.removeEventListener("animationend", fit);
+      window.removeEventListener("resize", fit);
+      room.style.removeProperty("--studio-zone-cap");
+    };
+  }, [transportAside]);
+
+  /*
+   * Focus follows the one live Stop. When the transport steps out under the
+   * take sheet while it holds focus (REC by keyboard), focus moves to the
+   * sheet's Stop instead of dropping to the page; when the sheet is closed
+   * mid-take (its Close key unmounts with it), it goes to the transport's
+   * Stop, which is back.
+   */
+  const transportAreaRef = React.useRef<HTMLDivElement | null>(null);
+  const wasAsideRef = React.useRef(false);
+  React.useLayoutEffect(() => {
+    const was = wasAsideRef.current;
+    wasAsideRef.current = transportAside;
+    const room = roomRef.current;
+    const area = transportAreaRef.current;
+    if (!room || !area || was === transportAside) return;
+    const active = document.activeElement;
+    const lost = !active || active === document.body || !room.contains(active);
+    if (transportAside) {
+      if (lost || area.contains(active)) {
+        room.querySelector<HTMLElement>('[data-studio="tool-card"] [data-studio="voice-record"]')?.focus();
+      }
+    } else if (recordingRef.current && lost) {
+      area.querySelector<HTMLElement>('[data-sk="transport"][data-kind="stop"]')?.focus();
+    }
+  }, [transportAside]);
   /** The active page's mood: its own, else the story's (T24a). The Stage names it. */
   const pageMood = effectiveMood(state, page?.id);
   /** How many pages have their own mood; the Music card says so before it sets every page. */
@@ -1417,7 +1601,12 @@ export default function Studio() {
   /* -------------------------------------------------------------- render */
 
   return (
-    <div className="studio" data-recording={recording ? "true" : "false"}>
+    <div
+      ref={roomRef}
+      className="studio"
+      data-recording={recording ? "true" : "false"}
+      data-take-sheet={transportAside ? "true" : undefined}
+    >
       {/* ------------------------------------------------------------ top bar */}
       {/* The top row of the room: the bar, and under it, on a reply, its chip. */}
       <div className="studio-area-top min-w-0">
@@ -1527,6 +1716,7 @@ export default function Studio() {
           photoBusy={photoBusy}
           narrated={hasVoice}
           musicOn={state.musicOn}
+          recording={recording}
           onSelect={(next) => {
             if (next === "photo") {
               setTool(null);
@@ -1554,10 +1744,11 @@ export default function Studio() {
             hasVoice={hasVoice}
             voiceSeconds={currentMeta?.duration ?? audio.clipDuration}
             recordSeconds={audio.recordSeconds}
+            codec={voiceCodec}
             playing={audio.playing}
             micError={audio.micError}
             onToggleRecord={() => void toggleRecord()}
-            onListen={() => (audio.playing ? stopAudio() : void play(activeIndex))}
+            onListen={() => playOrStop(activeIndex)}
             onDelete={deleteRecording}
             onRetry={() => {
               clearMicError();
@@ -1584,6 +1775,9 @@ export default function Studio() {
         {tool === "magic" ? (
           <MagicPanel
             busy={magicBusy}
+            recording={recording}
+            prompt={magicPrompt}
+            onPromptChange={setMagicPrompt}
             willReplace={pages.some((p) => p.text?.content?.trim() || p.illustration?.url)}
             onGenerate={(prompt, count, look) => void runMagic(prompt, count, look)}
             onClose={() => setTool(null)}
@@ -1643,7 +1837,7 @@ export default function Studio() {
           recording={recording}
           recordSeconds={audio.recordSeconds}
           position={audio.position}
-          clipDuration={audio.clipDuration}
+          clipDuration={pageDuration}
           photoBusy={photoBusy}
           mood={pageMood}
           musicOn={state.musicOn}
@@ -1702,7 +1896,12 @@ export default function Studio() {
       </div>
 
       {/* -------------------------------------------------------- transport */}
-      <div className="studio-area-transport">
+      <div
+        ref={transportAreaRef}
+        className="studio-area-transport"
+        data-aside={transportAside ? "true" : undefined}
+        inert={transportAside}
+      >
         <Transport
           playing={audio.playing}
           recording={recording}
@@ -1710,7 +1909,7 @@ export default function Studio() {
           pageNumber={activeIndex + 1}
           pageCount={pageCount}
           position={audio.position}
-          clipDuration={audio.clipDuration}
+          clipDuration={pageDuration}
           recordSeconds={audio.recordSeconds}
           onPrev={() => {
             stopAudio();
@@ -1720,7 +1919,7 @@ export default function Studio() {
             stopAudio();
             setActive(activeIndex + 1);
           }}
-          onPlayPause={() => (audio.playing ? stopAudio() : void play(activeIndex))}
+          onPlayPause={() => playOrStop(activeIndex)}
           onRecord={() => {
             setTool("voice");
             void toggleRecord();

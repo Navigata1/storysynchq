@@ -13,7 +13,7 @@ import { Lock, Mic, MicOff, Pen, Play, Square, Trash2, X } from "lucide-react";
 import { BigButton, GlassPanel } from "@/components/studio-kit/kit";
 import type { MicPermissionError } from "@/lib/audio/recorder";
 import { MOOD_CHROME, MOOD_NAMES, moodBlurb, type MoodName } from "./moods-ui";
-import { formatClock } from "./types";
+import { formatClock, type CodecBadge } from "./types";
 import "./read-this.css";
 
 /* ---------------------------------------------------------------- shell */
@@ -21,11 +21,19 @@ import "./read-this.css";
 function PanelShell({
   title,
   subtitle,
+  compact = false,
   onClose,
   children,
 }: {
   title: string;
   subtitle?: string;
+  /**
+   * The phone sheet during a take with READ THIS (studio.css "the take
+   * sheet"): the title and subtitle only repeat the Stage's pill, its chip
+   * and Stop, so on a phone they step out of sight (still read out) and the
+   * close key sits in the card's corner. From 768px nothing changes.
+   */
+  compact?: boolean;
   onClose: () => void;
   children: React.ReactNode;
 }) {
@@ -34,21 +42,35 @@ function PanelShell({
       role="dialog"
       aria-label={title}
       data-studio="tool-card"
+      data-compact={compact ? "true" : undefined}
       // The card's own navy must beat GlassPanel's default bg-white/5 (it never
       // did, so the sheet read as clear glass over the toolbar): hence the "!".
-      className="studio-toolpanel studio-scroll flex flex-col border-white/12 bg-[#0b1020]/92! p-4 shadow-2xl lg:rounded-[20px] lg:bg-[#080b15]/80! lg:p-5"
+      // On a phone the sheet is opaque: the toolbar's labels never show
+      // through behind the privacy footnote.
+      className="studio-toolpanel studio-scroll flex flex-col border-white/12 bg-[#0b1020]/92! p-4 shadow-2xl max-md:bg-[#0b1020]! lg:rounded-[20px] lg:bg-[#080b15]/80! lg:p-5"
     >
       {/* The close key sits beside the title, so the subtitle has the full width. */}
-      <div className="relative mb-3 flex-none">
-        <h2 className="flex min-h-8 items-center pr-12 text-base font-semibold text-white lg:text-xl lg:tracking-[-0.01em]">
+      <div data-studio="tool-card-head" className="studio-toolpanel-head flex-none">
+        <h2
+          className={`flex min-h-8 items-center pr-12 text-base font-semibold text-white lg:text-xl lg:tracking-[-0.01em]${
+            compact ? " max-md:sr-only max-md:min-h-0" : ""
+          }`}
+        >
           {title}
         </h2>
-        {subtitle ? <p className="mt-1 text-sm text-white/50 lg:text-ss-fg-2">{subtitle}</p> : null}
+        {subtitle ? (
+          <p
+            data-studio="tool-card-subtitle"
+            className={`mt-1 text-sm text-white/50 lg:text-ss-fg-2${compact ? " max-md:sr-only" : ""}`}
+          >
+            {subtitle}
+          </p>
+        ) : null}
         <button
           type="button"
           onClick={onClose}
           aria-label={`Close ${title}`}
-          className="sk-focus absolute -top-1 right-0 flex h-10 w-10 items-center justify-center rounded-xl border border-white/12 bg-white/5 text-white/70 hover:bg-white/10"
+          className="studio-toolpanel-close sk-focus absolute -top-1 right-0 flex h-10 w-10 items-center justify-center rounded-xl border border-white/12 bg-white/5 text-white/70 hover:bg-white/10"
         >
           <X aria-hidden="true" className="size-[18px]" strokeWidth={2} />
         </button>
@@ -59,6 +81,18 @@ function PanelShell({
 }
 
 /* ----------------------------------------------------------------- voice */
+
+/**
+ * The Voice card's codec line, from types.ts `codecBadge`: its label, then
+ * what Finish will do with it. A draft line says what was negotiated and
+ * never which browser it came from (Chromium records AAC too now).
+ */
+export function codecLine(badge: CodecBadge): string | null {
+  if (badge.tone === "none") return null;
+  if (badge.tone === "published") return `${badge.label} — ${badge.hint}`;
+  if (badge.label === "draft · AAC") return `${badge.label} — Finish is a passthrough`;
+  return `${badge.label} — Finish converts it to AAC`;
+}
 
 const MIC_HELP: Record<MicPermissionError, { title: string; body: string }> = {
   denied: {
@@ -117,6 +151,11 @@ export interface VoicePanelProps {
   hasVoice: boolean;
   voiceSeconds: number;
   recordSeconds: number;
+  /**
+   * One mono line under Stop: during a take, the codec the recorder
+   * negotiated; after it, what this page's voice is. Null: no line.
+   */
+  codec?: string | null;
   playing: boolean;
   micError: MicPermissionError | null;
   onToggleRecord: () => void;
@@ -133,6 +172,7 @@ export function VoicePanel({
   hasVoice,
   voiceSeconds,
   recordSeconds,
+  codec = null,
   playing,
   micError,
   onToggleRecord,
@@ -191,6 +231,7 @@ export function VoicePanel({
   return (
     <PanelShell
       title="Voice"
+      compact={reading}
       subtitle={
         recording
           ? "Listening… tap again when you are done"
@@ -235,6 +276,12 @@ export function VoicePanel({
             <span className="text-lg leading-none font-semibold text-white tabular-nums">{label}</span>
           </button>
 
+          {codec ? (
+            <p data-studio="codec-line" className="studio-codec-line font-ss-mono">
+              {codec}
+            </p>
+          ) : null}
+
           <p
             data-studio="voice-lock"
             className="flex items-center justify-center gap-2 text-[13px] leading-snug text-ss-fg-3"
@@ -275,7 +322,10 @@ export function VoicePanel({
         ) : null}
       </div>
 
-      <p className="mt-2.5 flex-none border-t border-white/10 pt-2.5 text-center text-xs leading-relaxed text-[#6f7891]">
+      <p
+        data-studio="voice-footnote"
+        className="studio-voice-footnote mt-2.5 flex-none border-t border-white/10 pt-2.5 text-center text-xs leading-relaxed text-ss-fg-3"
+      >
         Recordings live only in this browser until a grown-up taps Finish my story.
       </p>
     </PanelShell>
@@ -416,19 +466,31 @@ export type MagicLook = (typeof MAGIC_LOOKS)[number]["id"];
 
 export interface MagicPanelProps {
   busy: boolean;
+  /** A take is recording: a new story would replace its page, so Magic waits. */
+  recording?: boolean;
+  /** The idea, kept by the Studio so a take that sets Magic aside never loses it. */
+  prompt: string;
+  onPromptChange: (prompt: string) => void;
   willReplace: boolean;
   onGenerate: (prompt: string, pages: number, look: MagicLook) => void;
   onClose: () => void;
 }
 
-export function MagicPanel({ busy, willReplace, onGenerate, onClose }: MagicPanelProps) {
-  const [prompt, setPrompt] = React.useState("");
+export function MagicPanel({
+  busy,
+  recording = false,
+  prompt,
+  onPromptChange,
+  willReplace,
+  onGenerate,
+  onClose,
+}: MagicPanelProps) {
   const [pages, setPages] = React.useState(5);
   const [look, setLook] = React.useState<MagicLook>("storybook");
   const [confirming, setConfirming] = React.useState(false);
 
   const submit = () => {
-    if (!prompt.trim() || busy) return;
+    if (!prompt.trim() || busy || recording) return;
     if (willReplace && !confirming) {
       setConfirming(true);
       return;
@@ -445,7 +507,7 @@ export function MagicPanel({ busy, willReplace, onGenerate, onClose }: MagicPane
         id="studio-magic-prompt"
         value={prompt}
         onChange={(e) => {
-          setPrompt(e.target.value);
+          onPromptChange(e.target.value);
           setConfirming(false);
         }}
         rows={3}
@@ -498,7 +560,13 @@ export function MagicPanel({ busy, willReplace, onGenerate, onClose }: MagicPane
         </div>
       </div>
 
-      {confirming ? (
+      {recording ? (
+        <p data-studio="magic-waits" className="mt-3 text-sm leading-snug text-amber-200/85">
+          Finish the recording first — a new story would replace the page you are reading.
+        </p>
+      ) : null}
+
+      {confirming && !recording ? (
         <p className="mt-3 rounded-xl border border-amber-400/40 bg-amber-500/10 p-3 text-sm text-amber-100">
           This replaces the pages you already have. Tap again to go ahead.
         </p>
@@ -508,7 +576,7 @@ export function MagicPanel({ busy, willReplace, onGenerate, onClose }: MagicPane
         icon="✨"
         label={busy ? "Writing…" : confirming ? "Yes, replace my pages" : "Make my story"}
         variant={confirming ? "red" : "violet"}
-        disabled={busy || !prompt.trim()}
+        disabled={busy || recording || !prompt.trim()}
         onClick={submit}
         className="mt-3 w-full justify-center"
       />

@@ -294,6 +294,68 @@
   /* "your voice · m:ss" with Listen and Delete: compact keys */
   .studio-voice-yours { --sk-big-h: 52px; }
 
+  /* The codec line under Stop: what the recorder negotiated during a take,
+     what the page's voice is after it (s06 phone 2). Mono, quiet, one line
+     where it fits. */
+  .studio-codec-line {
+    margin: 0;
+    max-width: 100%;
+    font-size: 10.5px;
+    line-height: 1.35;
+    letter-spacing: 0.1em;
+    text-align: center;
+    text-transform: uppercase;
+    color: var(--ss-fg-3);
+  }
+  /* Docked (≥ 1024px) the column's take is measured to the pixel (s03) and
+     the Advanced inspector already names each page's codec: no line there. */
+  @media (min-width: 1024px) {
+    .studio-codec-line { display: none; }
+  }
+
+  /* the card's head: the title, its subtitle, the close key beside them */
+  .studio-toolpanel-head {
+    position: relative;
+    margin-bottom: 12px;
+  }
+
+  /* ----------------------------------------------------- the take sheet */
+  /* A phone mid-take with the Voice sheet open (s06 phone 2): the sheet's
+     Stop is the only Stop. The transport steps out (inert in Studio.tsx,
+     unseen here) and the sheet takes its band; the sheet's title and
+     subtitle, which only repeat the Stage's pill, chip and Stop, step out of
+     sight (still read out) and the close key sits in READ THIS's corner. */
+  @media (max-width: 767.98px) {
+    .studio[data-take-sheet="true"] .studio-area-transport { visibility: hidden; }
+    .studio[data-take-sheet="true"] .studio-toolpanel { bottom: 0; }
+    /* The photo being read stays whole above the sheet, ring and pill
+       included: the picture zone takes the room left above the sheet's top
+       (Studio.tsx measures it), and the Stage's words, under the sheet and
+       on READ THIS, give way instead. */
+    /* the room is the screen for the take, so the Stage keeps its height */
+    .studio[data-take-sheet="true"] {
+      height: 100dvh;
+      min-height: 0;
+    }
+    .studio[data-take-sheet="true"] .stage-zone {
+      flex: 0 0 auto;
+      height: var(--studio-zone-cap, auto);
+    }
+    .studio-toolpanel[data-compact="true"] .studio-toolpanel-head {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      z-index: 2;
+      width: 40px;
+      height: 40px;
+      margin: 0;
+    }
+    /* solid over the paper: the key's glass fill would read as a smudge */
+    .studio-toolpanel[data-compact="true"] .studio-toolpanel-close {
+      background-color: #0b1020 !important;
+    }
+  }
+
   /* ---------------------------------------------------------- inspector */
   .studio-inspector {
     position: fixed;
