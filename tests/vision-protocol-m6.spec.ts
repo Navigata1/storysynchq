@@ -639,3 +639,59 @@ test.describe("M6 · /protocol codec card", () => {
     });
   }
 });
+
+/* ------------------------------ 9 · a wrapped bar still clears anchor jumps */
+
+test.describe("M6 wave B · /protocol scroll-padding follows the bar's real height", () => {
+  for (const [w, h] of [
+    [320, 568],
+    [375, 812],
+    [1140, 712],
+  ] as const) {
+    test(`${w}×${h}: scroll-padding-top ≥ bar + 12; an anchor jump and scrollIntoView land below the bar`, async ({
+      page,
+    }) => {
+      await open(page, w, h);
+      // the page measures its bar once hydrated (a CSS fallback stands in before)
+      await expect
+        .poll(() => page.evaluate(() => document.documentElement.style.getPropertyValue("--pr-bar-h")))
+        .not.toBe("");
+      const pad = await settled(page, () => ({
+        bar: document.querySelector(".pr-bar")!.getBoundingClientRect().height,
+        pad: Number.parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop),
+      }));
+      // at 320 the bar wraps to two lines (~89 px); the padding was a fixed 60
+      expect(pad.pad, JSON.stringify(pad)).toBeGreaterThanOrEqual(pad.bar + 12 - 1);
+      expect(pad.pad, "no needless gap above the target").toBeLessThanOrEqual(pad.bar + 12 + 1);
+
+      for (const id of ["pr-codec-h", "pr-privacy-h", "pr-container-h"]) {
+        // the browser's own anchor scroll
+        await page.evaluate((target) => {
+          window.scrollTo(0, 0);
+          location.hash = `#${target}`;
+        }, id);
+        const viaHash = await settled(page, () => {
+          const bar = document.querySelector(".pr-bar")!.getBoundingClientRect().bottom;
+          const target = document.getElementById(location.hash.slice(1))!.getBoundingClientRect().top;
+          return { bar, target };
+        });
+        expect(viaHash.target, `${id} via #hash ${JSON.stringify(viaHash)}`).toBeGreaterThanOrEqual(viaHash.bar);
+
+        // and a script's scrollIntoView
+        await page.evaluate((target) => {
+          window.scrollTo(0, 0);
+          document.getElementById(target)!.scrollIntoView({ block: "start" });
+        }, id);
+        const viaScript = await settled(page, () => {
+          const bar = document.querySelector(".pr-bar")!.getBoundingClientRect().bottom;
+          // the hash still names the same target
+          const target = document.getElementById(location.hash.slice(1))!.getBoundingClientRect().top;
+          return { bar, target };
+        });
+        expect(viaScript.target, `${id} via scrollIntoView ${JSON.stringify(viaScript)}`).toBeGreaterThanOrEqual(
+          viaScript.bar,
+        );
+      }
+    });
+  }
+});

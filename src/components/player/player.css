@@ -248,6 +248,41 @@
     padding-bottom: max(clamp(20px, 5vw, 48px), env(safe-area-inset-bottom, 0px));
   }
 
+  /* s05 with a first drawing: the drawing, blurred once (22px) and dimmed
+     (brightness .5, then .3 → .62 navy), opaque under the gate — no second
+     blur stacked on the room's 44px one, no vignette muddying the foot. It
+     overhangs the screen so the blur's soft rim never shows. */
+  .pl-cover-room {
+    position: absolute;
+    inset: 0;
+    z-index: 39;
+    overflow: hidden;
+    pointer-events: none;
+    background-color: var(--ss-navy, #0a0e1a);
+  }
+  .pl-cover-room img {
+    position: absolute;
+    inset: -70px;
+    width: calc(100% + 140px);
+    height: calc(100% + 140px);
+    max-width: none;
+    object-fit: cover;
+    filter: blur(22px) brightness(0.5) saturate(1.15);
+  }
+  .pl-cover-room::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(180deg, rgba(6, 9, 16, 0.3), rgba(6, 9, 16, 0.62));
+  }
+  .pl-root:not(.is-hc) .pl-cover.has-art {
+    background-image: none;
+    backdrop-filter: none;
+  }
+  .pl-root.is-hc .pl-cover-room {
+    display: none;
+  }
+
   .pl-root[data-view="cover"] :is(.pl-stage, .pl-chrome, .pl-deck, .pl-progress) {
     visibility: hidden;
   }
@@ -291,7 +326,8 @@
     line-height: 1.6;
     letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: rgba(226, 232, 240, 0.4);
+    /* s05 .g-micro: fg at .74, AA on the drawing's dimmed light */
+    color: rgba(226, 232, 240, 0.74);
     text-align: center;
   }
 
@@ -406,6 +442,27 @@
     -webkit-mask-image: linear-gradient(180deg, #000 0, #000 calc(var(--pl-fit-h) - 64px), transparent var(--pl-fit-h));
     mask-image: linear-gradient(180deg, #000 0, #000 calc(var(--pl-fit-h) - 64px), transparent var(--pl-fit-h));
   }
+  /* …and under that foot the drawing's own lower edge, mirrored, softened and
+     a little dimmed, washes on down into the scrim — the band between the
+     picture and the words reads as the page's colours, not the room's fog. It
+     starts under the fade (the mirror's first rows are the picture's last)
+     and fades out before the prose, so the scrim's contrast is unchanged. */
+  .pl-page.is-full.is-portrait-fit .pl-picture-foot {
+    --pl-fit-h: calc(100vw / var(--pl-art-ratio, 1));
+    position: absolute;
+    top: calc(var(--pl-fit-h) - 72px);
+    left: 0;
+    width: 100%;
+    height: var(--pl-fit-h);
+    object-fit: fill;
+    transform: scaleY(-1);
+    filter: blur(14px) saturate(1.1) brightness(0.82);
+    /* drawn bottom-up: the mask is flipped with the element, so 0deg is the
+       mirror's visual top (the picture's own foot) */
+    -webkit-mask-image: linear-gradient(0deg, #000 0, #000 30%, rgba(0, 0, 0, 0.5) 52%, transparent 78%);
+    mask-image: linear-gradient(0deg, #000 0, #000 30%, rgba(0, 0, 0, 0.5) 52%, transparent 78%);
+    pointer-events: none;
+  }
   .pl-page.is-full .pl-prose {
     text-shadow: 0 2px 18px rgba(0, 0, 0, 0.7);
   }
@@ -419,7 +476,10 @@
     overflow-y: auto;
     overscroll-behavior: contain;
     padding: clamp(18px, 3.4vw, 44px) clamp(24px, 6vw, 96px);
-    padding-bottom: max(clamp(96px, 14vh, 148px), env(safe-area-inset-bottom, 0px));
+    /* the awake transport stands 92px + the chrome's own bottom inset
+       (max(16px, safe area)) tall; the words keep 12px clear of it on every
+       phone height, not only where 14vh happens to be enough (s02, 320×568) */
+    padding-bottom: max(clamp(120px, 14vh, 148px), calc(env(safe-area-inset-bottom, 0px) + 104px));
     background-image: linear-gradient(
       180deg,
       rgba(7, 10, 18, 0) 0%,
@@ -528,6 +588,7 @@
     background-color: #000000;
   }
   .pl-root.is-hc .pl-room-light,
+  .pl-root.is-hc .pl-picture-foot,
   .pl-root.is-hc .pl-ambient,
   .pl-root.is-hc .pl-backdrop,
   .pl-root.is-hc .pl-vignette {

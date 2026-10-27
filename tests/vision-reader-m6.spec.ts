@@ -24,6 +24,8 @@
 
 import { expect, test, type Page } from "@playwright/test";
 import { randomBytes } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { seedDeviceLibrary } from "./fixtures/helpers";
 
 /* ─────────────────────────────────────────────────────────────── helpers */
@@ -623,11 +625,14 @@ test.describe("M6 · B · the cover gate (s05)", () => {
       await expect(page.locator(sel).first(), `${sel} under the gate`).toBeHidden();
     }
     await expect(page.getByRole("button", { name: "Reading options" })).toBeHidden();
+    // M6 wave B (deliberate change): the blur ≥ 20px now lives on the gate's
+    // own copy of the first drawing ([data-pl="cover-room"]), blurred once,
+    // instead of a backdrop-filter re-blurring the room's already-blurred copy.
     const blur = await page
-      .locator(".pl-cover")
-      .evaluate((el) => getComputedStyle(el).backdropFilter || (getComputedStyle(el) as unknown as Record<string, string>).webkitBackdropFilter);
+      .locator('[data-pl="cover-room"] img')
+      .evaluate((el) => getComputedStyle(el).filter);
     const px = Number(/blur\(([\d.]+)px\)/.exec(blur)?.[1] ?? 0);
-    expect(px, `cover blur ${blur}`).toBeGreaterThanOrEqual(20);
+    expect(px, `gate drawing blur ${blur}`).toBeGreaterThanOrEqual(20);
 
     const begin = page.getByRole("button", { name: /Tap to Begin/ });
     await expect(begin.locator("svg.lucide-sparkles")).toHaveCount(1);
@@ -730,5 +735,207 @@ test.describe("M6 · B · the end card (s06)", () => {
     );
     console.log(`[m6-b] privacy line ${info.color}: p5 ${worst.toFixed(2)}:1`);
     expect(worst).toBeGreaterThanOrEqual(4.5);
+  });
+});
+
+/* ─────────────────────── wave B · the portrait-fit band reads as the page */
+
+test.describe("M6 wave B · s02 phone portrait-fit: under the picture's foot, the page's colours, not fog", () => {
+  for (const vp of [
+    { width: 375, height: 812 },
+    { width: 390, height: 844 },
+  ]) {
+    test(`${vp.width}×${vp.height} · the band below the faded foot carries the drawing (texture and hue), decoration only`, async ({
+      page,
+    }) => {
+      test.setTimeout(60000);
+      await page.setViewportSize(vp);
+      await housePage2(page, "cats");
+      await expect(page.locator(".pl-page.is-full.is-portrait-fit")).toHaveCount(1);
+      await page.waitForTimeout(1200); // the page-in and the room's crossfade land
+
+      const geo = await page.evaluate(() => {
+        const img = document.querySelector<HTMLImageElement>(".pl-page.is-full .pl-picture img")!;
+        const r = img.getBoundingClientRect();
+        const scale = Math.min(r.width / img.naturalWidth, r.height / img.naturalHeight);
+        return { foot: r.top + img.naturalHeight * scale, w: window.innerWidth };
+      });
+      const [pic, band] = await pixels(page, [
+        { x: 0, y: geo.foot - 96, width: geo.w, height: 28 }, // the picture's last unfaded rows
+        { x: 0, y: geo.foot + 8, width: geo.w, height: 72 }, // the band under its foot
+      ]);
+      const w = Math.round(geo.w);
+      // texture: how much the band varies from column to column (a fog is flat)
+      const rows = band.length / w;
+      const cols: number[] = [];
+      for (let x = 0; x < w; x++) {
+        let sum = 0;
+        for (let y = 0; y < rows; y++) sum += lum(...band[y * w + x]);
+        cols.push(sum / rows);
+      }
+      const mean = cols.reduce((a, b) => a + b, 0) / cols.length;
+      const sd = Math.sqrt(cols.reduce((a, b) => a + (b - mean) ** 2, 0) / cols.length);
+      // hue: the band's blue-over-red cast against the picture's own
+      const cast = (px: Array<[number, number, number]>) =>
+        px.reduce((a, [r, , b]) => a + (b - r), 0) / px.length;
+      const drift = Math.abs(cast(band) - cast(pic));
+      console.log(`[m6-wb] ${vp.width} band column sd ${sd.toFixed(4)}, hue drift ${drift.toFixed(1)}`);
+      // was a flat blue-grey haze: sd ≈ 0.021 (relative luminance), drift ≈ 24;
+      // with the drawing carried on: sd ≈ 0.051, drift ≈ 6-8
+      expect(sd, "the band carries the drawing's variation").toBeGreaterThanOrEqual(0.035);
+      expect(drift, "the band keeps the drawing's hue").toBeLessThanOrEqual(15);
+
+      // decoration only: hidden from assistive tech, gone in high contrast
+      const foot = page.locator('[data-pl="picture-foot"]');
+      await expect(foot).toHaveAttribute("aria-hidden", "true");
+      await expect(foot).toHaveAttribute("alt", "");
+      await page.mouse.move(vp.width / 2, vp.height / 3); // wake the idled chrome
+      await page.getByRole("button", { name: "Reading options" }).click();
+      await page.getByRole("switch", { name: /High contrast/ }).click();
+      await page.keyboard.press("Escape");
+      await expect(page.locator(".pl-root")).toHaveClass(/\bis-hc\b/);
+      await expect(foot).toBeHidden();
+    });
+  }
+
+  test("768×1024 · no foot where the picture is not fitted", async ({ page }) => {
+    test.setTimeout(60000);
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await housePage2(page, "cats");
+    await expect(page.locator(".pl-page.is-portrait-fit")).toHaveCount(0);
+    await expect(page.locator('[data-pl="picture-foot"]')).toHaveCount(0);
+  });
+});
+
+/* ───────────── wave B · the awake transport never covers the last prose line */
+
+const HOUSE_PAGES = (
+  JSON.parse(readFileSync(join(__dirname, "..", "public", "demo", "brave-little-star.ssync.json"), "utf8")) as {
+    pages: unknown[];
+  }
+).pages.length;
+
+test.describe("M6 wave B · s02 small phones: the awake transport clears the words", () => {
+  for (const vp of [
+    { width: 320, height: 568 },
+    { width: 375, height: 667 },
+    { width: 414, height: 736 },
+    { width: 375, height: 812 },
+  ]) {
+    test(`${vp.width}×${vp.height} · every page of the house tape: the last line ends ≥ 8px above the transport`, async ({
+      page,
+    }) => {
+      test.setTimeout(90000);
+      await page.setViewportSize(vp);
+      await stubSpeech(page);
+      await page.goto("/read?demo=1");
+      await tapToBegin(page);
+      await page.evaluate(() => document.fonts.ready.then(() => true));
+      const root = page.locator(".pl-root");
+      const total = HOUSE_PAGES;
+      for (let n = 1; n <= total; n++) {
+        if (n > 1) await page.keyboard.press("ArrowRight");
+        await expect(root).toHaveAttribute("data-page", String(n));
+        await expect(page.locator(".pl-page")).not.toHaveClass(/is-(out|in)\b/, { timeout: 5000 });
+        // wake the chrome (a pointer move), then read in one frame; a text
+        // region that scrolls is read at its end, where its last line rests
+        await page.mouse.move(vp.width / 2 + n, vp.height / 3);
+        await expect(page.locator(".pl-chrome--bottom")).not.toHaveClass(/is-hidden/);
+        const r = await page.evaluate(() => {
+          const text = document.querySelector<HTMLElement>('.pl-page [data-pl="text"]');
+          const prose = text?.querySelector(".pl-prose");
+          if (!text || !prose) return null;
+          text.scrollTop = text.scrollHeight;
+          const range = document.createRange();
+          range.selectNodeContents(prose);
+          const last = Math.max(...[...range.getClientRects()].map((q) => q.bottom));
+          const transport = document.querySelector(".pl-transport")!.getBoundingClientRect();
+          return { last, transportTop: transport.top };
+        });
+        if (!r) continue; // a picture-only page
+        expect(r.last, `page ${n}: last line ${r.last} vs transport ${r.transportTop}`).toBeLessThanOrEqual(
+          r.transportTop - 8,
+        );
+      }
+    });
+  }
+});
+
+/* ──────────────── wave B · the cover gate: the drawing blurred once, not mud */
+
+test.describe("M6 wave B · s05 the cover gate is the first drawing, blurred once and dimmed", () => {
+  test("390×844 · one blur (≈22px), brightness ≈ .5, no stacked backdrop blur; the foot not crushed; the note at AA", async ({
+    page,
+  }) => {
+    test.setTimeout(60000);
+    await page.setViewportSize({ width: 390, height: 844 });
+    const code = randomBytes(16).toString("hex");
+    await seedDeviceLibrary(page, "twinkle", { shareCode: code });
+    await page.goto(`/read?story=${code}`);
+    await expect(page.locator(".pl-root")).toHaveAttribute("data-view", "cover", { timeout: 20000 });
+    const art = page.locator('[data-pl="cover-room"] img');
+    await expect(art).toHaveCount(1);
+    await expect(page.locator('[data-pl="cover-room"]')).toHaveAttribute("aria-hidden", "true");
+    await art.evaluate((el) => (el as HTMLImageElement).decode().catch(() => undefined));
+    await page.waitForTimeout(900); // the gate's own entrance lands
+
+    const f = await page.evaluate(() => {
+      const img = document.querySelector('[data-pl="cover-room"] img')!;
+      const cover = document.querySelector(".pl-cover")!;
+      const filter = getComputedStyle(img).filter;
+      const num = (re: RegExp) => Number(re.exec(filter)?.[1] ?? NaN);
+      const cs = getComputedStyle(cover);
+      const backdrop = cs.backdropFilter || (cs as unknown as Record<string, string>).webkitBackdropFilter || "none";
+      return { blur: num(/blur\(([\d.]+)px\)/), brightness: num(/brightness\(([\d.]+)\)/), backdrop };
+    });
+    // s05's .g-bg: blur(22px) brightness(0.5)
+    expect(f.blur).toBeGreaterThanOrEqual(20);
+    expect(f.blur).toBeLessThanOrEqual(28);
+    expect(f.brightness).toBeGreaterThanOrEqual(0.4);
+    expect(f.brightness).toBeLessThanOrEqual(0.6);
+    expect(f.backdrop.includes("blur"), `no second blur stacked on the room: ${f.backdrop}`).toBe(false);
+
+    // pixels: the gate's top and foot strips (clear of the cassette and the
+    // button). Was 50 → 23 (8-bit mean): a crushed, muddy foot. s05 keeps its
+    // foot at ~.8 of its top.
+    const [top, foot] = await pixels(page, [
+      { x: 0, y: 0, width: 390, height: 40 },
+      { x: 60, y: 800, width: 330, height: 40 },
+    ]);
+    const mean = (px: Array<[number, number, number]>) => px.reduce((a, [r, g, b]) => a + (r + g + b) / 3, 0) / px.length;
+    const ratioFootTop = mean(foot) / mean(top);
+    console.log(`[m6-wb] gate top ${mean(top).toFixed(1)} foot ${mean(foot).toFixed(1)}`);
+    expect(ratioFootTop, "the foot of the gate is not crushed to black").toBeGreaterThanOrEqual(0.55);
+    expect(mean(top), "dimmed, not bright").toBeLessThanOrEqual(110);
+
+    // the note under the button reads at AA on the light behind it
+    const note = page.locator(".pl-cover-note");
+    const box = (await note.boundingBox())!;
+    const color = parseColor(await note.evaluate((el) => getComputedStyle(el).color));
+    const [behind] = await pixels(page, [{ x: box.x, y: box.y + box.height + 4, width: box.width, height: 8 }]);
+    const bg = behind.reduce((a, p) => [a[0] + p[0], a[1] + p[1], a[2] + p[2]], [0, 0, 0]).map((v) => v / behind.length);
+    const ink = [0, 1, 2].map((i) => color[i] * color[3] + bg[i] * (1 - color[3]));
+    const cr = ratio(lum(ink[0], ink[1], ink[2]), lum(bg[0], bg[1], bg[2]));
+    expect(cr, `note contrast ${cr.toFixed(2)}`).toBeGreaterThanOrEqual(4.5);
+  });
+
+  test("high contrast: the gate drops the drawing and keeps its plain dim", async ({ page }) => {
+    test.setTimeout(60000);
+    await page.setViewportSize({ width: 390, height: 844 });
+    const code = randomBytes(16).toString("hex");
+    await seedDeviceLibrary(page, "twinkle", { shareCode: code });
+    // the viewer's stored choice (prefs.ts: ssync-reader-prefs, v2)
+    await page.addInitScript(() => {
+      try {
+        window.localStorage.setItem("ssync-reader-prefs", JSON.stringify({ v: 2, contrast: true }));
+      } catch {}
+    });
+    await page.goto(`/read?story=${code}`);
+    const root = page.locator(".pl-root");
+    await expect(root).toHaveAttribute("data-view", "cover", { timeout: 20000 });
+    await expect(root).toHaveClass(/\bis-hc\b/);
+    await expect(page.locator('[data-pl="cover-room"]')).toBeHidden();
+    const bgImage = await page.locator(".pl-cover").evaluate((el) => getComputedStyle(el).backgroundImage);
+    expect(bgImage).toContain("gradient");
   });
 });

@@ -133,6 +133,17 @@
   overflow: clip;
 }
 
+/* Phones in portrait: the promise is shorter than the screen, so a centred
+   min-height left an empty band under "or scroll to the two doors" with only
+   a sliver of the first door below it. Here the hero is as tall as its
+   content and the doors follow straight on (s01: the doors peek). Wider
+   screens keep the centred laptop composition above. */
+@media (max-width: 767px) {
+  .ls-hero {
+    min-height: 0;
+  }
+}
+
 .ls-hero-inner {
   position: relative;
   z-index: 1;

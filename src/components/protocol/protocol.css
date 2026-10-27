@@ -58,11 +58,20 @@
 }
 
 /* Keyboard focus never lands under the sticky bar (WCAG 2.2 SC 2.4.11): the
-   browser's own focus and anchor scrolls stop 60 px down (the 48 px bar + 12).
-   ProtocolPage's focus handler covers a stop already in view under the bar,
-   which Chrome does not scroll at all. */
+   browser's own focus and anchor scrolls stop 12 px below the bar. The bar is
+   48 px on one line, but below ~330 px it wraps to two (~89 px), so
+   ProtocolPage measures it into --pr-bar-h on <html>; 48 px is the fallback
+   before hydration. Its focus handler covers a stop already in view under the
+   bar, which Chrome does not scroll at all. */
 html:has(.pr-root) {
-  scroll-padding-top: 60px;
+  scroll-padding-top: calc(var(--pr-bar-h, 48px) + 12px);
+}
+
+/* before hydration, where the bar is known to wrap, assume its two lines */
+@media (max-width: 349px) {
+  html:has(.pr-root) {
+    scroll-padding-top: calc(var(--pr-bar-h, 90px) + 12px);
+  }
 }
 
 .pr-arrow {

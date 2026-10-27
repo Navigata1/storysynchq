@@ -189,9 +189,33 @@ function useFocusClearOfBar(rootRef: React.RefObject<HTMLDivElement | null>) {
   }, [rootRef]);
 }
 
+/**
+ * The sticky bar's real height on <html> as --pr-bar-h, for the page's
+ * scroll-padding-top (protocol.css). One line it is 48 px; below ~330 px the
+ * three destinations wrap to two lines and a fixed padding would leave anchor
+ * jumps and scrollIntoView targets under the bar. Removed on unmount so no
+ * other route inherits it.
+ */
+function useBarHeightVar(rootRef: React.RefObject<HTMLDivElement | null>) {
+  React.useEffect(() => {
+    const bar = rootRef.current?.querySelector<HTMLElement>(".pr-bar");
+    if (!bar) return;
+    const html = document.documentElement;
+    const write = () => html.style.setProperty("--pr-bar-h", `${bar.getBoundingClientRect().height}px`);
+    write();
+    const observer = new ResizeObserver(write);
+    observer.observe(bar);
+    return () => {
+      observer.disconnect();
+      html.style.removeProperty("--pr-bar-h");
+    };
+  }, [rootRef]);
+}
+
 export function ProtocolPage() {
   const rootRef = React.useRef<HTMLDivElement>(null);
   useFocusClearOfBar(rootRef);
+  useBarHeightVar(rootRef);
 
   return (
     <div ref={rootRef} className="pr-root sk-font-ui">

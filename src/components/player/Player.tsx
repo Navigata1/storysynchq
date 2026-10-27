@@ -1355,6 +1355,15 @@ export function Player({
             </div>
           ) : (
             <>
+              {/* A phone in portrait fits the picture to its width (s02): below
+                  its faded foot the drawing's own colours carry on (a soft
+                  mirrored wash of its lower edge) down into the scrim, instead
+                  of the room's grey haze. Decoration only; painted before (so
+                  under) the picture, outside it so the picture keeps one img. */}
+              {image && portraitFit ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img className="pl-picture-foot" src={image} alt="" aria-hidden="true" data-pl="picture-foot" />
+              ) : null}
               {image ? (
                 <div className="pl-picture">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1604,8 +1613,18 @@ export function Player({
       ) : null}
 
       {/* ──────────────────────────────────────────────────── cover gate */}
+      {/* s05: the gate's light is the first drawing itself, blurred once and
+          dimmed (the reference's blur 22 · brightness .5 · dim .3 → .62),
+          drawn opaque over the room rather than re-blurring the room's own
+          already-blurred, vignetted copy of it */}
+      {!started && bg.cur ? (
+        <div className="pl-cover-room" data-pl="cover-room" aria-hidden="true">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={bg.cur} alt="" />
+        </div>
+      ) : null}
       {!started ? (
-        <div className="pl-cover" data-pl="cover">
+        <div className={cx("pl-cover", bg.cur && "has-art")} data-pl="cover">
           <div className="pl-cover-inner">
             <div>
               <div className="pl-shell">

@@ -348,3 +348,36 @@ test("M6 s01 · 9 · the hero cassette: a tape pack behind the left reel only, a
   const warm = r.stops.filter(([red, , blue]) => red - blue >= 20 && red >= 60);
   expect(warm.length, JSON.stringify(r.stops)).toBeGreaterThan(0);
 });
+
+/* ------------------------------------- 10 · no empty band on a phone (wave B) */
+
+test.describe("M6 wave B s01 · on a phone the doors follow the hint, no empty band", () => {
+  for (const viewport of [
+    { width: 390, height: 844 },
+    { width: 375, height: 812 },
+    { width: 414, height: 896 },
+  ]) {
+    for (const reduced of [false, true]) {
+      test(`10 · ${viewport.width}×${viewport.height}${reduced ? " reduced motion" : ""}: hint → first door ≤ 48px, the door peeks ≥ 60px`, async ({
+        page,
+      }) => {
+        if (reduced) await page.emulateMedia({ reducedMotion: "reduce" });
+        await open(page, viewport);
+        await doorsRevealed(page);
+        const r = await page.evaluate(() => {
+          const hint = document.querySelector('[data-ls="or-scroll"]')!.getBoundingClientRect();
+          const nav = document.querySelector(".ls-hero .ls-nav")!.getBoundingClientRect();
+          const kicker = document.querySelector('[data-ls="hero-kicker"]')!.getBoundingClientRect();
+          const card = document.querySelector(".ls-doors-grid > *:first-child")!.getBoundingClientRect();
+          return { hintBottom: hint.bottom, cardTop: card.top, kickerTop: kicker.top, navBottom: nav.bottom, ih: innerHeight };
+        });
+        // was 78px of nothing at 390×844 (the hero centred in a min-height)
+        expect(r.cardTop - r.hintBottom, JSON.stringify(r)).toBeLessThanOrEqual(48);
+        expect(r.cardTop - r.hintBottom).toBeGreaterThanOrEqual(0);
+        expect(r.ih - r.cardTop, `door peek ${r.ih - r.cardTop}px`).toBeGreaterThanOrEqual(60);
+        // the kicker still clears the nav that overlays the hero
+        expect(r.kickerTop).toBeGreaterThanOrEqual(r.navBottom);
+      });
+    }
+  }
+});
