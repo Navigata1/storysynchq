@@ -529,9 +529,14 @@ test.describe("M6 · /protocol FIG. 1 plates", () => {
             l.textContent,
             window.__pr.lines(l),
           ]),
-          files: Array.from(fig.querySelectorAll(".sk-px-file")).map((f) => [
-            f.textContent,
-            window.__pr.lines(f),
+          // every readout but the Visual plate's (its alt text may take a
+          // second tail line, pinned in the test below)
+          files: Array.from(fig.querySelectorAll(".sk-px-file"))
+            .filter((f) => !f.closest('[data-layer="Visual"]'))
+            .map((f) => [f.textContent, window.__pr.lines(f)]),
+          tails: Array.from(fig.querySelectorAll(".sk-px-tail")).map((t) => [
+            t.textContent,
+            window.__pr.lines(t),
           ]),
           overflow: plates
             .map((li) => li.querySelector<HTMLElement>(".sk-px-in")!)
@@ -545,11 +550,89 @@ test.describe("M6 · /protocol FIG. 1 plates", () => {
         expect(n, `"${text}" stays one line`).toBe(1);
       for (const [text, n] of geo.files)
         expect(n, `"${text}" in at most two lines`).toBeLessThanOrEqual(2);
+      for (const [text, n] of geo.tails)
+        expect(n, `"${text}" tail in at most two lines`).toBeLessThanOrEqual(2);
       for (const h of geo.heights) {
         expect(h).toBeGreaterThanOrEqual(45);
         expect(h).toBeLessThanOrEqual(55);
       }
       expect(geo.overflow, "nothing spills out of a plate").toEqual([]);
+    });
+  }
+});
+
+/* --------------------------- 5b · no readout is cut short by an ellipsis */
+
+test.describe("M6 · /protocol FIG. 1 readouts are whole", () => {
+  for (const [w, h] of [
+    [1140, 712],
+    [1280, 720],
+    [768, 1024],
+  ] as const) {
+    test(`${w}: the Visual plate's alt text is shown in full, inside its plate`, async ({
+      page,
+    }) => {
+      await open(page, w, h);
+      await page
+        .locator('figure[data-protocol="fig-packet"]')
+        .scrollIntoViewIfNeeded();
+      const geo = await settled(page, () => {
+        const fig = document.querySelector(
+          'figure[data-protocol="fig-packet"]',
+        )!;
+        return Array.from(fig.querySelectorAll<HTMLElement>(".sk-px-tail")).map(
+          (t) => {
+            const li = t.closest("li")!;
+            const back = li
+              .querySelector('[data-plate="backing"]')!
+              .getBoundingClientRect();
+            // where the tail's own glyphs land, line by line
+            const range = document.createRange();
+            range.selectNodeContents(t);
+            const rects = Array.from(range.getClientRects()).filter(
+              (r) => r.width > 2 && r.height > 2,
+            );
+            const cs = getComputedStyle(t);
+            const clipped = (el: HTMLElement | null): string[] => {
+              const out: string[] = [];
+              for (let n = el; n && n !== li; n = n.parentElement) {
+                const s = getComputedStyle(n);
+                if (s.textOverflow === "ellipsis" && s.overflowX !== "visible")
+                  out.push(`ellipsis on .${n.className}`);
+                if (n.scrollWidth > n.clientWidth + 0.5 && s.overflowX !== "visible")
+                  out.push(`.${n.className} cuts ${n.scrollWidth - n.clientWidth}px`);
+              }
+              return out;
+            };
+            return {
+              layer: li.dataset.layer,
+              text: t.textContent,
+              textOverflow: cs.textOverflow,
+              clipped: clipped(t),
+              right: Math.max(...rects.map((r) => r.right)),
+              bottom: Math.max(...rects.map((r) => r.bottom)),
+              plateRight: back.right,
+              plateBottom: back.bottom,
+            };
+          },
+        );
+      });
+      const visual = geo.find((t) => t.layer === "Visual");
+      expect(visual, "the Visual plate prints its alt text").toBeTruthy();
+      expect(visual!.text).toBe("The little star among bigger, sleepy stars");
+      for (const t of geo) {
+        expect(t.textOverflow, `"${t.text}" ends in no ellipsis`).not.toBe(
+          "ellipsis",
+        );
+        expect(t.clipped, `"${t.text}" is not cut by any box`).toEqual([]);
+        expect(t.right, `"${t.text}" ends inside its plate`).toBeLessThanOrEqual(
+          t.plateRight,
+        );
+        expect(
+          t.bottom,
+          `"${t.text}" sits inside its plate`,
+        ).toBeLessThanOrEqual(t.plateBottom);
+      }
     });
   }
 });
