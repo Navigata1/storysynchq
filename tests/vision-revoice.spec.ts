@@ -34,7 +34,7 @@ const HOUSE_TITLE = "The Brave Little Star";
 const HOUSE_AUTHOR = "Island Development Crew";
 
 const REPLACE_BODY =
-  "The story on the Stage will be replaced. It is only kept on this device, so download it first if you want to keep it.";
+  "The story on the Stage will be replaced. It is only kept on this device, so finish it first if you want to keep it.";
 const BAD_FILE = "That file could not be opened as a .storysync tape.";
 const NOT_FOUND = "We couldn't find that tape";
 

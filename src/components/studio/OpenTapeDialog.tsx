@@ -119,7 +119,7 @@ export function OpenTapeDialog({
           </h2>
         </div>
         <p id="studio-open-body" className="mt-2 text-sm leading-relaxed text-white/60">
-          The story on the Stage will be replaced. It is only kept on this device, so download it
+          The story on the Stage will be replaced. It is only kept on this device, so finish it
           first if you want to keep it.
         </p>
         <div className="mt-4 grid gap-2">
