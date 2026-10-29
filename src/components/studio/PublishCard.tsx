@@ -86,6 +86,11 @@ export interface PublishCardProps {
    */
   returnFocusTo?: React.RefObject<HTMLElement | null>;
   note: string | null;
+  /**
+   * The saved tape got no link, and the share step said why (`shareBook`'s
+   * own sentence). Null: no sentence, so the card's general no-link copy.
+   */
+  linkError?: string | null;
   error: string | null;
   /** Page 1's picture as published, printed on the label. None when page 1 has none. */
   firstPicture?: { src: string; alt: string } | null;
@@ -368,6 +373,7 @@ export function PublishCard({
   reply = null,
   returnFocusTo,
   note,
+  linkError = null,
   error,
   firstPicture,
   layers,
@@ -873,9 +879,11 @@ export function PublishCard({
         <div>
           {saveFailed ? null : (
             <p className="rounded-xl border border-white/10 bg-white/[0.04] p-3 text-sm leading-relaxed text-white/70">
-              {authOffer
-                ? "Saved on this device. Nobody is signed in, so there is no link yet — download the tape, or sign in and one will be made."
-                : "Saved on this device. There is no cloud library configured, so download the .storysync file to keep the tape or hand it to someone."}
+              {linkError
+                ? `Saved ${cloud ? "to your cloud library" : "on this device"}, but no link was made. ${linkError}`
+                : authOffer
+                  ? "Saved on this device. Nobody is signed in, so there is no link yet — download the tape, or sign in and one will be made."
+                  : "Saved on this device. There is no cloud library configured, so download the .storysync file to keep the tape or hand it to someone."}
             </p>
           )}
           {authOffer ? (
@@ -944,7 +952,17 @@ export function PublishCard({
                   <MetaGroups
                     groups={[
                       "SSYNC 2.0",
-                      shareUrl ? (cloud ? "SHARED UNLISTED" : "LINKED ON THIS DEVICE") : "ON THIS DEVICE",
+                      // The label claims only what happened: a failed save
+                      // keeps nothing anywhere.
+                      saveFailed
+                        ? "NOT SAVED"
+                        : shareUrl
+                          ? cloud
+                            ? "SHARED UNLISTED"
+                            : "LINKED ON THIS DEVICE"
+                          : cloud
+                            ? "IN YOUR CLOUD LIBRARY"
+                            : "ON THIS DEVICE",
                     ]}
                   />
                 </span>

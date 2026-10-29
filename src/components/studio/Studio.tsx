@@ -323,9 +323,32 @@ export default function Studio() {
   const [steps, setSteps] = React.useState<PublishStep[]>(STEP_TEMPLATE);
   const [publishError, setPublishError] = React.useState<string | null>(null);
   const [publishNote, setPublishNote] = React.useState<string | null>(null);
+  /** Why the saved tape got no link, in `shareBook`'s own words; null when it did not say. */
+  const [linkError, setLinkError] = React.useState<string | null>(null);
   const [shareUrl, setShareUrl] = React.useState<string | null>(null);
   const [madeInLabel, setMadeInLabel] = React.useState("0:00");
   const [announcement, setAnnouncement] = React.useState("");
+  const reannounceFrame = React.useRef<number | null>(null);
+  /**
+   * Words a parent may trigger twice in a row ("Page 3 is Hush now." after
+   * applying the same feeling again). An unchanged live region is not news to
+   * a screen reader, so the region is emptied and the words written a frame
+   * later — the same clear-then-write "Everything deleted." uses.
+   */
+  const reannounce = React.useCallback((text: string) => {
+    if (reannounceFrame.current !== null) window.cancelAnimationFrame(reannounceFrame.current);
+    setAnnouncement("");
+    reannounceFrame.current = window.requestAnimationFrame(() => {
+      reannounceFrame.current = null;
+      setAnnouncement(text);
+    });
+  }, []);
+  React.useEffect(
+    () => () => {
+      if (reannounceFrame.current !== null) window.cancelAnimationFrame(reannounceFrame.current);
+    },
+    [],
+  );
 
   /* The honest unauthenticated path: cloud configured, nobody signed in. */
   const [authOffer, setAuthOffer] = React.useState(false);
@@ -772,12 +795,12 @@ export default function Studio() {
   const applyFeelingToPage = (mood: MoodName) => {
     if (!page) return;
     setPageMood(mood);
-    setAnnouncement(`Page ${activeIndex + 1} is ${mood} now.`);
+    reannounce(`Page ${activeIndex + 1} is ${mood} now.`);
   };
 
   const applyFeelingToEveryPage = (mood: MoodName) => {
     setState((prev) => ({ ...prev, mood, pageMoods: {} }));
-    setAnnouncement(`Every page is ${mood} now.`);
+    reannounce(`Every page is ${mood} now.`);
   };
 
   const applyPauseToAll = () => {
@@ -1060,9 +1083,11 @@ export default function Studio() {
       pageCount: manifest.pages.length,
       description: manifest.metadata.description ?? "",
       thumbnail: null,
-      // Unlisted-by-URL. `is_public` is what the read policy checks, so a story
-      // that is not public can never be opened by the person holding the link —
-      // which is the entire point of publishing (see PRIVACY.md, "public").
+      // Unlisted-by-URL. Since migration 003 there is no public read policy:
+      // a link is opened only through the by-code lookup function
+      // (`storybook_by_share_code`), which checks `is_public`, so a story that is not public can never be opened
+      // by the person holding the link — which is the entire point of
+      // publishing (see PRIVACY.md, "public").
       isPublic: true,
       ssyncData: manifest as unknown as object,
     }),
@@ -1136,11 +1161,15 @@ export default function Studio() {
         }
       }
 
+      setLinkError(null);
       if (savedId && usedCloud === cloud) {
         try {
           code = await shareBook(savedId);
-        } catch {
+        } catch (err) {
           code = null;
+          // The share step says why in a sentence of its own; the card shows
+          // it instead of its general no-link copy.
+          setLinkError(err instanceof Error && err.message.trim() ? err.message.trim() : null);
         }
       }
 
@@ -2260,6 +2289,7 @@ export default function Studio() {
                 reply={state.reply ? { name: state.reply.name } : null}
                 returnFocusTo={finishRef}
                 note={publishNote}
+                linkError={linkError}
                 error={publishError}
                 authOffer={authOffer}
                 authBusy={authBusy}
