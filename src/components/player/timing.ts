@@ -47,32 +47,7 @@ export function wordIndexAtTime(
   return raw > wordCount - 1 ? wordCount - 1 : raw;
 }
 
-/** "3s" / "450ms" / undefined → milliseconds. */
-export function parseDuration(value: string | undefined, fallbackMs: number): number {
-  if (!value) return fallbackMs;
-  const n = parseFloat(value);
-  if (!Number.isFinite(n)) return fallbackMs;
-  return value.includes("ms") ? n : n * 1000;
-}
-
-export function formatClock(totalSeconds: number): string {
-  const s = Math.max(0, Math.round(totalSeconds));
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
-}
-
-/** Structural shape of the only page fields a runtime estimate needs. */
-export interface TimedPage {
-  text?: { content?: string } | undefined;
-  timing?: { autoPause?: string } | undefined;
-}
-
-/** Rough runtime for the cover label: read at ~2.5 words/second plus pauses. */
-export function estimateSeconds(pages: readonly TimedPage[], defaultPauseMs = 3000): number {
-  let total = 0;
-  for (const page of pages) {
-    const content = page.text?.content?.trim();
-    const words = content ? content.split(/\s+/).length : 0;
-    total += words / 2.5 + parseDuration(page.timing?.autoPause, defaultPauseMs) / 1000;
-  }
-  return Math.max(20, total);
-}
+/* Runtime arithmetic lives in the storysync library (one source for every
+   label that prints a runtime); the Player keeps importing it from here. */
+export { estimateSeconds, formatClock, parseDuration } from "../../lib/storysync/tape-meta";
+export type { TimedPage } from "../../lib/storysync/tape-meta";

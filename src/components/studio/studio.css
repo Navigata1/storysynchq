@@ -6,10 +6,19 @@
    className always win. Keyframes stay unlayered, matching studio-kit.
 
    Layout ladder:
-     < 768px   stage-first column; the tool rail becomes a bottom toolbar and
-               the inspector becomes a sheet
-     ≥ 768px   rail returns to the left edge
-     ≥ 1180px  the inspector takes its own column (Advanced only)
+     < 768px   stage-first column; the tool rail becomes a bottom toolbar, a
+               tool card and the inspector become sheets
+     ≥ 768px   rail returns to the left edge, full height; a tool card floats
+               over the Stage. With 600px of height or more the room fits the
+               screen (100dvh): the Stage gives way, nothing scrolls (s03)
+     ≥ 1024px  an open tool card docks in its own column between the rail and
+               the Stage, so it never covers the page it talks about; the
+               transport becomes s03's inset deck on the strip's column
+     ≥ 1180px  the inspector takes its own column (Advanced only), the room's
+               full height beside the Stage, strip and transport (s09); the
+               title sits centred on the top bar
+   Below 640px the top bar is one quiet row (s06 phone 2): Exit, the title,
+   "More" (Simple/Advanced, Open a tape) and a compact Finish.
    ========================================================================== */
 
 @keyframes studio-rise {
@@ -70,9 +79,26 @@
   }
 
   .studio-area-top { grid-area: top; }
-  .studio-area-rail { grid-area: rail; }
+
+  /* The publish card, portalled to <body> so the room can be inert behind
+     it: it keeps the room's ink. */
+  .studio-modal-host {
+    --sk-ink: rgba(255, 255, 255, 0.78);
+    color: #e9f0fa;
+  }
+  .studio-area-rail { grid-area: rail; min-height: 0; }
   .studio-area-stage { grid-area: stage; position: relative; min-height: 0; min-width: 0; }
-  .studio-area-film { grid-area: film; }
+  .studio-area-film { grid-area: film; min-width: 0; }
+  /* Where an open tool card lives. Below 1024px it shares the Stage's cell (a
+     floating card, or a sheet that is fixed anyway) and lets taps through. */
+  .studio-area-tool {
+    grid-area: stage;
+    position: relative;
+    min-height: 0;
+    min-width: 0;
+    pointer-events: none;
+  }
+  .studio-area-tool > * { pointer-events: auto; }
   .studio-area-transport {
     grid-area: transport;
     position: relative;
@@ -80,14 +106,208 @@
   }
   .studio { --studio-transport-h: calc(88px + env(safe-area-inset-bottom, 0px)); }
 
+  /* ------------------------------------------------------------ transport */
+  /* Below 1024px a bar across the foot (a phone's thumb zone); from 1024px
+     s03's inset deck (see "≥ 1024px"). The reels sit in a dark capsule; the
+     readout is one mono line from 1024px, `0:05 · pg 3/5`, and folds in two
+     (time over page) below it so the keys keep their room. */
+  .studio-transport {
+    padding: 12px 12px calc(12px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    background-color: rgba(0, 0, 0, 0.45);
+    -webkit-backdrop-filter: blur(24px);
+    backdrop-filter: blur(24px);
+  }
+  /* the two sides match, so the keys sit on the bar's centre */
+  .studio-transport-side { width: 86px; }
+  .studio-transport-deck {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background-color: #05070d;
+    box-shadow:
+      inset 0 2px 6px rgba(0, 0, 0, 0.8),
+      0 0 0 1px rgba(255, 255, 255, 0.06);
+  }
+  /* --ss-fg-3 measures ≥ 6:1 on the bar (WCAG AA); tape-red while recording */
+  .studio-transport-readout {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 3px;
+    font-family: var(--ss-mono);
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.2;
+    letter-spacing: 0.1em;
+    text-align: right;
+    white-space: nowrap;
+    color: var(--ss-fg-3);
+  }
+  .studio-transport-sep { display: none; }
+  .studio-transport[data-recording="true"] .studio-transport-readout { color: #ff6a52; }
+  /* While the mic is live, REC is the stop square in s03's armed ring
+     (`.s3-rec56`): a frozen ring, never a pulse — nothing loops here. */
+  .studio-transport .studio-transport-rec[data-kind="stop"] {
+    color: var(--ss-red);
+    border: 3px solid rgba(227, 69, 47, 0.85);
+    background-color: #1a1f33;
+    background-image: none;
+    box-shadow:
+      0 0 0 6px rgba(227, 69, 47, 0.14),
+      0 0 26px rgba(227, 69, 47, 0.35);
+  }
+  /* the pointer that pressed REC is still over the key: keep the ring red */
+  .studio-transport .studio-transport-rec[data-kind="stop"]:not(:disabled):hover {
+    color: #ff6a52;
+    border-color: rgba(227, 69, 47, 0.85);
+  }
+  .studio-transport .studio-transport-rec[data-kind="stop"] .sk-transport-glyph {
+    width: 36%;
+    height: 36%;
+  }
+  @media (min-width: 640px) {
+    .studio-transport-side { width: 132px; }
+  }
+  /* A 375px phone cannot carry four 60px keys, their gaps and the readout:
+     the keys come down to 52px there, so the transport never scrolls the
+     page sideways; the readout tracks a little tighter inside its 86px. */
+  @media (max-width: 399.98px) {
+    .studio-area-transport .sk-transport { --sk-transport-size: 52px; }
+    .studio-transport-readout { letter-spacing: 0.06em; }
+  }
+
+  /* ------------------------------------------------------------ top bar */
+  .studio-title {
+    display: flex;
+    flex: 1 1 8rem;
+    min-width: 8rem;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .studio-title .studio-title-input {
+    field-sizing: content; /* Chromium; elsewhere the input's size attribute sizes it */
+    max-width: calc(100% - 22px);
+    text-align: center;
+    text-overflow: ellipsis;
+  }
+  /* Between the two groups (below 1180px) the pen keeps clear of SIMPLE.
+     Padding, not margin: the bar wraps exactly where it did before. */
+  @media (max-width: 1179.98px) {
+    .studio-title { padding-right: 12px; }
+  }
+
+  /* "More" (a phone only): Simple/Advanced and "Open a tape" in one small
+     panel under the bar. From 640px it is no panel at all — its contents sit
+     on the bar, in the same order, exactly as before. */
+  .studio-bar-more { display: contents; }
+  @media (max-width: 639.98px) {
+    /* the bar (and its panel) above the Stage and the sheets */
+    .studio-area-top {
+      position: relative;
+      z-index: 49;
+    }
+    .studio-bar-more {
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 12px;
+      display: none;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 10px;
+      width: min(240px, calc(100vw - 24px));
+      padding: 12px;
+      border-radius: 16px;
+      border: 1px solid var(--ss-line-2);
+      background-color: rgba(11, 16, 32, 0.97);
+      box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.7);
+    }
+    .studio-bar-more[data-open="true"] {
+      display: flex;
+      animation: studio-fade 200ms ease-out both;
+    }
+    .studio-bar-more [data-sk="mode"] { align-self: center; }
+    /* one quiet row: Exit · the title, centred, giving way first · Finish */
+    .studio-topbar .studio-title {
+      flex: 1 1 0;
+      min-width: 0;
+      padding-right: 0;
+    }
+    /* "after this take" is read with Finish (aria-describedby), not drawn */
+    .studio-finish[data-recording="true"] { transform: none; }
+    .studio-finish-note {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+  }
+
+  /* "Finish my story" — and, while the mic is live, "after this take" under it */
+  .studio-finish {
+    position: relative;
+    display: flex;
+    transition: transform 300ms var(--ss-ease);
+  }
+  .studio-finish[data-recording="true"] { transform: translateY(-6px); }
+  /* Waiting for the take (disabled): s03's tinted-gold outline, not the
+     generic dimmed gold block, with the record dot at half strength. */
+  .studio-finish .sk-big--gold:disabled {
+    opacity: 1;
+    background-color: rgba(245, 158, 11, 0.14);
+    background-image: none;
+    color: rgba(251, 191, 74, 0.62);
+    border-color: rgba(245, 158, 11, 0.32);
+    box-shadow: none;
+  }
+  .studio-finish .sk-big--gold:disabled .sk-big-icon { opacity: 0.5; }
+  .studio-finish-note {
+    position: absolute;
+    top: calc(100% + 3px);
+    left: 0;
+    right: 0;
+    font-size: 10.5px;
+    line-height: 1;
+    letter-spacing: 0.1em;
+    text-align: center;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--ss-fg-3);
+    pointer-events: none;
+  }
+
   /* ------------------------------------------------------------ tool rail */
+  /* Three friendly tools, a divider, then a quieter Magic (s03). */
   .studio-rail-list {
+    --sk-big-h: 84px;
     display: flex;
     flex-direction: row;
     gap: 8px;
     padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
   }
   .studio-rail-list > * { flex: 1 1 0; min-width: 0; }
+  .studio-rail-list > .studio-rail-sep {
+    flex: none;
+    align-self: stretch;
+    width: 1px;
+    margin: 12px 2px;
+    background-color: var(--ss-line-2);
+  }
+  .studio-rail-list > .studio-rail-magic { flex: 0 0 60px; }
+  /* mid-take, Photo and Magic wait (aria-disabled, still focusable): dimmed
+     like the strip's locked controls */
+  .studio-rail-list > [data-waiting="true"] {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
 
   /* --------------------------------------------------------- tool panel */
   .studio-toolpanel {
@@ -102,6 +322,99 @@
     border-radius: 22px 22px 0 0;
     padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
     animation: studio-rise 300ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+  }
+
+  /* The Voice card's take: the big red button and the lock row. On a phone
+     the button lies on its side to keep the sheet short; docked, it grows to
+     the reference's 132px when the column has the height, and gives way when
+     it does not. */
+  .studio-voice-take {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 2px 0 4px;
+  }
+  .studio-voice-disc { width: 64px; height: 64px; }
+  /* the take and "your voice": one body; docked, it is what scrolls */
+  .studio-voice-body {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+  }
+  /* the record button: disc beside its name on a phone, above it from 768px */
+  .studio-voice-record {
+    flex-direction: row;
+    padding: 8px 16px;
+  }
+  /* side by side, the live ring stands 16px out from the disc: its name
+     steps clear of it during a take */
+  .studio[data-recording="true"] .studio-voice-record > :last-child { margin-left: 8px; }
+  /* "your voice · m:ss" with Listen and Delete: compact keys */
+  .studio-voice-yours { --sk-big-h: 52px; }
+
+  /* The codec line under Stop: what the recorder negotiated during a take,
+     what the page's voice is after it (s06 phone 2). Mono, quiet, one line
+     where it fits. */
+  .studio-codec-line {
+    margin: 0;
+    max-width: 100%;
+    font-size: 10.5px;
+    line-height: 1.35;
+    letter-spacing: 0.1em;
+    text-align: center;
+    text-transform: uppercase;
+    color: var(--ss-fg-3);
+  }
+  /* Docked (≥ 1024px) the column's take is measured to the pixel (s03) and
+     the Advanced inspector already names each page's codec: no line there. */
+  @media (min-width: 1024px) {
+    .studio-codec-line { display: none; }
+  }
+
+  /* the card's head: the title, its subtitle, the close key beside them */
+  .studio-toolpanel-head {
+    position: relative;
+    margin-bottom: 12px;
+  }
+
+  /* ----------------------------------------------------- the take sheet */
+  /* A phone mid-take with the Voice sheet open (s06 phone 2): the sheet's
+     Stop is the only Stop. The transport steps out (inert in Studio.tsx,
+     unseen here) and the sheet takes its band; the sheet's title and
+     subtitle, which only repeat the Stage's pill, chip and Stop, step out of
+     sight (still read out) and the close key sits in READ THIS's corner. */
+  @media (max-width: 767.98px) {
+    .studio[data-take-sheet="true"] .studio-area-transport { visibility: hidden; }
+    .studio[data-take-sheet="true"] .studio-toolpanel { bottom: 0; }
+    /* The photo being read stays whole above the sheet, ring and pill
+       included: the picture zone takes the room left above the sheet's top
+       (Studio.tsx measures it), and the Stage's words, under the sheet and
+       on READ THIS, give way instead. */
+    /* the room is the screen for the take, so the Stage keeps its height */
+    .studio[data-take-sheet="true"] {
+      height: 100dvh;
+      min-height: 0;
+    }
+    .studio[data-take-sheet="true"] .stage-zone {
+      flex: 0 0 auto;
+      height: var(--studio-zone-cap, auto);
+    }
+    .studio-toolpanel[data-compact="true"] .studio-toolpanel-head {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      z-index: 2;
+      width: 40px;
+      height: 40px;
+      margin: 0;
+    }
+    /* solid over the paper: the key's glass fill would read as a smudge */
+    .studio-toolpanel[data-compact="true"] .studio-toolpanel-close {
+      background-color: #0b1020 !important;
+    }
   }
 
   /* ---------------------------------------------------------- inspector */
@@ -119,6 +432,21 @@
     animation: studio-rise 300ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
   }
 
+  /* An inspector slider: its name with the reading at the right, the range
+     under them (a sheet); from 1180px one row, s09's `.s9-sl`. */
+  .studio-insp-slider {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "name  value"
+      "range range";
+    align-items: center;
+    column-gap: 10px;
+  }
+  .studio-insp-slider-name { grid-area: name; }
+  .studio-insp-slider-value { grid-area: value; text-align: right; }
+  .studio-insp-slider-range { grid-area: range; }
+
   /* ------------------------------------------------------------- ≥ 768px */
   @media (min-width: 768px) {
     .studio {
@@ -127,17 +455,35 @@
       grid-template-areas:
         "top  top"
         "rail stage"
-        "film film"
-        "transport transport";
+        "rail film"
+        "rail transport";
     }
     .studio-rail-list {
+      --sk-big-h: 92px;
       flex-direction: column;
-      width: 118px;
+      align-items: center;
+      width: 116px;
       height: 100%;
-      gap: 10px;
-      padding: 4px 10px 10px;
+      gap: 12px;
+      padding: 20px 12px 12px;
+      overflow-y: auto;
+      scrollbar-width: none;
     }
-    .studio-rail-list > * { flex: 0 0 auto; }
+    .studio-rail-list > * { flex: 0 0 auto; width: 100%; }
+    .studio-rail-list > .studio-rail-sep {
+      width: auto;
+      height: 1px;
+      margin: 4px 12px;
+    }
+    .studio-rail-list > .studio-rail-magic { flex: 0 0 auto; width: 72px; }
+
+    .studio-voice-take { gap: 12px; padding: 8px 0; }
+    .studio-voice-disc { width: 104px; height: 104px; }
+    .studio-voice-record {
+      flex-direction: column;
+      padding: 12px 16px 4px;
+    }
+    .studio[data-recording="true"] .studio-voice-record > :last-child { margin-left: 0; }
 
     .studio-toolpanel {
       position: absolute;
@@ -151,20 +497,157 @@
     }
   }
 
+  /* The room fits the screen: one viewport, no page scroll. The Stage row
+     takes what the chrome leaves; the picture zone inside it gives way. */
+  @media (min-width: 768px) and (min-height: 600px) {
+    .studio {
+      height: 100dvh;
+      min-height: 0;
+    }
+  }
+
+  /* ------------------------------------------------------------ ≥ 1024px */
+  @media (min-width: 1024px) {
+    .studio {
+      grid-template-columns: auto auto minmax(0, 1fr);
+      grid-template-areas:
+        "top  top  top"
+        "rail tool stage"
+        "rail film film"
+        "rail transport transport";
+    }
+    /* The docked column: as tall as the Stage, beside it, never over it. */
+    .studio-area-tool {
+      grid-area: tool;
+      display: flex;
+      padding: 16px 0 16px 12px;
+      pointer-events: auto;
+    }
+    .studio-area-tool:empty { padding: 0; }
+    /* The body takes the card's height between the title and the footnote
+       (never less than its content: on a short screen see below). */
+    .studio-voice-body { flex: 1 1 0; }
+    /* The take sits at the card's foot, the lock row just over the footnote,
+       as s03 sets it; the room above is where the reference draws its (Idea)
+       mascot, left honestly empty. */
+    .studio-voice-take {
+      flex: 1 1 0;
+      min-height: 150px;
+      justify-content: flex-end;
+      container-type: size;
+    }
+    .studio-voice-disc {
+      width: clamp(64px, calc(100cqh - 84px), 132px);
+      height: clamp(64px, calc(100cqh - 84px), 132px);
+    }
+    .studio-toolpanel {
+      position: relative;
+      left: auto;
+      bottom: auto;
+      width: 320px;
+      max-height: none;
+      height: 100%;
+      animation: studio-fade 260ms ease-out both;
+    }
+
+    /* s03's inset deck: on the strip's column (12px in from the rail and
+       the screen's edge, as the Pages strip's own padding sets it), 12px
+       off the foot, a rounded dark-glass panel. */
+    .studio-area-transport {
+      padding: 0 12px calc(12px + env(safe-area-inset-bottom, 0px));
+    }
+    .studio-transport {
+      padding: 11px 22px;
+      border: 1px solid var(--ss-line);
+      border-radius: 18px;
+      background-color: rgba(8, 11, 21, 0.62);
+    }
+    /* room for the one-line readout, both sides alike so the keys stay
+       centred (a two-digit "0:00 / 0:00 · pg 12/12" fits) */
+    .studio-transport-side { width: 230px; }
+    .studio-transport-readout {
+      flex-direction: row;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 0;
+      font-size: 13px;
+      line-height: 1;
+    }
+    .studio-transport-sep { display: inline; white-space: pre; }
+  }
+
+  /* A short laptop (docked, under 700px tall): the disc lies beside its name
+     again, at 64px, and the body is what scrolls, so the privacy footnote
+     never leaves the card's foot. The body's 8px of inner room keeps a focus
+     ring or the live ring inside its clip. */
+  @media (min-width: 1024px) and (max-height: 699.98px) {
+    /* the inset deck gives back its height: 6px off the foot and a slimmer
+       panel, no taller than the full-bleed bar it replaced */
+    .studio-area-transport {
+      padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
+    }
+    .studio-transport { padding-block: 8px; }
+    .studio-voice-body {
+      min-height: 0;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      margin: 0 -8px;
+      padding: 0 8px;
+    }
+    .studio-voice-take {
+      flex: 0 0 auto;
+      min-height: 0;
+      margin-top: auto; /* at the foot when there is room, as above; safe when there is not */
+      gap: 6px;
+      padding: 6px 0 0;
+      container-type: normal;
+    }
+    .studio-voice-disc { width: 64px; height: 64px; }
+    .studio-voice-record {
+      flex-direction: row;
+      padding: 4px 16px;
+    }
+    .studio-voice-yours { --sk-big-h: 44px; } /* still a 44px target */
+    /* During a take "your voice" is gone and the take fits: the body stops
+       clipping (the live ring's glow is never cut square) and the take
+       breathes, so the ring clears the lock row. */
+    .studio[data-recording="true"] .studio-voice-body {
+      min-height: auto;
+      overflow: visible;
+    }
+    .studio[data-recording="true"] .studio-voice-take {
+      gap: 18px;
+      padding-top: 18px;
+    }
+    .studio[data-recording="true"] .studio-voice-record > :last-child { margin-left: 8px; }
+  }
+
   /* ------------------------------------------------------------ ≥ 1180px */
   @media (min-width: 1180px) {
     .studio {
-      grid-template-columns: auto minmax(0, 1fr) auto;
+      grid-template-columns: auto auto minmax(0, 1fr) auto;
+      /* The inspector runs the room's full height (s09): the strip and the
+         transport keep to the Stage's columns, beside it, never under it. */
       grid-template-areas:
-        "top  top   top"
-        "rail stage inspector"
-        "film film  film"
-        "transport transport transport";
+        "top  top  top   top"
+        "rail tool stage inspector"
+        "rail film film  inspector"
+        "rail transport transport inspector";
+    }
+    /* the title sits centred on the bar, clear of both ends */
+    .studio-topbar .studio-title {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      max-width: calc(100% - 2 * 410px);
+      min-width: 0;
+      transform: translate(-50%, -50%);
     }
     .studio-inspector {
       position: static;
       grid-area: inspector;
       width: 366px;
+      min-height: 0;
       max-height: none;
       height: 100%;
       border-radius: 0;
@@ -173,6 +656,33 @@
       animation: studio-fade 260ms ease-out both;
     }
     .studio-inspector-close { display: none; }
+    /* s09's density: label · slider · reading on one row. The name column
+       fits "TIMING MULTIPLIER" (nowrap, ~142px in Plex Mono) and so keeps
+       8+ px clear of its track with the 10px column gap. */
+    .studio-insp-slider {
+      grid-template-columns: 144px minmax(0, 1fr) 44px;
+      grid-template-areas: "name range value";
+      margin-bottom: 8px;
+    }
+    .studio-insp-slider-name { white-space: nowrap; }
+    /* s03's title: Fraunces 700 at 22px. The `min-[1180px]:text-[22px]`
+       utility on the input sorts before `sm:text-lg` and silently loses to it;
+       a layered rule can only beat a utility as !important. */
+    .studio-topbar .studio-title .studio-title-input { font-size: 22px !important; }
+  }
+  /* Advanced up to 1440px: the inspector's full-height column leaves the
+     transport the Stage's width, so its readout folds in two (time over
+     page, as below 1024px) and both sides narrow alike, keys still centred. */
+  @media (min-width: 1180px) and (max-width: 1439.98px) {
+    .studio[data-advanced="true"] .studio-transport-side { width: 120px; }
+    .studio[data-advanced="true"] .studio-transport-readout {
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 3px;
+      font-size: 12px;
+      line-height: 1.2;
+    }
+    .studio[data-advanced="true"] .studio-transport-sep { display: none; }
   }
 
   /* ------------------------------------------------------------- the stage */
@@ -191,23 +701,35 @@
       inset 0 1px 0 rgba(255, 255, 255, 0.07);
   }
   .studio-monitor-page {
+    position: relative; /* above the Stage's backdrop light */
     display: flex;
     flex-direction: column;
     min-height: 0;
     flex: 1 1 auto;
     animation: studio-page-in 420ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
   }
+  .studio-monitor[data-recording="true"] {
+    box-shadow:
+      0 40px 90px rgba(0, 0, 0, 0.55),
+      0 0 120px -20px rgba(227, 69, 47, 0.22),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.03),
+      inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  }
+  /* The page's words in the reference's cream (.ss-story #F3E6C8), set as
+     balanced lines in a measure no wider than the Player's (~640px). */
   .studio-story-text {
     font-family: var(--font-fraunces), Georgia, "Iowan Old Style", serif;
     font-size: clamp(1.05rem, 1.15vw + 0.85rem, 1.6rem);
     line-height: 1.55;
     letter-spacing: 0.002em;
-    color: #f4f1e8;
-    text-wrap: pretty;
+    color: var(--ss-cream);
+    text-wrap: balance;
     white-space: pre-wrap;
   }
   .studio-story-input {
     width: 100%;
+    max-inline-size: 640px;
+    margin-inline: auto;
     resize: none;
     background: transparent;
     border: none;
@@ -215,45 +737,6 @@
     field-sizing: content;
   }
   .studio-story-input::placeholder { color: rgba(244, 241, 232, 0.32); }
-
-  /* ---------------------------------------------------------- filmstrip */
-  .studio-strip {
-    display: flex;
-    gap: 10px;
-    overflow-x: auto;
-    scroll-snap-type: x proximity;
-    padding: 4px 2px 8px;
-    scrollbar-width: thin;
-  }
-  .studio-strip > * { scroll-snap-align: center; }
-  .studio-strip::-webkit-scrollbar { height: 8px; }
-  .studio-strip::-webkit-scrollbar-thumb {
-    background-color: rgba(245, 158, 11, 0.35);
-    border-radius: 999px;
-  }
-  .studio-strip::-webkit-scrollbar-track { background-color: rgba(255, 255, 255, 0.04); }
-
-  .studio-thumb {
-    position: relative;
-    flex: none;
-    width: 84px;
-    height: 62px;
-    overflow: hidden;
-    border-radius: 10px;
-    border: 2px solid rgba(255, 255, 255, 0.14);
-    background-color: rgba(255, 255, 255, 0.05);
-    cursor: pointer;
-    transition:
-      border-color 200ms ease-out,
-      box-shadow 240ms ease-out,
-      transform 180ms cubic-bezier(0.2, 0.7, 0.3, 1);
-  }
-  .studio-thumb:hover { transform: translateY(-2px); }
-  .studio-thumb.is-current {
-    border-color: #f59e0b;
-    box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.4), 0 10px 24px rgba(245, 158, 11, 0.22);
-  }
-  .studio-thumb-img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
   /* ------------------------------------------------------- misc surfaces */
   .studio-scroll { scrollbar-width: thin; }
@@ -304,8 +787,20 @@
     cursor: pointer;
   }
 
+  /* ------------------------------------- nothing loops in the Creator */
+  /* Reels turn while the tape moves; nothing else repeats. The kit's record
+     rings pulse elsewhere; in the Studio they hold a frozen frame of the
+     pulse, as the reference draws the live record button (the Transport's
+     live REC is the stop square in a still ring, "transport" above). */
+  .studio .sk-big--red:not(:disabled) .sk-big-ring,
+  .studio-modal-host .sk-big--red:not(:disabled) .sk-big-ring {
+    animation: none;
+    opacity: 0.55;
+  }
+
   /* ------------------------------------------------- reduced motion: off */
   @media (prefers-reduced-motion: reduce) {
+    .studio-finish { transition: none; }
     .studio-toolpanel,
     .studio-inspector,
     .studio-monitor-page,
@@ -313,14 +808,13 @@
     .studio-printing,
     .studio-rise,
     .studio-fade,
+    .studio-bar-more,
     .studio-busy {
       animation: none !important;
     }
     .studio-printing { clip-path: none; opacity: 1; }
     .studio-busy { background-image: linear-gradient(90deg, rgba(245, 158, 11, 0.45), rgba(245, 158, 11, 0.45)); }
-    .studio-thumb,
     .studio-title-input,
     .studio-progress-bar { transition-duration: 1ms; }
-    .studio-thumb:hover { transform: none; }
   }
 }

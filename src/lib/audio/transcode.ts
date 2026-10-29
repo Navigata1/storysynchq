@@ -12,8 +12,37 @@
 //   2. WebCodecs AudioEncoder supports AAC (Chromium) → decode + re-encode,
 //      mux to M4A with mp4-muxer
 //   3. Otherwise → decode + write 16 kHz mono WAV (universal, larger)
+//
+// With `{ level: true }` (the Studio's "Evening out each voice", T17) each
+// voice is also brought to one loudness on the way through (./level.ts),
+// still on this device and still in one pass:
+//   WAV            → levelled in place (16-bit PCM mono), else decoded
+//   AAC/MP4        → decoded, levelled, re-encoded as AAC — only where an AAC
+//                    encoder exists; otherwise left exactly as recorded. It is
+//                    never turned into a WAV just to be levelled
+//   Opus/WebM      → decoded, levelled, then the same ladder (AAC, else WAV)
+//   anything compliant that will not decode → left exactly as recorded
+// Without the option nothing here changes: /classic and every other caller
+// get the same bytes as before.
 
 import { Muxer, ArrayBufferTarget } from "mp4-muxer";
+import { levelPcm, levelWav, type LevelledPcm } from "./level";
+
+export type LevellingOutcome = "applied" | "unchanged" | "skipped";
+export type LevellingSkipReason = "aac-encoder-unavailable" | "undecodable" | "encode-failed";
+
+/** What levelling did to one voice: brought it to the target, found it there, or left it as recorded (and why). */
+export interface LevellingReport {
+  outcome: LevellingOutcome;
+  /** The gain applied, dB (0 when unchanged); absent when skipped. */
+  gainDb?: number;
+  reason?: LevellingSkipReason;
+}
+
+export interface NormalizeOptions {
+  /** Level the voice to the target loudness before it becomes AAC (or WAV). */
+  level?: boolean;
+}
 
 export interface NormalizedNarration {
   blob: Blob;
@@ -21,6 +50,8 @@ export interface NormalizedNarration {
   codec: "aac" | "wav";
   ext: "m4a" | "wav";
   wasTranscoded: boolean;
+  /** Present only when levelling was asked for. */
+  levelling?: LevellingReport;
 }
 
 const AAC_SAMPLE_RATE = 48000;
@@ -133,11 +164,26 @@ function encodeWav(pcm: Float32Array, sampleRate: number): Blob {
   return new Blob([buffer], { type: "audio/wav" });
 }
 
+function report(levelled: { outcome: LevelledPcm["outcome"]; gainDb: number }): LevellingReport {
+  return { outcome: levelled.outcome, gainDb: levelled.gainDb };
+}
+
+function skipped(reason: LevellingSkipReason): LevellingReport {
+  return { outcome: "skipped", reason };
+}
+
 /**
  * Normalizes one narration recording for publishing. Returns the original
  * blob untouched when it is already compliant (Safari's AAC/MP4 recordings).
+ * `{ level: true }` also evens out its loudness first (see the header).
  */
-export async function normalizeNarration(blob: Blob, mimeType?: string): Promise<NormalizedNarration> {
+export async function normalizeNarration(
+  blob: Blob,
+  mimeType?: string,
+  options?: NormalizeOptions,
+): Promise<NormalizedNarration> {
+  if (options?.level) return normalizeLevelled(blob, mimeType);
+
   const type = (mimeType || blob.type || "").toLowerCase();
 
   if (type.includes("mp4") || type.includes("aac") || type.includes("m4a")) {
@@ -160,4 +206,76 @@ export async function normalizeNarration(blob: Blob, mimeType?: string): Promise
   const pcm = await decodeToMono(blob, WAV_SAMPLE_RATE);
   const wav = encodeWav(pcm, WAV_SAMPLE_RATE);
   return { blob: wav, mimeType: "audio/wav", codec: "wav", ext: "wav", wasTranscoded: true };
+}
+
+/** The same ladder with "Evening out each voice" on the way through. Opus/WebM never comes out. */
+async function normalizeLevelled(blob: Blob, mimeType?: string): Promise<NormalizedNarration> {
+  const type = (mimeType || blob.type || "").toLowerCase();
+  const asRecorded = (codec: "aac" | "wav", levelling: LevellingReport): NormalizedNarration =>
+    codec === "aac"
+      ? { blob, mimeType: "audio/mp4", codec: "aac", ext: "m4a", wasTranscoded: false, levelling }
+      : { blob, mimeType: "audio/wav", codec: "wav", ext: "wav", wasTranscoded: false, levelling };
+
+  /* AAC/MP4 (Safari): level only where it can go back to AAC */
+  if (type.includes("mp4") || type.includes("aac") || type.includes("m4a")) {
+    if (!(await aacEncoderSupported())) return asRecorded("aac", skipped("aac-encoder-unavailable"));
+    let levelled: LevelledPcm;
+    try {
+      levelled = levelPcm(await decodeToMono(blob, AAC_SAMPLE_RATE), AAC_SAMPLE_RATE);
+    } catch {
+      return asRecorded("aac", skipped("undecodable"));
+    }
+    if (levelled.outcome === "unchanged") return asRecorded("aac", report(levelled));
+    try {
+      const m4a = await encodeAacM4a(levelled.pcm);
+      return { blob: m4a, mimeType: "audio/mp4", codec: "aac", ext: "m4a", wasTranscoded: true, levelling: report(levelled) };
+    } catch {
+      return asRecorded("aac", skipped("encode-failed"));
+    }
+  }
+
+  /* WAV: 16-bit PCM mono in place; any other layout through the decoder */
+  if (type.includes("wav")) {
+    const inPlace = levelWav(new Uint8Array(await blob.arrayBuffer()));
+    if (inPlace) {
+      if (inPlace.outcome === "unchanged") return asRecorded("wav", report(inPlace));
+      const wav = new Blob([inPlace.bytes as Uint8Array<ArrayBuffer>], { type: "audio/wav" });
+      return { blob: wav, mimeType: "audio/wav", codec: "wav", ext: "wav", wasTranscoded: false, levelling: report(inPlace) };
+    }
+    // Stereo, 24-bit, float: decoded. Already even, it stays the WAV it was.
+    try {
+      return await levelThroughLadder(blob, (levelling) => asRecorded("wav", levelling));
+    } catch {
+      return asRecorded("wav", skipped("undecodable"));
+    }
+  }
+
+  /* draft Opus/WebM: decode, level, then AAC or WAV — a failure here is a failed publish, as before */
+  return levelThroughLadder(blob);
+}
+
+/**
+ * Decode, level, encode: AAC where WebCodecs can, else 16 kHz WAV. With
+ * `keep`, a take that is already even is returned as recorded instead of
+ * being re-encoded for nothing.
+ */
+async function levelThroughLadder(
+  blob: Blob,
+  keep?: (levelling: LevellingReport) => NormalizedNarration,
+): Promise<NormalizedNarration> {
+  if (await aacEncoderSupported()) {
+    try {
+      const levelled = levelPcm(await decodeToMono(blob, AAC_SAMPLE_RATE), AAC_SAMPLE_RATE);
+      if (keep && levelled.outcome === "unchanged") return keep(report(levelled));
+      const m4a = await encodeAacM4a(levelled.pcm);
+      return { blob: m4a, mimeType: "audio/mp4", codec: "aac", ext: "m4a", wasTranscoded: true, levelling: report(levelled) };
+    } catch {
+      // fall through to WAV
+    }
+  }
+
+  const levelled = levelPcm(await decodeToMono(blob, WAV_SAMPLE_RATE), WAV_SAMPLE_RATE);
+  if (keep && levelled.outcome === "unchanged") return keep(report(levelled));
+  const wav = encodeWav(levelled.pcm, WAV_SAMPLE_RATE);
+  return { blob: wav, mimeType: "audio/wav", codec: "wav", ext: "wav", wasTranscoded: true, levelling: report(levelled) };
 }

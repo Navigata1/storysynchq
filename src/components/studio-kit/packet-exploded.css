@@ -1,0 +1,458 @@
+/* ============================================================================
+   PacketExploded — one page taken apart into seven printed plates
+   (brief LOCAL (11), s08 FIG. 1).
+
+   Phones (< 768 px): a flat stack, full width, 07 on top.
+   ≥ 768 px: parallelograms. Each plate's backing is skewed −18° while its
+   contents stay upright; plates sit 10 px apart, each 14 px right of the one
+   below, joined at both corners by dashed connectors, with a soft shadow.
+
+   Static on purpose: print does not move — no transition, no animation, with
+   or without reduced motion. Positions use `left`, never margin, so a page's
+   unlayered list reset cannot flatten the stack.
+   ========================================================================== */
+
+@layer components {
+  .sk-px {
+    /* the horizontal step between plates, and room for the skewed corners */
+    --sk-px-step: 14px;
+    --sk-px-edge: 12px;
+    /* tape-paper dashes: visible on the studio's navy (the reference's tint) */
+    --sk-px-connector: rgba(255, 253, 246, 0.42);
+    /* pencil for the empty plates' notes: ink-3 (#8b8073) is only 3.0–3.5:1 on
+       the layer fills; this darker pencil is 4.7–5.5:1 on all seven (AA). */
+    --sk-px-pencil: #6b6157;
+
+    /* the readouts' one-line rule (below) asks how wide the stack is */
+    container: sk-px / inline-size;
+
+    position: relative;
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    color: var(--ss-ink);
+  }
+
+  .sk-px-plate {
+    position: relative;
+    left: 0;
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* the plate itself — fill, ink border, shadow; skewed on wide screens */
+  .sk-px-back {
+    position: absolute;
+    inset: 0;
+    border: 2px solid var(--ss-ink);
+    border-radius: 8px;
+    background: var(--sk-px-fill, var(--ss-paper));
+    box-shadow:
+      0 16px 22px -14px rgba(0, 0, 0, 0.85),
+      0 2px 0 rgba(0, 0, 0, 0.25),
+      inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  }
+
+  .sk-px-plate--sig .sk-px-back {
+    border: 3.5px solid var(--ss-red);
+    box-shadow:
+      0 16px 24px -14px rgba(0, 0, 0, 0.85),
+      0 0 26px -6px rgba(227, 69, 47, 0.55),
+      inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  }
+
+  /* dashed connectors, from this plate's top corners up to the next plate */
+  .sk-px-plate:not(:last-child)::before,
+  .sk-px-plate:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    bottom: 100%;
+    height: 10px;
+    border-left: 1.5px dashed var(--sk-px-connector);
+    pointer-events: none;
+  }
+  .sk-px-plate:not(:last-child)::before {
+    left: 16px;
+  }
+  .sk-px-plate:not(:last-child)::after {
+    right: 16px;
+  }
+
+  /* contents: upright, above the backing */
+  .sk-px-in {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 10px;
+    min-height: 48px;
+    padding: 8px 14px 9px 12px;
+  }
+
+  .sk-px-num {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--ss-ink);
+    color: var(--ss-paper);
+    font: 600 10.5px/1 var(--ss-mono);
+    letter-spacing: 0.02em;
+  }
+
+  .sk-px-id {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .sk-px-name {
+    font: 600 15px/1.05 var(--ss-display);
+    letter-spacing: -0.005em;
+    color: var(--ss-ink);
+  }
+
+  .sk-px-path {
+    margin: 0;
+    padding: 0;
+    border-radius: 0;
+    background: none;
+    font: 500 10.5px/1.15 var(--ss-mono);
+    color: var(--ss-ink-2);
+    white-space: nowrap;
+  }
+
+  /* the Signature tag, pinned to the plate's top edge */
+  .sk-px-tag {
+    position: absolute;
+    top: -11px;
+    right: 14px;
+    z-index: 2;
+    padding: 3px 7px;
+    border: 1.5px solid var(--ss-red-ink);
+    border-radius: 4px;
+    background: var(--ss-layer-signature);
+    color: var(--ss-red-ink);
+    font: 600 11px/1 var(--ss-mono);
+    letter-spacing: 0.12em;
+    white-space: nowrap;
+    transform: rotate(-2deg);
+    box-shadow: 0 3px 6px -3px rgba(0, 0, 0, 0.6);
+  }
+
+  /* the artifact and the value, at the right end */
+  .sk-px-art {
+    flex: 1 1 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    padding-left: 32px;
+  }
+
+  .sk-px-file {
+    min-width: 0;
+    font: 500 10.5px/1.25 var(--ss-mono);
+    color: var(--ss-ink-2);
+    overflow-wrap: anywhere;
+  }
+  .sk-px-line {
+    display: block;
+  }
+  .sk-px-head {
+    font-weight: 600;
+    color: var(--ss-ink);
+  }
+  .sk-px-file--sig .sk-px-head {
+    font: italic 600 12px/1.15 var(--ss-display);
+  }
+  /* the " · " a reader hears between head and tail; the eye sees a line break */
+  .sk-px-sep {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /* a layer this page does not use, said in pencil */
+  .sk-px-file--empty {
+    font: italic 400 12.5px/1.25 var(--ss-display);
+    color: var(--sk-px-pencil);
+  }
+
+  /* 01 · the mini label line */
+  .sk-px-label {
+    display: flex;
+    min-width: 0;
+    height: 36px;
+    border: 1.5px solid var(--ss-ink);
+    border-radius: 5px;
+    overflow: hidden;
+    background: var(--ss-paper);
+    box-shadow: 0 2px 0 rgba(30, 26, 22, 0.12);
+  }
+  .sk-px-label > i {
+    flex: none;
+    width: 6px;
+    background: var(--ss-red);
+    border-right: 1.5px solid var(--ss-ink);
+  }
+  .sk-px-label > i + i {
+    width: 7px;
+    background: var(--ss-label);
+  }
+  .sk-px-label-text {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+    padding: 2px 10px 0 8px;
+  }
+  .sk-px-label-text b,
+  .sk-px-label-text em {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .sk-px-label-text b {
+    font: 800 12.5px/1.15 var(--ss-display);
+    letter-spacing: -0.01em;
+  }
+  .sk-px-label-text em {
+    font: italic 500 11px/1.3 var(--ss-display);
+    color: var(--ss-ink-2);
+  }
+
+  /* 02 · the page picture, taped on as a print */
+  .sk-px-photo {
+    position: relative;
+    flex: none;
+    display: block;
+    padding: 2px;
+    border: 1px solid rgba(30, 26, 22, 0.35);
+    border-radius: 2px;
+    background: #fffdf8;
+    box-shadow: 0 3px 6px -2px rgba(30, 26, 22, 0.45);
+    transform: rotate(-6deg);
+  }
+  .sk-px-photo::before {
+    content: "";
+    position: absolute;
+    top: -5px;
+    left: 50%;
+    z-index: 1;
+    width: 24px;
+    height: 9px;
+    margin-left: -12px;
+    background: rgba(238, 227, 198, 0.92);
+    transform: rotate(5deg);
+    clip-path: polygon(3% 0, 97% 0, 100% 22%, 96% 45%, 100% 70%, 97% 100%, 3% 100%, 0 75%, 4% 50%, 0 25%);
+  }
+  .sk-px-photo img {
+    display: block;
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+  }
+
+  /* 03 · the sentence, two lines (the whole of it stays in the DOM) */
+  .sk-px-sentence {
+    margin: 0;
+    min-width: 0;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+    font: 500 12px/1.3 var(--ss-display);
+    letter-spacing: -0.003em;
+    color: var(--ss-ink);
+  }
+
+  /* 04 · the voice, or a dashed flat line where none was recorded */
+  .sk-px-wave {
+    flex: none;
+    display: block;
+    width: 108px;
+    height: 26px;
+    fill: #d97f06;
+  }
+  .sk-px-flat {
+    flex: none;
+    width: 108px;
+    height: 0;
+    border-top: 1.5px dashed var(--ss-ink-3);
+  }
+
+  /* 05 · the melody: a band in the mood's colour */
+  .sk-px-band {
+    position: relative;
+    flex: none;
+    display: flex;
+    align-items: center;
+    width: 60px;
+    height: 24px;
+    padding-left: 5px;
+    border: 1.5px solid var(--ss-ink);
+    border-radius: 5px;
+    background: var(--sk-px-mood, var(--mood-wonder));
+  }
+  .sk-px-band--silent {
+    border-style: dashed;
+    border-color: var(--ss-ink-3);
+    background: transparent;
+  }
+  .sk-px-band-icon {
+    width: 12px;
+    height: 12px;
+    color: var(--ss-ink);
+  }
+  .sk-px-band > u {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--ss-ink);
+  }
+
+  /* 06 · three micro pages: default, high contrast, easier to read */
+  .sk-px-renders {
+    flex: none;
+    display: flex;
+    gap: 4px;
+  }
+  .sk-px-renders svg {
+    display: block;
+    width: 18px;
+    height: 24px;
+  }
+
+  /* 07 · the seal: wax when signed, a dashed outline while nothing is */
+  .sk-px-seal {
+    position: relative;
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    transform: rotate(-8deg);
+  }
+  .sk-px-seal-wax {
+    position: absolute;
+    inset: 0;
+    width: 32px;
+    height: 32px;
+    overflow: visible;
+  }
+  .sk-px-seal-icon {
+    position: relative;
+    width: 14px;
+    height: 14px;
+  }
+  .sk-px-seal[data-sealed="true"] {
+    filter: drop-shadow(0 2px 2px rgba(120, 20, 10, 0.45));
+  }
+  .sk-px-seal[data-sealed="true"] path {
+    fill: var(--ss-red);
+  }
+  .sk-px-seal[data-sealed="true"] circle {
+    fill: none;
+    stroke: #b02c1b;
+    stroke-width: 1.4;
+  }
+  .sk-px-seal[data-sealed="true"] .sk-px-seal-icon {
+    color: #ffe6dc;
+  }
+  .sk-px-seal[data-sealed="false"] path {
+    fill: none;
+    stroke: var(--ss-red);
+    stroke-width: 1.4;
+    stroke-dasharray: 2.2 2;
+  }
+  .sk-px-seal[data-sealed="false"] circle {
+    display: none;
+  }
+  .sk-px-seal[data-sealed="false"] .sk-px-seal-icon {
+    color: var(--ss-red);
+  }
+
+  /* ---------------------------------------------- ≥ 768 px: the exploded stack */
+  @media (min-width: 768px) {
+    .sk-px-plate {
+      left: calc(var(--sk-px-edge) + var(--sk-px-i, 0) * var(--sk-px-step));
+      width: calc(100% - 2 * var(--sk-px-edge) - 6 * var(--sk-px-step));
+    }
+
+    .sk-px-back {
+      transform: skewX(-18deg);
+    }
+
+    /* the corners lean with the skew: the next plate is one step to the right */
+    .sk-px-plate:not(:last-child)::before {
+      left: 7px;
+    }
+    .sk-px-plate:not(:last-child)::after {
+      right: -7px;
+    }
+
+    .sk-px-in {
+      flex-wrap: nowrap;
+      gap: 12px;
+      padding: 4px 22px 4px 20px;
+    }
+
+    .sk-px-id {
+      flex: none;
+      min-width: 136px;
+    }
+
+    .sk-px-art {
+      flex: 1 1 auto;
+      padding-left: 0;
+    }
+
+    .sk-px-tag {
+      top: -15px;
+      right: auto;
+      left: 132px;
+    }
+  }
+
+  /* A stack ≥ 600 px wide (FIG. 1 beside the cards at ≥ 1140 px, or alone from
+     768 px) prints each readout as designed: the head line and the tail line
+     never wrap inside a clause — a tail too long for its plate ends in an
+     ellipsis (the whole value stays in the DOM, read by assistive tech) — and a
+     pencil note takes at most two lines. Narrower (1088–1139 px, 556 px) the
+     readouts wrap between words, as T23b requires. */
+  @container sk-px (min-width: 600px) {
+    .sk-px-file {
+      overflow-wrap: normal;
+    }
+    .sk-px-line,
+    .sk-px-tail {
+      white-space: nowrap;
+    }
+    .sk-px-tail {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .sk-px-file--empty {
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
+      overflow: hidden;
+    }
+  }
+}

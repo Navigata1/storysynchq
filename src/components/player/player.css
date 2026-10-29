@@ -215,6 +215,12 @@
       linear-gradient(180deg, rgba(4, 6, 12, 0.34) 0%, rgba(4, 6, 12, 0) 22%, rgba(4, 6, 12, 0) 68%, rgba(4, 6, 12, 0.42) 100%);
   }
 
+  /* side A complete: the end card brings its own dim (end-card.css), so the
+     room's vignette steps back and the last picture still lights the room */
+  .pl-root[data-view="end"] .pl-vignette {
+    opacity: 0.5;
+  }
+
   .pl-root.is-idle-ui {
     cursor: none;
   }
@@ -222,6 +228,10 @@
   /* --------------------------------------------------------------- cover -- */
   /* The gate sits on the story's own light: the blurred first picture is
      already behind it, dimmed just enough for the label to read. */
+  /* s05: only the first drawing glows through the gate — the room's own
+     full-bleed blur of it, dimmed (the reference's .3 → .62 dim) and softened
+     further, with a vignette; the page itself, the Player's chrome, words and
+     transport stay out of sight (and out of the tab order) until the tap. */
   .pl-cover {
     position: absolute;
     inset: 0;
@@ -229,10 +239,52 @@
     display: grid;
     place-items: center;
     overflow-y: auto;
-    background-color: rgba(6, 9, 16, 0.68);
-    backdrop-filter: blur(3px);
+    background-color: transparent;
+    background-image:
+      radial-gradient(130% 90% at 50% 42%, rgba(6, 9, 16, 0) 38%, rgba(6, 9, 16, 0.5) 100%),
+      linear-gradient(180deg, rgba(6, 9, 16, 0.34) 0%, rgba(6, 9, 16, 0.66) 100%);
+    backdrop-filter: blur(24px) brightness(0.86) saturate(1.15);
     padding: clamp(20px, 5vw, 48px);
     padding-bottom: max(clamp(20px, 5vw, 48px), env(safe-area-inset-bottom, 0px));
+  }
+
+  /* s05 with a first drawing: the drawing, blurred once (22px) and dimmed
+     (brightness .5, then .3 → .62 navy), opaque under the gate — no second
+     blur stacked on the room's 44px one, no vignette muddying the foot. It
+     overhangs the screen so the blur's soft rim never shows. */
+  .pl-cover-room {
+    position: absolute;
+    inset: 0;
+    z-index: 39;
+    overflow: hidden;
+    pointer-events: none;
+    background-color: var(--ss-navy, #0a0e1a);
+  }
+  .pl-cover-room img {
+    position: absolute;
+    inset: -70px;
+    width: calc(100% + 140px);
+    height: calc(100% + 140px);
+    max-width: none;
+    object-fit: cover;
+    filter: blur(22px) brightness(0.5) saturate(1.15);
+  }
+  .pl-cover-room::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(180deg, rgba(6, 9, 16, 0.3), rgba(6, 9, 16, 0.62));
+  }
+  .pl-root:not(.is-hc) .pl-cover.has-art {
+    background-image: none;
+    backdrop-filter: none;
+  }
+  .pl-root.is-hc .pl-cover-room {
+    display: none;
+  }
+
+  .pl-root[data-view="cover"] :is(.pl-stage, .pl-chrome, .pl-deck, .pl-progress) {
+    visibility: hidden;
   }
 
   .pl-cover-inner {
@@ -274,7 +326,8 @@
     line-height: 1.6;
     letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: rgba(226, 232, 240, 0.4);
+    /* s05 .g-micro: fg at .74, AA on the drawing's dimmed light */
+    color: rgba(226, 232, 240, 0.74);
     text-align: center;
   }
 
@@ -353,6 +406,10 @@
     right: 0;
     bottom: 0;
     left: 0;
+    /* content-sized (no max height), so nothing to scroll; visible overflow
+       lets the blur layer below run past the screen's edges */
+    overflow: visible;
+    isolation: isolate;
     padding-top: clamp(56px, 13vh, 150px);
     background-image: linear-gradient(
       180deg,
@@ -361,7 +418,50 @@
       rgba(4, 6, 12, 0.84) 34%,
       rgba(4, 6, 12, 0.92) 100%
     );
+  }
+  /* The blur behind the words fades in with the scrim instead of starting on
+     a hard line at the box's top edge (backdrop-filter ignores the gradient),
+     and runs 24px past the sides so no sharp edge strip survives. */
+  .pl-page.is-full .pl-text::before {
+    content: "";
+    position: absolute;
+    inset: 0 -24px -24px;
+    z-index: -1;
+    pointer-events: none;
     backdrop-filter: blur(14px) saturate(0.92);
+    -webkit-mask-image: linear-gradient(180deg, transparent 0, rgba(0, 0, 0, 0.55) 12%, #000 30%);
+    mask-image: linear-gradient(180deg, transparent 0, rgba(0, 0, 0, 0.55) 12%, #000 30%);
+  }
+  /* A phone narrower than 0.7 of the picture's own shape (Player.tsx): the
+     picture fits the width from the top instead of a hard crop, its foot
+     fading into the room's blurred light; the words sit on the scrim below. */
+  .pl-page.is-full.is-portrait-fit .pl-picture img {
+    object-fit: contain;
+    object-position: 50% 0;
+    --pl-fit-h: calc(100vw / var(--pl-art-ratio, 1));
+    -webkit-mask-image: linear-gradient(180deg, #000 0, #000 calc(var(--pl-fit-h) - 64px), transparent var(--pl-fit-h));
+    mask-image: linear-gradient(180deg, #000 0, #000 calc(var(--pl-fit-h) - 64px), transparent var(--pl-fit-h));
+  }
+  /* …and under that foot the drawing's own lower edge, mirrored, softened and
+     a little dimmed, washes on down into the scrim — the band between the
+     picture and the words reads as the page's colours, not the room's fog. It
+     starts under the fade (the mirror's first rows are the picture's last)
+     and fades out before the prose, so the scrim's contrast is unchanged. */
+  .pl-page.is-full.is-portrait-fit .pl-picture-foot {
+    --pl-fit-h: calc(100vw / var(--pl-art-ratio, 1));
+    position: absolute;
+    top: calc(var(--pl-fit-h) - 72px);
+    left: 0;
+    width: 100%;
+    height: var(--pl-fit-h);
+    object-fit: fill;
+    transform: scaleY(-1);
+    filter: blur(14px) saturate(1.1) brightness(0.82);
+    /* drawn bottom-up: the mask is flipped with the element, so 0deg is the
+       mirror's visual top (the picture's own foot) */
+    -webkit-mask-image: linear-gradient(0deg, #000 0, #000 30%, rgba(0, 0, 0, 0.5) 52%, transparent 78%);
+    mask-image: linear-gradient(0deg, #000 0, #000 30%, rgba(0, 0, 0, 0.5) 52%, transparent 78%);
+    pointer-events: none;
   }
   .pl-page.is-full .pl-prose {
     text-shadow: 0 2px 18px rgba(0, 0, 0, 0.7);
@@ -376,7 +476,10 @@
     overflow-y: auto;
     overscroll-behavior: contain;
     padding: clamp(18px, 3.4vw, 44px) clamp(24px, 6vw, 96px);
-    padding-bottom: max(clamp(96px, 14vh, 148px), env(safe-area-inset-bottom, 0px));
+    /* the awake transport stands 92px + the chrome's own bottom inset
+       (max(16px, safe area)) tall; the words keep 12px clear of it on every
+       phone height, not only where 14vh happens to be enough (s02, 320×568) */
+    padding-bottom: max(clamp(120px, 14vh, 148px), calc(env(safe-area-inset-bottom, 0px) + 104px));
     background-image: linear-gradient(
       180deg,
       rgba(7, 10, 18, 0) 0%,
@@ -419,21 +522,33 @@
   /* Word-level read-along. Colour and weight only — transforms do not apply to
      inline boxes, and the wrapping stays natural. */
   .pl-word {
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
     transition:
       color 220ms ease-out,
       opacity 220ms ease-out,
-      text-shadow 220ms ease-out;
+      text-shadow 220ms ease-out,
+      box-shadow 220ms ease-out;
   }
   .pl-word.is-past {
-    /* warm, not white: the words already spoken keep the lamp's colour */
-    color: rgba(255, 247, 234, 0.96);
+    /* warm cream, not white: the words already spoken keep the lamp's colour (s02) */
+    color: var(--ss-cream);
   }
+  /* Not yet spoken: dimmer, cooler — but never under 4.5:1 on the darkest
+     scrim a phone's 18-19px prose sits on (the reference's .42 is a
+     large-text value). The said / now / ahead difference is warmth and glow. */
   .pl-word.is-future {
-    color: rgba(233, 240, 250, 0.42);
+    color: rgba(233, 240, 250, 0.6);
   }
+  /* the word being spoken: label gold, a two-layer halo and a gold ink
+     underline (foundation .ss-readalong .now; s02 .rd-text .now) — marked by
+     more than colour */
   .pl-word.is-now {
-    color: #fcd34d;
-    text-shadow: 0 0 22px rgba(245, 158, 11, 0.45);
+    color: var(--ss-label);
+    text-shadow:
+      0 0 26px rgba(255, 201, 60, 0.7),
+      0 0 8px rgba(255, 201, 60, 0.35);
+    box-shadow: inset 0 -0.12em 0 rgba(255, 201, 60, 0.55);
   }
 
   /* Title page — Register B type, centred, no picture competition. */
@@ -473,6 +588,7 @@
     background-color: #000000;
   }
   .pl-root.is-hc .pl-room-light,
+  .pl-root.is-hc .pl-picture-foot,
   .pl-root.is-hc .pl-ambient,
   .pl-root.is-hc .pl-backdrop,
   .pl-root.is-hc .pl-vignette {
@@ -485,6 +601,11 @@
   }
   .pl-root.is-hc .pl-prose {
     color: #ffffff;
+    font-weight: 600;
+  }
+  /* s02 figure C "High contrast": the words already spoken are pure white */
+  .pl-root.is-hc .pl-word.is-past {
+    color: #ffffff;
   }
   .pl-root.is-hc .pl-word.is-future {
     color: rgba(255, 255, 255, 0.72);
@@ -492,6 +613,8 @@
   .pl-root.is-hc .pl-word.is-now {
     color: #ffe36a;
     text-shadow: none;
+    /* a solid underline, no glow */
+    box-shadow: inset 0 -0.12em 0 currentColor;
   }
   .pl-root.is-hc .pl-picture {
     background-color: #000000;
@@ -521,39 +644,7 @@
     border-radius: 18px;
   }
 
-  /* ----------------------------------------------------------- the deck --- */
-  /* Reels turn quietly in the corner while the tape rolls. Never auto-hidden:
-     they are the one honest indicator that sound is moving. */
-  .pl-deck {
-    --sk-ink: rgba(233, 240, 250, 0.72);
-    position: absolute;
-    top: max(14px, env(safe-area-inset-top, 0px));
-    left: 16px;
-    z-index: 20;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 12px;
-    border: 1px solid rgba(255, 255, 255, 0.09);
-    border-radius: 999px;
-    background-color: rgba(8, 11, 19, 0.5);
-    backdrop-filter: blur(10px);
-    opacity: 0.55;
-    pointer-events: none;
-    transition: opacity 320ms ease-out;
-  }
-  .pl-deck.is-live {
-    opacity: 0.92;
-  }
-  .pl-deck-read {
-    font-family: var(--font-plex-mono), ui-monospace, monospace;
-    font-size: 10px;
-    line-height: 1;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: rgba(226, 232, 240, 0.62);
-    white-space: nowrap;
-  }
+  /* The deck chip (`.pl-deck*`) lives in ./deck.css (T09a). */
 
   /* ------------------------------------------------------------- chrome --- */
   .pl-chrome {
@@ -566,6 +657,13 @@
   .pl-chrome.is-hidden {
     opacity: 0;
     pointer-events: none;
+  }
+  /* belt and braces for the Player's wake-on-focus: chrome a keyboard stands
+     on is never invisible */
+  .pl-chrome.is-hidden:has(:focus-visible) {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
   }
   .pl-chrome--top {
     top: max(12px, env(safe-area-inset-top, 0px));
@@ -628,23 +726,9 @@
     line-height: 1;
   }
 
-  /* progress: a strip of tape filling up */
-  .pl-progress {
-    position: relative;
-    height: 3px;
-    width: min(560px, 100%);
-    overflow: hidden;
-    border-radius: 999px;
-    background-color: rgba(255, 255, 255, 0.1);
-  }
-  .pl-progress-fill {
-    height: 100%;
-    width: 100%;
-    transform-origin: 0 50%;
-    border-radius: 999px;
-    background-image: linear-gradient(90deg, #f59e0b, #fcd34d);
-    transition: transform 480ms cubic-bezier(0.2, 0.7, 0.3, 1);
-  }
+  /* progress — the strip of tape filling up (`.pl-progress*`) lives in
+     ./deck.css with the tape packs (T09b): one segment per page, on the
+     room's floor, never hidden with the chrome. */
 
   .pl-transport {
     display: flex;
@@ -917,9 +1001,6 @@
       animation-duration: 1ms !important;
     }
     .pl-word {
-      transition-duration: 1ms;
-    }
-    .pl-progress-fill {
       transition-duration: 1ms;
     }
     .pl-choice:hover {

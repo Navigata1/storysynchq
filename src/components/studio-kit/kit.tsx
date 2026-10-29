@@ -5,7 +5,7 @@
  *
  * Two registers, one kit (docs/design-direction.md §2):
  *   Register A — studio chrome: GlassPanel, TransportButton, ModeToggle, VUMeter
- *   Register B — tape stock:    Reel, TapeLabel
+ *   Register B — tape stock:    Reel, TapeLabel (+ Cassette, in ./Cassette)
  *   BigButton bridges both (child-scale action, warm gradients).
  *
  * Cascade note: kit.css lives in @layer components, so any Tailwind utility a
@@ -14,8 +14,24 @@
  * Inherited CSS custom properties you can set on any ancestor:
  *   --sk-ink            ink colour Reel picks up (GlassPanel sets it light,
  *                       TapeLabel sets it to tape ink — nested reels adapt)
+ *   --sk-reel-face      Reel face fill (default: a faint tint of the ink; the
+ *                       Cassette window sets paper, like the reference reel)
  *   --sk-big-h          BigButton min-height (default 64px; child mode: 88–104px)
  *   --sk-transport-size TransportButton diameter (default 56px)
+ *
+ * Tokens: colours, moods, layer fills, `--ss-ease` and the type stacks are CSS
+ * custom properties on `:root` (src/app/globals.css), with Tailwind utilities
+ * (`bg-ss-navy`, `text-ss-ink`, `ease-ss`, `font-ss-display` …). kit.css draws
+ * from them; `./tokens` is the typed mirror for SVG attributes and tests.
+ *
+ * Kit layout convention:
+ *   - The primitives above stay here, in kit.tsx + kit.css.
+ *   - Every NEW shared component gets its own file,
+ *     src/components/studio-kit/<Name>.tsx, with a component-scoped <name>.css
+ *     beside it only when it needs custom CSS (complex animation, SVG parts).
+ *   - Consumers import it from that file directly
+ *     (`import { Cassette } from "@/components/studio-kit/Cassette"`), never
+ *     through a barrel, so a page only ships the pieces it uses.
  */
 
 import * as React from "react";
@@ -23,21 +39,8 @@ import "./kit.css";
 
 /* ------------------------------------------------------------------ tokens */
 
-/** Register B — tape stock palette. */
-export const TAPE = {
-  paper: "#FFFDF6",
-  ink: "#1E1A16",
-  label: "#FFC93C",
-  red: "#E3452F",
-  shell: "#3B3733",
-} as const;
-
-/** Register A — studio chrome palette (convenience; kit styling already uses it). */
-export const STUDIO = {
-  bg: "#0a0e1a",
-  gold: "#F59E0B",
-  violet: "#7C6BFF",
-} as const;
+/** TAPE (Register B) and STUDIO (Register A) palettes, from the token mirror. */
+export { TAPE, STUDIO } from "./tokens";
 
 /* ------------------------------------------------------------------ utils */
 
@@ -55,18 +58,26 @@ function clamp01(n: number): number {
 export interface ReelProps {
   /** Spin while audio moves. Pauses in place when false (it keeps its angle). */
   spinning?: boolean;
-  /** Diameter in px. Default 56. */
-  size?: number;
+  /**
+   * Diameter: px as a number (default 56), or any CSS length as a string —
+   * e.g. a container unit, so a reel can scale with the shell it sits in.
+   */
+  size?: number | string;
   className?: string;
 }
 
 const REEL_SPOKES = [0, 60, 120, 180, 240, 300];
 
 /**
- * A cassette reel: 3px ink rim, dashed inner circle, six spokes, solid hub.
+ * A cassette reel, drawn like the reference ink reel (`#i-reel`): a rim, a
+ * dashed inner circle, six round-capped spokes and a solid hub. At rest — not
+ * spinning, or under reduced motion — it sits on the reference's static 18°
+ * frame, never at 0°.
+ *
  * Decorative (aria-hidden) — pair it with a labelled control for state.
- * Colour comes from the inherited `--sk-ink` (light inside GlassPanel, ink
- * inside TapeLabel), so it reads correctly in both registers.
+ * Ink comes from the inherited `--sk-ink` (light inside GlassPanel, ink inside
+ * TapeLabel); the face from `--sk-reel-face` (a faint tint of the ink unless a
+ * tape-stock context sets paper, as the Cassette window does).
  */
 export function Reel({ spinning = false, size = 56, className }: ReelProps) {
   return (
@@ -78,17 +89,16 @@ export function Reel({ spinning = false, size = 56, className }: ReelProps) {
       style={{ width: size, height: size }}
     >
       <svg className="sk-reel-svg" viewBox="0 0 100 100" focusable="false" aria-hidden="true">
-        <circle className="sk-reel-face" cx="50" cy="50" r="45" />
-        <circle className="sk-reel-rim" cx="50" cy="50" r="45" />
-        <circle className="sk-reel-dash" cx="50" cy="50" r="32" />
+        <circle className="sk-reel-rim" cx="50" cy="50" r="46" />
+        <circle className="sk-reel-dash" cx="50" cy="50" r="31" />
         {REEL_SPOKES.map((angle) => (
           <line
             key={angle}
             className="sk-reel-spoke"
             x1="50"
-            y1="21"
+            y1="22"
             x2="50"
-            y2="39"
+            y2="38"
             transform={`rotate(${angle} 50 50)`}
           />
         ))}
@@ -127,39 +137,64 @@ export function GlassPanel({ children, className, ...rest }: GlassPanelProps) {
 /* --------------------------------------------------------------- TapeLabel */
 
 export interface TapeLabelProps {
-  /** The story title — Fraunces 900, the loudest thing on the card. */
+  /** The story title — Fraunces 800, the loudest thing on the card. */
   title: string;
+  /** Printed in italic under the title, prefixed "by ". */
   author?: string;
   /** Mono label line, e.g. "SIDE A · 8 PAGES · 4:32". */
   meta?: React.ReactNode;
-  /** Override the yellow header band (the red stripe is fixed brand). */
+  /** Override the label-yellow band (the red stripe is fixed brand). */
   accent?: string;
+  /**
+   * A picture printed at the left of the field, beside the words (s05: the
+   * child's first page, 72×72 in a 2px ink frame — the consumer draws it).
+   * Absent, the label renders exactly as it always has.
+   */
+  inset?: React.ReactNode;
   className?: string;
 }
 
 /**
- * Register B artifact: the cassette label card. Paper field, 3px ink border,
- * label-yellow band under a tape-red stripe. This is the cover gate of every
- * published story and the face of a story in the library.
+ * Register B artifact: the cassette label card (reference `.ss-tape`). Paper
+ * field ruled every 28px inside a 3px ink border, radius 12; a 10px tape-red
+ * stripe over a 3px ink rule; a label-yellow band in mono 600 with two filled
+ * ink holes at the left and "STORYSYNC" at the right. This is the cover gate
+ * of every published story and the face of a story in the library.
  */
-export function TapeLabel({ title, author, meta, accent, className }: TapeLabelProps) {
+export function TapeLabel({ title, author, meta, accent, inset, className }: TapeLabelProps) {
+  const words = (
+    <>
+      <div className="sk-tape-title sk-font-tape">{title}</div>
+      {author ? <div className="sk-tape-author sk-font-tape">by {author}</div> : null}
+      {meta ? <div className="sk-tape-meta sk-font-meta">{meta}</div> : null}
+    </>
+  );
   return (
     <div data-sk="tape" className={cx("sk-tape", className)}>
       <div className="sk-tape-stripe" aria-hidden="true" />
-      <div className="sk-tape-band" style={{ backgroundColor: accent ?? TAPE.label }}>
+      <div
+        className="sk-tape-band sk-font-meta"
+        style={accent ? { backgroundColor: accent } : undefined}
+      >
         <span className="sk-tape-holes" aria-hidden="true">
           <span className="sk-tape-hole" />
           <span className="sk-tape-hole" />
         </span>
-        <span className="sk-tape-mark sk-font-meta" aria-hidden="true">
-          StorySync
+        <span className="sk-tape-mark" aria-hidden="true">
+          STORYSYNC
         </span>
       </div>
-      <div className="sk-tape-field">
-        <div className="sk-tape-title sk-font-tape">{title}</div>
-        {author ? <div className="sk-tape-author sk-font-tape">by {author}</div> : null}
-        {meta ? <div className="sk-tape-meta sk-font-meta">{meta}</div> : null}
-      </div>
+      {inset ? (
+        // s05 `.t-field`: the picture, then the words, 18px apart.
+        <div className="sk-tape-field flex items-center gap-[18px]">
+          <div data-sk="tape-inset" className="flex-none">
+            {inset}
+          </div>
+          <div className="min-w-0">{words}</div>
+        </div>
+      ) : (
+        <div className="sk-tape-field">{words}</div>
+      )}
     </div>
   );
 }
@@ -168,12 +203,21 @@ export function TapeLabel({ title, author, meta, accent, className }: TapeLabelP
 
 export type BigButtonVariant = "gold" | "violet" | "red" | "ghost";
 
+/**
+ * Outline: "rounded" (default) is the kit's 16px child-scale key; "pill" is
+ * the reference `.ss-btn` (radius 999px), for a page's one primary action
+ * where the reference draws a pill (s01's hero "Press play").
+ */
+export type BigButtonShape = "rounded" | "pill";
+
 export interface BigButtonProps
   extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "children"> {
   /** Emoji, SVG, or any node. Decorative — the label names the button. */
   icon?: React.ReactNode;
   label: string;
   variant?: BigButtonVariant;
+  /** Outline (default "rounded"). See BigButtonShape. */
+  shape?: BigButtonShape;
 }
 
 /**
@@ -185,6 +229,7 @@ export function BigButton({
   icon,
   label,
   variant = "gold",
+  shape = "rounded",
   disabled = false,
   className,
   type = "button",
@@ -194,6 +239,7 @@ export function BigButton({
     <button
       data-sk="big"
       data-variant={variant}
+      data-shape={shape === "pill" ? "pill" : undefined}
       {...rest}
       type={type}
       disabled={disabled}

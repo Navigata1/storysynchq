@@ -1,0 +1,49 @@
+/* ============================================================================
+   "Reply to · <title>" — the chip a thank-you carries (T18, s06 phone 2).
+
+   It sits in the room's top row, right under the bar, at every width, on the
+   bar's own 12px gutter (under Exit, as s06 sets it 6px below the bar): the
+   bar keeps its own height and the Stage starts below the chip. The chip is
+   the reference's violet `ss-chip` at s06's size (26px, 12.5px type, a 13px
+   Heart). A long title gives way to an ellipsis; the chip never wraps or
+   pushes the page sideways. Static: nothing moves, so reduced motion has
+   nothing to stop.
+   ========================================================================== */
+
+@layer components {
+  .studio-reply {
+    display: flex;
+    min-width: 0;
+    padding: 6px 12px 0;
+  }
+
+  .studio-reply-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 100%;
+    min-width: 0;
+    height: 26px;
+    margin: 0;
+    padding: 0 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(124, 107, 255, 0.5);
+    background-color: rgba(124, 107, 255, 0.16);
+    color: #cdc6ff;
+    font-family: var(--ss-ui);
+    font-weight: 500;
+    font-size: 12.5px;
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .studio-reply-chip > svg {
+    flex: none;
+    width: 13px;
+    height: 13px;
+  }
+  .studio-reply-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}

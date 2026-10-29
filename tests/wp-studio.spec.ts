@@ -255,15 +255,15 @@ test.describe("WP-S · the share loop", () => {
     await page.getByRole("button", { name: "Finish my story" }).click();
     await passGate(page, true);
 
-    /* the card: link, QR, made-in */
+    /* the card: link, made-in — and, with no cloud library here, no QR (M6):
+       the link opens on this device only, so nothing invites another phone */
     const shareInput = page.locator('[data-studio="share-url"]');
     await expect(shareInput).toBeVisible();
     const shareUrl = await shareInput.inputValue();
     expect(shareUrl).toMatch(/\/read\?story=[0-9a-f]{16,}$/);
 
-    const qr = page.locator('[data-studio="share-qr"]');
-    await expect(qr).toBeVisible();
-    expect(await qr.getAttribute("src")).toMatch(/^data:image\/png;base64,/);
+    await expect(page.locator('[data-studio="share-qr"]')).toHaveCount(0);
+    await expect(page.locator('[data-studio="device-note"]')).toBeVisible();
 
     await expect(page.locator('[data-studio="made-in"]')).toHaveText(/Made in \d+:[0-5]\d/);
     expect(await page.locator('[data-studio="made-in"]').innerText()).not.toMatch(/0:00/);
@@ -312,7 +312,8 @@ test.describe("WP-S · the share loop", () => {
     expect(second[0].shareCode).toBe(firstCode);
 
     /* one tap wipes it everywhere */
-    const deleteButton = page.getByRole("button", { name: /Delete everything/ });
+    // s05 renames the control (T16): "Pull the tape out — delete everything".
+    const deleteButton = page.getByRole("button", { name: /Pull the tape out — delete everything/ });
     await deleteButton.click();
     await page.getByRole("button", { name: /Tap again to delete everything/ }).click();
     await expect(page.getByRole("button", { name: "Finish my story" })).toBeVisible();
@@ -323,7 +324,7 @@ test.describe("WP-S · the share loop", () => {
     await expect(page.getByText("We couldn't find that tape")).toBeVisible({ timeout: 15000 });
   });
 
-  test("the share sheet and the .storysync download both carry the finished tape", async ({
+  test("a device-only link offers no share sheet; the .storysync download carries the finished tape", async ({
     page,
   }) => {
     await page.addInitScript(() => {
@@ -340,13 +341,13 @@ test.describe("WP-S · the share loop", () => {
     await page.getByRole("button", { name: "Finish my story" }).click();
     await passGate(page, false);
 
-    const shareUrl = await page.locator('[data-studio="share-url"]').inputValue();
-    await page.getByRole("button", { name: "Share the link…" }).click();
-    const shared = await page.evaluate(
-      () => (window as unknown as { __shared?: { url?: string; title?: string } }).__shared,
-    );
-    expect(shared?.url).toBe(shareUrl);
-    expect(shared?.title).toBe(STORY_TITLE);
+    // M6: with no cloud library the link opens on this device only, so even
+    // where Web Share exists (stubbed above) the card offers no share sheet:
+    // the .storysync file is how the story travels.
+    await expect(page.locator('[data-studio="share-url"]')).toHaveValue(/\/read\?story=[0-9a-f]{16,}$/);
+    await expect(page.getByRole("button", { name: "Share the link…" })).toHaveCount(0);
+    const shared = await page.evaluate(() => (window as unknown as { __shared?: unknown }).__shared);
+    expect(shared, "nothing was handed to a share sheet").toBeUndefined();
 
     const download = page.waitForEvent("download");
     await page.getByRole("button", { name: "Download the .storysync file" }).click();
@@ -519,11 +520,19 @@ test.describe("WP-S · child-flow correctness", () => {
     await seedDraft(page, { narration: false, autoPause: "450ms" });
     await openSeededStudio(page);
 
+    // On a phone (< 640px, M6) Simple/Advanced waits behind the bar's "More" key.
+    if (!(await page.locator('[data-sk="mode"]').first().isVisible())) {
+      await page.locator('[data-studio="bar-more"]').click();
+    }
     await page.locator('[data-sk="mode"]').first().click();
-    const label = page.locator('label[for="insp-autopause"]');
-    await expect(label).toBeVisible();
-    await expect(label).toContainText(/0\.[45]s/);
-    await expect(label).not.toContainText("450");
+    // M6 (s09 density): the reading sits beside the slider, not inside its label;
+    // the slider itself speaks it (aria-valuetext).
+    const slider = page.locator("#insp-autopause");
+    await expect(slider).toBeVisible();
+    await expect(slider).toHaveAttribute("aria-valuetext", /^0\.[45]s$/);
+    const row = page.locator('[data-studio="insp-slider"]', { has: slider });
+    await expect(row).toContainText(/0\.[45]s/);
+    await expect(row).not.toContainText("450");
   });
 
   test("an autosave failure is visible at phone width", async ({ page }) => {

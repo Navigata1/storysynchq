@@ -18,10 +18,8 @@
  */
 
 import { expect, test, type Page } from "@playwright/test";
-import fs from "fs";
-import path from "path";
+import { evidencePath } from "./fixtures/evidence";
 
-const SHOTS = path.join(process.cwd(), "tests", "screenshots");
 const BASE_NAVY = { r: 0x0a, g: 0x0e, b: 0x1a };
 
 interface Rgb {
@@ -53,9 +51,8 @@ async function samplePixels(
   shot: string | null,
   points: Array<{ x: number; y: number }>,
 ): Promise<Array<Rgb & { x: number; y: number }>> {
-  fs.mkdirSync(SHOTS, { recursive: true });
   const buffer = await page.screenshot(
-    shot ? { path: path.join(SHOTS, `${shot}.png`) } : {},
+    shot ? { path: evidencePath(`${shot}.png`, { dir: "tests/screenshots" }) } : {},
   );
   const dataUrl = `data:image/png;base64,${buffer.toString("base64")}`;
   return page.evaluate(
@@ -86,9 +83,8 @@ async function scanRect(
   shot: string | null,
   rect: { x: number; y: number; width: number; height: number },
 ): Promise<number[]> {
-  fs.mkdirSync(SHOTS, { recursive: true });
   const buffer = await page.screenshot(
-    shot ? { path: path.join(SHOTS, `${shot}.png`) } : {},
+    shot ? { path: evidencePath(`${shot}.png`, { dir: "tests/screenshots" }) } : {},
   );
   const dataUrl = `data:image/png;base64,${buffer.toString("base64")}`;
   return page.evaluate(
@@ -489,7 +485,7 @@ for (const shape of ["absent", "throws"] as const) {
     await expect(end.getByRole("button", { name: /Read it again/i })).toBeVisible();
     await expect(end.getByRole("button", { name: /Make your own story/i })).toBeVisible();
     await page.screenshot({
-      path: path.join(SHOTS, `critic-player-endcard-noaudio-${shape}.png`),
+      path: evidencePath(`critic-player-endcard-noaudio-${shape}.png`, { dir: "tests/screenshots" }),
     });
   });
 }
@@ -569,9 +565,11 @@ test("critic WP-P · prose is Fraunces, clamp()-sized, and capped near 62ch", as
   expect(wide.size).toBeGreaterThan(narrow.size + 4);
   expect(narrow.size).toBeGreaterThanOrEqual(16);
   expect(wide.size).toBeLessThanOrEqual(1.9 * 16 + 0.5);
-  // ~62ch measure: the cap, and the line actually rendered, both respect it
-  expect(wide.maxWidth / wide.chWidth).toBeGreaterThan(55);
-  expect(wide.maxWidth / wide.chWidth).toBeLessThan(70);
+  // the measure: the cap, and the line actually rendered, both respect it.
+  // T08 (s02): at 1440×900 the prose sits on a book page of the spread, whose
+  // measure is a book's (≈34 ch), not the full-bleed ~62ch (kept on phones).
+  expect(wide.maxWidth / wide.chWidth).toBeGreaterThanOrEqual(28);
+  expect(wide.maxWidth / wide.chWidth).toBeLessThanOrEqual(40);
   expect(wide.rendered).toBeLessThanOrEqual(wide.maxWidth + 1);
 });
 
@@ -872,7 +870,9 @@ for (const vp of [
     await page.setViewportSize({ width: vp.width, height: vp.height });
     await seedRound2(page);
     await tapToBegin(page, "/read?story=critic-white");
-    await expect(page.locator(".pl-page.is-full")).toHaveCount(1);
+    // T08 (s02): at desktop width the "full" page opens as a two-page spread
+    // (words on a sheer right page); a phone keeps the full-bleed scrim.
+    await expect(page.locator(vp.width >= 1024 ? ".pl-page.is-spread" : ".pl-page.is-full")).toHaveCount(1);
     await backdropPainted(page);
 
     const prose = page.locator('[data-pl="prose"]');
@@ -1040,7 +1040,7 @@ test("critic WP-P · the end-card QR encodes the exact share URL", async ({ page
   const other = encode("http://localhost:3000/read?story=some-other-tape");
   const diff = read.bits.reduce((n, bit, i) => n + (bit === (other.bits[i] ? 1 : 0) ? 0 : 1), 0);
   expect(diff, "the module comparison cannot tell two URLs apart").toBeGreaterThan(0);
-  await page.screenshot({ path: path.join(SHOTS, "critic-player-endcard-qr.png") });
+  await page.screenshot({ path: evidencePath("critic-player-endcard-qr.png", { dir: "tests/screenshots" }) });
 
   // and a tape opened with no ?story= gets no QR at all
   await tapToBegin(page, "/read?demo=1");

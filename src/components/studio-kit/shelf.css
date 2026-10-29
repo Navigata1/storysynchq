@@ -1,0 +1,519 @@
+/* ============================================================================
+   Shelf + ShelfTape — tapes standing on a ledge (brief design_system LOCAL (8);
+   s07 `.s7-ledge`, `.s7-face`, `.s7-blank`, `.s7-slot`, `.s7-loop`).
+
+   The ledge: 8px of shell with a 1px top highlight and a soft shadow, the
+   whole width of the row. Faces: 150×110, radius 10, the 165° shell gradient,
+   a paper label inset 6px (stripe, band with two ink holes, ruled field), a
+   dark reel window, two screws. Selected: lifted 10px over a gold glow, 300ms
+   --ss-ease. Pulling: 8° and 30px up over 420ms, the ribbon spilling.
+
+   Room for the motion: the scroller keeps 44px above the faces (a pulled tape
+   reaches 40px up) and 30px under the ledge (the loop's lowest curl), so
+   nothing is clipped by the horizontal scroll.
+
+   Reduced motion: the lift is still there, with no transition; nothing
+   animates (the Read Room removes a pulled tape at once).
+   ========================================================================== */
+
+@keyframes sk-shelf-pull {
+  from {
+    transform: translateY(-10px) rotate(0deg);
+  }
+  to {
+    transform: translateY(-30px) rotate(8deg);
+  }
+}
+
+@keyframes sk-shelf-spill {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@layer components {
+  /* ---------- the scroller + ledge ---------------------------------------- */
+  .sk-shelf {
+    position: relative;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--ss-fg) 18%, transparent) transparent;
+    /* the glow and the selected ring reach past the first and last face */
+    margin-inline: -12px;
+    padding: 44px 12px 0;
+    border-radius: 14px;
+  }
+  .sk-shelf:focus-visible {
+    outline-offset: 0;
+  }
+  .sk-shelf-track {
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    width: max-content;
+    min-width: 100%;
+    /* 8px ledge + 30px for the spilled loop under it */
+    padding-bottom: 38px;
+  }
+  /* the cubby the tapes stand in, and the morning light falling into it (s07
+     .s7-cubby + .s7-sunlight) */
+  .sk-shelf-track::before {
+    content: "";
+    position: absolute;
+    left: -12px;
+    right: -12px;
+    top: -30px;
+    bottom: 38px;
+    z-index: 0;
+    border-radius: 14px 14px 0 0;
+    pointer-events: none;
+    background:
+      radial-gradient(460px 170px at 36% 100%, rgba(255, 214, 150, 0.1), transparent 72%),
+      linear-gradient(180deg, transparent, color-mix(in srgb, var(--ss-fg) 2.8%, transparent));
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--ss-fg) 3%, transparent);
+  }
+  .sk-shelf-ledge {
+    position: absolute;
+    left: -12px;
+    right: -12px;
+    bottom: 30px;
+    z-index: 0;
+    height: 8px;
+    border-radius: 2px;
+    background-image: linear-gradient(180deg, var(--ss-shell-hi), var(--ss-shell) 45%, var(--ss-shell-2));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.2),
+      0 12px 18px -6px rgba(0, 0, 0, 0.75),
+      0 3px 4px rgba(0, 0, 0, 0.4);
+  }
+
+  /* ---------- a slot: one tape's place on the ledge ----------------------- */
+  .sk-shelf-slot {
+    position: relative;
+    z-index: 1;
+    flex: none;
+    width: 150px;
+    height: 110px;
+  }
+  .sk-shelf-slot[data-pulling="true"] {
+    z-index: 2;
+  }
+
+  /* the gold light under the selected tape, falling on the ledge */
+  .sk-shelf-glow {
+    position: absolute;
+    left: -30px;
+    right: -30px;
+    bottom: -32px;
+    z-index: 0;
+    height: 70px;
+    border-radius: 50%;
+    pointer-events: none;
+    background: radial-gradient(
+      closest-side,
+      color-mix(in srgb, var(--ss-gold) 55%, transparent),
+      color-mix(in srgb, var(--ss-gold) 14%, transparent) 55%,
+      transparent
+    );
+    filter: blur(4px);
+    opacity: 0;
+    transition: opacity 300ms var(--ss-ease);
+  }
+  /* …and a bright line of it on the ledge's lip (s07 .s7-glow2) */
+  .sk-shelf-glow::after {
+    content: "";
+    position: absolute;
+    left: 30px;
+    right: 30px;
+    top: 31px;
+    height: 6px;
+    border-radius: 3px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in srgb, var(--ss-label) 85%, transparent),
+      transparent
+    );
+    filter: blur(1.5px);
+  }
+  .sk-shelf-slot[data-selected="true"] .sk-shelf-glow {
+    opacity: 1;
+  }
+  .sk-shelf-slot[data-pulling="true"] .sk-shelf-glow {
+    opacity: 0;
+  }
+
+  /* the empty place a pulled tape leaves */
+  .sk-shelf-hole {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: 10px;
+    border: 1.5px dashed color-mix(in srgb, var(--ss-fg) 18%, transparent);
+    background: rgba(0, 0, 0, 0.12);
+  }
+
+  /* the ribbon spilling out of a pulled tape */
+  .sk-shelf-loop {
+    position: absolute;
+    left: 0;
+    top: 70px;
+    z-index: 1;
+    width: 150px;
+    height: 116px;
+    overflow: visible;
+    pointer-events: none;
+    filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.55));
+  }
+  .sk-shelf-loop path {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: sk-shelf-spill 420ms var(--ss-ease) 60ms forwards;
+  }
+
+  /* ---------- the face ------------------------------------------------------ */
+  .sk-shelf-face {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: block;
+    width: 150px;
+    height: 110px;
+    padding: 0;
+    border: 0;
+    border-radius: 10px;
+    color: var(--ss-ink);
+    text-align: left;
+    cursor: pointer;
+    background-image: linear-gradient(165deg, var(--ss-shell-hi) 0%, var(--ss-shell) 42%, var(--ss-shell-2) 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.16),
+      inset 0 0 0 1.5px rgba(0, 0, 0, 0.35),
+      0 16px 22px -12px rgba(0, 0, 0, 0.85),
+      0 3px 6px rgba(0, 0, 0, 0.35);
+    transform: translateY(0);
+    transform-origin: 50% 50%;
+    transition:
+      transform 300ms var(--ss-ease),
+      box-shadow 300ms var(--ss-ease),
+      opacity 220ms var(--ss-ease);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .sk-shelf-face:not([aria-checked="true"]):hover {
+    transform: translateY(-3px);
+  }
+  .sk-shelf-slot[data-selected="true"] .sk-shelf-face {
+    transform: translateY(-10px);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.18),
+      inset 0 0 0 1.5px rgba(0, 0, 0, 0.35),
+      0 0 0 2px color-mix(in srgb, var(--ss-gold) 95%, transparent),
+      0 0 26px 2px color-mix(in srgb, var(--ss-gold) 38%, transparent),
+      0 22px 26px -14px rgba(0, 0, 0, 0.9);
+  }
+  .sk-shelf-slot[data-pulling="true"] .sk-shelf-face {
+    animation: sk-shelf-pull 420ms var(--ss-ease) forwards;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.16),
+      inset 0 0 0 1.5px rgba(0, 0, 0, 0.35),
+      0 26px 30px -12px rgba(0, 0, 0, 0.85);
+  }
+  .sk-shelf-slot[data-pulling="true"] .sk-shelf-label {
+    filter: saturate(0.75);
+  }
+  .sk-shelf-slot[data-leaving="true"] .sk-shelf-face,
+  .sk-shelf-slot[data-leaving="true"] .sk-shelf-loop,
+  .sk-shelf-slot[data-leaving="true"] .sk-shelf-hole {
+    opacity: 0;
+    transition: opacity 220ms var(--ss-ease);
+  }
+
+  /* the paper label */
+  .sk-shelf-label {
+    position: absolute;
+    left: 6px;
+    right: 6px;
+    top: 6px;
+    /* every label the same height, its field ruled to just above the window */
+    bottom: 21px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1.5px solid var(--ss-ink);
+    border-radius: 5px;
+    background-color: var(--ss-paper);
+  }
+  .sk-shelf-stripe {
+    display: block;
+    flex: none;
+    height: 4px;
+    background-color: var(--ss-red);
+  }
+  .sk-shelf-band {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 3px;
+    height: 9px;
+    padding: 0 5px;
+    border-top: 1px solid var(--ss-ink);
+    border-bottom: 1px solid var(--ss-ink);
+    background-color: var(--ss-label);
+  }
+  .sk-shelf-hole-ink {
+    display: block;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background-color: var(--ss-ink);
+  }
+  .sk-shelf-field {
+    display: block;
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 4px;
+    background-color: var(--ss-paper);
+    background-image: repeating-linear-gradient(
+      180deg,
+      transparent 0 11px,
+      color-mix(in srgb, var(--ss-ink) 7%, transparent) 11px 12px
+    );
+  }
+  .sk-shelf-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 5px;
+  }
+  .sk-shelf-inset {
+    display: block;
+    flex: none;
+    box-sizing: border-box;
+    width: 32px;
+    height: 32px;
+    border: 2px solid var(--ss-ink);
+    border-radius: 3px;
+    background-color: var(--ss-crayon-paper);
+    object-fit: cover;
+  }
+  .sk-shelf-title {
+    display: -webkit-box;
+    min-width: 0;
+    overflow: hidden;
+    padding-top: 1px;
+    font-family: var(--ss-display);
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.04;
+    letter-spacing: -0.01em;
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+  .sk-shelf-meta {
+    display: block;
+    margin-top: 3px;
+    font-family: var(--ss-mono);
+    font-size: 9.5px;
+    font-weight: 500;
+    line-height: 1.16;
+    letter-spacing: 0;
+    text-transform: uppercase;
+    color: var(--ss-ink);
+  }
+  /* a meta in lines: each line one row, clipped; the separator between them is
+     read (and copied) but not drawn, as the reference sets it */
+  .sk-shelf-meta-line {
+    display: block;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .sk-shelf-meta-sep {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /* the reel window */
+  .sk-shelf-window {
+    --sk-ink: var(--ss-ink);
+    --sk-reel-face: var(--ss-paper-3);
+    position: absolute;
+    left: 41px;
+    top: 93px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-sizing: border-box;
+    width: 68px;
+    height: 12px;
+    padding: 0 9px;
+    border-radius: 999px;
+    background-image: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--ss-ink) 70%, var(--ss-slot)),
+      color-mix(in srgb, var(--ss-ink) 85%, var(--ss-shell))
+    );
+    box-shadow:
+      inset 0 2px 4px rgba(0, 0, 0, 0.8),
+      0 0 0 1.5px color-mix(in srgb, var(--ss-ink) 85%, black);
+  }
+  .sk-shelf-window::before {
+    content: "";
+    position: absolute;
+    left: 18px;
+    right: 18px;
+    top: 4px;
+    height: 4px;
+    border-radius: 1px;
+    background-image: var(--ss-tape-brown);
+  }
+  .sk-shelf-window > .sk-reel {
+    position: relative;
+    z-index: 1;
+  }
+  .sk-shelf-screw {
+    position: absolute;
+    bottom: 5px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, var(--ss-ink-3), var(--ss-shell) 70%);
+  }
+  .sk-shelf-screw--l {
+    left: 8px;
+  }
+  .sk-shelf-screw--r {
+    right: 8px;
+  }
+  .sk-shelf-stamp {
+    position: absolute;
+    top: -9px;
+    right: 2px;
+    z-index: 3;
+  }
+  /* T20b's NEW (s07 .ss-stamp.s7-new): tape-red ink and a 2px tape-red border
+     on paper, mono 600 11px tracked, tilted −6° */
+  .sk-shelf-new {
+    display: block;
+    padding: 3px 5px 2px 6px;
+    border: 2px solid var(--ss-red);
+    border-radius: 7px;
+    background-color: var(--ss-paper);
+    color: var(--ss-red);
+    font-family: var(--ss-mono);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    transform: rotate(-6deg);
+    box-shadow: 0 4px 8px -4px rgba(0, 0, 0, 0.6);
+  }
+
+  /* T20b's "SENT TO YOU": a mono label under the ledge, below its tape (s07
+     .s7-sent's place; a plain label, not a status chip) */
+  .sk-shelf-ledge-label {
+    position: absolute;
+    left: 2px;
+    /* the slot's foot is the ledge's top: 8px of ledge, then the label */
+    top: calc(100% + 15px);
+    z-index: 1;
+    font-family: var(--ss-mono);
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.2;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--ss-fg-2);
+    pointer-events: none;
+  }
+
+  /* ---------- the blank tape: "Make your own" ------------------------------- */
+  .sk-shelf-face.sk-shelf-face--blank {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    box-sizing: border-box;
+    padding: 8px 10px;
+    border: 2px dashed var(--ss-ink);
+    border-radius: 10px;
+    color: var(--ss-ink);
+    text-align: center;
+    background-image: none;
+    background-color: color-mix(in srgb, var(--ss-paper) 94%, transparent);
+    box-shadow: 0 16px 22px -12px rgba(0, 0, 0, 0.8);
+  }
+  .sk-shelf-plus {
+    display: grid;
+    place-items: center;
+    flex: none;
+    box-sizing: border-box;
+    width: 26px;
+    height: 26px;
+    border: 2px solid var(--ss-ink);
+    border-radius: 50%;
+    background-color: var(--ss-label);
+  }
+  .sk-shelf-plus > svg {
+    width: 15px;
+    height: 15px;
+  }
+  .sk-shelf-blank-title {
+    display: block;
+    margin-top: 1px;
+    font-family: var(--ss-display);
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+  }
+  .sk-shelf-blank-meta {
+    display: block;
+    font-family: var(--ss-mono);
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.25;
+    letter-spacing: 0.04em;
+    color: var(--ss-ink-2);
+  }
+  .sk-shelf-blank-meta > span {
+    display: block;
+  }
+
+  /* ---------- reduced motion: the same states, standing still --------------- */
+  @media (prefers-reduced-motion: reduce) {
+    .sk-shelf-face,
+    .sk-shelf-glow,
+    .sk-shelf-slot[data-leaving="true"] .sk-shelf-face,
+    .sk-shelf-slot[data-leaving="true"] .sk-shelf-loop,
+    .sk-shelf-slot[data-leaving="true"] .sk-shelf-hole {
+      transition: none;
+    }
+    .sk-shelf-face:not([aria-checked="true"]):hover {
+      transform: none;
+    }
+    .sk-shelf-slot[data-pulling="true"] .sk-shelf-face {
+      animation: none;
+      transform: translateY(-30px) rotate(8deg);
+    }
+    .sk-shelf-loop path {
+      animation: none;
+      stroke-dashoffset: 0;
+    }
+  }
+}

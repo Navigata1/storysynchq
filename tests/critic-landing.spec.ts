@@ -16,7 +16,8 @@
  *   · both /protocol and the hero are checked for horizontal overflow at the
  *     project viewport (375px on mobile).
  *
- * Screenshots for a human: tests/screenshots/critic-landing-*.png
+ * Screenshots for a human: tests/screenshots/critic-landing-*.png with
+ * UPDATE_SCREENSHOTS=1, else the test's output folder (tests/fixtures/evidence.ts)
  */
 
 import { expect, test, type Page } from "@playwright/test";
@@ -24,8 +25,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import { unzipSync, strFromU8 } from "fflate";
-
-const SHOTS = path.join(process.cwd(), "tests", "screenshots");
+import { evidencePath } from "./fixtures/evidence";
 
 /** docs/design-direction.md §9.4 — hard-coded here so the test can fail. */
 const SEVEN_LAYERS = ["Metadata", "Visual", "Text", "Voice", "Sound", "Behavior", "Signature"];
@@ -34,9 +34,8 @@ const SEVEN_LAYERS = ["Metadata", "Visual", "Text", "Voice", "Sound", "Behavior"
 const INSERT_BUDGET_MS = 900;
 
 function shot(page: Page, name: string, fullPage = false) {
-  fs.mkdirSync(SHOTS, { recursive: true });
   return page.screenshot({
-    path: path.join(SHOTS, `${name}-${test.info().project.name}.png`),
+    path: evidencePath(`${name}-${test.info().project.name}.png`, { dir: "tests/screenshots" }),
     fullPage,
   });
 }
@@ -171,9 +170,11 @@ test.describe("CRITIC · WP-L hero: press play inserts the tape", () => {
     await page.goto("/");
     const inFooter = page.locator('footer a[href="/protocol"]');
     await expect(inFooter).toHaveCount(1);
+    // T07: the s01 top nav adds "The SSYNC Protocol" — nav + protocol section.
     const outsideFooter = page.locator('a[href="/protocol"]:not(footer a)');
-    await expect(outsideFooter).toHaveCount(1);
-    await outsideFooter.first().click();
+    await expect(outsideFooter).toHaveCount(2);
+    // Desktop: the nav link; phones: the nav links sit behind Menu, so the section's.
+    await outsideFooter.filter({ visible: true }).first().click();
     await page.waitForURL(/\/protocol$/, { timeout: 4000 });
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
@@ -453,8 +454,10 @@ test.describe("CRITIC · WP-L round 2: try to break it", () => {
       await expect(input).toHaveCount(0, { timeout: 2000 });
     }).toPass({ timeout: 20000 });
 
-    // It is a playing tape, not just a parsed file: the illustration and the
-    // first page's words are on screen.
+    // It is a playing tape, not just a parsed file: it opens on its Tap to
+    // Begin cover (only the drawing shows through, as s05 draws it), and once
+    // begun the illustration and the first page's words are on screen.
+    await page.getByRole("button", { name: /Tap to Begin/i }).click({ timeout: 15000 });
     await expect(page.getByRole("img", { name: /tiny star shining brighter/i })).toBeVisible({
       timeout: 15000,
     });

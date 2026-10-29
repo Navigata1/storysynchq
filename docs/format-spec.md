@@ -93,6 +93,14 @@ ladder (implemented in `src/lib/audio/transcode.ts`):
 - **Two audio buses**: narration (foreground) and music bed (background). While
   narration plays, the music bed ducks approximately −12 dB with smooth gain
   ramps (~0.6 s), restoring afterward — the cassette-book sound.
+- **Per-page mood and crossfade**: each page plays the mood its own `music`
+  names (a mood string, a v1 track id, or `{ "crossfade": "<mood>" }`); a page
+  that names no music is silence. `pages[].music.duration` is the crossfade
+  into this page's mood, written as a duration (`"2s"`, `"450ms"`); default
+  1.6 s; players MAY clamp (the reference player clamps to 0.05–10 s and reads
+  anything that is not a non-negative duration as the default). It belongs to
+  the page being entered, whichever way the reader turns. A bed that starts
+  from silence fades in on its own envelope.
 - **Tap to Begin**: browsers (iOS Safari especially) block audio before a user
   gesture. Players MUST gate playback behind an initial tap and resume the
   audio context inside that gesture.
@@ -100,6 +108,16 @@ ladder (implemented in `src/lib/audio/transcode.ts`):
   (scaled by `settings.accessibility.timingMultiplier`), optionally play a
   page-turn cue, then advance. Manual navigation re-syncs narration to the new
   page.
+- **Author-default accessibility**: Players SHOULD apply `settings.accessibility`
+  as defaults; a viewer's own choices override them, and are stored on the
+  device only. `highContrast: true` opens the tape in high contrast and
+  `dyslexiaFont: true` with an easier-to-read font, unless the viewer has chosen
+  otherwise; `false` is the same as absent. The viewer's choice wins field by
+  field: a viewer who turned high contrast off still gets the tape's font.
+  `timingMultiplier` scales every pause as above, and a viewer's own pause
+  setting multiplies on top. The reference player stores only the settings a
+  viewer explicitly changed (under `ssync-reader-prefs`, never sent anywhere),
+  and says "Set by the storyteller" on a switch whose value comes from the tape.
 - **No text-to-speech requirement**: if `text.audioUrl` is absent, a player MAY
   synthesize narration from `text.content` (the reference reader uses the Web
   Speech API) or display text silently.
@@ -123,16 +141,52 @@ At AAC 96 kbps, 5 minutes of narration is ≈ 3.6 MB.
 The seven-layer packet model from the protocol vision (Metadata / Visual / Text /
 Voice / Sound / Behavior / **Signature**) reserves a top-level `signature` block
 for what must travel WITH a story to make it ownable and remixable outside any
-one app: `shareUrl`, `ownership`, `remixOf` (remix ancestry), `voiceConsent[]`
-(who consented to which recorded voice — sacred for children's and family
-voices), and `rights`. All fields optional and additive; v2.0 readers ignore
-them. A published story containing a recorded human voice SHOULD carry a
+one app: `shareUrl`, `ownership`, `remixOf` (remix ancestry), `replyTo`,
+`voiceConsent[]` (who consented to which recorded voice — sacred for children's
+and family voices), and `rights`. All fields optional and additive; v2.0 readers
+ignore them. A published story containing a recorded human voice SHOULD carry a
 `voiceConsent` record.
+
+`replyTo` is the share URL or id of the tape this one answers; a reply is a new
+tape, not a derivative, so it is distinct from `remixOf`.
+
+### 7.1 `voiceConsent[]` — consent travels in the tape
+
+The file carries the consent, not a server. There is **one `voiceConsent`
+record per recorded voice** on the tape: a story narrated by a child and
+answered by a grandparent carries two records.
+
+| Field | Required | Meaning |
+|---|---|---|
+| `voice` | yes | Whose voice, as credited on the tape. |
+| `grantedBy` | yes | Who consented. Conventionally `"parent/guardian"` (a child's voice, consented by their grown-up) or `"self"` (an adult's own voice). Free text is allowed. |
+| `date` | no | Calendar date of consent, **`YYYY-MM-DD`**: the consenting device's local date. |
+
+```json
+{ "voice": "Ada, age 4 — with Dad", "grantedBy": "parent/guardian", "date": "2026-10-19" }
+```
+
+`date` is a calendar date, `YYYY-MM-DD`, not a timestamp. Older tapes carry a
+full ISO timestamp (`2026-10-19T18:09:58.123Z`): readers MUST accept it and
+keep opening the tape, and validators SHOULD warn. The schema types `date` as
+`format: "date"` and adds no `pattern`, so the rule stays a warning rather than
+a schema failure.
+
+The reference validator (`validateManifest` in
+[`/src/lib/storysync/manifest.ts`](../src/lib/storysync/manifest.ts)) prints
+these warnings. A warning never fails validation and never blocks packing,
+unpacking or publishing:
+
+```
+WARN  signature.voiceConsent[0].date is a full timestamp; the v2.1 draft asks for a date
+WARN  signature.voiceConsent[0].date "Oct 19 2026" is not a calendar date (YYYY-MM-DD)
+WARN  a recorded voice is on this tape but signature.voiceConsent is empty; the v2.1 draft says it SHOULD carry one
+```
 
 ## 8. Versioning
 
 - `1.0` — bare JSON document (`.ssync.json`), external/data-URL media only.
   Readers keep accepting v1 documents.
 - `2.0` — this spec: ZIP container, bundled assets, codec rule, `audioCodec`.
-- `2.1` (draft) — the Signature layer (§7): ownership, remix ancestry, consent.
+- `2.1` (draft) — the Signature layer (§7): ownership, remix ancestry, replies, consent.
 - Future versions bump `version` and migrate in `src/lib/storysync/`.

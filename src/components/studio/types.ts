@@ -11,6 +11,7 @@
 
 import type { MoodName } from "@/lib/audio/moods";
 import type { SsyncManifest, SsyncPage } from "@/lib/storysync/manifest";
+import type { RemixRecord } from "@/lib/storysync/revoice";
 
 /* ------------------------------------------------------------------ moods */
 
@@ -24,6 +25,13 @@ import type { SsyncManifest, SsyncPage } from "@/lib/storysync/manifest";
 export { MOOD_NAMES } from "@/lib/audio/moods";
 export type { MoodName } from "@/lib/audio/moods";
 
+/**
+ * Where an opened tape came from (`revoiceManifest`, src/lib/storysync/revoice.ts):
+ * `{ of, title, author }`. Draft-only — the publish writes `of` into
+ * `signature.remixOf` and keeps `author` as the tape's author.
+ */
+export type { RemixRecord } from "@/lib/storysync/revoice";
+
 /* ------------------------------------------------------------------ state */
 
 /** Draft-only bookkeeping for a recording that has not been published yet. */
@@ -32,6 +40,28 @@ export interface RecordingMeta {
   mimeType: string;
   /** Wall-clock seconds. */
   duration: number;
+  /**
+   * Set by a publish with "Evening out each voice" on, once this take has been
+   * brought to the target loudness or found already there (T17). A levelled
+   * take is never levelled again; a new take starts without it.
+   */
+  levelled?: boolean;
+}
+
+/**
+ * The tape a reply answers (T18), as the Creator's "Reply to · <title>" chip
+ * names it. Draft-only: the reply's link travels in `signature.replyTo`; the
+ * title never enters a manifest.
+ */
+export interface ReplyRecord {
+  /** The answered tape's title. */
+  title: string;
+  /**
+   * Whom the thank-you goes back to (the seed's `name`), so the publish card
+   * can keep the end card's promise: "Send it back to <name>". Absent when
+   * the answered tape names nobody.
+   */
+  name?: string;
 }
 
 export interface PublishRecord {
@@ -45,11 +75,28 @@ export interface StudioState {
   manifest: SsyncManifest;
   /** page id → draft recording meta. */
   recordings: Record<string, RecordingMeta>;
+  /** The story mood: every page without its own plays it. */
   mood: MoodName;
+  /**
+   * Per-page moods (T24a): page id → that page's own mood, set in Advanced.
+   * Draft-only — never in the draft's `page.music`; publish writes each
+   * page's effective mood (./page-moods `publishedMusic`). Optional, and
+   * absent means none, so a state written without it (a draft from an older
+   * build, a test fixture) still loads: `blankState` and the draft loader
+   * give `{}`.
+   */
+  pageMoods?: Record<string, MoodName>;
   musicOn: boolean;
   /** 0..1, pre-duck. */
   musicVolume: number;
   narrationVolume: number;
+  /**
+   * "Evening out each voice" (T17): publish brings every recording to one
+   * loudness before it becomes AAC. Draft-only, never written to a manifest.
+   * Optional, and absent means on, so a draft from an older build (or a test
+   * fixture) still levels: the draft loader merges over `blankState`.
+   */
+  levelVoices?: boolean;
   published: PublishRecord | null;
   /**
    * Every story id this tape has ever been saved under, so "delete everything"
@@ -59,6 +106,32 @@ export interface StudioState {
   publishedIds: string[];
   /** When this tape was started, on this device. Feeds "Made in m:ss". */
   startedAt: string;
+  /**
+   * Set when this draft is a tape opened in the Creator to be re-voiced
+   * (T15); null for a story made here. Never written into a manifest as is.
+   * Optional, and absent means null, so a state written without it (a draft
+   * from an older build, a test fixture) still loads: the draft loader merges
+   * over `blankState`, which sets it to null.
+   */
+  remix?: RemixRecord | null;
+  /**
+   * Set when this draft is a thank-you to another tape (T18): the chip under
+   * the top bar. Draft-only, never written into a manifest. Absent for a
+   * story made here; `blankState` leaves it out, so "Start a new story" and
+   * "delete everything" clear it.
+   */
+  reply?: ReplyRecord;
+  /**
+   * Whose voice the family chose on the shelf for this copy (T22b, "Read it
+   * in…" → "WHOSE VOICE?"): the Voice card says "Reading as <name>" and the
+   * gate's "read by" starts as it, so T03 names the narrator and T04b asks
+   * consent for that voice. Draft-only, never written into a manifest; the
+   * name reaches a tape only through the byline the grown-up passes at the
+   * gate. Set with the opened tape it came with (alongside `remix`) and gone
+   * wherever `remix` is replaced: another tape, Magic, "Start a new story"
+   * and "delete everything" (`blankState` leaves it out).
+   */
+  voiceName?: string;
 }
 
 export const DEFAULT_TITLE = "My Story";
@@ -101,12 +174,15 @@ export function blankState(): StudioState {
     manifest: blankManifest(),
     recordings: {},
     mood: "Wonder",
+    pageMoods: {},
     musicOn: true,
     musicVolume: 0.3,
     narrationVolume: 0.85,
+    levelVoices: true,
     published: null,
     publishedIds: [],
     startedAt: new Date().toISOString(),
+    remix: null,
   };
 }
 
@@ -223,12 +299,35 @@ export function codecBadge(
   }
   const mime = (meta?.mimeType || "").toLowerCase();
   if (mime.includes("mp4") || mime.includes("aac")) {
-    return { label: "draft · AAC", tone: "draft", hint: "Safari recorded AAC — publish is a passthrough." };
+    return { label: "draft · AAC", tone: "draft", hint: "Recorded as AAC already — publish keeps it AAC." };
   }
   if (mime.includes("webm") || mime.includes("opus")) {
     return { label: "draft · Opus", tone: "draft", hint: "Draft only. Normalized to AAC/M4A when you finish." };
   }
   return { label: "draft", tone: "draft", hint: "Normalized to AAC/M4A when you finish." };
+}
+
+export const VOICES_TO_AAC = "Converting voices to AAC";
+
+/**
+ * The voices step as it really went (the publish rule: AAC/M4A, WAV the only
+ * fallback). Every take AAC: the reference words, "Converting voices to AAC ·
+ * 5/5". Any take that fell back to WAV (no AAC encoder in this browser): the
+ * step no longer claims AAC and its detail names what was written, so it
+ * agrees with the label's codec ("WAV", or "AAC + WAV").
+ */
+export function voicesStepText(
+  done: number,
+  total: number,
+  aac: number,
+  wav: number,
+): { label: string; detail: string } {
+  const count = `${done}/${total}`;
+  if (wav === 0) return { label: VOICES_TO_AAC, detail: count };
+  return {
+    label: "Converting voices",
+    detail: aac === 0 ? `${count} · WAV` : `${count} · ${aac} AAC · ${wav} WAV`,
+  };
 }
 
 /** Big JSON with data URLs inlined is unreadable — show the shape, not the bytes. */

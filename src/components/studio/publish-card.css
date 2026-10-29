@@ -1,0 +1,124 @@
+/* ============================================================================
+   PublishCard — the printed tape, landscape (T16, s05 "One link, Grandma's
+   iPhone", the tablet half). Component-scoped: only what utilities cannot say
+   cleanly — the slot tuck, the label's printed shadow, and the two layouts.
+
+   The layout follows the card's `data-layout`, which PublishCard sets from
+   one media query, (min-width: 1024px), so the CSS and the DOM order can
+   never disagree:
+     wide    two columns, 32px apart (s05 `.t-card`): the left column runs
+             the heading to the fine print, Download pushed down so the delete
+             and Share line up; it fits a 1180×820 tablet with no scroll
+     narrow  one column, in the order the DOM gives it: heading + steps, the
+             link column, then the meter and the buttons — sharing comes
+             before deleting on a phone
+
+   Everything lives in @layer components so utilities passed in className win.
+   Motion: the label prints in with `.studio-printing` (studio.css), which is
+   `none` under prefers-reduced-motion. Nothing here moves.
+   ========================================================================== */
+
+@layer components {
+  .pc-ready {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    width: 100%;
+    max-width: 1100px;
+    min-height: 100%;
+    margin: 0 auto;
+  }
+
+  /* ---------- the print slot and the label tucked under it ------------- */
+  .pc-print {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .pc-label {
+    position: relative;
+    z-index: 1;
+    width: min(600px, calc(100% - 24px));
+    /* half the 14px slot: the label's top edge is still inside the printer */
+    margin-top: -7px;
+    box-shadow:
+      0 30px 60px -24px rgba(0, 0, 0, 0.85),
+      0 0 90px rgba(255, 201, 60, 0.08);
+  }
+  /* the slot's shadow falling on the paper as it comes out */
+  .pc-label::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 18px;
+    pointer-events: none;
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.5), transparent);
+  }
+  .pc-label .sk-tape-field {
+    padding: 13px 18px 14px;
+  }
+  .pc-label .sk-tape-meta {
+    margin-top: 9px;
+  }
+  .pc-label .pc-meta-2 {
+    margin-top: 3px;
+    color: var(--ss-ink-2);
+  }
+
+  .pc-chips {
+    margin-top: 20px;
+  }
+
+  /* ---------- the card ------------------------------------------------- */
+  .pc-card {
+    margin-top: 14px;
+    padding: 18px;
+    box-shadow:
+      0 30px 60px -30px rgba(0, 0, 0, 0.7),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+  .pc-col {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .pc-card[data-layout="narrow"] {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+  .pc-card[data-layout="narrow"] .pc-meter {
+    margin-bottom: 18px;
+  }
+  .pc-share {
+    margin-top: 16px;
+  }
+
+  .pc-card[data-layout="wide"] {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: 32px;
+    padding: 24px;
+  }
+  .pc-card[data-layout="wide"] .pc-meter {
+    margin-top: 18px;
+    margin-bottom: 16px;
+  }
+  .pc-card[data-layout="wide"] .pc-qr {
+    margin-bottom: 16px;
+  }
+  /* Download sits low in the left column, so the delete lines up with Share */
+  .pc-card[data-layout="wide"] .pc-download,
+  .pc-card[data-layout="wide"] .pc-share {
+    margin-top: auto;
+  }
+
+  @media (max-width: 479.98px) {
+    .pc-card[data-layout="narrow"] {
+      padding: 16px;
+    }
+  }
+}

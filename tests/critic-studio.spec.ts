@@ -26,6 +26,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { unzipSync, strFromU8 } from "fflate";
 import { MOOD_NAMES } from "../src/lib/audio/moods";
+import { evidencePath } from "./fixtures/evidence";
 
 const DRAFT_KEY = "ssync-studio-draft";
 const LIBRARY_KEY = "ssync-library";
@@ -268,26 +269,25 @@ test.describe("CRITIC · WP-S share loop", () => {
     expect(seconds).toBeGreaterThanOrEqual(90);
     expect(seconds).toBeLessThan(400);
 
-    // The QR is a real raster of the link, big enough to point a camera at.
-    const qr = page.locator('[data-studio="share-qr"]');
-    await expect(qr).toBeVisible();
-    const src = await qr.getAttribute("src");
-    expect(src).toMatch(/^data:image\/png;base64,/);
-    expect((src ?? "").length).toBeGreaterThan(1200);
-    const box = await qr.boundingBox();
-    expect(box!.width).toBeGreaterThanOrEqual(120);
+    // M6: with no cloud library here the link opens on this device only, so
+    // the card offers no QR for another phone's camera; it says where the
+    // link opens and hands over the .storysync file instead.
+    await expect(page.locator('[data-studio="share-qr"]')).toHaveCount(0);
+    await expect(page.locator('[data-studio="device-note"]')).toBeVisible();
+    await expect(page.getByRole("button", { name: "Download the .storysync file" })).toBeVisible();
 
     // The Register-B tape label prints in over 900 ms; disable animations so the
     // capture is the finished card, then prove the label really is there.
     await expect(page.getByText(/SIDE A · 2 PAGES/)).toBeVisible();
     await page.screenshot({
-      path: "tests/screenshots/critic-studio-publish-desktop.png",
+      path: evidencePath("critic-studio-publish-desktop.png", { dir: "tests/screenshots" }),
       animations: "disabled",
     });
     await page.setViewportSize({ width: 390, height: 844 });
-    await expect(page.locator('[data-studio="share-qr"]')).toBeVisible();
+    await expect(page.locator('[data-studio="share-url"]')).toBeVisible();
+    await expect(page.locator('[data-studio="share-qr"]')).toHaveCount(0);
     await page.screenshot({
-      path: "tests/screenshots/critic-studio-publish-mobile.png",
+      path: evidencePath("critic-studio-publish-mobile.png", { dir: "tests/screenshots" }),
       animations: "disabled",
     });
 
@@ -321,7 +321,8 @@ test.describe("CRITIC · WP-S share loop", () => {
     expect(second[0].ssyncData.metadata.title).toBe("Bo and the Blue Moon, Again");
     expect(second[0].title).toBe("Bo and the Blue Moon, Again");
 
-    await page.getByRole("button", { name: /^Delete everything$/ }).click();
+    // s05 renames the control (T16): "Pull the tape out — delete everything".
+    await page.getByRole("button", { name: "Pull the tape out — delete everything", exact: true }).click();
     await page.getByRole("button", { name: /Tap again to delete everything/ }).click();
     await expect(page.getByRole("button", { name: "Finish my story" })).toBeVisible();
     expect(await library(page)).toHaveLength(0);
@@ -374,7 +375,7 @@ test.describe("CRITIC · WP-S share loop", () => {
         false,
       );
     }
-    const firstQr = await page.locator('[data-studio="share-qr"]').getAttribute("src");
+    const firstUrl = await page.locator('[data-studio="share-url"]').inputValue();
 
     // Same story, music on, studio mood "Calm" — the studio's choice wins over
     // whatever the draft's pages said, and it must be a shared-vocabulary name.
@@ -390,11 +391,11 @@ test.describe("CRITIC · WP-S share loop", () => {
       expect(MOOD_NAMES).toContain(p.music!);
     }
 
-    // Two tapes, two links, two different QR rasters: the code is generated
-    // from the share URL, it is not a decorative fixed image.
-    const secondQr = await second.locator('[data-studio="share-qr"]').getAttribute("src");
-    expect(secondQr).toMatch(/^data:image\/png;base64,/);
-    expect(secondQr).not.toBe(firstQr);
+    // Two tapes, two links (M6: a device-only link has no QR raster to
+    // compare; each tape still gets its own unguessable code).
+    const secondUrl = await second.locator('[data-studio="share-url"]').inputValue();
+    expect(secondUrl).toMatch(/\/read\?story=[0-9a-f]{32}$/);
+    expect(secondUrl).not.toBe(firstUrl);
     await context.close();
   });
 
@@ -484,6 +485,10 @@ test.describe("CRITIC · WP-S child-flow", () => {
     await openStudio(page);
 
     // Advanced mode mounts the inspector, the meter and the manifest readouts.
+    // On a phone (< 640px, M6) Simple/Advanced waits behind the bar's "More" key.
+    if (!(await page.locator('[data-sk="mode"]').first().isVisible())) {
+      await page.locator('[data-studio="bar-more"]').click();
+    }
     await page.locator('[data-sk="mode"]').first().click();
     await expect(page.locator("#insp-autopause")).toBeVisible();
 

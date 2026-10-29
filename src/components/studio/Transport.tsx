@@ -4,8 +4,15 @@
  * TRANSPORT — ⏮ ● REC ▶ ⏭, reels spinning while the tape moves.
  * Record is tap-to-start / tap-to-stop: a 4-year-old cannot hold a button
  * steady while performing, and hold-to-record loses the take on a slip.
- * ⏮ and ⏭ are dead while the mic is live — the take belongs to the page it was
- * started on, so that page stays on the Stage until the take is finished.
+ * While the mic is live only REC stays live, and it shows the stop square
+ * (s03 `.s3-rec56`): ⏮ and ⏭ are dead because the take belongs to the page it
+ * was started on, and ▶ is dead because playing the page's old voice, the
+ * speech or the music bed would land in the open microphone.
+ *
+ * s03 sets it as a deck: the two reels in a dark capsule at the left, the
+ * keys centred, and one mono line at the right — `0:05 · pg 3/5`, tape-red
+ * while recording. On a phone the line folds in two (time over page) so the
+ * keys keep their room (studio.css, "transport").
  */
 
 import * as React from "react";
@@ -19,6 +26,7 @@ export interface TransportProps {
   pageNumber: number;
   pageCount: number;
   position: number;
+  /** The page's voice length in seconds; 0 when it is not known (no voice yet). */
   clipDuration: number;
   recordSeconds: number;
   onPrev: () => void;
@@ -41,38 +49,47 @@ export function Transport({
   onPlayPause,
   onRecord,
 }: TransportProps) {
-  const readout = recording
+  // A length we do not know is a dash, never a made-up "0:00".
+  const total = clipDuration > 0 ? formatClock(clipDuration) : "—";
+  const time = recording
     ? `● ${formatClock(recordSeconds)}`
-    : `${formatClock(position)} / ${formatClock(clipDuration)}`;
+    : `${formatClock(position)} / ${total}`;
 
   return (
     <section
       aria-label="Transport"
-      className="flex items-center justify-between gap-3 border-t border-white/8 bg-black/45 px-3 py-3 backdrop-blur-xl"
-      style={
-        {
-          "--sk-transport-size": "60px",
-          paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))",
-        } as React.CSSProperties
-      }
+      data-studio="transport"
+      data-recording={recording ? "true" : "false"}
+      // Padding, fill, border and blur live in studio.css ("transport"): a
+      // utility here would beat the layered rules and pin the phone bar's
+      // values on the ≥ 1024px inset deck too.
+      className="studio-transport flex items-center justify-between gap-3"
+      style={{ "--sk-transport-size": "60px" } as React.CSSProperties}
     >
-      <div className="hidden w-[132px] flex-none items-center gap-3 sm:flex">
-        <Reel spinning={playing || recording} size={34} />
-        <Reel spinning={playing || recording} size={34} />
+      <div className="studio-transport-side hidden flex-none items-center sm:flex">
+        <span data-studio="transport-deck" className="studio-transport-deck">
+          <Reel spinning={playing || recording} size={34} />
+          <Reel spinning={playing || recording} size={34} />
+        </span>
       </div>
 
       <div className="flex flex-1 items-center justify-center gap-3 sm:gap-5">
         <TransportButton kind="prev" onClick={onPrev} disabled={recording || pageNumber <= 1} />
+        {/* One key, two faces: the round dot to start, the stop square in the
+            armed ring while the mic is live. The name says which; no
+            aria-pressed on top of a changing name. */}
         <TransportButton
-          kind="rec"
-          active={recording}
+          kind={recording ? "stop" : "rec"}
           onClick={onRecord}
           aria-label={recording ? "Stop recording" : "Record my voice on this page"}
-          className={voiceArmed && !recording ? "ring-2 ring-[#E3452F]/70 ring-offset-2 ring-offset-[#0a0e1a]" : undefined}
+          className={`studio-transport-rec${
+            voiceArmed && !recording ? " ring-2 ring-[#E3452F]/70 ring-offset-2 ring-offset-[#0a0e1a]" : ""
+          }`}
         />
         <TransportButton
           kind={playing ? "pause" : "play"}
           active={playing}
+          disabled={recording}
           onClick={onPlayPause}
           aria-label={playing ? "Stop playing" : "Play the story"}
           className="scale-[1.15]"
@@ -85,13 +102,16 @@ export function Transport({
       </div>
 
       <div
-        className="w-[86px] flex-none text-right text-[11px] leading-tight tracking-[0.16em] text-white/45 uppercase sm:w-[132px]"
-        style={{ fontFamily: "var(--font-plex-mono), monospace" }}
+        data-studio="transport-readout"
+        className="studio-transport-side studio-transport-readout flex-none"
       >
-        <div className={recording ? "text-[#ff6a52]" : undefined}>{readout}</div>
-        <div className="text-white/30">
+        <span data-studio="transport-time">{time}</span>
+        <span className="studio-transport-sep" aria-hidden="true">
+          {" · "}
+        </span>
+        <span data-studio="transport-page">
           pg {pageNumber}/{pageCount}
-        </div>
+        </span>
       </div>
     </section>
   );

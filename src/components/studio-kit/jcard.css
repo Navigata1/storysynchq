@@ -1,0 +1,210 @@
+/* ============================================================================
+   JCard — the card inside a cassette case (brief design_system LOCAL (10),
+   s06 `.s06-jcard`). Register B: paper, ink, label-yellow, tape-red.
+
+   One deliberate departure from the brief: keys print at 62% ink, not 55%.
+   At 55% the 9.5px mono keys sit at 3.9:1 on paper; 62% clears 4.5:1 (AA for
+   small text) and still reads as the reference's quiet grey key.
+
+   Static: no transition, no animation, under any motion preference.
+   ========================================================================== */
+
+@layer components {
+  .sk-jcard {
+    position: relative;
+    display: flex;
+    overflow: hidden;
+    color: var(--ss-ink);
+    background-color: var(--ss-paper);
+    border: 3px solid var(--ss-ink);
+    border-radius: 10px;
+    text-align: start; /* printed: reads from the left, even in a centred room */
+    box-shadow: 0 24px 40px -20px rgba(0, 0, 0, 0.7);
+  }
+
+  /* the 6px tape-red stripe along the bottom edge */
+  .sk-jcard::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 6px;
+    background-color: var(--ss-red);
+    pointer-events: none;
+  }
+
+  /* ---------- the spine: label-yellow, vertical mono, generated text ------ */
+  /* The rows size the card; the spine only stretches to their height. Its
+     line is positioned out of flow (absolute), so a title of any length never
+     adds to the card's height — it is cut to the spine instead. */
+  .sk-jcard-spine {
+    position: relative;
+    flex: none;
+    width: 24px;
+    overflow: hidden;
+    background-color: var(--ss-label);
+    border-right: 2px solid var(--ss-ink);
+  }
+  /* the printed line: reads bottom to top, like a cassette spine, centred
+     with a 9px margin at each end; the title (data-spine) gives way to an
+     ellipsis, the tail never does */
+  .sk-jcard-spine-text {
+    position: absolute;
+    inset: 9px 0;
+    margin: auto;
+    height: max-content;
+    max-height: calc(100% - 18px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    white-space: nowrap;
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    font-family: var(--ss-mono);
+    font-variant-ligatures: none;
+    font-weight: 600;
+    font-size: 9.5px;
+    line-height: 1;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ss-ink);
+  }
+  /* a long line (JCard: more than 26 characters) sets a little tighter, so
+     more of the title survives before the ellipsis */
+  .sk-jcard-spine-text[data-spine-fit="tight"] {
+    letter-spacing: 0.16em;
+  }
+  /* …and on a short card (fewer than 5 rows: a short spine) tighter still */
+  .sk-jcard-spine-text[data-spine-fit="tighter"] {
+    letter-spacing: 0.12em;
+  }
+  .sk-jcard-spine-text::before {
+    content: attr(data-spine);
+    flex: 0 1 auto;
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .sk-jcard-spine-text::after {
+    content: attr(data-spine-tail);
+    flex: none;
+    white-space: pre;
+  }
+
+  /* ---------- the rows -------------------------------------------------- */
+  .sk-jcard-body {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 8px 12px 14px;
+    /* the faint vertical grain of a printed insert */
+    background:
+      repeating-linear-gradient(90deg, transparent 0 3px, rgba(30, 26, 22, 0.018) 3px 4px),
+      var(--ss-paper);
+  }
+  .sk-jcard-rows {
+    margin: 0;
+  }
+  .sk-jcard-row {
+    position: relative;
+    display: grid;
+    grid-template-columns: 62px minmax(0, 1fr);
+    column-gap: 10px;
+    align-items: baseline;
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(30, 26, 22, 0.14);
+  }
+  .sk-jcard-row:last-child {
+    border-bottom: 0;
+  }
+  /* a stamped row leaves room for its ring under the key */
+  .sk-jcard-row[data-stamped] {
+    min-height: 52px;
+    padding-bottom: 12px;
+  }
+
+  .sk-jcard-key {
+    font-family: var(--ss-mono);
+    font-variant-ligatures: none;
+    font-weight: 600;
+    font-size: 9.5px;
+    line-height: 1.2;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(30, 26, 22, 0.62);
+  }
+  .sk-jcard-value {
+    margin: 0;
+    min-width: 0;
+    font-family: var(--ss-ui);
+    font-weight: 400;
+    font-size: 12.5px;
+    line-height: 1.3;
+    color: var(--ss-ink);
+    text-wrap: balance;
+    overflow-wrap: anywhere;
+  }
+
+  /* the small tape-red ring under a stamped row's key (s06 `.s06-ring`) */
+  .sk-jcard-stamp {
+    position: absolute;
+    left: 10px;
+    top: 19px;
+    width: 28px;
+    height: 28px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    color: var(--ss-red);
+    border: 2.5px solid var(--ss-red);
+    box-shadow:
+      inset 0 0 0 2px var(--ss-paper),
+      inset 0 0 0 3px rgba(227, 69, 47, 0.55);
+    transform: rotate(-10deg);
+    opacity: 0.92;
+  }
+  .sk-jcard-stamp > svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  /* ---------- the last row: a link under a hairline (s06 `.s06-jlink`) ---- */
+  .sk-jcard-foot {
+    margin-top: 1px;
+    padding-top: 4px;
+    border-top: 1px solid rgba(30, 26, 22, 0.14);
+  }
+  .sk-jcard-foot > a {
+    display: inline-flex;
+    min-height: 24px;
+    align-items: center;
+    gap: 6px;
+    border-radius: 4px;
+    font-family: var(--ss-mono);
+    font-variant-ligatures: none;
+    font-weight: 600;
+    font-size: 11px;
+    line-height: 1;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(30, 26, 22, 0.7);
+    text-decoration: none;
+  }
+  .sk-jcard-foot > a:hover {
+    color: var(--ss-ink);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  /* The kit ring, inked: gold on paper is ~2.1:1, under WCAG 1.4.11's 3:1
+     (cf. `.sk-big--gold:focus-visible`). Beats `.sk-focus` on specificity. */
+  .sk-jcard-foot > a:focus-visible { outline-color: var(--ss-ink); }
+  .sk-jcard-foot > a > svg {
+    flex: none;
+    width: 13px;
+    height: 13px;
+  }
+}

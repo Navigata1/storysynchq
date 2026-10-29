@@ -1,0 +1,50 @@
+StorySync Vision build · M6 gates
+Commit under test: 6391953 (branch claude/storysync-audit-refactor-soq121, PR #5)
+Run: 2026-10-27 03:46–04:19 UTC, local container, production build served by `next start` (as CI does)
+
+$ npx tsc --noEmit
+exit 0 (no output)
+
+$ npm run lint
+   491:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  1311:13  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  1515:50  warning  '_' is defined but never used                                                                                                                                                                                                                                                            @typescript-eslint/no-unused-vars
+  2440:15  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  3094:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  3227:25  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  922:11  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  637:9   warning  'connector' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  665:57  warning  'setting' is defined but never used             @typescript-eslint/no-unused-vars
+  818:3   warning  'characterTracker' is defined but never used    @typescript-eslint/no-unused-vars
+✖ 10 problems (0 errors, 10 warnings)
+exit 0
+
+$ npm run build
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /classic
+├ ○ /protocol
+├ ○ /read
+└ ○ /studio
+
+
+○  (Static)  prerendered as static content
+
+exit 0
+
+$ CI=1 npx playwright test   # desktop 1280x720 + mobile 375x812, retries 1
+    Error Context: test-results/wp-player-WP-P-·-words-ove-6cd65--5-1-too-at-1440-and-at-390-mobile/error-context.md
+
+  1 flaky
+    [mobile] › tests/wp-player.spec.ts:458:7 › WP-P · words over art stay legible › the ordinary text panel clears 4.5:1 too, at 1440 and at 390 
+  44 skipped
+  1847 passed (30.6m)
+exit 0
+(the one flaky test passed on its retry: wp-player 'the ordinary text panel clears 4.5:1' read a null colour on its first mobile attempt)
+
+$ CI=1 VISION_EVIDENCE=1 npx playwright test tests/vision-fidelity.spec.ts --project=desktop
+  16 passed (1.1m)
+exit 0 — 24 reference-state shots written to docs/vision/evidence/s0X-*.png
+
+CI (GitHub Actions 'verify', next start + Chromium 145): see PR #5 checks on the head commit.

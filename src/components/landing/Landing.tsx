@@ -3,12 +3,15 @@
 /**
  * Landing — the immersive cassette-memory front door (docs/design-direction.md §4).
  *
- * Five beats, one scroll:
- *   1. HERO      the memory  — a Register-B cassette in the deep-navy room
+ * Six beats, one scroll:
+ *   1. HERO      the memory  — the s01 top nav, then a Register-B cassette in
+ *                              the deep-navy room
  *   2. DOORS     the truth   — ▶ PLAY A STORY (/read)  ●  MAKE A STORY (/studio)
- *   3. HOW       the craft   — snap · record · share, CSS-only vignettes
- *   4. PROTOCOL  the promise — .storysync, like PDF for story experiences
- *   5. FOOTER    quiet exits — privacy, source, classic site
+ *   3. MAGIC     the why     — tape-stripe seam, "Remember the magic?", and the
+ *                              three surfaces · one file (T07)
+ *   4. HOW       the craft   — snap · record · share, CSS-only vignettes
+ *   5. PROTOCOL  the promise — .storysync, like PDF for story experiences
+ *   6. FOOTER    quiet exits — privacy, source, classic site; the company line
  *
  * No audio here. Nothing leaves the device. Every animation gates on
  * prefers-reduced-motion; reveals are IntersectionObserver-driven and skipped
@@ -19,7 +22,15 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BigButton, GlassPanel, Reel, TapeLabel } from "@/components/studio-kit/kit";
+import { Cassette } from "@/components/studio-kit/Cassette";
+import { tapeMetaLine } from "@/lib/storysync/tape-meta";
+import houseTape from "../../../public/demo/brave-little-star.ssync.json";
 import "./landing.css";
+import "./landing-bands.css";
+import { HeroSky } from "./HeroSky";
+import { LandingNav } from "./LandingNav";
+import { MagicBand, MAGIC_TITLE_ID } from "./MagicBand";
+import { SurfacesRow } from "./SurfacesRow";
 
 /* --------------------------------------------------------------- constants */
 
@@ -28,6 +39,8 @@ const PRIVACY_URL = "https://github.com/Navigata1/storysynchq/blob/main/PRIVACY.
 const SCHEMA_URL = "/protocol/v2.schema.json";
 const PROTOCOL_HREF = "/protocol";
 const DOORS_ID = "ls-doors";
+/** The doors reveal while still below the fold, so their peeking tops show at rest. */
+const DOORS_REVEAL_MARGIN = "0px 0px 96px 0px";
 
 /**
  * "Press play" plays the demo tape: the Read Room opens `?demo=1` straight on
@@ -35,6 +48,19 @@ const DOORS_ID = "ls-doors";
  * and the whole cassette feeling — begins.
  */
 const DEMO_HREF = "/read?demo=1";
+
+/**
+ * The house tape's label facts, read from the demo manifest in /public — never
+ * hand-typed, so the landing cannot drift from the tape. A static JSON import:
+ * resolved at build time, no runtime request.
+ */
+const HOUSE_TAPE = {
+  title: houseTape.metadata.title,
+  author: houseTape.metadata.author,
+  meta: tapeMetaLine(houseTape),
+  /** Page 1's picture: its single bright star is the hero's one light. */
+  sky: houseTape.pages[0]?.illustration?.url,
+} as const;
 
 /**
  * Cassette-into-deck travel before the route change, in ms.
@@ -131,6 +157,13 @@ interface RevealProps {
   className?: string;
   /** Stagger, in ms. */
   delay?: number;
+  /**
+   * IntersectionObserver rootMargin. The default trims the bottom 10% so a
+   * section reveals once it is properly on screen; content that must show at
+   * the fold (the doors peeking in, s01) widens it instead, so the hidden
+   * state's 24px drop cannot hold it below the viewport edge.
+   */
+  rootMargin?: string;
 }
 
 /**
@@ -138,7 +171,7 @@ interface RevealProps {
  * IntersectionObserver) the content is shown immediately and the CSS
  * transition never applies.
  */
-function Reveal({ children, className, delay = 0 }: RevealProps) {
+function Reveal({ children, className, delay = 0, rootMargin = "0px 0px -10% 0px" }: RevealProps) {
   const ref = React.useRef<HTMLDivElement | null>(null);
   const [shown, setShown] = React.useState(false);
 
@@ -159,11 +192,11 @@ function Reveal({ children, className, delay = 0 }: RevealProps) {
           }
         }
       },
-      { threshold: 0, rootMargin: "0px 0px -10% 0px" },
+      { threshold: 0, rootMargin },
     );
     io.observe(el);
     return () => io.disconnect();
-  }, [shown]);
+  }, [shown, rootMargin]);
 
   return (
     <div
@@ -233,6 +266,13 @@ function Glyph({ kind, className }: { kind: GlyphKind; className?: string }) {
  * animation state: CSS moves the cassette down behind the deck face and lights
  * the transport lamp, and every one of those rules lives behind
  * `prefers-reduced-motion: no-preference` in landing.css.
+ *
+ * At rest the tape is poised in the deck mouth with its lower third swallowed
+ * (the depth is the well's height, never a transform on the slide); under
+ * reduced motion it is already seated, only its label band above the mouth.
+ * The house tape's title is read from the demo manifest. The play key on the
+ * deck face is decoration (the deck is aria-hidden; "Press play" is the
+ * control), and page 1's star sits right behind it (HeroSky).
  */
 function HeroDeck({ inserting }: { inserting: boolean }) {
   return (
@@ -241,49 +281,37 @@ function HeroDeck({ inserting }: { inserting: boolean }) {
       data-ls="tape-stage"
       data-inserting={inserting ? "true" : "false"}
     >
+      {HOUSE_TAPE.sky ? <HeroSky src={HOUSE_TAPE.sky} /> : null}
+
       {/* the well clips at the deck mouth, so the tape is genuinely swallowed */}
       <div className="ls-tape-well" aria-hidden="true">
         <div className="ls-tape-slide" data-ls="tape-slide">
-          <div className="ls-cassette">
-            <span className="ls-screw ls-screw--tl" />
-            <span className="ls-screw ls-screw--tr" />
-            <span className="ls-screw ls-screw--bl" />
-            <span className="ls-screw ls-screw--br" />
-
-            <TapeLabel
-              className="ls-cassette-label"
-              title="StorySyncHQ"
-              meta="SIDE A · PRESS PLAY"
-            />
-
-            <div className="ls-cassette-window">
-              <span className="ls-cassette-ribbon" />
-              <Reel spinning size={62} />
-              <Reel spinning size={62} />
-            </div>
-
-            <div className="ls-cassette-foot">
-              <span className="ls-cassette-slot" />
-              <span className="ls-cassette-slot ls-cassette-slot--wide" />
-              <span className="ls-cassette-slot" />
-            </div>
-          </div>
+          <Cassette
+            className="ls-cassette"
+            title={HOUSE_TAPE.title}
+            meta="SIDE A · PRESS PLAY"
+            spinning
+          />
         </div>
       </div>
 
       <div className="ls-deck" data-ls="deck" aria-hidden="true">
+        <span className="ls-deck-top" />
         <span className="ls-deck-mouth" />
-        <span className="ls-deck-face">
-          <span className="ls-deck-lamp" />
-          <span className="ls-deck-readout sk-font-meta">
-            {inserting ? "▶ PLAY · SIDE A" : "DECK · READY"}
-          </span>
-          <span className="ls-deck-vents">
-            <span />
-            <span />
-            <span />
-            <span />
-          </span>
+        <span className="ls-deck-lamp" />
+        <span className="ls-deck-readout sk-font-meta">
+          {inserting ? "▶ PLAY · SIDE A" : "DECK · READY"}
+        </span>
+        <span className="ls-deck-vents">
+          <span />
+          <span />
+          <span />
+          <span />
+          <span />
+          <span />
+        </span>
+        <span className="ls-deck-key" data-ls="play-key" aria-hidden="true">
+          <Glyph kind="play" />
         </span>
       </div>
     </div>
@@ -337,32 +365,40 @@ function Hero() {
   return (
     <section className="ls-hero" aria-labelledby="ls-hero-title">
       <Starfield />
-      <div className="ls-hero-glow" aria-hidden="true" />
+
+      <LandingNav privacyHref={PRIVACY_URL} />
 
       <div className="ls-wrap ls-hero-inner">
-        <p className="ls-eyebrow sk-font-meta">The library cassette · rebuilt for the web</p>
-
-        <h1 id="ls-hero-title" className="sr-only">
-          StorySyncHQ
-        </h1>
+        {/* two unbreakable halves: on a phone the only break is after the · */}
+        <p className="ls-eyebrow ls-hero-kicker sk-font-meta" data-ls="hero-kicker">
+          <span className="ls-nw">The library cassette ·</span>{" "}
+          <span className="ls-nw">rebuilt for the web</span>
+        </p>
 
         <HeroDeck inserting={inserting} />
 
-        <p className="ls-hero-line sk-font-tape">
+        {/* The visible line is the page's one h1. aria-label adds the brand to
+            its name (and to the hero region's) without changing its text. */}
+        <h1
+          id="ls-hero-title"
+          className="ls-hero-line sk-font-tape"
+          aria-label="StorySyncHQ: Press play on the stories you make together."
+        >
           Press play on the stories you make together.
-        </p>
+        </h1>
 
         <p className="ls-hero-sub">
           Photos of their drawings. Their voice on every page. A little music underneath.
           One link that plays anywhere.
         </p>
 
-        <div className="ls-hero-cta" style={styleVars({ "--sk-big-h": "76px" })}>
+        <div className="ls-hero-cta" style={styleVars({ "--sk-big-h": "84px" })}>
           <BigButton
             data-ls="press-play"
             icon={<Glyph kind="play" />}
             label="Press play"
             variant="gold"
+            shape="pill"
             aria-busy={inserting}
             onClick={pressPlay}
           />
@@ -376,12 +412,9 @@ function Hero() {
             onClick={goToDoors}
           >
             or scroll to the two doors
+            <Glyph kind="chevron" />
           </button>
         </div>
-
-        <span className="ls-scroll-cue" aria-hidden="true">
-          <Glyph kind="chevron" />
-        </span>
       </div>
     </section>
   );
@@ -407,9 +440,8 @@ function PlayDoor() {
         </span>
         <div className="ls-door-title sk-font-tape">Play a story</div>
         <p className="ls-door-copy">
-          Open a shared link, a <code className="sk-font-meta">.storysync</code> file, or the
-          demo tape. Tap to begin — the voice, the pages and the music arrive exactly as they
-          were made.
+          Open a tape someone made for you: a shared link, a{" "}
+          <code className="sk-font-meta">.storysync</code> file, or our demo tape.
         </p>
         <div className="ls-door-spacer" />
         {/* visual affordance only — the link is already named by its title */}
@@ -602,7 +634,8 @@ function RecordVignette() {
 function ShareVignette() {
   return (
     <span className="ls-vig ls-vig--share" aria-hidden="true">
-      <span className="ls-chip sk-font-meta">storysynchq/s/7f3q2</span>
+      {/* the real link's shape (/read?story=<128-bit code>), code truncated */}
+      <span className="ls-chip sk-font-meta">/read?story=3f9c…a71e</span>
       <span className="ls-devices">
         <span className="ls-dev ls-dev--phone ls-anim" />
         <span className="ls-dev ls-dev--tablet ls-anim" />
@@ -655,23 +688,33 @@ export default function Landing() {
       {/* ------------------------------------------------------- two doors */}
       <section id={DOORS_ID} className="ls-section ls-section--doors" aria-labelledby="ls-doors-title">
         <div className="ls-wrap">
-          <Reveal className="ls-section-head">
-            <p className="ls-eyebrow sk-font-meta">Two doors · one loop</p>
-            <h2 id="ls-doors-title" className="ls-h2 sk-font-tape">
-              Someone makes it. Someone plays it.
-            </h2>
-            <p className="ls-lede">
-              Then they want to make one back. That loop — receive, then create — is the whole
-              reason the format exists.
-            </p>
-          </Reveal>
+          {/* s01 draws no head here: the doors start right under the hero, so
+              their tops peek in at the fold. The h2 still names the section. */}
+          <h2 id="ls-doors-title" className="sr-only">
+            Someone makes it. Someone plays it.
+          </h2>
 
           <div className="ls-doors-grid">
-            <Reveal className="ls-doors-cell" delay={80}>
+            <Reveal className="ls-doors-cell" delay={80} rootMargin={DOORS_REVEAL_MARGIN}>
               <PlayDoor />
             </Reveal>
-            <Reveal className="ls-doors-cell" delay={180}>
+            <Reveal className="ls-doors-cell" delay={180} rootMargin={DOORS_REVEAL_MARGIN}>
               <MakeDoor />
+            </Reveal>
+          </div>
+        </div>
+      </section>
+
+      {/* ------------------------------------------- remember the magic? */}
+      <section className="ls-band" aria-labelledby={MAGIC_TITLE_ID}>
+        <div className="ls-wrap">
+          <span className="ls-seam" data-ls="seam" aria-hidden="true" />
+          <div className="ls-band-grid">
+            <Reveal>
+              <MagicBand />
+            </Reveal>
+            <Reveal delay={120}>
+              <SurfacesRow />
             </Reveal>
           </div>
         </div>
@@ -681,7 +724,7 @@ export default function Landing() {
       <section className="ls-section" aria-labelledby="ls-how-title">
         <div className="ls-wrap">
           <Reveal className="ls-section-head">
-            <p className="ls-eyebrow sk-font-meta">Three steps · about ten minutes</p>
+            <p className="ls-eyebrow sk-font-meta">Three steps · one tape</p>
             <h2 id="ls-how-title" className="ls-h2 sk-font-tape">
               How the magic works
             </h2>
@@ -748,11 +791,7 @@ export default function Landing() {
           </Reveal>
 
           <Reveal delay={140} className="ls-protocol-tape">
-            <TapeLabel
-              title="The Brave Little Star"
-              author="Island Development Crew"
-              meta="SIDE A · 8 PAGES · 4:32 · AAC/M4A"
-            />
+            <TapeLabel title={HOUSE_TAPE.title} author={HOUSE_TAPE.author} meta={HOUSE_TAPE.meta} />
             <p className="ls-protocol-readout sk-font-meta">
               manifest.json · assets/ · zip · ssync v2
             </p>
@@ -766,7 +805,12 @@ export default function Landing() {
           <div>
             <p className="ls-footer-mark sk-font-tape">StorySyncHQ</p>
             <p className="ls-footer-note">
-              Nothing leaves this device until a grown-up taps through the gate. No trackers, ever.
+              Nothing leaves this device until a <span className="ls-nw">grown-up</span> taps
+              through the gate. No trackers, ever.
+            </p>
+            <p className="ls-company sk-font-meta" data-ls="company">
+              A product of Island Development Crew LLC ·{" "}
+              <span className="ls-nw">Part of the SyncHQ Suite</span>
             </p>
           </div>
           <nav className="ls-footer-links sk-font-meta" aria-label="Footer">

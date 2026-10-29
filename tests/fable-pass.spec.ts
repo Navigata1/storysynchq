@@ -37,7 +37,8 @@ test.describe("Fable pass · player", () => {
 test.describe("Fable pass · studio", () => {
   test("a blank story never leaves an autosave envelope behind", async ({ page }) => {
     await page.goto("/studio");
-    await expect(page.locator('[data-sk="mode"]').first()).toBeVisible({ timeout: 10000 });
+    // the studio is up (on a phone the mode switch now sits behind "More")
+    await expect(page.locator('[data-studio="transport"]').first()).toBeVisible({ timeout: 10000 });
     // Autosave debounces at ~900ms; wait past it, then the key must be absent.
     await page.waitForTimeout(2200);
     const draft = await page.evaluate(() => localStorage.getItem("ssync-studio-draft"));

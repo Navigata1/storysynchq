@@ -1,0 +1,227 @@
+/* ============================================================================
+   VoiceCassette — a blank voice cassette (brief design_system LOCAL (6);
+   s07 `.s7-vc`).
+
+     .sk-voice          the cassette (a 68px column: the face, then the caption
+                        when it reads today); the radio covers it
+       .is-on           checked: a 2px label-yellow ring and a soft glow
+       .is-reading      reads the tape today: the reels turn slowly with a
+                        faint blur; the caption shows
+     .sk-voice-shell    the 68×60 shell (warm grey, radius 7)
+     .sk-voice-label    the paper label (inset 3, 33px tall, 1.5px ink border)
+                        with the dashed ink line the name sits on
+     .sk-voice-name     Fraunces italic 500 11px, two lines at most
+     .sk-voice-rec      the 7px tape-red record dot (a name)
+     .sk-voice-plus     lucide Plus in the dot's place ("Someone new")
+     .sk-voice-window   the dark window with two 9px kit Reels and the tape
+     .sk-voice-foot     the little foot under the window
+     .sk-voice-cap      mono 10.5px label-yellow caption ("READING NOW")
+
+   Focus is the kit's one gold ring, around the shell. Reduced motion: no
+   transition, and the kit stops every reel on its 18° frame (kit.css).
+   ========================================================================== */
+
+@layer components {
+  .sk-voice {
+    position: relative;
+    display: flex;
+    flex: none;
+    width: 68px;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* the native radio: invisible, over the whole cassette, so a tap anywhere checks it */
+  .sk-voice-input {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    appearance: none;
+    cursor: pointer;
+  }
+
+  /* ---------- the face ---------- */
+  .sk-voice-shell {
+    position: relative;
+    display: block;
+    width: 68px;
+    height: 60px;
+    border-radius: 7px;
+    background: linear-gradient(165deg, var(--ss-shell-hi) 0%, var(--ss-shell) 42%, var(--ss-shell-2) 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.16),
+      inset 0 0 0 1.5px rgba(0, 0, 0, 0.35),
+      0 10px 16px -8px rgba(0, 0, 0, 0.8);
+    transition:
+      box-shadow 240ms var(--ss-ease),
+      filter 240ms var(--ss-ease);
+  }
+  .sk-voice:hover:not(.is-on) .sk-voice-shell {
+    filter: brightness(1.12);
+  }
+  .sk-voice.is-on .sk-voice-shell {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.16),
+      inset 0 0 0 1.5px rgba(0, 0, 0, 0.35),
+      0 0 0 2px rgba(255, 201, 60, 0.85),
+      0 0 18px rgba(255, 201, 60, 0.3);
+  }
+  .sk-voice:has(.sk-voice-input:focus-visible) .sk-voice-shell {
+    outline: 3px solid var(--ss-gold);
+    outline-offset: 3px;
+  }
+
+  /* the paper label, and the dashed ink line the name is written on */
+  .sk-voice-label {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    left: 3px;
+    display: flex;
+    height: 33px;
+    align-items: flex-end;
+    padding: 0 3px 4px;
+    overflow: hidden;
+    border: 1.5px solid var(--ss-ink);
+    border-radius: 4px;
+    background-color: var(--ss-paper);
+    color: var(--ss-ink);
+  }
+  .sk-voice-label::before {
+    content: "";
+    position: absolute;
+    right: 3px;
+    bottom: 4px;
+    left: 3px;
+    border-bottom: 1px dashed rgba(30, 26, 22, 0.75);
+  }
+  /* a dot or a plus at the right: the line stops short of it */
+  .sk-voice-label--mark::before {
+    right: 13px;
+  }
+
+  .sk-voice-name {
+    position: relative;
+    display: -webkit-box;
+    min-width: 0;
+    padding-bottom: 2px;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    font-family: var(--ss-display);
+    font-size: 11px;
+    font-style: italic;
+    font-weight: 500;
+    line-height: 1.05;
+    overflow-wrap: anywhere;
+    hyphens: manual;
+  }
+
+  .sk-voice-rec {
+    position: absolute;
+    right: 3px;
+    bottom: 2px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background-color: var(--ss-red);
+    box-shadow: 0 0 0 1.5px rgba(227, 69, 47, 0.25);
+  }
+  .sk-voice-plus {
+    position: absolute;
+    right: 2px;
+    bottom: 1px;
+    display: block;
+    width: 10px;
+    height: 10px;
+    line-height: 0;
+    color: var(--ss-red);
+  }
+  .sk-voice-plus > svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* ---------- the window: two small reels and the tape between them ---------- */
+  .sk-voice-window {
+    --sk-ink: var(--ss-ink);
+    --sk-reel-face: #e9dfc6;
+    position: absolute;
+    top: 39px;
+    left: 13px;
+    display: flex;
+    width: 42px;
+    height: 11px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: linear-gradient(180deg, #16120f, #2a241f);
+    box-shadow:
+      inset 0 2px 3px rgba(0, 0, 0, 0.8),
+      0 0 0 1.5px #1a1612;
+  }
+  .sk-voice-window::before {
+    content: "";
+    position: absolute;
+    top: 4px;
+    right: 12px;
+    left: 12px;
+    height: 3px;
+    background: linear-gradient(180deg, #5b3a24, #3d2616);
+  }
+  .sk-voice-window > .sk-reel {
+    position: relative;
+  }
+  /* reading now: slow, with a faint blur and a sheen across the window */
+  .sk-voice.is-reading .sk-voice-window .sk-reel-svg {
+    animation-duration: 4.8s;
+    filter: blur(0.35px);
+  }
+  .sk-voice.is-reading .sk-voice-window::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: conic-gradient(from 0deg, transparent, rgba(255, 255, 255, 0.08), transparent 30%);
+    pointer-events: none;
+  }
+
+  .sk-voice-foot {
+    position: absolute;
+    right: 18px;
+    bottom: 0;
+    left: 18px;
+    height: 6px;
+    border-radius: 4px 4px 0 0;
+    background-color: #24211f;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+
+  /* ---------- the caption under the reader of today ---------- */
+  .sk-voice-cap {
+    align-self: flex-start;
+    margin-top: 5px;
+    font-family: var(--ss-mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    line-height: 1.1;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    color: var(--ss-label);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sk-voice-shell {
+      transition: none;
+    }
+  }
+}

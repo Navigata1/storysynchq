@@ -32,15 +32,31 @@
         "shareUrl": { "type": "string" },
         "ownership": { "type": "string" },
         "remixOf": { "type": "string", "description": "Share URL or id of the story this one was remixed from" },
+        "replyTo": {
+          "type": "string",
+          "description": "Share URL or id of the tape this one answers. A reply is a new tape, not a derivative, so it is distinct from remixOf."
+        },
         "voiceConsent": {
           "type": "array",
+          "description": "One record per recorded voice on the tape.",
           "items": {
             "type": "object",
             "required": ["voice", "grantedBy"],
             "properties": {
-              "voice": { "type": "string" },
-              "grantedBy": { "type": "string" },
-              "date": { "type": "string", "format": "date" }
+              "voice": {
+                "type": "string",
+                "description": "Whose voice, as credited on the tape, e.g. \"Ada, age 4 — with Dad\"."
+              },
+              "grantedBy": {
+                "type": "string",
+                "description": "Who consented. Conventionally \"parent/guardian\" (for a child's voice) or \"self\" (an adult's own voice); free text is allowed.",
+                "examples": ["parent/guardian", "self"]
+              },
+              "date": {
+                "type": "string",
+                "format": "date",
+                "description": "Calendar date of consent, YYYY-MM-DD, the consenting device's local date. Readers MUST accept a full ISO timestamp written by older tapes; validators warn on timestamps."
+              }
             }
           }
         },
@@ -113,7 +129,10 @@
                 "type": "object",
                 "properties": {
                   "crossfade": { "type": "string" },
-                  "duration": { "type": "string" }
+                  "duration": {
+                    "type": "string",
+                    "description": "Crossfade into this page's mood, e.g. \"2s\" or \"450ms\"; default 1.6 s; players MAY clamp"
+                  }
                 }
               }
             ]

@@ -4,8 +4,10 @@
  * /protocol — the SSYNC format's home in the product (docs/10x-plan.md gap G9).
  *
  * Register A page (calm studio chrome, docs/design-direction.md §2) carrying
- * Register B artifacts: the packet diagram printed on tape paper, the container
- * layout as a printed sheet, and a real cassette label on the download card.
+ * Register B artifacts: the exploded page and the packet diagram printed on
+ * tape paper, and the container layout as a printed sheet. The hero hands over
+ * the demo as a real .storysync (built on this device); beside FIG. 1 the codec
+ * rule, the validator talking and a player you can copy (s08).
  * "Like PDF" is only credible if the spec is a page a developer can read — so
  * everything normative here is the same text as docs/format-spec.md, and every
  * claim links to the schema that enforces it.
@@ -13,10 +15,18 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { GlassPanel } from "@/components/studio-kit/kit";
+import { PacketExploded, type ExplodedPlate } from "@/components/studio-kit/PacketExploded";
+import { mimeForAssetPath, packedAssetPath } from "@/lib/storysync/container";
+import type { SsyncManifest } from "@/lib/storysync/manifest";
+import { pageMood } from "@/components/player/music-plan";
+import houseTape from "../../../public/demo/brave-little-star.ssync.json";
 import { PACKET_LAYERS } from "./layers";
+import { packetPlates, type PlateAssetKind, type PlateManifest } from "./plates";
 import { PacketDiagram } from "./PacketDiagram";
 import { DownloadDemo } from "./DownloadDemo";
+import { ProtocolCards } from "./ProtocolCards";
 import "./protocol.css";
 
 const V1_SCHEMA = "/protocol/v1.schema.json";
@@ -47,7 +57,13 @@ const FACTS: Array<{ k: string; v: string }> = [
   { k: "Runtime", v: "Plain web · no server required" },
 ];
 
-const CONTAINER_TREE = `the-brave-little-star.storysync
+/**
+ * An example archive, not the demo download: it shows a voice in each permitted
+ * codec (the download of the house tape holds only its manifest and pictures —
+ * the browser voice reads it), so its root is a generic name, never the
+ * download's own filename.
+ */
+const CONTAINER_TREE = `my-story.storysync
 ├── manifest.json            REQUIRED · SSYNC v2 manifest (UTF-8 JSON)
 └── assets/                  all bundled media, flat
     ├── cover.jpg
@@ -68,6 +84,63 @@ const PAGE_EXAMPLE = `{
   "timing": { "autoPause": "3s" }
 }`;
 
+/* ------------------------------------------------- FIG. 1, taken apart */
+
+/**
+ * The house tape, read at build time (a static JSON import, as the landing
+ * does): the figure needs no request. Its third page is the one exploded.
+ */
+const HOUSE_TAPE: PlateManifest = houseTape;
+const FIG_PAGE_INDEX = 2;
+const FIG_PAGE = HOUSE_TAPE.pages[FIG_PAGE_INDEX];
+
+/**
+ * Where "Download the demo as .storysync" puts a file: the download fetches
+ * the same-origin file, reads it as a data URL of its served type and lets
+ * `buildStorysyncFromStory` name it (`base` + that type's extension) — so the
+ * figure and the validator card ask the container's own naming rule, with the
+ * type that file is served as.
+ */
+function packedPath(url: string, base: string): string {
+  if (url.startsWith("assets/")) return url;
+  return packedAssetPath(url.startsWith("data:") ? url : mimeForAssetPath(url), base);
+}
+
+/** A page's picture or voice, named as the container names it. */
+function packedLikeTheDownload(url: string, asset: { pageId: number; kind: PlateAssetKind }): string {
+  return packedPath(url, asset.kind === "picture" ? `page-${asset.pageId}` : `narration-${asset.pageId}`);
+}
+
+const FIG_PLATES: ExplodedPlate[] = packetPlates(HOUSE_TAPE, FIG_PAGE_INDEX, {
+  assetPath: packedLikeTheDownload,
+});
+
+/**
+ * The house tape as the download packs it (T23a's naming): version 2.0, every
+ * file (cover, pictures, any voice) at the path the container writes. The
+ * validator card reads this; nothing is fetched.
+ */
+const PACKED_HOUSE_TAPE: SsyncManifest = (() => {
+  const tape = JSON.parse(JSON.stringify(houseTape)) as SsyncManifest;
+  tape.version = "2.0";
+  if (tape.metadata.coverImage) tape.metadata.coverImage = packedPath(tape.metadata.coverImage, "cover");
+  for (const page of tape.pages) {
+    if (page.illustration?.url) {
+      page.illustration.url = packedLikeTheDownload(page.illustration.url, { pageId: page.id, kind: "picture" });
+    }
+    if (page.text?.audioUrl) {
+      page.text.audioUrl = packedLikeTheDownload(page.text.audioUrl, { pageId: page.id, kind: "voice" });
+    }
+  }
+  return tape;
+})();
+
+const FIG_ART = {
+  title: HOUSE_TAPE.metadata.title,
+  picture: FIG_PAGE.illustration?.url,
+  mood: pageMood(HOUSE_TAPE, FIG_PAGE),
+};
+
 const LADDER: Array<{ source: string; action: string }> = [
   { source: "AAC/MP4 — Safari, iOS", action: "Passes through. Already compliant." },
   {
@@ -80,18 +153,86 @@ const LADDER: Array<{ source: string; action: string }> = [
   },
 ];
 
+/** The app icon (public/icons): the same cassette the landing nav and the favicon carry. */
+const ICON_SRC = "/icons/icon-96x96.png";
+
+/**
+ * Keyboard focus never hides under the sticky bar (WCAG 2.2 SC 2.4.11).
+ * `scroll-padding-top` (protocol.css) covers the scrolls the browser makes, but
+ * Chrome does not scroll a focused element that is already inside the viewport
+ * — even when it sits wholly under the bar — and it ignores scroll-padding when
+ * it checks. So one frame after keyboard focus, a stop whose top is under the
+ * bar is scrolled to sit just below it. Instant: a jump, never an animation.
+ */
+function useFocusClearOfBar(rootRef: React.RefObject<HTMLDivElement | null>) {
+  React.useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    let frame = 0;
+    const onFocusIn = (event: FocusEvent) => {
+      const el = event.target;
+      const bar = root.querySelector(".pr-bar");
+      if (!(el instanceof HTMLElement) || !bar || bar.contains(el)) return;
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        if (document.activeElement !== el || !el.matches(":focus-visible")) return;
+        const clear = bar.getBoundingClientRect().bottom + 12;
+        const top = el.getBoundingClientRect().top;
+        if (top < clear) window.scrollBy({ top: top - clear, behavior: "auto" });
+      });
+    };
+    root.addEventListener("focusin", onFocusIn);
+    return () => {
+      cancelAnimationFrame(frame);
+      root.removeEventListener("focusin", onFocusIn);
+    };
+  }, [rootRef]);
+}
+
+/**
+ * The sticky bar's real height on <html> as --pr-bar-h, for the page's
+ * scroll-padding-top (protocol.css). One line it is 48 px; below ~330 px the
+ * three destinations wrap to two lines and a fixed padding would leave anchor
+ * jumps and scrollIntoView targets under the bar. Removed on unmount so no
+ * other route inherits it.
+ */
+function useBarHeightVar(rootRef: React.RefObject<HTMLDivElement | null>) {
+  React.useEffect(() => {
+    const bar = rootRef.current?.querySelector<HTMLElement>(".pr-bar");
+    if (!bar) return;
+    const html = document.documentElement;
+    const write = () => html.style.setProperty("--pr-bar-h", `${bar.getBoundingClientRect().height}px`);
+    write();
+    const observer = new ResizeObserver(write);
+    observer.observe(bar);
+    return () => {
+      observer.disconnect();
+      html.style.removeProperty("--pr-bar-h");
+    };
+  }, [rootRef]);
+}
+
 export function ProtocolPage() {
+  const rootRef = React.useRef<HTMLDivElement>(null);
+  useFocusClearOfBar(rootRef);
+  useBarHeightVar(rootRef);
+
   return (
-    <div className="pr-root sk-font-ui">
+    <div ref={rootRef} className="pr-root sk-font-ui">
       <header className="pr-bar">
         <div className="pr-wrap pr-bar-inner">
+          {/* s08: "← StorySyncHQ" with the tape glyph; the arrow and the icon are decoration */}
           <Link className="pr-back sk-font-meta sk-focus" href="/">
-            ← StorySyncHQ
+            <ArrowLeft className="pr-back-arrow" aria-hidden="true" focusable="false" />
+            {/* eslint-disable-next-line @next/next/no-img-element -- an 18 px app icon; no optimisation pipeline yet (CLAUDE.md §3) */}
+            <img className="pr-back-icon" src={ICON_SRC} alt="" width={18} height={18} decoding="async" />
+            StorySyncHQ
           </Link>
-          <nav className="pr-bar-nav sk-font-meta" aria-label="Product">
+          <nav className="pr-bar-nav" aria-label="Product">
             <Link className="pr-bar-link sk-focus" href="/read">
               Play a story
             </Link>
+            <i className="pr-bar-dot" aria-hidden="true" />
             <Link className="pr-bar-link sk-focus" href="/studio">
               Make a story
             </Link>
@@ -103,27 +244,26 @@ export function ProtocolPage() {
         {/* ------------------------------------------------------------ hero */}
         <section className="pr-hero" aria-labelledby="pr-title">
           <div className="pr-wrap">
-            <p className="pr-eyebrow sk-font-meta">The SSYNC protocol · version 2.0</p>
-            <h1 id="pr-title" className="pr-h1 sk-font-tape">
-              One file holds the whole storybook.
-            </h1>
-            <p className="pr-lede">
-              SSYNC is to storybooks what PDF is to documents: an open format for immersive,
-              narrated, illustrated, musical reading. It is deliberately <em>not</em> video —
-              still images, layered audio and timing, so a page weighs kilobytes and a voice
-              survives being re-read at any speed.
-            </p>
-            <p className="pr-lede pr-lede--quiet">
-              A <code className="sk-font-meta">.storysync</code> file is a ZIP holding one{" "}
-              <code className="sk-font-meta">manifest.json</code> and its assets. The player is
-              plain web. Nobody needs our servers — or our app — to hear a story.
-            </p>
+            {/* ≥ 1024 px the download takes the hero's right side, beside the
+                kicker and the h1 (s08); below, it follows the lede. */}
+            <div className="pr-hero-head">
+              <p className="pr-eyebrow sk-font-meta">The SSYNC protocol · version 2.0</p>
+              <h1 id="pr-title" className="pr-h1 sk-font-tape">
+                One file holds the whole storybook.
+              </h1>
+              <p className="pr-lede">
+                SSYNC is to storybooks what PDF is to documents: pictures, words, voices, music and
+                timing in one open file. Deliberately not video. The player is plain web — nobody
+                needs our servers, or our app, to hear a story.
+              </p>
+              <DownloadDemo compact />
+            </div>
 
             <ul className="pr-facts">
               {FACTS.map((fact) => (
                 <li key={fact.k} className="pr-fact">
                   <span className="pr-fact-k sk-font-meta">{fact.k}</span>
-                  <span className="pr-fact-v sk-font-meta">{fact.v}</span>
+                  <span className="pr-fact-v">{fact.v}</span>
                 </li>
               ))}
             </ul>
@@ -141,6 +281,28 @@ export function ProtocolPage() {
                 Full specification
                 <Arrow />
               </a>
+            </div>
+          </div>
+        </section>
+
+        {/* ------------------------------------------- FIG. 1, taken apart */}
+        <section className="pr-figs" aria-labelledby="pr-figs-h">
+          <div className="pr-wrap">
+            <h2 id="pr-figs-h" className="sr-only">
+              Taken apart
+            </h2>
+            <div className="pr-fig-grid">
+              <figure className="pr-fig" data-protocol="fig-packet">
+                <figcaption className="pr-fig-cap sk-font-meta">
+                  Fig. 1 — page {FIG_PAGE_INDEX + 1} of {HOUSE_TAPE.metadata.title}, taken apart
+                </figcaption>
+                <PacketExploded className="pr-fig-stack" plates={FIG_PLATES} art={FIG_ART} />
+                <p className="pr-fig-note">
+                  A reader that understands only layers 1–3 still shows the story; each layer above
+                  adds a sense.
+                </p>
+              </figure>
+              <ProtocolCards className="pr-fig-cards" packedTape={PACKED_HOUSE_TAPE} />
             </div>
           </div>
         </section>
@@ -200,7 +362,7 @@ export function ProtocolPage() {
                     {CONTAINER_TREE}
                   </pre>
                   <figcaption className="pr-sheet-cap sk-font-meta">
-                    Fig. 2 — the archive layout
+                    Fig. 3 — the archive layout (an example)
                   </figcaption>
                 </figure>
               </div>
@@ -339,33 +501,22 @@ export function ProtocolPage() {
             </div>
           </div>
         </section>
-
-        {/* ------------------------------------------------------ take one */}
-        <section className="pr-section pr-section--take" aria-labelledby="pr-take-h">
-          <div className="pr-wrap">
-            <p className="pr-eyebrow sk-font-meta">Hold one in your hand</p>
-            <h2 id="pr-take-h" className="pr-h2 sk-font-tape">
-              The demo tape, as a file
-            </h2>
-            <DownloadDemo />
-          </div>
-        </section>
       </main>
 
       <footer className="pr-footer">
         <div className="pr-wrap pr-footer-inner">
-          <p className="pr-footer-note">
+          <p className="pr-footer-note sk-font-meta">
             SSYNC v2.0 · the spec, the schema and the reader are all open. Write your own player
             — the format outlives the app.
           </p>
           <nav className="pr-footer-links sk-font-meta" aria-label="Footer">
-            <Link className="pr-bar-link sk-focus" href="/">
+            <Link className="pr-footer-link sk-focus" href="/">
               Home
             </Link>
-            <a className="pr-bar-link sk-focus" href={SPEC_URL} target="_blank" rel="noreferrer">
+            <a className="pr-footer-link sk-focus" href={SPEC_URL} target="_blank" rel="noreferrer">
               Specification
             </a>
-            <a className="pr-bar-link sk-focus" href={GITHUB_URL} target="_blank" rel="noreferrer">
+            <a className="pr-footer-link sk-focus" href={GITHUB_URL} target="_blank" rel="noreferrer">
               GitHub
             </a>
           </nav>

@@ -27,7 +27,10 @@ import {
   getStorybookByShareCode,
   createShareLink,
   getSession,
+  type ShareLookupClient,
+  type SharedStorybookRow,
 } from "./supabase";
+import { mintShareCode, ShareCodeError } from "./share-code";
 
 export const LIBRARY_KEY = "ssync-library";
 
@@ -148,22 +151,21 @@ function writeLibrary(entries: LocalEntry[], what: string): void {
   }
 }
 
-/** Unguessable, unlisted (PRIVACY.md rule 4) — 128 bits of randomness. */
-function mintShareCode(): string {
-  try {
-    const bytes = new Uint8Array(16);
-    crypto.getRandomValues(bytes);
-    return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
-  } catch {
-    return `${Date.now().toString(16)}${Math.random().toString(16).slice(2, 18)}`;
-  }
-}
-
+/**
+ * A local story id. Ids are not links — the link is minted by `mintShareCode`,
+ * which never weakens — so when this browser has no secure random source at
+ * all, a non-secret id is fine here.
+ */
 function newId(): string {
   try {
     return crypto.randomUUID();
   } catch {
+    /* not a secure context (plain-http LAN address): fall through */
+  }
+  try {
     return `local-${mintShareCode()}`;
+  } catch {
+    return `local-${Date.now().toString(16)}${Math.random().toString(16).slice(2, 18)}`;
   }
 }
 
@@ -332,29 +334,63 @@ export async function getBooks(userId: string): Promise<StoredBook[]> {
 }
 
 /**
- * Resolve a share code. The cloud path reads `shared_links`; the local path
+ * Every share code ever minted is lowercase hex: 32 characters since T02, 16
+ * before. Anything else cannot match one, so it is never sent to the cloud.
+ */
+const SHARE_CODE_SHAPE = /^[0-9a-f]+$/;
+
+/**
+ * The cloud half of a share link: the one story whose code matches exactly,
+ * through the by-code lookup (`getStorybookByShareCode`). A string that cannot
+ * be a code resolves to nothing without a request. A cloud failure is a
+ * `CloudError`. Pass `client` only to stub the cloud in a test.
+ */
+export async function resolveShareCode(
+  code: string,
+  client: ShareLookupClient | null = supabase,
+): Promise<StoredBook | null> {
+  if (!client || !SHARE_CODE_SHAPE.test(code)) return null;
+  let row: SharedStorybookRow | null;
+  try {
+    row = await getStorybookByShareCode(code, client);
+  } catch (err) {
+    throw fromSupabase(err, "Opening the tape");
+  }
+  // A link opens only a published story (migration 003 checks `is_public`;
+  // before it, the read policy did), so the row need not carry the flag.
+  return row ? fromRow({ ...row, is_public: true }) : null;
+}
+
+/**
+ * Resolve a share code. The cloud path is `resolveShareCode`; the local path
  * matches the code minted by `shareBook` (and accepts a raw story id, because
  * older builds handed the id out as the code).
  */
 export async function getSharedBook(code: string): Promise<StoredBook | null> {
   if (!code) return null;
-  if (isSupabaseConfigured()) {
-    const result = (await getStorybookByShareCode(code)) as StorybookRow | null;
-    return result ? fromRow(result) : null;
-  }
+  if (isSupabaseConfigured()) return resolveShareCode(code);
   const library = readLibrary();
   return library.find((b) => b.shareCode === code) ?? library.find((b) => b.id === code) ?? null;
 }
 
 /* ----------------------------------------------------------------- share */
 
-/** Mint (or reuse) the unlisted code that `/read?story=<code>` resolves. */
+/** No secure random source: say so, and never hand out a guessable link. */
+const UNSAFE_LINK =
+  "Making the link: this browser cannot make a private link safely. Download the .storysync file instead.";
+
+/**
+ * Mint the unlisted code that `/read?story=<code>` resolves. Both paths take it
+ * from `mintShareCode` (128 bits, 32 hex). On this device a story that already
+ * has a code keeps it, whatever its length, so a link already sent still works.
+ */
 export async function shareBook(storybookId: string): Promise<string> {
   if (isSupabaseConfigured()) {
     try {
       const link = (await createShareLink(storybookId)) as { share_code: string };
       return link.share_code;
     } catch (err) {
+      if (err instanceof ShareCodeError) throw new CloudError("unknown", UNSAFE_LINK);
       throw fromSupabase(err, "Making the link");
     }
   }
@@ -364,7 +400,13 @@ export async function shareBook(storybookId: string): Promise<string> {
   if (index < 0) throw new CloudError("notFound", "That tape is not on this device any more.");
   const existing = library[index].shareCode;
   if (existing) return existing;
-  const code = mintShareCode();
+  let code: string;
+  try {
+    code = mintShareCode();
+  } catch (err) {
+    if (err instanceof ShareCodeError) throw new CloudError("unknown", UNSAFE_LINK);
+    throw err;
+  }
   library[index] = { ...library[index], shareCode: code };
   writeLibrary(library, "Making the link");
   return code;

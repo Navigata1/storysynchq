@@ -12,7 +12,9 @@
  * itself is always downloadable.
  */
 
-import type { StudioState } from "./types";
+import { voiceName } from "@/components/player/known-voices";
+import { sanitizePageMoods } from "./page-moods";
+import type { ReplyRecord, StudioState } from "./types";
 import { blankState, pageHasContent } from "./types";
 
 export const DRAFT_KEY = "ssync-studio-draft";
@@ -47,10 +49,37 @@ export function loadDraft(): { state: StudioState; savedAt: string } | null {
       manifest: { ...fallback.manifest, ...parsed.state.manifest },
       recordings: parsed.state.recordings ?? {},
     };
+    // Per-page moods (T24a): an older draft has none; an entry for a page
+    // that is not in the story, or a value that is not a mood, is dropped.
+    state.pageMoods = sanitizePageMoods(
+      parsed.state.pageMoods,
+      state.manifest.pages.map((p) => p.id),
+    );
+    // A reply's chip comes back with its draft (T18); anything else in its
+    // place is dropped rather than shown.
+    const reply = replyRecord(parsed.state.reply);
+    if (reply) state.reply = reply;
+    else delete state.reply;
+    // So does the voice chosen on the shelf (T22b), tidied as the Creator
+    // takes it; anything else in its place is dropped.
+    const voice = voiceName(parsed.state.voiceName);
+    if (voice) state.voiceName = voice;
+    else delete state.voiceName;
     return { state, savedAt: parsed.savedAt };
   } catch {
     return null;
   }
+}
+
+/**
+ * A stored reply record, if it is one: `{ title }` with a non-empty string,
+ * and `name` (whom it goes back to) when that is a non-empty string too.
+ */
+function replyRecord(value: unknown): ReplyRecord | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const { title, name } = value as { title?: unknown; name?: unknown };
+  if (typeof title !== "string" || !title.trim()) return undefined;
+  return typeof name === "string" && name.trim() ? { title, name: name.trim() } : { title };
 }
 
 /** True when nothing a child made is in the state — no pictures, words, voice. */

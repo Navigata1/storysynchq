@@ -3,6 +3,86 @@
 :root {
   --background: #0f1419;
   --foreground: #e6ebf2;
+
+  /* ── SSYNC foundation tokens ───────────────────────────────────────────
+     Ported from docs/vision/reference/foundation.css (.ss-screen) and the
+     brief's design_system. One source for every surface: use these (or the
+     Tailwind utilities wired below), never a repeated literal. Typed mirror:
+     src/components/studio-kit/tokens.ts — tests/vision-tokens.spec.ts fails
+     on any drift between the two. Additive: nothing here restyles a page. */
+
+  /* Register A — studio chrome, the room */
+  --ss-navy: #0a0e1a;
+  --ss-navy-2: #0f1426;
+  --ss-navy-3: #161d33;
+  --ss-navy-4: #1f2742;
+  --ss-line: rgba(255, 255, 255, 0.1);
+  --ss-line-2: rgba(255, 255, 255, 0.16);
+  --ss-glass: rgba(255, 255, 255, 0.05);
+  --ss-glass-2: rgba(255, 255, 255, 0.08);
+  --ss-fg: #ffffff;
+  --ss-fg-2: #cdd3e2;
+  --ss-fg-3: #8d96ad;
+  --ss-fg-4: #5d6680;
+  --ss-gold: #f59e0b;
+  --ss-gold-2: #fbbf4a;
+  --ss-violet: #7c6bff;
+  --ss-violet-2: #a59bff;
+  --ss-ok: #3fb68b;
+
+  /* Register B — tape stock, anything that IS a story */
+  --ss-paper: #fffdf6;
+  --ss-paper-2: #f5eedc;
+  --ss-paper-3: #e9dfc6;
+  --ss-ink: #1e1a16;
+  --ss-ink-2: #5a5148;
+  --ss-ink-3: #8b8073;
+  --ss-label: #ffc93c;
+  --ss-red: #e3452f;
+  --ss-shell: #3b3733;
+  --ss-shell-2: #2c2926;
+
+  /* Local additions (brief LOCAL) + cassette / print-slot tones */
+  --ss-kraft: #dfd2b8;
+  --ss-tape-brown: linear-gradient(180deg, #5b3a24, #3d2616);
+  --ss-tape-brown-1: #5b3a24;
+  --ss-tape-brown-2: #3d2616;
+  --ss-crayon-paper: #fbf7ec;
+  --ss-red-ink: #b4301f; /* the Signature tag ink */
+  --ss-shell-hi: #4a443e;
+  --ss-foot-1: #2e2a27;
+  --ss-foot-2: #24211f;
+  --ss-slot: #05070d;
+
+  /* A story's words on the dark Stage: the reference's cream (.ss-story) */
+  --ss-cream: #f3e6c8;
+
+  /* The eight canonical moods (src/lib/audio/moods.ts) */
+  --mood-wonder: #f5b544;
+  --mood-adventure: #f28c38;
+  --mood-calm: #5db4e8;
+  --mood-joy: #f7d348;
+  --mood-hush: #a98bf5;
+  --mood-rain: #8c9bb0;
+  --mood-suspense: #7b7fe8;
+  --mood-melancholy: #e58fa6;
+
+  /* The seven packet layers (docs/format-spec.md §7) */
+  --ss-layer-metadata: #efe9dc;
+  --ss-layer-visual: #e4e0fa;
+  --ss-layer-text: #fbf3df;
+  --ss-layer-voice: #fadfda;
+  --ss-layer-sound: #fbebd2;
+  --ss-layer-behavior: #e6e9ee;
+  --ss-layer-signature: #ffe9a8;
+
+  /* Motion — one easing family, everywhere */
+  --ss-ease: cubic-bezier(0.22, 0.8, 0.24, 1);
+
+  /* Type — next/font self-hosts the families; their variables sit on <html> */
+  --ss-display: var(--font-fraunces), "Iowan Old Style", Georgia, serif;
+  --ss-ui: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --ss-mono: var(--font-plex-mono), ui-monospace, Menlo, monospace;
 }
 
 @theme inline {
@@ -10,6 +90,71 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* SSYNC tokens as theme variables → bg-ss-navy, text-ss-ink, border-ss-ink,
+     bg-mood-wonder, fill-ss-layer-voice, ease-ss, font-ss-display … */
+  --color-ss-navy: var(--ss-navy);
+  --color-ss-navy-2: var(--ss-navy-2);
+  --color-ss-navy-3: var(--ss-navy-3);
+  --color-ss-navy-4: var(--ss-navy-4);
+  --color-ss-line: var(--ss-line);
+  --color-ss-line-2: var(--ss-line-2);
+  --color-ss-glass: var(--ss-glass);
+  --color-ss-glass-2: var(--ss-glass-2);
+  --color-ss-fg: var(--ss-fg);
+  --color-ss-fg-2: var(--ss-fg-2);
+  --color-ss-fg-3: var(--ss-fg-3);
+  --color-ss-fg-4: var(--ss-fg-4);
+  --color-ss-gold: var(--ss-gold);
+  --color-ss-gold-2: var(--ss-gold-2);
+  --color-ss-violet: var(--ss-violet);
+  --color-ss-violet-2: var(--ss-violet-2);
+  --color-ss-ok: var(--ss-ok);
+
+  --color-ss-paper: var(--ss-paper);
+  --color-ss-paper-2: var(--ss-paper-2);
+  --color-ss-paper-3: var(--ss-paper-3);
+  --color-ss-ink: var(--ss-ink);
+  --color-ss-ink-2: var(--ss-ink-2);
+  --color-ss-ink-3: var(--ss-ink-3);
+  --color-ss-label: var(--ss-label);
+  --color-ss-red: var(--ss-red);
+  --color-ss-shell: var(--ss-shell);
+  --color-ss-shell-2: var(--ss-shell-2);
+
+  --color-ss-kraft: var(--ss-kraft);
+  --color-ss-tape-brown-1: var(--ss-tape-brown-1);
+  --color-ss-tape-brown-2: var(--ss-tape-brown-2);
+  --color-ss-crayon-paper: var(--ss-crayon-paper);
+  --color-ss-red-ink: var(--ss-red-ink);
+  --color-ss-shell-hi: var(--ss-shell-hi);
+  --color-ss-foot-1: var(--ss-foot-1);
+  --color-ss-foot-2: var(--ss-foot-2);
+  --color-ss-slot: var(--ss-slot);
+  --color-ss-cream: var(--ss-cream);
+
+  --color-mood-wonder: var(--mood-wonder);
+  --color-mood-adventure: var(--mood-adventure);
+  --color-mood-calm: var(--mood-calm);
+  --color-mood-joy: var(--mood-joy);
+  --color-mood-hush: var(--mood-hush);
+  --color-mood-rain: var(--mood-rain);
+  --color-mood-suspense: var(--mood-suspense);
+  --color-mood-melancholy: var(--mood-melancholy);
+
+  --color-ss-layer-metadata: var(--ss-layer-metadata);
+  --color-ss-layer-visual: var(--ss-layer-visual);
+  --color-ss-layer-text: var(--ss-layer-text);
+  --color-ss-layer-voice: var(--ss-layer-voice);
+  --color-ss-layer-sound: var(--ss-layer-sound);
+  --color-ss-layer-behavior: var(--ss-layer-behavior);
+  --color-ss-layer-signature: var(--ss-layer-signature);
+
+  --ease-ss: var(--ss-ease);
+
+  --font-ss-display: var(--ss-display);
+  --font-ss-ui: var(--ss-ui);
+  --font-ss-mono: var(--ss-mono);
 }
 
 * {

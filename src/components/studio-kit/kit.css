@@ -8,15 +8,22 @@
    @keyframes stay unlayered — layers do not affect at-rule name lookup, but
    keeping them out keeps the cascade obvious.
 
+   Colours, the easing family and the type stacks are the SSYNC tokens on
+   :root (src/app/globals.css: --ss-*, --mood-*, --ss-layer-*, --ss-ease).
+   Draw from them, never a repeated literal; alpha tints of a token stay rgba
+   until a later ticket gives them a name.
+
    Inherited custom properties used across the kit:
      --sk-ink            ink colour reels/rules pick up (light on chrome, ink on tape)
      --sk-big-h          BigButton min-height (default 64px; child mode: bump it)
      --sk-transport-size TransportButton diameter (default 56px)
    ========================================================================== */
 
+/* A reel turns from the reference's static 18° frame (`.ss-reel--spin`), so
+   a reel that has never spun — paused at the first keyframe — rests there too. */
 @keyframes sk-reel-spin {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
+  from { transform: rotate(18deg); }
+  to   { transform: rotate(378deg); }
 }
 
 @keyframes sk-ring-pulse {
@@ -28,35 +35,39 @@
 @layer components {
   /* ---------- type registers ------------------------------------------- */
   .sk-font-tape {
-    font-family: var(--font-fraunces), Georgia, "Iowan Old Style", "Times New Roman", serif;
+    font-family: var(--ss-display);
     font-optical-sizing: auto;
   }
   .sk-font-meta {
-    font-family: var(--font-plex-mono), ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-family: var(--ss-mono);
     font-variant-ligatures: none;
   }
   .sk-font-ui {
-    font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
+    font-family: var(--ss-ui);
   }
 
   /* ---------- focus (one ring, everywhere) ------------------------------ */
   .sk-focus:focus-visible {
-    outline: 3px solid #f59e0b;
+    outline: 3px solid var(--ss-gold);
     outline-offset: 3px;
   }
 
   /* ---------- Reel ------------------------------------------------------ */
+  /* The reference ink reel (`#i-reel`, viewBox 100): rim r46 stroke 4, dashed
+     r31 stroke 2.4 (5 5), six spokes 22→38 stroke 5 with round caps, hub r9.
+     Strokes scale with the reel, as the reference's do. */
   .sk-reel {
     display: inline-block;
     flex: none;
     line-height: 0;
-    color: var(--sk-ink, #1e1a16);
+    color: var(--sk-ink, var(--ss-ink));
   }
   .sk-reel-svg {
     display: block;
     width: 100%;
     height: 100%;
     transform-origin: 50% 50%;
+    transform: rotate(18deg); /* the static frame (reduced motion lands here) */
     animation: sk-reel-spin 1.9s linear infinite;
     animation-play-state: paused; /* keeps its angle instead of snapping home */
     will-change: transform;
@@ -64,30 +75,21 @@
   .sk-reel--spinning .sk-reel-svg {
     animation-play-state: running;
   }
-  .sk-reel-face {
-    fill: currentColor;
-    opacity: 0.07;
-  }
   .sk-reel-rim {
-    fill: none;
+    fill: var(--sk-reel-face, color-mix(in srgb, currentColor 7%, transparent));
     stroke: currentColor;
-    stroke-width: 3;
-    vector-effect: non-scaling-stroke;
+    stroke-width: 4;
   }
   .sk-reel-dash {
     fill: none;
     stroke: currentColor;
-    stroke-width: 2;
-    stroke-dasharray: 5 6;
-    opacity: 0.72;
-    vector-effect: non-scaling-stroke;
+    stroke-width: 2.4;
+    stroke-dasharray: 5 5;
   }
   .sk-reel-spoke {
     stroke: currentColor;
-    stroke-width: 2;
+    stroke-width: 5;
     stroke-linecap: round;
-    opacity: 0.85;
-    vector-effect: non-scaling-stroke;
   }
   .sk-reel-hub {
     fill: currentColor;
@@ -104,87 +106,90 @@
 
   /* ---------- TapeLabel (Register B) ------------------------------------ */
   .sk-tape {
-    --sk-ink: #1e1a16;
+    --sk-ink: var(--ss-ink);
     position: relative;
     overflow: hidden;
-    border: 3px solid #1e1a16;
+    border: 3px solid var(--ss-ink);
     border-radius: 12px;
-    background-color: #fffdf6;
-    color: #1e1a16;
-    box-shadow:
-      0 18px 44px rgba(0, 0, 0, 0.4),
-      inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    background-color: var(--ss-paper);
+    color: var(--ss-ink);
+    text-align: start; /* a printed label reads from the left, even in a centred room */
+    box-shadow: 0 22px 44px -22px color-mix(in srgb, var(--ss-slot) 60%, transparent);
   }
   .sk-tape-stripe {
     height: 10px;
-    background-color: #e3452f;
-    border-bottom: 3px solid #1e1a16;
+    background-color: var(--ss-red);
+    border-bottom: 3px solid var(--ss-ink);
   }
   .sk-tape-band {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    min-height: 30px;
-    padding: 6px 12px;
-    border-bottom: 3px solid #1e1a16;
+    padding: 7px 14px;
+    background-color: var(--ss-label); /* `accent` overrides it inline */
+    border-bottom: 3px solid var(--ss-ink);
+    color: var(--ss-ink);
+    font-weight: 600;
+    font-size: 11px;
+    line-height: 1;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
   }
   .sk-tape-holes {
     display: inline-flex;
+    flex: none;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
   }
   .sk-tape-hole {
-    width: 13px;
-    height: 13px;
-    border: 2px solid #1e1a16;
-    border-radius: 999px;
-    opacity: 0.85;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: var(--ss-ink);
   }
   .sk-tape-mark {
-    font-size: 9px;
-    line-height: 1;
-    letter-spacing: 0.3em;
-    text-transform: uppercase;
-    opacity: 0.72;
     white-space: nowrap;
   }
   .sk-tape-field {
-    padding: 16px 18px 18px;
-    /* faint ruled paper */
+    padding: 14px 18px 16px;
+    /* ruled paper: one faint ink line every 28px */
+    background-color: var(--ss-paper);
     background-image: repeating-linear-gradient(
       180deg,
-      transparent 0 23px,
-      rgba(30, 26, 22, 0.07) 23px 24px
+      transparent 0 27px,
+      rgba(30, 26, 22, 0.07) 27px 28px
     );
-    background-position: 0 10px;
   }
   .sk-tape-title {
     margin: 0;
-    font-weight: 900;
-    font-size: clamp(1.3rem, 4.4vw, 2rem);
+    font-weight: 800;
+    /* 28px from a 640px viewport up; fluid below, never under 20px */
+    font-size: clamp(1.25rem, 0.5rem + 3.125vw, 1.75rem);
     line-height: 1.05;
     letter-spacing: -0.015em;
     text-wrap: balance;
     overflow-wrap: anywhere;
   }
   .sk-tape-author {
-    margin-top: 6px;
+    margin-top: 4px;
+    font-style: italic;
     font-weight: 500;
-    font-size: 0.95rem;
-    line-height: 1.2;
-    opacity: 0.76;
+    font-size: 1rem;
+    line-height: 1.3;
+    color: var(--ss-ink-2);
     overflow-wrap: anywhere;
   }
   .sk-tape-meta {
     margin-top: 12px;
-    padding-top: 10px;
-    border-top: 2px solid rgba(30, 26, 22, 0.14);
-    font-size: 10px;
-    line-height: 1.5;
-    letter-spacing: 0.18em;
+    border-top: none; /* no rule over the meta line */
+    font-weight: 500;
+    font-size: 11px;
+    line-height: 1.3;
+    letter-spacing: 0.15em;
     text-transform: uppercase;
-    opacity: 0.7;
+    color: var(--ss-ink);
+    overflow-wrap: anywhere;
   }
 
   /* ---------- BigButton ------------------------------------------------- */
@@ -206,11 +211,11 @@
     user-select: none;
     -webkit-tap-highlight-color: transparent;
     transition:
-      transform 160ms cubic-bezier(0.2, 0.7, 0.3, 1),
-      box-shadow 240ms ease-out,
-      background-color 240ms ease-out,
-      border-color 240ms ease-out,
-      opacity 200ms ease-out;
+      transform 160ms var(--ss-ease),
+      box-shadow 240ms var(--ss-ease),
+      background-color 240ms var(--ss-ease),
+      border-color 240ms var(--ss-ease),
+      opacity 200ms var(--ss-ease);
   }
   .sk-big:not(:disabled):hover { transform: translateY(-1px); }
   .sk-big:not(:disabled):active { transform: translateY(1px); }
@@ -227,18 +232,18 @@
   .sk-big-label { line-height: 1.15; }
 
   .sk-big--gold {
-    background-image: linear-gradient(180deg, #fbbf24 0%, #f59e0b 100%);
-    color: #1e1a16;
+    background-image: linear-gradient(180deg, #fbbf24 0%, var(--ss-gold) 100%);
+    color: var(--ss-ink);
     border-color: rgba(30, 26, 22, 0.3);
     box-shadow:
       0 10px 26px rgba(245, 158, 11, 0.28),
       inset 0 1px 0 rgba(255, 255, 255, 0.5);
   }
-  .sk-big--gold:focus-visible { outline-color: #fffdf6; }
+  .sk-big--gold:focus-visible { outline-color: var(--ss-paper); }
 
   .sk-big--violet {
     background-image: linear-gradient(180deg, #8b7bff 0%, #6d5bef 100%);
-    color: #ffffff;
+    color: var(--ss-fg);
     border-color: rgba(255, 255, 255, 0.18);
     box-shadow:
       0 10px 26px rgba(124, 107, 255, 0.32),
@@ -246,14 +251,14 @@
   }
 
   .sk-big--red {
-    background-image: linear-gradient(180deg, #f0553f 0%, #e3452f 100%);
+    background-image: linear-gradient(180deg, #f0553f 0%, var(--ss-red) 100%);
     color: #fff7f5;
     border-color: rgba(0, 0, 0, 0.28);
     box-shadow:
       0 10px 26px rgba(227, 69, 47, 0.34),
       inset 0 1px 0 rgba(255, 255, 255, 0.24);
   }
-  .sk-big--red:focus-visible { outline-color: #fffdf6; }
+  .sk-big--red:focus-visible { outline-color: var(--ss-paper); }
 
   .sk-big--ghost {
     background-color: rgba(255, 255, 255, 0.05);
@@ -270,12 +275,20 @@
     position: absolute;
     inset: -3px;
     border-radius: 19px;
-    border: 2px solid #e3452f;
+    border: 2px solid var(--ss-red);
     opacity: 0;
     pointer-events: none;
   }
   .sk-big--red:not(:disabled) .sk-big-ring {
     animation: sk-ring-pulse 1.8s ease-out infinite;
+  }
+
+  /* The reference .ss-btn pill (foundation.css: radius 999px), opt-in via
+     shape="pill". Only the outline changes — variant, height, pressed and
+     reduced-motion behaviour stay the BigButton's. The red ring follows. */
+  .sk-big[data-shape="pill"],
+  .sk-big[data-shape="pill"] .sk-big-ring {
+    border-radius: 999px;
   }
 
   /* ---------- TransportButton ------------------------------------------- */
@@ -303,13 +316,13 @@
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
     transition:
-      transform 140ms cubic-bezier(0.2, 0.7, 0.3, 1),
-      color 220ms ease-out,
-      border-color 220ms ease-out,
-      box-shadow 260ms ease-out;
+      transform 140ms var(--ss-ease),
+      color 220ms var(--ss-ease),
+      border-color 220ms var(--ss-ease),
+      box-shadow 260ms var(--ss-ease);
   }
   .sk-transport:not(:disabled):hover {
-    color: #ffffff;
+    color: var(--ss-fg);
     border-color: rgba(255, 255, 255, 0.3);
   }
   .sk-transport:not(:disabled):active { transform: translateY(1px); }
@@ -337,7 +350,7 @@
       inset 0 1px 0 rgba(255, 255, 255, 0.16);
   }
 
-  .sk-transport--rec { color: #e3452f; }
+  .sk-transport--rec { color: var(--ss-red); }
   .sk-transport--rec:not(:disabled):hover { color: #ff6a52; }
   .sk-transport--rec.is-active {
     color: #ff6a52;
@@ -356,7 +369,7 @@
   .sk-transport-ring {
     position: absolute;
     inset: -4px;
-    border: 2px solid #e3452f;
+    border: 2px solid var(--ss-red);
     border-radius: 999px;
     opacity: 0;
     pointer-events: none;
@@ -377,10 +390,10 @@
     letter-spacing: 0.16em;
     text-transform: uppercase;
     color: rgba(226, 232, 240, 0.42);
-    transition: color 240ms ease-out;
+    transition: color 240ms var(--ss-ease);
     white-space: nowrap;
   }
-  .sk-mode-word.is-on { color: #f59e0b; }
+  .sk-mode-word.is-on { color: var(--ss-gold); }
 
   .sk-mode-track {
     position: relative;
@@ -394,7 +407,7 @@
     box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.5);
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
-    transition: border-color 240ms ease-out, background-color 240ms ease-out;
+    transition: border-color 240ms var(--ss-ease), background-color 240ms var(--ss-ease);
   }
   .sk-mode-track::before {
     content: "";
@@ -424,8 +437,8 @@
     background-image: linear-gradient(180deg, #e7edf6 0%, #aebacb 100%);
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
     transition:
-      transform 320ms cubic-bezier(0.2, 0.7, 0.3, 1),
-      background-image 320ms ease-out;
+      transform 320ms var(--ss-ease),
+      background-image 320ms var(--ss-ease);
   }
   .sk-mode-knob::after {
     content: "";
@@ -436,7 +449,7 @@
   }
   .sk-mode-track[aria-checked="true"] .sk-mode-knob {
     transform: translateX(32px);
-    background-image: linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%);
+    background-image: linear-gradient(180deg, #fcd34d 0%, var(--ss-gold) 100%);
   }
 
   /* ---------- VUMeter ---------------------------------------------------- */
@@ -463,10 +476,10 @@
     inset: 0;
     background-image: linear-gradient(
       90deg,
-      #f59e0b 0%,
+      var(--ss-gold) 0%,
       #fbbf24 58%,
       #ff8a3d 76%,
-      #e3452f 88%
+      var(--ss-red) 88%
     );
     -webkit-mask-image: repeating-linear-gradient(90deg, #000 0 7px, transparent 7px 10px);
     mask-image: repeating-linear-gradient(90deg, #000 0 7px, transparent 7px 10px);
@@ -487,8 +500,10 @@
 
   /* ---------- reduced motion: no spin, no pulse, no travel --------------- */
   @media (prefers-reduced-motion: reduce) {
+    /* every reel rests on the 18° frame; !important so no consumer's
+       unlayered motion rule can start one turning */
     .sk-reel-svg {
-      animation: none;
+      animation: none !important;
     }
     .sk-big-ring,
     .sk-transport-ring {

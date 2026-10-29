@@ -11,10 +11,17 @@
  * code path the Studio uses when a child publishes their own tape.
  *
  * Nothing is uploaded: fetch → blob → data URL → ZIP → download, all local.
+ *
+ * Two looks, the same hooks (`[data-protocol="download-demo"]`,
+ * `[data-protocol="download-status"]`, the `.pr-take` wrapper) and the same
+ * packing/done/error statuses:
+ *   - default: the cassette label, its reels and the "take the tape apart" copy;
+ *   - `compact` (s08's hero): the gold button and its status line, nothing else.
  */
 
 import * as React from "react";
 import Link from "next/link";
+import { Download } from "lucide-react";
 import { buildStorysyncFromStory } from "@/lib/storysync/container";
 import type { SsyncManifest } from "@/lib/storysync/manifest";
 import { BigButton, Reel, TapeLabel } from "@/components/studio-kit/kit";
@@ -59,7 +66,12 @@ function needsInlining(url: string | undefined): url is string {
   return !!url && !url.startsWith("data:") && !url.startsWith("assets/");
 }
 
-export function DownloadDemo() {
+export interface DownloadDemoProps {
+  /** s08's hero: the button and the status line only. */
+  compact?: boolean;
+}
+
+export function DownloadDemo({ compact = false }: DownloadDemoProps) {
   const [status, setStatus] = React.useState<Status>({ kind: "idle" });
   const busy = status.kind === "packing";
   const urlsRef = React.useRef<string[]>([]);
@@ -132,6 +144,44 @@ export function DownloadDemo() {
     }
   }, [busy]);
 
+  const button = (
+    <BigButton
+      data-protocol="download-demo"
+      label={busy ? "Packing the tape…" : "Download the demo as .storysync"}
+      variant="gold"
+      icon={<Download />}
+      disabled={busy}
+      aria-busy={busy}
+      onClick={() => {
+        void download();
+      }}
+    />
+  );
+
+  const statusLine = (
+    <p
+      className={compact ? "pr-take-status" : "pr-take-status sk-font-meta"}
+      role="status"
+      data-protocol="download-status"
+    >
+      {status.kind === "packing" ? "Bundling assets and zipping…" : null}
+      {status.kind === "done"
+        ? `${status.filename} · ${formatBytes(status.bytes)} · ${status.assets} bundled assets`
+        : null}
+      {status.kind === "error" ? status.message : null}
+      {status.kind === "idle" ? "Nothing is uploaded — the ZIP is built on this device." : null}
+    </p>
+  );
+
+  if (compact) {
+    return (
+      <div className="pr-take pr-take--compact">
+        {button}
+        {statusLine}
+      </div>
+    );
+  }
+
   return (
     <div className="pr-take">
       <div className="pr-take-tape">
@@ -155,26 +205,8 @@ export function DownloadDemo() {
           on <Link className="pr-inline-link sk-focus" href="/read">the reader</Link> and it plays.
         </p>
 
-        <BigButton
-          data-protocol="download-demo"
-          label={busy ? "Packing the tape…" : "Download the demo as .storysync"}
-          variant="gold"
-          icon="⬇"
-          disabled={busy}
-          aria-busy={busy}
-          onClick={() => {
-            void download();
-          }}
-        />
-
-        <p className="pr-take-status sk-font-meta" role="status" data-protocol="download-status">
-          {status.kind === "packing" ? "Bundling assets and zipping…" : null}
-          {status.kind === "done"
-            ? `${status.filename} · ${formatBytes(status.bytes)} · ${status.assets} bundled assets`
-            : null}
-          {status.kind === "error" ? status.message : null}
-          {status.kind === "idle" ? "Nothing is uploaded — the ZIP is built on this device." : null}
-        </p>
+        {button}
+        {statusLine}
       </div>
     </div>
   );

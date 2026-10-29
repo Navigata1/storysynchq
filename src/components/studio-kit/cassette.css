@@ -1,0 +1,149 @@
+/* ============================================================================
+   Cassette — the whole tape (Register B), component-scoped to Cassette.tsx.
+   Spec: the reference `.ss-cassette` (docs/vision/reference/foundation.css)
+   and s01's hero tape.
+
+   Lives in @layer components like kit.css, so a consumer's class (unlayered
+   page CSS or a Tailwind utility) always wins an override — the landing's
+   `.ls-cassette` sets the hero width and tilt that way.
+
+   Every colour is an SSYNC token (src/app/globals.css); tints are the token
+   mixed with transparent, never a new literal. The shell is a size container:
+   the label type, the window and the reels scale with its width (cqi).
+   ========================================================================== */
+
+@layer components {
+  .sk-cassette {
+    --sk-cassette-reel: 14.2cqi; /* 22% of a 58% window, over the 90% content box */
+    container-type: inline-size;
+    position: relative;
+    box-sizing: border-box;
+    flex: none;
+    width: 380px;
+    max-width: 100%;
+    aspect-ratio: 1.6;
+    padding: 5%;
+    border-radius: 20px;
+    background-image: linear-gradient(
+      165deg,
+      var(--ss-shell-hi) 0%,
+      var(--ss-shell) 40%,
+      var(--ss-shell-2) 100%
+    );
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, var(--ss-fg) 14%, transparent),
+      inset 0 0 0 2px color-mix(in srgb, var(--ss-slot) 35%, transparent),
+      0 34px 60px -26px color-mix(in srgb, var(--ss-slot) 75%, transparent);
+  }
+
+  /* ---------- screws ------------------------------------------------------ */
+  .sk-cassette-screw {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-image: radial-gradient(circle at 35% 35%, var(--ss-ink-3), var(--ss-shell) 70%);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ss-slot) 50%, transparent);
+  }
+  .sk-cassette-screw--tl { left: 9px; top: 9px; }
+  .sk-cassette-screw--tr { right: 9px; top: 9px; }
+  .sk-cassette-screw--bl { left: 9px; bottom: 9px; }
+  .sk-cassette-screw--br { right: 9px; bottom: 9px; }
+
+  /* ---------- the label: a TapeLabel cut to the shell (74% of its height) - */
+  .sk-cassette .sk-cassette-label {
+    display: flex;
+    flex-direction: column;
+    height: 74%;
+    border-radius: 10px;
+    box-shadow: none;
+  }
+  .sk-cassette-label .sk-tape-stripe {
+    flex: none;
+    height: 9px;
+  }
+  .sk-cassette-label .sk-tape-band {
+    flex: none;
+    padding: 5px 12px;
+    font-size: 10px;
+  }
+  .sk-cassette-label .sk-tape-field {
+    flex: 1;
+    min-height: 0;
+    padding: 7px 14px;
+  }
+  /* one line each: the window sits over the lower half of the label */
+  .sk-cassette-label .sk-tape-title {
+    font-size: clamp(14px, 6.9cqi, 28px);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .sk-cassette-label .sk-tape-author {
+    margin-top: 1px;
+    font-size: clamp(11px, 3.9cqi, 16px);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .sk-cassette-label .sk-tape-meta {
+    margin-top: 3px;
+    letter-spacing: 0.16em;
+    color: var(--ss-ink-2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ---------- the window: ink ring, tape ribbon, two reels ---------------- */
+  .sk-cassette-window {
+    --sk-ink: var(--ss-ink);
+    --sk-reel-face: var(--ss-paper);
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-sizing: border-box;
+    width: 58%;
+    height: 26%;
+    padding: 0 8%;
+    border-radius: 999px;
+    transform: translate(-50%, -6%);
+    background-image: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--ss-ink) 70%, var(--ss-slot)),
+      color-mix(in srgb, var(--ss-ink) 60%, var(--ss-shell-2))
+    );
+    box-shadow:
+      inset 0 2px 8px color-mix(in srgb, var(--ss-slot) 80%, transparent),
+      0 0 0 3px var(--ss-ink);
+  }
+  .sk-cassette-ribbon {
+    position: absolute;
+    left: 18%;
+    right: 18%;
+    top: 50%;
+    height: 34%;
+    border-radius: 2px;
+    background-image: var(--ss-tape-brown);
+    transform: translateY(-50%);
+  }
+  .sk-cassette-window > .sk-reel {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ---------- the foot ---------------------------------------------------- */
+  .sk-cassette-foot {
+    position: absolute;
+    left: 18%;
+    right: 18%;
+    bottom: 0;
+    height: 14%;
+    border-radius: 10px 10px 0 0;
+    background-image: linear-gradient(180deg, var(--ss-foot-1), var(--ss-foot-2));
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--ss-fg) 8%, transparent);
+  }
+}

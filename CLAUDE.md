@@ -44,6 +44,7 @@ src/app/                — thin routes; each page renders one component tree
   globals.css       — Global styles + design tokens
 src/components/
   studio-kit/       — shared studio-chrome primitives (Reel, TapeLabel, GlassPanel, Transport…)
+                      in kit.tsx/kit.css; tokens.ts mirrors the :root --ss-* tokens (globals.css); every NEW shared component gets its own studio-kit/<Name>.tsx (+ <name>.css), imported from that file directly
   landing/          — Landing + deck insert animation
   player/           — Player (dual-bus, read-along, page-turn cue), ReadRoom, timing presets
   studio/           — Stage, ToolRail, Filmstrip, Transport, Inspector, ParentGate, PublishCard, draft autosave
@@ -62,6 +63,7 @@ public/
   demo/             — demo storybook data + images
 tests/              — Playwright: legacy suites (/classic), builder gates (wp-*), blind-critic
                       gates (critic-*), fable-pass, storysync-roundtrip (Node-side)
+  fixtures/         — Vision Reel tapes (.storysync + sources, facts, page helpers); illustrative, tests only
 ```
 
 ## 2. Locked architecture decisions (v2 — see ARCHITECTURE_REVIEW.md for rationale)

@@ -187,8 +187,10 @@ export function PacketDiagram() {
         </svg>
       </div>
       <figcaption className="pr-packet-cap sk-font-meta">
-        Fig. 1 — the SSYNC packet. A reader that understands only layers 1–3 still shows the
-        story; each layer above adds a sense.
+        {/* Drawn 01 at the top (manifest order), so it never says "above": FIG. 1's
+            plates, drawn 01 at the bottom, carry that sentence. */}
+        Fig. 2 — the seven layers, in manifest order. Each block is one JSON key; a reader may stop
+        after layer 3 and still show the story.
       </figcaption>
     </figure>
   );

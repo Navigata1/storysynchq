@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { evidencePath } from './fixtures/evidence';
 
 test.describe('Phase 1: Reader Polish', () => {
   test('landing page loads with hero and CTA', async ({ page }) => {
@@ -6,7 +7,7 @@ test.describe('Phase 1: Reader Polish', () => {
     await expect(page.getByRole('heading', { name: 'StorySyncHQ' })).toBeVisible();
     await expect(page.getByRole('button', { name: /Read Demo Storybook/i })).toBeVisible();
     await expect(page.getByText('The Immersive Storybook Protocol')).toBeVisible();
-    await page.screenshot({ path: 'tests/screenshots/landing-hero.png', fullPage: false });
+    await page.screenshot({ path: evidencePath('landing-hero.png', { dir: 'tests/screenshots' }), fullPage: false });
   });
 
   test('landing page sections render', async ({ page }) => {
@@ -16,7 +17,7 @@ test.describe('Phase 1: Reader Polish', () => {
     await page.waitForTimeout(500);
     await expect(page.getByRole('heading', { name: 'Remember the magic?' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Narrate' })).toBeVisible();
-    await page.screenshot({ path: 'tests/screenshots/landing-features.png', fullPage: false });
+    await page.screenshot({ path: evidencePath('landing-features.png', { dir: 'tests/screenshots' }), fullPage: false });
   });
 
   test('demo storybook opens and renders first page', async ({ page }) => {
@@ -29,7 +30,7 @@ test.describe('Phase 1: Reader Polish', () => {
     // Reader open — check for any reader UI element
     const readerUI = page.locator('text=/\\d.*\\/.*8/');
     await expect(readerUI.first()).toBeVisible({ timeout: 5000 });
-    await page.screenshot({ path: 'tests/screenshots/reader-page1.png' });
+    await page.screenshot({ path: evidencePath('reader-page1.png', { dir: 'tests/screenshots' }) });
   });
 
   test('reader navigation works', async ({ page }) => {
@@ -43,7 +44,7 @@ test.describe('Phase 1: Reader Polish', () => {
     await page.waitForTimeout(300);
     const counter2 = page.locator('text=/\\d.*\\/.*8/');
     await expect(counter2.first()).toBeVisible({ timeout: 3000 });
-    await page.screenshot({ path: 'tests/screenshots/reader-page2.png' });
+    await page.screenshot({ path: evidencePath('reader-page2.png', { dir: 'tests/screenshots' }) });
   });
 
   test('voice mode toggle and record button visible', async ({ page }) => {
@@ -57,7 +58,7 @@ test.describe('Phase 1: Reader Polish', () => {
     await expect(page.getByRole('button', { name: /AI Voice/i })).toBeVisible();
     // Mic button should be visible
     await expect(page.getByRole('button', { name: '🎤' })).toBeVisible();
-    await page.screenshot({ path: 'tests/screenshots/reader-controls.png' });
+    await page.screenshot({ path: evidencePath('reader-controls.png', { dir: 'tests/screenshots' }) });
   });
 
   test('recording panel opens', async ({ page }) => {
@@ -71,7 +72,7 @@ test.describe('Phase 1: Reader Polish', () => {
     await page.waitForTimeout(300);
     await expect(page.getByText(/Record Page/i)).toBeVisible();
     await expect(page.getByText(/Start Recording/i)).toBeVisible();
-    await page.screenshot({ path: 'tests/screenshots/reader-record-panel.png' });
+    await page.screenshot({ path: evidencePath('reader-record-panel.png', { dir: 'tests/screenshots' }) });
   });
 
   test('exit reader returns to landing', async ({ page }) => {
@@ -97,6 +98,6 @@ test.describe('Phase 1: Reader Polish', () => {
     await page.waitForTimeout(300);
     const counter5 = page.locator('text=/\\d.*\\/.*8/');
     await expect(counter5.first()).toBeVisible({ timeout: 3000 });
-    await page.screenshot({ path: 'tests/screenshots/reader-page5.png' });
+    await page.screenshot({ path: evidencePath('reader-page5.png', { dir: 'tests/screenshots' }) });
   });
 });
