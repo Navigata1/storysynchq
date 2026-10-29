@@ -68,8 +68,11 @@ export interface ParentGateProps {
   /**
    * Called only when the answer is right and every voice is ticked; `consents`
    * is one entry per voice, in voice order, with who consented to it.
+   * `stampedAt` is the gate's own clock — the moment the stamp's date and the
+   * sheet's year were read from — so the consent record carries the date the
+   * grown-up saw stamped, even across local midnight.
    */
-  onPass: (author: string, consents: ConsentChoice[]) => void;
+  onPass: (author: string, consents: ConsentChoice[], stampedAt: Date) => void;
   onCancel: () => void;
   /**
    * The answer "Whose voice is on this tape?" starts on. Default: a child's
@@ -288,6 +291,7 @@ export function ParentGate({
       onPass(
         author.trim(),
         voices.map((voice, i) => ({ voice, grantedBy: grantors[i] })),
+        today,
       );
       return;
     }

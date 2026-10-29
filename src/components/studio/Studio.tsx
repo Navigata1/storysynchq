@@ -405,6 +405,8 @@ export default function Studio() {
   const authorRef = React.useRef("");
   /** Each voice and who consented to it — a retry publishes with the same consent. */
   const consentRef = React.useRef<ConsentChoice[]>([]);
+  /** The gate's clock when it passed: the consent stamp's date, kept for "Try again". */
+  const stampedAtRef = React.useRef<Date | null>(null);
   /** "story by" as it is being typed in the gate; the gate's voice list follows it. */
   const [gateAuthor, setGateAuthor] = React.useState("");
   const cuesRef = React.useRef<StudioCues | null>(null);
@@ -542,6 +544,7 @@ export default function Studio() {
       publishedRef.current = null;
       authorRef.current = "";
       consentRef.current = [];
+      stampedAtRef.current = null;
       readerRef.current = null;
       setShareUrl(null);
       setPublishNote(null);
@@ -1216,10 +1219,11 @@ export default function Studio() {
   );
 
   const runPublish = React.useCallback(
-    async (author: string, consents: ConsentChoice[]) => {
+    async (author: string, consents: ConsentChoice[], stampedAt?: Date) => {
       stopAudio();
       authorRef.current = author;
       consentRef.current = consents;
+      stampedAtRef.current = stampedAt ?? null;
       setPhase("publishing");
       setPublishError(null);
       setPublishNote(null);
@@ -1355,7 +1359,9 @@ export default function Studio() {
           return choice;
         });
         const hasVoiceInStory = voices.length > 0;
-        const now = new Date();
+        // One captured moment: the gate's own clock, the one its stamp and
+        // sheet were drawn from, so the record's date is the stamp's date.
+        const now = stampedAt ?? new Date();
         const credit = remix ? source.metadata.author?.trim() || remix.author : author;
         const signature: SsyncSignature = {
           ...(source.signature ?? {}),
@@ -2259,11 +2265,11 @@ export default function Studio() {
           sheet={gateSheet}
           onAuthorChange={setGateAuthor}
           onCancel={() => setPhase("edit")}
-          onPass={(author, consents) => {
+          onPass={(author, consents, stampedAt) => {
             // A re-voiced tape keeps its author: the byline is the reader.
             if (state.remix) readerRef.current = author;
             else setAuthor(author);
-            void runPublish(author, consents);
+            void runPublish(author, consents, stampedAt);
           }}
         />
       ) : null}
@@ -2300,7 +2306,7 @@ export default function Studio() {
                 onDownload={downloadTape}
                 onDeleteEverything={() => void deleteEverything()}
                 onBack={() => setPhase("edit")}
-                onRetry={() => void runPublish(authorRef.current, consentRef.current)}
+                onRetry={() => void runPublish(authorRef.current, consentRef.current, stampedAtRef.current ?? undefined)}
               />
             </div>,
             document.body,
