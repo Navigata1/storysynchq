@@ -256,7 +256,7 @@ export function ProtocolPage() {
                 timing in one open file. Deliberately not video. The player is plain web — nobody
                 needs our servers, or our app, to hear a story.
               </p>
-              <DownloadDemo compact />
+              <DownloadDemo />
             </div>
 
             <ul className="pr-facts">
