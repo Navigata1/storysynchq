@@ -24,25 +24,16 @@
  */
 
 import * as React from "react";
-import { Cloud, CloudRain, Compass, Eye, Leaf, Moon, Star, Sun, type LucideIcon } from "lucide-react";
 import { MOOD_NAMES, MOODS, type MoodName } from "@/lib/audio/moods";
+import { MOOD_ICON } from "./mood-icons";
 import "./mood-tape-chip.css";
 
 function cx(...parts: Array<string | false | null | undefined>): string {
   return parts.filter(Boolean).join(" ");
 }
 
-/** The mood icon set (the reference sprite's, as lucide-react). */
-export const MOOD_ICON: Record<MoodName, LucideIcon> = {
-  Wonder: Star,
-  Adventure: Compass,
-  Calm: Moon,
-  Joy: Sun,
-  Hush: Cloud,
-  Rain: CloudRain,
-  Suspense: Eye,
-  Melancholy: Leaf,
-};
+/** The mood icon set (one source: ./mood-icons), re-exported for the chip's consumers. */
+export { MOOD_ICON };
 
 /**
  * Each mood's music-box contour: six dots, their drop in px from the top of a

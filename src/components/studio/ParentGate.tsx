@@ -24,22 +24,16 @@ import * as React from "react";
 import {
   AudioWaveform,
   Check,
-  Cloud,
-  CloudRain,
-  Compass,
-  Eye,
-  Leaf,
   Lock,
-  Moon,
   Pen,
   Star,
-  Sun,
   Undo2,
-  type LucideIcon,
 } from "lucide-react";
 import { BigButton } from "@/components/studio-kit/kit";
 import { PacketBands, type PacketBand } from "@/components/studio-kit/PacketBands";
 import { ConsentStamp } from "@/components/studio-kit/ConsentStamp";
+import { MOOD_ICON } from "@/components/studio-kit/mood-icons";
+import { isMoodName } from "@/lib/audio/moods";
 import {
   consentDate,
   stampDate,
@@ -142,18 +136,6 @@ const WHOSE_FIRST_EACH = "Choose whose voice each one is first.";
 
 const SUBLINE =
   "This consent is written into the tape itself, so it travels with the story wherever the file goes.";
-
-/** Each mood's icon (brief design_system: the sprite's Lucide symbols). */
-const MOOD_ICON: Record<string, LucideIcon> = {
-  Wonder: Star,
-  Adventure: Compass,
-  Calm: Moon,
-  Joy: Sun,
-  Hush: Cloud,
-  Rain: CloudRain,
-  Suspense: Eye,
-  Melancholy: Leaf,
-};
 
 /**
  * Typing the byline renames the voice it credits, in place: the same
@@ -747,7 +729,7 @@ function TapeSheet({ rows, recorded, stamp }: TapeSheetProps) {
       band.aside = <AudioWaveform aria-hidden="true" className="size-5 text-ss-ink" strokeWidth={2} />;
     }
     if (row.layer === "Sound" && row.mood) {
-      const Icon = MOOD_ICON[row.mood] ?? Star;
+      const Icon = isMoodName(row.mood) ? MOOD_ICON[row.mood] : Star;
       band.aside = (
         <Icon
           aria-hidden="true"
