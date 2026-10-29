@@ -27,8 +27,9 @@
  */
 
 import * as React from "react";
-import { Cloud, CloudRain, Compass, Eye, Leaf, Moon, Stamp, Star, Sun, type LucideIcon } from "lucide-react";
+import { Stamp } from "lucide-react";
 import type { MoodName } from "@/lib/audio/moods";
+import { MOOD_ICON } from "./mood-icons";
 import { LAYER_FILL, REGISTER_B, type PacketLayerName } from "./tokens";
 import "./packet-exploded.css";
 
@@ -61,18 +62,6 @@ export interface PacketExplodedProps extends Omit<React.HTMLAttributes<HTMLOList
   /** The Signature plate's tag. Default "V2.1 · DRAFT"; null prints none. */
   signatureTag?: string | null;
 }
-
-/** Each mood's icon (brief design_system: the sprite's Lucide symbols). */
-const MOOD_ICON: Record<MoodName, LucideIcon> = {
-  Wonder: Star,
-  Adventure: Compass,
-  Calm: Moon,
-  Joy: Sun,
-  Hush: Cloud,
-  Rain: CloudRain,
-  Suspense: Eye,
-  Melancholy: Leaf,
-};
 
 /** 32 bar heights (%), the reel's `.ss-wave` pattern; 48 bars repeat it. */
 const WAVE = [

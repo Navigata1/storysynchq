@@ -12,19 +12,16 @@
  *
  * Nothing is uploaded: fetch → blob → data URL → ZIP → download, all local.
  *
- * Two looks, the same hooks (`[data-protocol="download-demo"]`,
- * `[data-protocol="download-status"]`, the `.pr-take` wrapper) and the same
- * packing/done/error statuses:
- *   - default: the cassette label, its reels and the "take the tape apart" copy;
- *   - `compact` (s08's hero): the gold button and its status line, nothing else.
+ * s08's hero: the gold button and its status line, nothing else
+ * (`[data-protocol="download-demo"]`, `[data-protocol="download-status"]`, in
+ * the `.pr-take` wrapper), with packing/done/error statuses.
  */
 
 import * as React from "react";
-import Link from "next/link";
 import { Download } from "lucide-react";
 import { buildStorysyncFromStory } from "@/lib/storysync/container";
 import type { SsyncManifest } from "@/lib/storysync/manifest";
-import { BigButton, Reel, TapeLabel } from "@/components/studio-kit/kit";
+import { BigButton } from "@/components/studio-kit/kit";
 
 const DEMO_URL = "/demo/brave-little-star.ssync.json";
 
@@ -66,12 +63,7 @@ function needsInlining(url: string | undefined): url is string {
   return !!url && !url.startsWith("data:") && !url.startsWith("assets/");
 }
 
-export interface DownloadDemoProps {
-  /** s08's hero: the button and the status line only. */
-  compact?: boolean;
-}
-
-export function DownloadDemo({ compact = false }: DownloadDemoProps) {
+export function DownloadDemo() {
   const [status, setStatus] = React.useState<Status>({ kind: "idle" });
   const busy = status.kind === "packing";
   const urlsRef = React.useRef<string[]>([]);
@@ -144,70 +136,27 @@ export function DownloadDemo({ compact = false }: DownloadDemoProps) {
     }
   }, [busy]);
 
-  const button = (
-    <BigButton
-      data-protocol="download-demo"
-      label={busy ? "Packing the tape…" : "Download the demo as .storysync"}
-      variant="gold"
-      icon={<Download />}
-      disabled={busy}
-      aria-busy={busy}
-      onClick={() => {
-        void download();
-      }}
-    />
-  );
-
-  const statusLine = (
-    <p
-      className={compact ? "pr-take-status" : "pr-take-status sk-font-meta"}
-      role="status"
-      data-protocol="download-status"
-    >
-      {status.kind === "packing" ? "Bundling assets and zipping…" : null}
-      {status.kind === "done"
-        ? `${status.filename} · ${formatBytes(status.bytes)} · ${status.assets} bundled assets`
-        : null}
-      {status.kind === "error" ? status.message : null}
-      {status.kind === "idle" ? "Nothing is uploaded — the ZIP is built on this device." : null}
-    </p>
-  );
-
-  if (compact) {
-    return (
-      <div className="pr-take pr-take--compact">
-        {button}
-        {statusLine}
-      </div>
-    );
-  }
-
   return (
     <div className="pr-take">
-      <div className="pr-take-tape">
-        <TapeLabel
-          title="The Brave Little Star"
-          author="Island Development Crew"
-          meta="SIDE A · 8 PAGES · SSYNC v2.0"
-        />
-        <div className="pr-take-reels" aria-hidden="true">
-          <Reel spinning={busy} size={30} />
-          <Reel spinning={busy} size={30} />
-        </div>
-      </div>
-
-      <div className="pr-take-body">
-        <h3 className="pr-h3 sk-font-tape">Take the tape apart</h3>
-        <p className="pr-copy">
-          This packs the demo story into a real container in your browser — the manifest, plus
-          every illustration bundled into <code className="sk-font-meta">assets/</code>. Rename
-          it to <code className="sk-font-meta">.zip</code> and read the whole thing; drop it back
-          on <Link className="pr-inline-link sk-focus" href="/read">the reader</Link> and it plays.
-        </p>
-
-        {button}
-        {statusLine}
-      </div>
+      <BigButton
+        data-protocol="download-demo"
+        label={busy ? "Packing the tape…" : "Download the demo as .storysync"}
+        variant="gold"
+        icon={<Download />}
+        disabled={busy}
+        aria-busy={busy}
+        onClick={() => {
+          void download();
+        }}
+      />
+      <p className="pr-take-status" role="status" data-protocol="download-status">
+        {status.kind === "packing" ? "Bundling assets and zipping…" : null}
+        {status.kind === "done"
+          ? `${status.filename} · ${formatBytes(status.bytes)} · ${status.assets} bundled assets`
+          : null}
+        {status.kind === "error" ? status.message : null}
+        {status.kind === "idle" ? "Nothing is uploaded — the ZIP is built on this device." : null}
+      </p>
     </div>
   );
 }

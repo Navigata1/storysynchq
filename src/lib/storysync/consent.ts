@@ -54,15 +54,6 @@ export function consentDate(date: Date): string {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-/** One record per voice, in voice order, all granted by `grantedBy` on `date`. */
-export function consentRecords(
-  voices: readonly string[],
-  grantedBy: string,
-  date: string,
-): VoiceConsentRecord[] {
-  return voices.map((voice) => ({ voice, grantedBy, date }));
-}
-
 /**
  * Who gave a voice's consent (`voiceConsent[].grantedBy`): a parent or
  * guardian for a child's voice, or the grown-up herself for her own (s06,

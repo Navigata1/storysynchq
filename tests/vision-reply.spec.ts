@@ -45,7 +45,7 @@ const LINE_NOBODY = "Record one page in your voice. It goes back as its own litt
 const CHIP = `Reply to · ${TWINKLE.title}`;
 const QUESTION = `Reply to ${TWINKLE.title}?`;
 const REPLACE_BODY =
-  "The story on the Stage will be replaced. It is only kept on this device, so download it first if you want to keep it.";
+  "The story on the Stage will be replaced. It is only kept on this device, so finish it first if you want to keep it.";
 const MINE = "Mine — I'm the grown-up speaking";
 const LINK_NAME = "What’s inside this tape?";
 

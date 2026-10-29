@@ -214,11 +214,8 @@ export async function createShareLink(storybookId: string) {
 }
 
 // ── Storage ──
-
-export async function uploadMedia(file: Blob, path: string) {
-  if (!supabase) throw new Error("Supabase not configured");
-  const { error } = await supabase.storage.from("storybook-media").upload(path, file);
-  if (error) throw error;
-  const { data: urlData } = supabase.storage.from("storybook-media").getPublicUrl(path);
-  return urlData.publicUrl;
-}
+// No media upload helper on purpose: a Storage public URL (`getPublicUrl`) is
+// world-readable by anyone who has it, outside the by-code share model
+// (T02b; PRIVACY.md). Pictures and voices travel inside the story's own
+// `ssync_data`, which reaches anyone but its owner only through the by-code
+// lookup.

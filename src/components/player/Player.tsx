@@ -448,6 +448,12 @@ export function Player({
      "next" (or anyone holding →) must never see the page freeze. */
   const targetRef = React.useRef(startIndex);
   const timingRef = React.useRef(1);
+  /* Where a browser voice is on its page: the word it last reached. A pause
+     cancels the utterance (speechSynthesis.pause() is not dependable — see
+     the narration effect), so play picks the page up again from this word
+     instead of re-reading it from the top. Cleared whenever a page is entered
+     and when its voice finishes. */
+  const ttsPlaceRef = React.useRef<{ page: number; word: number } | null>(null);
   const reducedRef = React.useRef(false);
   const choicesRef = React.useRef<ViewerChoices>({});
 
@@ -622,6 +628,7 @@ export function Player({
 
   /** A page comes on screen at its own beginning: the tape's place in it is 0. */
   const enterPage = React.useCallback((next: number) => {
+    ttsPlaceRef.current = null;
     setIndex(next);
     setInPage({ page: next, f: 0 });
   }, []);
@@ -833,6 +840,7 @@ export function Player({
     /** Narration finished → hold for the page's pause, then turn the page. */
     const finish = () => {
       if (cancelled) return;
+      ttsPlaceRef.current = null;
       setNarrating(false);
       setHighlight(-1);
       engine?.setNarrating(false);
@@ -894,20 +902,38 @@ export function Player({
       };
     }
 
-    /* 2 — browser TTS with a word-level read-along */
+    /* 2 — browser TTS with a word-level read-along
+
+       Pause cancels the utterance and play speaks the page again FROM THE
+       WORD IT HAD REACHED (ttsPlaceRef), not from its first word, so the
+       strip and the lit word never step back. speechSynthesis.pause() and
+       resume() are not used: they are widely reported not to pause on Chrome
+       for Android (the line speaks on, or is dropped), Chrome's network
+       voices can go silent for good after a long pause with no end event,
+       and a resume that stalls cannot be told apart from a quiet voice — so
+       a fallback could not know when to step in. cancel() + speak() behaves
+       the same in every browser.
+       A voice that sends no word boundaries never moves the cursor, so it
+       still starts the page over. */
     const synth = typeof window !== "undefined" ? window.speechSynthesis : undefined;
     if (content && synth) {
       const words = splitWords(content);
-      const utterance = new SpeechSynthesisUtterance(content);
+      const place = ttsPlaceRef.current;
+      const from = place && place.page === index && place.word > 0 && place.word < words.length ? place.word : 0;
+      const resuming = from > 0;
+      /** Where the spoken text starts in `content`: the boundaries are relative to it. */
+      const offset = resuming ? words[from].start : 0;
+      const utterance = new SpeechSynthesisUtterance(resuming ? content.slice(offset) : content);
       utterance.rate = ttsRate;
       utterance.pitch = 1.05;
-      let cursor = 0;
+      let cursor = from;
       // Each spoken word moves the tape; with the read-along on, it also lights.
       utterance.onboundary = (event) => {
         if (cancelled) return;
         if (event.name && event.name !== "word") return;
-        const at = event.charIndex ?? 0;
+        const at = offset + (event.charIndex ?? 0);
         while (cursor + 1 < words.length && words[cursor + 1].start <= at) cursor++;
+        ttsPlaceRef.current = { page: index, word: cursor };
         setInPage({ page: index, f: speechFraction(cursor, words.length) });
         if (highlightOn) setHighlight(cursor);
       };
@@ -919,11 +945,14 @@ export function Player({
       utterance.onend = finish;
       utterance.onerror = finish;
 
-      const startTimer = setTimeout(() => {
-        if (cancelled) return;
-        synth.cancel();
-        synth.speak(utterance);
-      }, START_DELAY_MS);
+      const startTimer = setTimeout(
+        () => {
+          if (cancelled) return;
+          synth.cancel();
+          synth.speak(utterance);
+        },
+        resuming ? RESUME_DELAY_MS : START_DELAY_MS,
+      );
       return () => {
         cancelled = true;
         clearTimeout(startTimer);
@@ -958,6 +987,14 @@ export function Player({
     ttsRate,
     highlightOn,
   ]);
+
+  /* While the tape is paused, the word a browser voice stopped on stays lit,
+     as a recorded voice's does (the narration effect's cleanup cleared it). */
+  React.useEffect(() => {
+    if (!paused || !highlightOn) return;
+    const place = ttsPlaceRef.current;
+    if (place && place.page === index) setHighlight(place.word);
+  }, [paused, highlightOn, index]);
 
   /* ── the countdown's clock: one tick a second, only while a hold runs ───
      Each tick lands just after a whole second of the hold has gone, so the

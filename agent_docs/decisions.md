@@ -734,3 +734,26 @@ deleting the story forgets it everywhere.**
 - **M6 · tests never rewrite tracked files.** Pictures go to test-results unless `VISION_EVIDENCE=1` (hand-back packet)
   or `UPDATE_SCREENSHOTS=1` (legacy tests/screenshots); every no-send check uses `watchSends` (ignores Next internals and
   `?_rsc=` route prefetches).
+
+**2026-10-29 · M7 · hardening (REPORT §6 known bugs that needed no product decision)**
+- **The ready card claims only what happened.** A failed save reads "NOT SAVED"; a cloud save with no link reads "IN
+  YOUR CLOUD LIBRARY", never "ON THIS DEVICE". When `shareBook` throws with a sentence, the card shows it after "Saved
+  on this device, but no link was made."; with no sentence the generic copy stays.
+- **One clock for the gate.** The gate passes the moment it was stamped to publish; the consent record's date and the
+  tape's © year come from that one moment, so they cannot straddle midnight. "Try again" reuses it.
+- **The Music card keeps the bed playing.** Stopping playback takes `keepBed`; picking a page on the filmstrip or
+  stepping pages with the Music card open keeps the bed and moves it to that page's mood. Closing the card still stops it.
+- **Layout.** No sideways scroll at 320px (below 360px the transport keys are 46px with 8px gaps); the top bar stays one
+  row at 640–767px ("Open a tape" is icon-only there, still named). A long voice name ends where the dashed line does,
+  short of the record dot or plus. FIG. 1's Visual readout on `/protocol` wraps instead of ending in an ellipsis.
+- **Repeated announcements re-announce.** "Type a feeling" clears the live region and writes again a frame later.
+- **A paused browser voice resumes at the word it reached.** Pause still cancels speech (pause()/resume() is unreliable
+  on Chrome for Android and network voices); play speaks the rest of the page from the last word boundary. A voice with
+  no word boundaries still restarts its page.
+- **No public-URL upload helper.** `uploadMedia` (getPublicUrl) is removed under the COPPA posture; media stays behind
+  the by-code share model. The uncalled `consentRecords` is removed (superseded by `consentRecordsFor`).
+- **One `MOOD_ICON`** in `studio-kit/mood-icons.ts`. The replace dialog no longer promises a draft download (drafts hold
+  raw codecs and are never exported).
+- **Left open, needs Jon:** a page with no music in a source tape opens in the Studio as the story mood, while the Player
+  plays it silent. Matching the Player needs a "silent page" state the per-page mood store does not have (touches
+  publish, Inspector, mood lane, Simple mode and the gate's sheet).

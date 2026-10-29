@@ -323,9 +323,32 @@ export default function Studio() {
   const [steps, setSteps] = React.useState<PublishStep[]>(STEP_TEMPLATE);
   const [publishError, setPublishError] = React.useState<string | null>(null);
   const [publishNote, setPublishNote] = React.useState<string | null>(null);
+  /** Why the saved tape got no link, in `shareBook`'s own words; null when it did not say. */
+  const [linkError, setLinkError] = React.useState<string | null>(null);
   const [shareUrl, setShareUrl] = React.useState<string | null>(null);
   const [madeInLabel, setMadeInLabel] = React.useState("0:00");
   const [announcement, setAnnouncement] = React.useState("");
+  const reannounceFrame = React.useRef<number | null>(null);
+  /**
+   * Words a parent may trigger twice in a row ("Page 3 is Hush now." after
+   * applying the same feeling again). An unchanged live region is not news to
+   * a screen reader, so the region is emptied and the words written a frame
+   * later — the same clear-then-write "Everything deleted." uses.
+   */
+  const reannounce = React.useCallback((text: string) => {
+    if (reannounceFrame.current !== null) window.cancelAnimationFrame(reannounceFrame.current);
+    setAnnouncement("");
+    reannounceFrame.current = window.requestAnimationFrame(() => {
+      reannounceFrame.current = null;
+      setAnnouncement(text);
+    });
+  }, []);
+  React.useEffect(
+    () => () => {
+      if (reannounceFrame.current !== null) window.cancelAnimationFrame(reannounceFrame.current);
+    },
+    [],
+  );
 
   /* The honest unauthenticated path: cloud configured, nobody signed in. */
   const [authOffer, setAuthOffer] = React.useState(false);
@@ -382,6 +405,8 @@ export default function Studio() {
   const authorRef = React.useRef("");
   /** Each voice and who consented to it — a retry publishes with the same consent. */
   const consentRef = React.useRef<ConsentChoice[]>([]);
+  /** The gate's clock when it passed: the consent stamp's date, kept for "Try again". */
+  const stampedAtRef = React.useRef<Date | null>(null);
   /** "story by" as it is being typed in the gate; the gate's voice list follows it. */
   const [gateAuthor, setGateAuthor] = React.useState("");
   const cuesRef = React.useRef<StudioCues | null>(null);
@@ -519,6 +544,7 @@ export default function Studio() {
       publishedRef.current = null;
       authorRef.current = "";
       consentRef.current = [];
+      stampedAtRef.current = null;
       readerRef.current = null;
       setShareUrl(null);
       setPublishNote(null);
@@ -772,12 +798,12 @@ export default function Studio() {
   const applyFeelingToPage = (mood: MoodName) => {
     if (!page) return;
     setPageMood(mood);
-    setAnnouncement(`Page ${activeIndex + 1} is ${mood} now.`);
+    reannounce(`Page ${activeIndex + 1} is ${mood} now.`);
   };
 
   const applyFeelingToEveryPage = (mood: MoodName) => {
     setState((prev) => ({ ...prev, mood, pageMoods: {} }));
-    setAnnouncement(`Every page is ${mood} now.`);
+    reannounce(`Every page is ${mood} now.`);
   };
 
   const applyPauseToAll = () => {
@@ -1060,9 +1086,11 @@ export default function Studio() {
       pageCount: manifest.pages.length,
       description: manifest.metadata.description ?? "",
       thumbnail: null,
-      // Unlisted-by-URL. `is_public` is what the read policy checks, so a story
-      // that is not public can never be opened by the person holding the link —
-      // which is the entire point of publishing (see PRIVACY.md, "public").
+      // Unlisted-by-URL. Since migration 003 there is no public read policy:
+      // a link is opened only through the by-code lookup function
+      // (`storybook_by_share_code`), which checks `is_public`, so a story that is not public can never be opened
+      // by the person holding the link — which is the entire point of
+      // publishing (see PRIVACY.md, "public").
       isPublic: true,
       ssyncData: manifest as unknown as object,
     }),
@@ -1136,11 +1164,15 @@ export default function Studio() {
         }
       }
 
+      setLinkError(null);
       if (savedId && usedCloud === cloud) {
         try {
           code = await shareBook(savedId);
-        } catch {
+        } catch (err) {
           code = null;
+          // The share step says why in a sentence of its own; the card shows
+          // it instead of its general no-link copy.
+          setLinkError(err instanceof Error && err.message.trim() ? err.message.trim() : null);
         }
       }
 
@@ -1187,10 +1219,11 @@ export default function Studio() {
   );
 
   const runPublish = React.useCallback(
-    async (author: string, consents: ConsentChoice[]) => {
+    async (author: string, consents: ConsentChoice[], stampedAt?: Date) => {
       stopAudio();
       authorRef.current = author;
       consentRef.current = consents;
+      stampedAtRef.current = stampedAt ?? null;
       setPhase("publishing");
       setPublishError(null);
       setPublishNote(null);
@@ -1326,7 +1359,9 @@ export default function Studio() {
           return choice;
         });
         const hasVoiceInStory = voices.length > 0;
-        const now = new Date();
+        // One captured moment: the gate's own clock, the one its stamp and
+        // sheet were drawn from, so the record's date is the stamp's date.
+        const now = stampedAt ?? new Date();
         const credit = remix ? source.metadata.author?.trim() || remix.author : author;
         const signature: SsyncSignature = {
           ...(source.signature ?? {}),
@@ -1733,8 +1768,10 @@ export default function Studio() {
       {/* The top row of the room: the bar, and under it, on a reply, its chip. */}
       <div className="studio-area-top min-w-0">
         <header
-          className={`studio-topbar relative flex flex-wrap items-center gap-2 border-b border-white/8 bg-[#060912]/55 px-3 py-2 backdrop-blur-xl max-sm:py-[3px] md:min-h-[68px] md:flex-nowrap ${
-            draftNote ? "" : "max-sm:flex-nowrap"
+          // One row at every width (the title gives way); only a failing
+          // autosave's note, below 768px, takes a row of its own.
+          className={`studio-topbar relative flex items-center gap-2 border-b border-white/8 bg-[#060912]/55 px-3 py-2 backdrop-blur-xl max-sm:py-[3px] md:min-h-[68px] ${
+            draftNote ? "flex-wrap md:flex-nowrap" : "flex-nowrap"
           }`}
           style={{ "--sk-big-h": "48px" } as React.CSSProperties}
         >
@@ -1760,7 +1797,8 @@ export default function Studio() {
             className="sk-focus flex h-11 items-center gap-2 rounded-xl border border-white/12 bg-white/5 px-3 text-sm text-white/75 hover:bg-white/10 max-sm:hidden"
           >
             <FolderOpen aria-hidden="true" className="h-[18px] w-[18px] flex-none" strokeWidth={1.8} />
-            <span className="hidden sm:inline">Open a tape</span>
+            {/* 640–767px: the key alone (its name stays "Open a tape"), so the bar keeps one row. */}
+            <span className="hidden md:inline">Open a tape</span>
           </button>
 
           <label className="sr-only" htmlFor="studio-title">
@@ -2080,7 +2118,9 @@ export default function Studio() {
           moods={laneMoods}
           locked={recording}
           onSelect={(index) => {
-            stopAudio();
+            // With the Music card open the bed keeps playing (it follows the
+            // card) and moves into the new page's mood.
+            stopAudio({ keepBed: tool === "music" });
             setActive(index);
           }}
           onMove={movePage}
@@ -2106,11 +2146,11 @@ export default function Studio() {
           clipDuration={pageDuration}
           recordSeconds={audio.recordSeconds}
           onPrev={() => {
-            stopAudio();
+            stopAudio({ keepBed: tool === "music" });
             setActive(activeIndex - 1);
           }}
           onNext={() => {
-            stopAudio();
+            stopAudio({ keepBed: tool === "music" });
             setActive(activeIndex + 1);
           }}
           onPlayPause={() => playOrStop(activeIndex)}
@@ -2230,11 +2270,11 @@ export default function Studio() {
           sheet={gateSheet}
           onAuthorChange={setGateAuthor}
           onCancel={() => setPhase("edit")}
-          onPass={(author, consents) => {
+          onPass={(author, consents, stampedAt) => {
             // A re-voiced tape keeps its author: the byline is the reader.
             if (state.remix) readerRef.current = author;
             else setAuthor(author);
-            void runPublish(author, consents);
+            void runPublish(author, consents, stampedAt);
           }}
         />
       ) : null}
@@ -2260,6 +2300,7 @@ export default function Studio() {
                 reply={state.reply ? { name: state.reply.name } : null}
                 returnFocusTo={finishRef}
                 note={publishNote}
+                linkError={linkError}
                 error={publishError}
                 authOffer={authOffer}
                 authBusy={authBusy}
@@ -2270,7 +2311,7 @@ export default function Studio() {
                 onDownload={downloadTape}
                 onDeleteEverything={() => void deleteEverything()}
                 onBack={() => setPhase("edit")}
-                onRetry={() => void runPublish(authorRef.current, consentRef.current)}
+                onRetry={() => void runPublish(authorRef.current, consentRef.current, stampedAtRef.current ?? undefined)}
               />
             </div>,
             document.body,
