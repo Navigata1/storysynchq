@@ -2115,7 +2115,9 @@ export default function Studio() {
           moods={laneMoods}
           locked={recording}
           onSelect={(index) => {
-            stopAudio();
+            // With the Music card open the bed keeps playing (it follows the
+            // card) and moves into the new page's mood.
+            stopAudio({ keepBed: tool === "music" });
             setActive(index);
           }}
           onMove={movePage}
@@ -2141,11 +2143,11 @@ export default function Studio() {
           clipDuration={pageDuration}
           recordSeconds={audio.recordSeconds}
           onPrev={() => {
-            stopAudio();
+            stopAudio({ keepBed: tool === "music" });
             setActive(activeIndex - 1);
           }}
           onNext={() => {
-            stopAudio();
+            stopAudio({ keepBed: tool === "music" });
             setActive(activeIndex + 1);
           }}
           onPlayPause={() => playOrStop(activeIndex)}
