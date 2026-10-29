@@ -1768,8 +1768,10 @@ export default function Studio() {
       {/* The top row of the room: the bar, and under it, on a reply, its chip. */}
       <div className="studio-area-top min-w-0">
         <header
-          className={`studio-topbar relative flex flex-wrap items-center gap-2 border-b border-white/8 bg-[#060912]/55 px-3 py-2 backdrop-blur-xl max-sm:py-[3px] md:min-h-[68px] md:flex-nowrap ${
-            draftNote ? "" : "max-sm:flex-nowrap"
+          // One row at every width (the title gives way); only a failing
+          // autosave's note, below 768px, takes a row of its own.
+          className={`studio-topbar relative flex items-center gap-2 border-b border-white/8 bg-[#060912]/55 px-3 py-2 backdrop-blur-xl max-sm:py-[3px] md:min-h-[68px] ${
+            draftNote ? "flex-wrap md:flex-nowrap" : "flex-nowrap"
           }`}
           style={{ "--sk-big-h": "48px" } as React.CSSProperties}
         >
@@ -1795,7 +1797,8 @@ export default function Studio() {
             className="sk-focus flex h-11 items-center gap-2 rounded-xl border border-white/12 bg-white/5 px-3 text-sm text-white/75 hover:bg-white/10 max-sm:hidden"
           >
             <FolderOpen aria-hidden="true" className="h-[18px] w-[18px] flex-none" strokeWidth={1.8} />
-            <span className="hidden sm:inline">Open a tape</span>
+            {/* 640–767px: the key alone (its name stays "Open a tape"), so the bar keeps one row. */}
+            <span className="hidden md:inline">Open a tape</span>
           </button>
 
           <label className="sr-only" htmlFor="studio-title">

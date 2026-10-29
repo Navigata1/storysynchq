@@ -63,7 +63,7 @@ export function Transport({
       // Padding, fill, border and blur live in studio.css ("transport"): a
       // utility here would beat the layered rules and pin the phone bar's
       // values on the ≥ 1024px inset deck too.
-      className="studio-transport flex items-center justify-between gap-3"
+      className="studio-transport flex items-center justify-between gap-3 max-[360px]:gap-2"
       style={{ "--sk-transport-size": "60px" } as React.CSSProperties}
     >
       <div className="studio-transport-side hidden flex-none items-center sm:flex">
@@ -73,7 +73,7 @@ export function Transport({
         </span>
       </div>
 
-      <div className="flex flex-1 items-center justify-center gap-3 sm:gap-5">
+      <div className="flex min-w-0 flex-1 items-center justify-center gap-3 max-[360px]:gap-2 sm:gap-5">
         <TransportButton kind="prev" onClick={onPrev} disabled={recording || pageNumber <= 1} />
         {/* One key, two faces: the round dot to start, the stop square in the
             armed ring while the mic is live. The name says which; no
