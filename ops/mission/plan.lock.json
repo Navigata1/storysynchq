@@ -1,0 +1,107 @@
+{
+  "schemaVersion": "1.0",
+  "ideaLock": "idea-storysync-poc-complete",
+  "frozenAt": "2026-10-31T22:12:00Z",
+  "planDoc": "ops/mission/contract.md",
+  "verdict": { "nbcli": "warning", "nbcliReport": "ops/mission/plan-readiness.md", "adversarialFindingsResolved": false },
+  "phases": [
+    {
+      "id": "P0",
+      "title": "Baseline: PR #6 (M7 hardening) crosses the ladder and a review round",
+      "goal": "C1, C2, C3 and C9 for the current head: the full ladder on a production build and an isolated-seat review with no open High, then the merge decision.",
+      "sessionsEstimate": "1",
+      "lane": "bugfix",
+      "gates": [
+        { "id": "P0-G1", "title": "TypeScript strict: no errors", "command": "npx tsc --noEmit" },
+        { "id": "P0-G2", "title": "ESLint: no errors", "command": "npm run lint" },
+        { "id": "P0-G3", "title": "Production build succeeds", "command": "npm run build" },
+        { "id": "P0-G4", "title": "Full Playwright suite against next start (desktop + mobile), CI mode", "command": "bash ops/mission/gates/e2e_prod.sh" },
+        { "id": "P0-G5", "title": "Review round P0 closed at this head: dispositions bound to HEAD, no open High", "command": "python3 ops/mission/gates/review_closed.py P0" },
+        { "id": "P0-G6", "title": "Ledger chain intact", "command": "python3 protocol/scripts/loop.py verify-ledger" }
+      ],
+      "evidenceRequired": ["static", "runtime-journey"]
+    },
+    {
+      "id": "P1",
+      "title": "Layout at every width and on landscape phones",
+      "goal": "C5: the frozen layout judge passes on every route at 320-1440 and 844x390 / 667x375.",
+      "sessionsEstimate": "1-2",
+      "lane": "bugfix",
+      "gates": [
+        { "id": "P1-G1", "title": "Layout judge (frozen before the fix)", "command": "npx playwright test tests/a2-layout.spec.ts" },
+        { "id": "P1-G2", "title": "Full suite on a production build", "command": "bash ops/mission/gates/e2e_prod.sh" },
+        { "id": "P1-G3", "title": "Review round P1 closed at this head", "command": "python3 ops/mission/gates/review_closed.py P1" }
+      ],
+      "evidenceRequired": ["static", "runtime-journey", "visual"]
+    },
+    {
+      "id": "P2",
+      "title": "Accessibility: zero serious or critical axe violations",
+      "goal": "C6: the frozen axe judge passes on every route and reachable dialog.",
+      "sessionsEstimate": "1-2",
+      "lane": "bugfix",
+      "gates": [
+        { "id": "P2-G1", "title": "axe judge (frozen before the fix)", "command": "npx playwright test tests/a2-a11y.spec.ts" },
+        { "id": "P2-G2", "title": "Full suite on a production build", "command": "bash ops/mission/gates/e2e_prod.sh" },
+        { "id": "P2-G3", "title": "Review round P2 closed at this head", "command": "python3 ops/mission/gates/review_closed.py P2" }
+      ],
+      "evidenceRequired": ["static", "runtime-journey"]
+    },
+    {
+      "id": "P3",
+      "title": "Performance budget",
+      "goal": "C7: first-load JS per route within the budget registered in the contract.",
+      "sessionsEstimate": "1",
+      "lane": "refactor",
+      "gates": [
+        { "id": "P3-G1", "title": "Per-route first-load JS within budget", "command": "python3 ops/mission/gates/js_budget.py" },
+        { "id": "P3-G2", "title": "Review round P3 closed at this head", "command": "python3 ops/mission/gates/review_closed.py P3" }
+      ],
+      "evidenceRequired": ["static"]
+    },
+    {
+      "id": "P4",
+      "title": "Cloud truth: a production link opens on another device",
+      "goal": "C4: needs the human's attestation of production's schema (migrations 001-003 applied to the project the deployed bundle names) and a cloud run; this environment cannot read production.",
+      "sessionsEstimate": "1",
+      "lane": "infra",
+      "gates": [
+        { "id": "P4-G1", "title": "Human attestation of production schema on file", "command": "python3 ops/mission/gates/hitl.py cloud-schema" }
+      ],
+      "evidenceRequired": ["static", "runtime-journey"]
+    },
+    {
+      "id": "P5",
+      "title": "WebKit playback",
+      "goal": "C8: the Player journey under WebKit; needs a WebKit browser this environment does not have.",
+      "sessionsEstimate": "1",
+      "lane": "infra",
+      "gates": [
+        { "id": "P5-G1", "title": "A WebKit browser is available to Playwright", "command": "python3 ops/mission/gates/browser_available.py webkit" }
+      ],
+      "evidenceRequired": ["runtime-journey"]
+    },
+    {
+      "id": "P6",
+      "title": "Close: evidence bundle, band score, governance",
+      "goal": "Derive the evidence bundle from the ledger, score it with dogfood_lanes (report the band reached), re-run every gate at the final head, write the governance block.",
+      "sessionsEstimate": "1",
+      "lane": "infra",
+      "gates": [
+        { "id": "P6-G1", "title": "Band score of the derived evidence bundle", "command": "python3 protocol/scripts/dogfood_lanes.py ops/mission/evidence/bundle.json" },
+        { "id": "P6-G2", "title": "Ledger chain intact", "command": "python3 protocol/scripts/loop.py verify-ledger" }
+      ],
+      "evidenceRequired": ["static"]
+    }
+  ],
+  "budget": { "costCapUsd": 1, "wallClockCapHours": 24, "notes": "No paid services planned (the schema needs a positive cap). Machine: 4 CPUs, Chromium only. Process budget per archipelago-2 step 10: mission paperwork under ops/ and protocol/ is counted against product under src/ and tests/ in contract.md." },
+  "hitl": {
+    "approvedBy": "Navigata1",
+    "approvedAt": "2026-10-31T21:59:00Z",
+    "conditions": [
+      "Merge decisions to main are delegated to the lead, gated on every phase gate passing (operator message 2026-10-31)",
+      "The review seat is an isolated Claude session treated as the review gate; no second model family is reachable (operator decision 2026-10-31, recorded in contract.md amendment A1)",
+      "Supabase migrations, production schema, secrets, domains and network policy stay human acts"
+    ]
+  }
+}

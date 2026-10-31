@@ -1,0 +1,63 @@
+{
+  "schemaVersion": "1.0",
+  "id": "idea-storysync-poc-complete",
+  "frozenAt": "2026-10-31T22:10:00Z",
+  "frozenBy": "claude-lead (operator: Navigata1, delegated 2026-10-31)",
+  "problem": {
+    "statement": "StorySync's POC is built to the Vision Reel (PR #5) and hardened (PR #6), but 'complete at production quality' has never been stated as checkable claims. Merges have rested on the builder's own reading; cloud sharing in production is unverified; layout, accessibility and cross-browser claims have no gate that could fail.",
+    "successCriteria": [
+      "The Child Journey (photos, a voice per page, auto music, publish, open the link) runs end to end in a production build and every step is pinned by a test that can fail",
+      "Every merge to main crosses the full ladder plus an isolated-seat review round with no open High",
+      "Every claim below is reported at the band its evidence reached; a claim this environment cannot check is reported unverified, never proven"
+    ]
+  },
+  "domain": { "id": 6, "letter": "F", "name": "Elite Software Craft" },
+  "definitionOfDone": [
+    {
+      "claim": "C1 · The Child Journey completes in a production build (next build + next start) at 1280x720 and 375x812: add pictures, record a voice on each page, music added automatically, pass the parental gate, publish, open the published tape in the Player and hear it play through",
+      "falsifiedBy": "the full Playwright suite (CI=1 against next start) reports any failed test, or the journey specs (vision-*, wp-*, critic-*, fable-pass) are missing from the run"
+    },
+    {
+      "claim": "C2 · A published tape carries only AAC/M4A or WAV narration, never Opus/WebM, and survives pack -> .storysync -> unpack with an identical manifest and assets",
+      "falsifiedBy": "tests/storysync-roundtrip.spec.ts or the manifest validator accepts an Opus/WebM audioUrl in a published manifest, or the round-trip diff is non-empty"
+    },
+    {
+      "claim": "C3 · COPPA posture holds: the parental gate stands before publish and share, one tap deletes the whole story, the Player sends no request to a third-party host, share codes are 128-bit unguessable",
+      "falsifiedBy": "a watchSends check observes a non-same-origin request from /read, a publish completes without the gate, delete leaves story data in storage, or a share code under 128 bits is generated"
+    },
+    {
+      "claim": "C4 · A link shared from production opens the tape on another device with no account (cloud mode)",
+      "falsifiedBy": "a cloud end-to-end run against production's Supabase project (publish on one browser context, open the link in a fresh context) fails, or the production schema lacks storybooks / storybook_by_share_code"
+    },
+    {
+      "claim": "C5 · No route scrolls sideways and no control is clipped or overlapped at 320-1440px wide and on landscape phones (844x390, 667x375); in landscape the Stage photo stays visible",
+      "falsifiedBy": "tests/a2-layout.spec.ts finds document scrollWidth > innerWidth on any route at any listed size, an interactive control whose box leaves the viewport, or a landscape Stage photo under 120px tall"
+    },
+    {
+      "claim": "C6 · Every route has zero serious or critical axe-core violations in its first-screen state and in each open dialog the suite reaches",
+      "falsifiedBy": "tests/a2-a11y.spec.ts reports any violation with impact serious or critical"
+    },
+    {
+      "claim": "C7 · First-load JavaScript per route stays within the frozen budget registered in ops/mission/contract.md",
+      "falsifiedBy": "ops/mission/gates/js_budget.py reads the production build's per-route first-load JS and finds any route over its budget"
+    },
+    {
+      "claim": "C8 · The Player reads a tape in WebKit (the Safari engine) as it does in Chromium",
+      "falsifiedBy": "the Player journey specs fail under a WebKit project, or no WebKit browser is available to run them"
+    },
+    {
+      "claim": "C9 · Every merge to main in this mission crossed tsc, lint, build, the full suite on a production build, and an isolated-seat review round whose dispositions leave no open High",
+      "falsifiedBy": "ops/mission/gates/review_closed.py finds a merged phase without a dispositions file bound to its merged head, or with a High not confirmed fixed"
+    }
+  ],
+  "confidence": {
+    "score": 6,
+    "biggestRisk": "C4 and C8 cannot be checked from this environment (production Supabase reads are denied by the session's permission policy; only Chromium is installed), so the mission's honest ceiling is band 3 until a human supplies that access.",
+    "nextAction": "Run the blind plan critic on these locks, then carry PR #6 through P0."
+  },
+  "psznDedupe": { "checked": true, "nearestNeighbor": "docs/10x-plan.md work packages (WP-M/S/P/L)", "similarity": 0.3 },
+  "rejectedAlternatives": [
+    { "idea": "declare StorySync complete on the M6/M7 evidence alone", "reason": "those runs are the builder's own reading; no claim was frozen with a check before the work and cloud sharing was never exercised" },
+    { "idea": "build the video-driven engagement layer now", "reason": "its input (the video) is unreachable from this session; building it would rest on an imagined source. It enters as its own phase once the transcript arrives" }
+  ]
+}

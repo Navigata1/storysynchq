@@ -1,0 +1,24 @@
+archipelago-2 vendors archipelago v1's protocol in this folder.
+
+Source: the arch-build skill's protocol/ folder as installed on the build machine
+(files dated 2026-07-10), copied on 2026-10-19 without re-fetching from upstream.
+Upstream: https://github.com/Navigata1/archipelago (public; MIT according to its README).
+
+The source's own PROVENANCE.txt, verbatim:
+  source: Navigata1/archipelago @ feat/gate-merge-fusion (PR #1) — includes Gate-Merge Fusion template. Refresh after merge: cd protocol && gh repo clone Navigata1/archipelago
+
+Byte-identical to the source: ARCHIPELAGO-README.md, schemas/ (5 files),
+examples/ (5), scripts/ (7) and templates/ (2). Left out: scripts/__pycache__/,
+which is build output. This file is new and replaces the source's PROVENANCE.txt,
+quoted above. The source folder held no LICENSE file; copy upstream's before any
+public release.
+
+SHA256SUMS lists every file here except itself. From the repository root:
+  python3 skills/archipelago-2/scripts/sums.py verify --complete protocol/SHA256SUMS
+
+The vendored checks run from tests/test_protocol.py:
+  python3 -m unittest discover -s tests -p test_protocol.py
+
+To refresh: clone upstream into a scratch folder, compare its files with these by
+sha256, copy what changed, run the tests, rewrite SHA256SUMS with sums.py, and say
+in this file what moved and from which upstream commit.
