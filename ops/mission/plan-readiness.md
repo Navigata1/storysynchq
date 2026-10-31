@@ -30,3 +30,12 @@ output for each round is in `reviews/S1/round<N>/` (transcript, seat.json, prefl
 
 `verdict.adversarialFindingsResolved` is set only after a further round confirms the Highs above
 (K1–K5) and finds no new High.
+
+### K6 · the skip allow-list, from the census
+
+Census run at 43d4caa (`e2e_prod.sh`, production build, CI mode): 1873 passed, 1 flaky (passed
+on retry), 48 skipped; every required family passed on both projects. Each of the 48 skips is
+an explicit `test.skip` whose condition is the project (a desktop-only seam or capture, a
+phone-only width) or the environment (`process.env.CI` for the dev-only cloud seam; no cloud
+library for the QR sticker). None is a test that stopped running. The 48 keys are registered
+as `judges/e2e-skips.txt` in SHA256SUMS; `e2e_check.py` on the census report then passes.
