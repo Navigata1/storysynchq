@@ -39,3 +39,14 @@ an explicit `test.skip` whose condition is the project (a desktop-only seam or c
 phone-only width) or the environment (`process.env.CI` for the dev-only cloud seam; no cloud
 library for the QR sticker). None is a test that stopped running. The 48 keys are registered
 as `judges/e2e-skips.txt` in SHA256SUMS; `e2e_check.py` on the census report then passes.
+
+## Round 3 · head 71d7134 · verdict amend · stop rule reached (3 of 3)
+
+Confirmed: K1 (both rounds), K2, K3, K4 (in part, reason holds), K5, K6, K7, K8, K10, K13.
+Rejected: K9 (merged_scan accepts any phase's green run), K11 (tests/ judges cannot be
+registered by the ops/mission-rooted sums file), K12 (no gate exercises the AAC path).
+New: K14 (high: C2b verified by a gate that never runs AAC), K15 (high: merged_scan accepts a
+non-merging phase and misses squash merges), K16-K22 (medium), K23-K24 (low).
+
+**Status: not ready.** By the contract's stop rule the plan does not kick off on this series.
+Dispositions are pending the operator's decision on how to proceed.
