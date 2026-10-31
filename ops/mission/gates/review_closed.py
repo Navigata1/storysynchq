@@ -61,6 +61,12 @@ def main():
         fail("review transcript sha256 does not match the recorded one")
     if d.get("canaryAbsent") is not True:
         fail("isolation not proven: canaryAbsent is not true")
+    # A round that never read the code is not a review (S1 critic finding K1): the
+    # seat's own verdict must be a review outcome, and it must name files it read.
+    if d.get("seatVerdict") not in ("approve", "amend", "ready"):
+        fail(f"seat verdict {d.get('seatVerdict')!r} is not a completed review")
+    if not d.get("filesRead"):
+        fail("no evidence the seat read the code: filesRead is empty")
 
     findings = d.get("findings")
     if not isinstance(findings, list):

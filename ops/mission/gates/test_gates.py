@@ -48,6 +48,8 @@ class ReviewClosed(unittest.TestCase):
             "transcript": "ops/mission/reviews/P0/transcript.md",
             "transcriptSha256": hashlib.sha256(self.transcript.read_bytes()).hexdigest(),
             "canaryAbsent": True,
+            "seatVerdict": "amend",
+            "filesRead": ["src/x.ts"],
             "findings": [
                 {"id": "R1", "severity": "high", "status": "fixed", "confirmedBy": "test X red->green"},
                 {"id": "R2", "severity": "low", "status": "rejected", "reason": "not reachable"},
@@ -90,6 +92,14 @@ class ReviewClosed(unittest.TestCase):
     def test_canary_present_fails(self):
         self.write(canaryAbsent=False)
         self.assertIn("isolation", self.check().stdout)
+
+    def test_blocked_seat_fails(self):
+        self.write(seatVerdict="blocked")
+        self.assertIn("not a completed review", self.check().stdout)
+
+    def test_nothing_read_fails(self):
+        self.write(filesRead=[])
+        self.assertIn("read the code", self.check().stdout)
 
     def test_open_high_fails(self):
         self.write(findings=[{"id": "R1", "severity": "high", "status": "open"}])

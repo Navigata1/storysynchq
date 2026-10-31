@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # The isolated review seat (contract.md amendment A1).
 #
-#   ops/mission/seat.sh --head <40-char SHA> --prompt <prompt.md> --out <dir> --canary-file <path>
+#   ops/mission/seat.sh --head <40-char SHA> --prompt <prompt.md> --out /var/tmp/a2-seats/<name> --canary-file <path>
 #
 # A fresh Claude session reviews a frozen clone of the repository at exactly --head:
 #   - the clone is a separate checkout under <dir>/clone, at the head, with no working
@@ -31,11 +31,14 @@ done
 [ -f "$PROMPT" ] || { echo "--prompt $PROMPT not found"; exit 64; }
 [ -f "$CANARY_FILE" ] || { echo "--canary-file $CANARY_FILE not found"; exit 64; }
 [ -n "$OUT" ] || { echo "--out is required"; exit 64; }
+# The seat's own checkout must sit outside every root its Read deny list covers
+# (S1 critic finding K1: a clone under /tmp was denied to the seat itself).
+case "$OUT" in /var/tmp/a2-seats/*) ;; *) echo "--out must be under /var/tmp/a2-seats/"; exit 64 ;; esac
 [ ! -e "$OUT/clone" ] || { echo "$OUT/clone exists: a seat never reuses a clone"; exit 65; }
 
 REPO=$(git rev-parse --show-toplevel)
 CANARY=$(head -n 1 "$CANARY_FILE")
-mkdir -p "$OUT/home" "$OUT/tmp"
+mkdir -p "$OUT/home" "$OUT/tmp" || exit 64
 PROMPT_ABS=$(cd "$(dirname "$PROMPT")" && pwd)/$(basename "$PROMPT")
 OUT=$(cd "$OUT" && pwd)
 

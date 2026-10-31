@@ -7,6 +7,7 @@ Read, in this order:
 2. ops/mission/plan.lock.json — the phases and their gate commands.
 3. ops/mission/contract.md — merge rule, frozen review threat model, stop rule, amendment A1.
 4. ops/mission/gates/*.py, ops/mission/gates/e2e_prod.sh, ops/mission/seat.sh — the judges.
+   Number your findings from K2.
 5. For context on the product: CLAUDE.md, docs/vision/evidence/REPORT.md (sections 3, 5, 6),
    .github/workflows/ci.yml, playwright.config.ts.
 
@@ -21,9 +22,16 @@ Attack the plan. In scope:
 - Isolation gaps in seat.sh.
 Out of scope: style, wording, the choice of tools, Phase 3 features named in CLAUDE.md.
 
+## First: confirm or reject the prior repair
+Round 1 (ops/mission/reviews/S1/round1-transcript.md) filed K1: the seat could not read its
+own checkout. The repair moved seat checkouts under /var/tmp/a2-seats/ (seat.sh) and made
+ops/mission/gates/review_closed.py refuse a round whose seat verdict is "blocked" or whose
+filesRead is empty. Confirm or reject K1 with your own probe: that you can read the files below
+is the first half; read review_closed.py and test_gates.py for the second.
+
 For each finding give: id (K1, K2, ...), severity (high/medium/low), the file and line or
 field, the mechanism (how it lets something false through), and a concrete fix.
 Mark each as a hard defect or a judgement call.
 
 End with exactly one fenced json block:
-{"verdict": "ready" | "amend" | "blocked", "findings": [{"id": "K1", "severity": "...", "file": "...", "where": "...", "summary": "...", "mechanism": "...", "fix": "...", "kind": "defect|judgement"}]}
+{"verdict": "ready" | "amend" | "blocked", "prior": {"K1": "confirmed|rejected"}, "filesRead": ["<every file you opened>"], "findings": [{"id": "K1", "severity": "...", "file": "...", "where": "...", "summary": "...", "mechanism": "...", "fix": "...", "kind": "defect|judgement"}]}
