@@ -1,24 +1,37 @@
 #!/usr/bin/env python3
-"""Gate: a phase's review round is closed at the head under test.
+"""Gate: a phase's review rounds are closed at the head under test.
 
-Reads ops/mission/reviews/<PHASE>/dispositions.json and fails unless:
-  - it names the reviewed head, and every commit after that head touches only
-    ops/mission/** (paperwork recorded after the review cannot hide a code change);
-  - the review transcript it cites exists and its sha256 matches the recorded one;
-  - the reviewer's canary was absent (isolation held);
-  - no finding is open: every High is "fixed" with a confirming probe recorded,
-    and every other finding has a status of fixed, rejected or deferred with a reason.
+Each round lives in ops/mission/reviews/<PHASE>/round<N>/ and holds the seat's own
+output (transcript.md, seat.json, preflight.txt, all written by seat.sh) plus the
+lead's dispositions.json. The gate judges the seat's output, not the lead's copy of it
+(S1 critic K1, K2):
+
+  - seat.json's head equals dispositions.reviewedHead, its transcriptSha256 matches
+    transcript.md, and its canaryAbsent is true (K13);
+  - the transcript's last fenced json block is a completed review (verdict approve,
+    amend or ready) that lists the files it read;
+  - every finding in every round's transcript appears in that round's dispositions,
+    at a severity no lower than the seat gave, with a closed status (fixed, rejected or
+    deferred, the last two with a reason) (K2);
+  - stop rule (contract section 3, K8): the latest round finds no High, its "prior" map
+    confirms every High from every earlier round, and there are at most 3 rounds;
+  - after the reviewed head only ops/mission/reviews/** and ops/mission/evidence/** may
+    change (K7): a judge, a lock or the contract changed after review voids the round.
 
 Usage: python3 ops/mission/gates/review_closed.py P0
 """
 import hashlib
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
 
-ALLOWED_AFTER_REVIEW = ("ops/mission/",)
+ALLOWED_AFTER_REVIEW = ("ops/mission/reviews/", "ops/mission/evidence/")
 CLOSED = {"fixed", "rejected", "deferred"}
+DONE = {"approve", "amend", "ready"}
+RANK = {"low": 0, "medium": 1, "high": 2, "critical": 3}
+MAX_ROUNDS = 3
 
 
 def fail(msg):
@@ -30,21 +43,93 @@ def git(*args):
     return subprocess.run(["git", *args], capture_output=True, text=True, check=True).stdout.strip()
 
 
+def last_json_block(text):
+    blocks = re.findall(r"```(?:json)?\s*\n(.*?)\n```", text, flags=re.S)
+    for raw in reversed(blocks):
+        try:
+            return json.loads(raw)
+        except json.JSONDecodeError:
+            continue
+    return None
+
+
+def load_round(rdir):
+    disp_path, seat_path, tr_path = rdir / "dispositions.json", rdir / "seat.json", rdir / "transcript.md"
+    for p in (disp_path, seat_path, tr_path):
+        if not p.is_file():
+            fail(f"{rdir.name}: {p.name} is missing")
+    try:
+        disp = json.loads(disp_path.read_text())
+        seat = json.loads(seat_path.read_text())
+    except json.JSONDecodeError as e:
+        fail(f"{rdir.name}: unreadable json: {e}")
+    tr_bytes = tr_path.read_bytes()
+    if hashlib.sha256(tr_bytes).hexdigest() != seat.get("transcriptSha256"):
+        fail(f"{rdir.name}: transcript.md does not match seat.json's transcriptSha256")
+    if seat.get("canaryAbsent") is not True:
+        fail(f"{rdir.name}: isolation not proven (seat.json canaryAbsent is not true)")
+    if seat.get("head") != disp.get("reviewedHead"):
+        fail(f"{rdir.name}: seat reviewed {seat.get('head')!r} but dispositions name {disp.get('reviewedHead')!r}")
+    verdict = last_json_block(tr_bytes.decode("utf-8", "replace"))
+    if not isinstance(verdict, dict):
+        fail(f"{rdir.name}: the transcript ends in no parseable json verdict")
+    if verdict.get("verdict") not in DONE:
+        fail(f"{rdir.name}: seat verdict {verdict.get('verdict')!r} is not a completed review")
+    if not verdict.get("filesRead"):
+        fail(f"{rdir.name}: the seat's verdict lists no files read")
+    return disp, verdict
+
+
+def check_dispositions(name, disp, verdict):
+    mine = {f.get("id"): f for f in disp.get("findings", []) if isinstance(f, dict)}
+    problems = []
+    for sf in verdict.get("findings", []):
+        fid, sev = sf.get("id"), str(sf.get("severity", "")).lower()
+        df = mine.get(fid)
+        if df is None:
+            problems.append(f"{name}/{fid} has no disposition")
+            continue
+        if RANK.get(str(df.get("severity", "")).lower(), -1) < RANK.get(sev, 0):
+            problems.append(f"{name}/{fid} downgraded from {sev} to {df.get('severity')}")
+        status = df.get("status")
+        if status not in CLOSED:
+            problems.append(f"{name}/{fid} status={status!r}")
+        elif status in ("rejected", "deferred") and not df.get("reason"):
+            problems.append(f"{name}/{fid} {status} without a reason")
+    return problems
+
+
 def main():
     if len(sys.argv) != 2:
         fail("usage: review_closed.py <PHASE>")
     phase = sys.argv[1]
-    path = Path("ops/mission/reviews") / phase / "dispositions.json"
-    if not path.exists():
-        fail(f"{path} does not exist: no review round recorded for {phase}")
-    try:
-        d = json.loads(path.read_text())
-    except json.JSONDecodeError as e:
-        fail(f"{path} is not valid JSON: {e}")
+    base = Path("ops/mission/reviews") / phase
+    rounds = sorted((p for p in base.glob("round*") if p.is_dir() and p.name[5:].isdigit()), key=lambda p: int(p.name[5:]))
+    if not rounds:
+        fail(f"no review round recorded under {base}")
+    if [int(p.name[5:]) for p in rounds] != list(range(1, len(rounds) + 1)):
+        fail(f"rounds must be numbered round1..roundN without gaps: {[p.name for p in rounds]}")
+    if len(rounds) > MAX_ROUNDS:
+        fail(f"{len(rounds)} rounds exceeds the stop rule's {MAX_ROUNDS}: the phase does not merge")
 
-    reviewed = d.get("reviewedHead", "")
-    if len(reviewed) != 40:
-        fail("reviewedHead must be a full 40-character SHA")
+    loaded = [(p.name, *load_round(p)) for p in rounds]
+    problems = []
+    for name, disp, verdict in loaded:
+        problems += check_dispositions(name, disp, verdict)
+
+    last_name, last_disp, last_verdict = loaded[-1]
+    last_highs = [f.get("id") for f in last_verdict.get("findings", []) if str(f.get("severity", "")).lower() in ("high", "critical")]
+    if last_highs:
+        problems.append(f"{last_name} found High {last_highs}: another round must confirm the repairs")
+    prior = last_verdict.get("prior", {}) or {}
+    for name, _, verdict in loaded[:-1]:
+        for f in verdict.get("findings", []):
+            if str(f.get("severity", "")).lower() in ("high", "critical") and prior.get(f.get("id")) != "confirmed":
+                problems.append(f"{name}/{f.get('id')} (high) not confirmed fixed by {last_name}")
+    if problems:
+        fail("open: " + "; ".join(problems))
+
+    reviewed = last_disp["reviewedHead"]
     try:
         git("merge-base", "--is-ancestor", reviewed, "HEAD")
     except subprocess.CalledProcessError:
@@ -52,41 +137,10 @@ def main():
     changed = [f for f in git("diff", "--name-only", reviewed, "HEAD").splitlines() if f]
     stray = [f for f in changed if not f.startswith(ALLOWED_AFTER_REVIEW)]
     if stray:
-        fail(f"files changed after the reviewed head outside ops/mission/: {stray[:8]}")
+        fail(f"changed after the reviewed head outside reviews/ and evidence/: {stray[:8]}")
 
-    transcript = Path(d.get("transcript", ""))
-    if not transcript.is_file():
-        fail(f"review transcript {transcript} is missing")
-    if hashlib.sha256(transcript.read_bytes()).hexdigest() != d.get("transcriptSha256"):
-        fail("review transcript sha256 does not match the recorded one")
-    if d.get("canaryAbsent") is not True:
-        fail("isolation not proven: canaryAbsent is not true")
-    # A round that never read the code is not a review (S1 critic finding K1): the
-    # seat's own verdict must be a review outcome, and it must name files it read.
-    if d.get("seatVerdict") not in ("approve", "amend", "ready"):
-        fail(f"seat verdict {d.get('seatVerdict')!r} is not a completed review")
-    if not d.get("filesRead"):
-        fail("no evidence the seat read the code: filesRead is empty")
-
-    findings = d.get("findings")
-    if not isinstance(findings, list):
-        fail("findings must be a list (empty when the reviewer found nothing)")
-    open_items = []
-    for f in findings:
-        fid, sev, status = f.get("id", "?"), str(f.get("severity", "")).lower(), f.get("status")
-        if status not in CLOSED:
-            open_items.append(f"{fid} ({sev}) status={status!r}")
-        elif sev == "high" and status != "fixed":
-            open_items.append(f"{fid} (high) must be fixed, is {status}")
-        elif sev == "high" and not f.get("confirmedBy"):
-            open_items.append(f"{fid} (high) fixed but no confirming probe recorded")
-        elif status in ("rejected", "deferred") and not f.get("reason"):
-            open_items.append(f"{fid} {status} without a reason")
-    if open_items:
-        fail("open findings: " + "; ".join(open_items))
-
-    highs = sum(1 for f in findings if str(f.get("severity", "")).lower() == "high")
-    print(f"[PASS] {phase} review closed at {reviewed[:12]}: {len(findings)} findings, {highs} high, none open")
+    total = sum(len(v.get("findings", [])) for _, _, v in loaded)
+    print(f"[PASS] {phase}: {len(rounds)} round(s) closed at {reviewed[:12]}, {total} findings, none open")
 
 
 if __name__ == "__main__":

@@ -2,12 +2,24 @@
 # Gate: the full Playwright suite (desktop + mobile, CI mode) against a production
 # build of HEAD served by `next start`, as .github/workflows/ci.yml runs it.
 #
-# Fails closed: a build that does not carry HEAD's SHA in its ssync-build meta is
-# refused (exit 3), so a stale .next can never stand in for the head under test.
+# Fails closed:
+#   - a working tree with uncommitted changes is refused (exit 4), so the build is HEAD
+#     and nothing else (S1 critic K6);
+#   - a build that does not carry HEAD's SHA in its ssync-build meta is refused (exit 3),
+#     so a stale .next can never stand in for the head under test;
+#   - the run's JSON report is judged by e2e_check.py: every required spec family must
+#     have run and passed, and every skip must be on the registered allow-list (K6).
 set -u
 cd "$(git rev-parse --show-toplevel)"
 HEAD_SHA=$(git rev-parse HEAD)
 LOG_DIR=${TMPDIR:-/tmp}
+
+# The mission's own run records (written by run_phase.py and loop.py while gates run)
+# cannot reach the build; everything else must be committed.
+RECORDS=(':!ops/mission/state.json' ':!ops/mission/ledger.jsonl' ':!ops/mission/evidence' ':!ops/mission/reviews')
+if [ -n "$(git status --porcelain -- . "${RECORDS[@]}")" ]; then
+  echo "refusing: the working tree has uncommitted changes"; git status --short -- . "${RECORDS[@]}" | head; exit 4
+fi
 
 pkill -f "next dev" 2>/dev/null
 pkill -f "next-server" 2>/dev/null
@@ -31,4 +43,8 @@ if [ "$SERVED" != "$HEAD_SHA" ]; then
 fi
 echo "serving HEAD $HEAD_SHA"
 
-CI=1 npx playwright test --reporter=dot
+REPORT=$LOG_DIR/a2-e2e-report.json
+CI=1 PLAYWRIGHT_JSON_OUTPUT_NAME="$REPORT" npx playwright test --reporter=dot,json
+RC=$?
+python3 ops/mission/gates/e2e_check.py "$REPORT" || exit 5
+exit $RC
