@@ -16,4 +16,6 @@ const pw=require('playwright');
 ")
 [ -n "$ENGINE" ] || { echo "[CANNOT RUN] no installed browser has a WebCodecs AAC encoder"; exit 77; }
 [ -f tests/a2-aac.spec.ts ] || { echo "[FAIL] tests/a2-aac.spec.ts is not written yet"; exit 1; }
-CI=1 bash ops/mission/gates/prod_server.sh npx playwright test --project="$ENGINE" tests/a2-aac.spec.ts
+# chromium is the suite's desktop project (playwright.config.ts has no "chromium" project, S1b K32)
+PROJECT=$([ "$ENGINE" = chromium ] && echo desktop || echo "$ENGINE")
+exec bash ops/mission/gates/judged.sh "--required ops/mission/judges/required-P5-aac-$PROJECT.json" --project="$PROJECT" tests/a2-aac.spec.ts

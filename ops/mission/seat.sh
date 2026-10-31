@@ -9,7 +9,9 @@
 #   - HOME and TMPDIR are scratch folders under <dir>, so no user settings, memory,
 #     project transcripts or session state of the lead are on the seat's paths;
 #   - --setting-sources project,local, --strict-mcp-config with no servers,
-#     --no-session-persistence; tools are read-only (Read, Grep, Glob, git log/show/diff, ls);
+#     --no-session-persistence; tools: Read, Grep, Glob, and Bash, which in practice runs inside
+#     the clone (cat, sed, git); nothing the seat writes leaves the clone, which is discarded
+#     (S1b K39 corrected this line, which used to claim read-only git and ls only);
 #   - Read is denied on every path that is not the clone or inside it (S1 critic K13).
 # Isolation is proven, not assumed: the canary text is planted in --canary-file (the lead's
 # private note) and in a decoy in each other reachable root (/var/tmp, /opt, /srv); a

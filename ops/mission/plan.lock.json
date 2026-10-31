@@ -110,7 +110,7 @@
         {
           "id": "P2-G5",
           "title": "Full suite on a production build of a clean HEAD (desktop + mobile, CI mode)",
-          "command": "bash ops/mission/gates/e2e_prod.sh"
+          "command": "bash ops/mission/gates/e2e_prod.sh ops/mission/judges/required-P2.json"
         },
         {
           "id": "P2-G6",
@@ -154,7 +154,7 @@
         {
           "id": "P3-G5",
           "title": "Full suite on a production build of a clean HEAD (desktop + mobile, CI mode)",
-          "command": "bash ops/mission/gates/e2e_prod.sh"
+          "command": "bash ops/mission/gates/e2e_prod.sh ops/mission/judges/required-P3.json"
         },
         {
           "id": "P3-G6",

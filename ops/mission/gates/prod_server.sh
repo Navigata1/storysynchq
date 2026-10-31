@@ -12,7 +12,8 @@ cd "$(git rev-parse --show-toplevel)"
 HEAD_SHA=$(git rev-parse HEAD)
 LOG_DIR=${TMPDIR:-/tmp}
 
-RECORDS=(':!ops/mission/state.json' ':!ops/mission/ledger.jsonl' ':!ops/mission/evidence' ':!ops/mission/reviews')
+# Review records are not exempt: what review_closed judges must be committed (S1b K38).
+RECORDS=(':!ops/mission/state.json' ':!ops/mission/ledger.jsonl' ':!ops/mission/evidence')
 if [ -n "$(git status --porcelain -- . "${RECORDS[@]}")" ]; then
   echo "refusing: the working tree has uncommitted changes"; git status --short -- . "${RECORDS[@]}" | head; exit 4
 fi

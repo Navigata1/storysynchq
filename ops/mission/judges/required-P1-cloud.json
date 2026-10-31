@@ -1,0 +1,10 @@
+{
+  "projects": [
+    "desktop"
+  ],
+  "families": {
+    "a2-cloud": {
+      "desktop": 2
+    }
+  }
+}

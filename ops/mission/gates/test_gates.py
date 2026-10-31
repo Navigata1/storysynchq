@@ -40,13 +40,15 @@ class ReviewClosed(unittest.TestCase):
         git(self.root, "add", ".")
         git(self.root, "commit", "-qm", "code")
         self.head = git(self.root, "rev-parse", "HEAD")
+        git(self.root, "branch", "mainline")
+        self.base = self.head
 
     def tearDown(self):
         self.tmp.cleanup()
 
     def prompt(self, n):
         prior = ", ".join(f["id"] for k in range(1, n) for f in self.raised.get(k, [])) or "none"
-        return f"review P0 r{n} at {self.head} from {'b' * 40}; prior {prior}\n"
+        return f"review P0 r{n} at {self.head} from {self.base}; prior {prior}\n"
 
     def round(self, n, seat_findings=(), prior=None, verdict="amend", files=("src.txt",),
               dispositions=None, canary=True, seat_head=None, tamper=False, prompt=None, last_fixed=False):
@@ -65,10 +67,11 @@ class ReviewClosed(unittest.TestCase):
             (d / "transcript.md").write_text(text + "edited\n")
         if dispositions is None:
             dispositions = [{"id": f["id"], "severity": f["severity"], "status": "fixed" if last_fixed else "rejected", "reason": "r"} for f in seat_findings]
-        (d / "dispositions.json").write_text(json.dumps({"reviewedHead": self.head, "base": "b" * 40, "findings": dispositions}))
+        (d / "dispositions.json").write_text(json.dumps({"reviewedHead": self.head, "base": self.base, "findings": dispositions}))
 
-    def check(self):
-        return run("review_closed.py", "P0", cwd=self.root)
+    def check(self, phase="P0"):
+        env = {**os.environ, "A2_MAIN_REF": "mainline"}
+        return subprocess.run([sys.executable, str(GATES / "review_closed.py"), phase], cwd=self.root, capture_output=True, text=True, env=env)
 
     def assertFails(self, needle):
         r = self.check()
@@ -137,6 +140,47 @@ class ReviewClosed(unittest.TestCase):
     def test_high_in_last_round_fails(self):
         self.round(1, [self.HIGH])
         self.assertFails("another round must confirm")
+
+    def test_narrowed_base_fails(self):
+        (self.root / "src.txt").write_text("phase work\n")
+        git(self.root, "commit", "-qam", "phase work")
+        self.head = git(self.root, "rev-parse", "HEAD")
+        self.base = git(self.root, "rev-parse", "HEAD^")  # merge-base is the commit before it, so this is fine...
+        self.round(1, [])
+        self.assertEqual(self.check().returncode, 0, self.check().stdout)
+        self.base = self.head  # ...but naming the head itself as base hides the phase's diff
+        self.round(1, [])
+        self.assertFails("is not merge-base")
+
+    def judge_setup(self, register_first):
+        (self.root / "ops/mission/judges/order.json").write_text(json.dumps({"P0": ["tests/a2-x.spec.ts"]}))
+        (self.root / "ops/mission/ROOTSUMS").write_text("")
+        git(self.root, "add", "ops")
+        git(self.root, "commit", "-qm", "order")
+        self.base = git(self.root, "rev-parse", "HEAD")
+        git(self.root, "branch", "-f", "mainline")
+        (self.root / "src").mkdir(exist_ok=True)
+        steps = ["judge", "fix"] if register_first else ["fix", "judge"]
+        for step in steps:
+            if step == "judge":
+                (self.root / "ops/mission/ROOTSUMS").write_text("0" * 64 + "  tests/a2-x.spec.ts\n")
+                git(self.root, "add", "ops/mission/ROOTSUMS")
+            else:
+                (self.root / "src/app.ts").write_text("fix\n")
+                git(self.root, "add", "src")
+            git(self.root, "commit", "-qm", step)
+        self.head = git(self.root, "rev-parse", "HEAD")
+
+    def test_judge_registered_before_fix_passes(self):
+        self.judge_setup(register_first=True)
+        self.round(1, [])
+        r = self.check()
+        self.assertEqual(r.returncode, 0, r.stdout)
+
+    def test_judge_registered_after_fix_fails(self):
+        self.judge_setup(register_first=False)
+        self.round(1, [])
+        self.assertFails("is not after judge")
 
     def test_stale_prompt_fails(self):
         self.round(1, [], prompt="review only README.md\n")
@@ -213,6 +257,10 @@ class Hitl(unittest.TestCase):
     def test_no_statements_fails(self):
         self.assertNotEqual(self.check([self.c("A2-ATTEST cloud-schema")]).returncode, 0)
 
+    def test_lead_footer_with_variant_fails(self):
+        r = self.check([self.c("A2-ATTEST cloud-schema\nx\n---\n_Generated with [Claude Code](https://claude.ai/code)_")])
+        self.assertIn("footer", r.stdout)
+
     def test_tag_not_first_line_fails(self):
         self.assertNotEqual(self.check([self.c("hello\nA2-ATTEST cloud-schema\nx")]).returncode, 0)
 
@@ -242,7 +290,9 @@ class E2ECheck(unittest.TestCase):
                 specs.append({"file": f, "title": "works", "tests": [{"projectName": proj, "status": status if f == "wp-a.spec.ts" and proj == "desktop" else "expected"}]})
         specs += list(extra)
         (self.root / "r.json").write_text(json.dumps({"suites": [{"title": "", "file": "", "suites": [], "specs": specs}]}))
-        return run("e2e_check.py", "r.json", cwd=self.root)
+        return run("e2e_check.py", "r.json", *self.args, cwd=self.root)
+
+    args = ("--skips", "ops/mission/judges/e2e-skips.txt")
 
     def test_good_passes(self):
         r = self.report()
@@ -267,7 +317,17 @@ class E2ECheck(unittest.TestCase):
 
     def test_unlisted_skip_fails(self):
         r = self.report(extra=[{"file": "wp-a.spec.ts", "title": "quietly off", "tests": [{"projectName": "desktop", "status": "skipped"}]}])
-        self.assertIn("not on", r.stdout)
+        self.assertIn("not allowed", r.stdout)
+
+    def test_no_skip_list_allows_no_skip(self):
+        self.args = ()
+        r = self.report(extra=[{"file": "vision-a.spec.ts", "title": "desk only", "tests": [{"projectName": "mobile", "status": "skipped"}]}])
+        self.assertIn("not allowed", r.stdout)
+
+    def test_registered_test_gone_fails(self):
+        (self.root / "present.txt").write_text("desktop › vision-a.spec.ts › works\ndesktop › vision-a.spec.ts › renamed away\n")
+        self.args = ("--present", "present.txt")
+        self.assertIn("did not pass", self.report().stdout)
 
 
 class Records(unittest.TestCase):
@@ -338,32 +398,67 @@ class Records(unittest.TestCase):
         self.assertNotEqual(self.band(5).returncode, 0)
         self.assertEqual(self.band(1).returncode, 0, self.band(1).stdout)
 
-    def scan(self, prs):
-        f = self.root / "prs.json"
-        f.write_text(json.dumps(prs))
-        env = {**os.environ, "A2_MERGED_PRS": str(f)}
-        (self.root / "ops/mission/state.json").write_text("{}")
-        git(self.root, "add", "ops/mission/state.json")
-        git(self.root, "commit", "-qm", "state")
+    def scan_setup(self):
+        """main: m0; PR branch: h (from m0); a merge commit mc with parents (m0, h)."""
+        m0 = self.head
+        (self.root / "g.txt").write_text("pr\n")
+        git(self.root, "add", "g.txt")
+        git(self.root, "commit", "-qm", "pr work")
         h = git(self.root, "rev-parse", "HEAD")
-        return h, lambda: subprocess.run([sys.executable, str(self.REPO / "ops/mission/gates/merged_scan.py")], cwd=self.root, capture_output=True, text=True, env=env)
+        tree = git(self.root, "rev-parse", "HEAD^{tree}")
+        mc = git(self.root, "commit-tree", tree, "-p", m0, "-p", h, "-m", "merge")
+        return m0, h, mc
 
-    def test_scan_accepts_merging_phase_run(self):
-        h, run_scan = self.scan([])
-        (self.root / "prs.json").write_text(json.dumps([{"number": 1, "head": {"sha": h}, "merged_at": "x"}]))
-        self.ledger(("P0", h, [(g, 0) for g in [f"P0-G{i}" for i in range(1, 7)]]))
-        r = run_scan()
+    def scan(self, prs, checks):
+        (self.root / "prs.json").write_text(json.dumps(prs))
+        (self.root / "checks.json").write_text(json.dumps(checks))
+        env = {**os.environ, "A2_MERGED_PRS": str(self.root / "prs.json"), "A2_CHECKS": str(self.root / "checks.json"), "A2_NO_FETCH": "1"}
+        return subprocess.run([sys.executable, str(self.REPO / "ops/mission/gates/merged_scan.py")], cwd=self.root, capture_output=True, text=True, env=env)
+
+    def green(self, h, ok=True):
+        self.ledger(("P0", h, [(f"P0-G{i}", 0 if ok else 1) for i in range(1, 7)]))
+
+    def test_scan_accepts_a_laddered_merge(self):
+        m0, h, mc = self.scan_setup()
+        self.green(h)
+        r = self.scan([{"number": 6, "head": {"sha": h}, "merge_commit_sha": mc}], {h: "success"})
         self.assertEqual(r.returncode, 0, r.stdout)
 
     def test_scan_rejects_non_merging_phase_run(self):
-        h, run_scan = self.scan([])
-        (self.root / "prs.json").write_text(json.dumps([{"number": 1, "head": {"sha": h}, "merged_at": "x"}]))
+        m0, h, mc = self.scan_setup()
         self.ledger(("P1", h, [("P1-G1", 0)]))
-        self.assertIn("no green merging-phase run", run_scan().stdout)
+        self.assertIn("no merging phase green", self.scan([{"number": 6, "head": {"sha": h}, "merge_commit_sha": mc}], {h: "success"}).stdout)
 
-    def test_scan_with_no_merges_fails(self):
-        _, run_scan = self.scan([])
-        self.assertIn("nothing to check", run_scan().stdout)
+    def test_scan_rejects_red_then_green(self):
+        m0, h, mc = self.scan_setup()
+        self.green(h, ok=False)
+        self.green(h)
+        self.assertIn("earlier red run", self.scan([{"number": 6, "head": {"sha": h}, "merge_commit_sha": mc}], {h: "success"}).stdout)
+
+    def test_scan_rejects_stale_branch(self):
+        m0, h, mc = self.scan_setup()
+        (self.root / "m.txt").write_text("main moved\n")
+        git(self.root, "checkout", "-q", m0)
+        git(self.root, "add", "m.txt")
+        git(self.root, "commit", "-qm", "main moved")
+        m1 = git(self.root, "rev-parse", "HEAD")
+        tree = git(self.root, "rev-parse", "HEAD^{tree}")
+        mc2 = git(self.root, "commit-tree", tree, "-p", m1, "-p", h, "-m", "merge onto moved main")
+        self.green(h)
+        self.assertIn("never laddered", self.scan([{"number": 6, "head": {"sha": h}, "merge_commit_sha": mc2}], {h: "success"}).stdout)
+
+    def test_scan_rejects_red_ci(self):
+        m0, h, mc = self.scan_setup()
+        self.green(h)
+        self.assertIn("verify did not succeed", self.scan([{"number": 6, "head": {"sha": h}, "merge_commit_sha": mc}], {h: "failure"}).stdout)
+
+    def test_scan_rejects_unfetchable_head(self):
+        m0, h, mc = self.scan_setup()
+        self.assertIn("cannot be fetched", self.scan([{"number": 6, "head": {"sha": "e" * 40}, "merge_commit_sha": mc}], {}).stdout)
+
+    def test_scan_ignores_pre_mission_prs_and_needs_one(self):
+        m0, h, mc = self.scan_setup()
+        self.assertIn("nothing to check", self.scan([{"number": 5, "head": {"sha": h}, "merge_commit_sha": mc}], {}).stdout)
 
     def test_run_phase_refuses_drift(self):
         st = json.loads((self.root / "ops/mission/plan.lock.json").read_text())

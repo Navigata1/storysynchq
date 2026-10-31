@@ -1,15 +1,20 @@
 #!/usr/bin/env python3
-"""Gate: every mission PR merged to main crossed a merging phase at its own head
-(C9; S1 critic K9, K15).
+"""Gate: every mission PR merged to main crossed a merging phase at its own head (C9).
 
-Lists the merged pull requests into main from GitHub (so squash and rebase merges count, and
-no stale local ref is trusted). A mission PR is one whose head commit descends from the
-kickoff commit (the commit that added ops/mission/state.json). For each, the ledger must hold
-an exit-0 phase-run of a *merging* phase (one whose gates carry the full ladder:
-a2lib.LADDER) at exactly that head. Zero mission merges fails: an empty scan proves nothing.
+Mission PRs are the PRs merged into main numbered FIRST_MISSION_PR or later (contract section
+6), listed from GitHub, so squash and rebase merges count (S1b K28). For each:
+  - its head is fetched (refs/pull/N/head); a head that cannot be fetched fails;
+  - the ledger holds an exit-0 phase-run of a merging phase (a2lib.LADDER) at that head, and no
+    run of that phase at that head failed: a red run is never erased by a rerun (K29);
+  - main's tip just before the merge (the merge commit's first parent) is in the head, so what
+    landed is what the ladder ran (K30);
+  - GitHub's `verify` check-run on that head concluded success (merge rule 2, K35).
+Exit 77 when GitHub cannot be read (cannot run here, K33); 1 on any violation or when no
+mission PR has merged.
 
 Usage: python3 ops/mission/gates/merged_scan.py
-       A2_MERGED_PRS=<file.json> ...   (fixtures: [{"number", "head": {"sha"}, "merged_at"}])
+  Fixtures: A2_MERGED_PRS=<json list of {number, head: {sha}, merge_commit_sha}>,
+            A2_CHECKS=<json {sha: conclusion}>, A2_NO_FETCH=1
 """
 import json
 import os
@@ -21,52 +26,74 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import a2lib  # noqa: E402
 
 REPO = "Navigata1/storysynchq"
+FIRST_MISSION_PR = 6
+
+
+def gh(path):
+    r = subprocess.run(["gh", "api", "--paginate", path], capture_output=True, text=True)
+    if r.returncode != 0:
+        print(f"[CANNOT RUN] GitHub unreadable: {r.stderr.strip()[:200]}")
+        sys.exit(a2lib.CANNOT_RUN)
+    out = []
+    for chunk in r.stdout.replace("][", "]\n[").splitlines():
+        if chunk.strip():
+            v = json.loads(chunk)
+            out.extend(v if isinstance(v, list) else [v])
+    return out
 
 
 def merged_prs():
-    fixture = os.environ.get("A2_MERGED_PRS")
-    if fixture:
-        return json.loads(Path(fixture).read_text())
-    r = subprocess.run(["gh", "api", "--paginate", f"repos/{REPO}/pulls?state=closed&base=main&per_page=100"],
-                       capture_output=True, text=True)
-    if r.returncode != 0:
-        print(f"[FAIL] cannot list merged PRs: {r.stderr.strip()[:200]}")
-        sys.exit(1)
-    prs = []
-    for chunk in r.stdout.replace("][", "]\n[").splitlines():
-        if chunk.strip():
-            prs.extend(json.loads(chunk))
-    return [p for p in prs if p.get("merged_at")]
+    if os.environ.get("A2_MERGED_PRS"):
+        return json.loads(Path(os.environ["A2_MERGED_PRS"]).read_text())
+    return [p for p in gh(f"repos/{REPO}/pulls?state=closed&base=main&per_page=100") if p.get("merged_at")]
 
 
-def is_ancestor(a, b):
-    return subprocess.run(["git", "merge-base", "--is-ancestor", a, b], capture_output=True).returncode == 0
+def verify_conclusion(sha):
+    if os.environ.get("A2_CHECKS"):
+        return json.loads(Path(os.environ["A2_CHECKS"]).read_text()).get(sha)
+    runs = gh(f"repos/{REPO}/commits/{sha}/check-runs")
+    for page in runs:
+        for cr in page.get("check_runs", []):
+            if cr.get("name") == "verify":
+                return cr.get("conclusion")
+    return None
+
+
+def git_ok(*a):
+    return subprocess.run(["git", *a], capture_output=True).returncode == 0
 
 
 def main():
-    added = subprocess.run(["git", "log", "--diff-filter=A", "--format=%H", "--", "ops/mission/state.json"],
-                           capture_output=True, text=True).stdout.split()
-    if not added:
-        print("[FAIL] no kickoff commit (ops/mission/state.json was never added)")
+    prs = [p for p in merged_prs() if p["number"] >= FIRST_MISSION_PR]
+    if not prs:
+        print("[FAIL] no mission PR has merged: nothing to check")
         sys.exit(1)
-    kickoff = added[-1]
     merging = a2lib.merging_phases()
-    green = {e["head"] for e in a2lib.phase_runs() if e["exit"] == 0 and e["phase"] in merging}
-    checked, bad = 0, []
-    for pr in merged_prs():
-        sha = pr["head"]["sha"]
-        if not is_ancestor(kickoff, sha):
-            continue  # merged before the mission began
-        checked += 1
-        if sha not in green:
-            bad.append(f"PR #{pr['number']} merged head {sha[:12]} with no green merging-phase run there")
+    runs = [e for e in a2lib.phase_runs() if e["phase"] in merging]
+    if not os.environ.get("A2_NO_FETCH"):
+        git_ok("fetch", "-q", "origin", "main")
+    bad = []
+    for pr in prs:
+        n, sha = pr["number"], pr["head"]["sha"]
+        if not os.environ.get("A2_NO_FETCH"):
+            git_ok("fetch", "-q", "origin", f"pull/{n}/head")
+        if not git_ok("cat-file", "-e", f"{sha}^{{commit}}"):
+            bad.append(f"PR #{n}: head {sha[:12]} cannot be fetched")
+            continue
+        at = [e for e in runs if e["head"] == sha]
+        green = {e["phase"] for e in at if e["exit"] == 0}
+        red = {e["phase"] for e in at if e["exit"] not in (0, a2lib.CANNOT_RUN)}
+        if not green - red:
+            bad.append(f"PR #{n}: no merging phase green at {sha[:12]} without an earlier red run there")
+        mc = pr.get("merge_commit_sha")
+        if not mc or not git_ok("merge-base", "--is-ancestor", f"{mc}^1", sha):
+            bad.append(f"PR #{n}: main's tip before the merge is not in the head (the merged result was never laddered)")
+        if verify_conclusion(sha) != "success":
+            bad.append(f"PR #{n}: GitHub verify did not succeed on {sha[:12]}")
     if bad:
         print("[FAIL] " + "; ".join(bad))
         sys.exit(1)
-    if checked == 0:
-        print("[FAIL] no mission merge found: nothing to check")
-        sys.exit(1)
-    print(f"[PASS] {checked} mission PR(s) merged, each with a green merging-phase run at its head")
+    print(f"[PASS] {len(prs)} mission PR(s): each green on a merging phase at its head, up to date with main, CI green")
 
 
 if __name__ == "__main__":

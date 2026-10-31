@@ -28,7 +28,8 @@ M = a2lib.M
 
 def status(spec, exits):
     if "live" in spec:
-        return "verified" if subprocess.run(spec["live"], shell=True).returncode == 0 else "unverified"
+        rc = subprocess.run(spec["live"], shell=True).returncode
+        return "verified" if rc == 0 else "unverified" if rc == a2lib.CANNOT_RUN else "falsified"
     got = [exits.get(g) for g in spec["gates"]]
     if any(e not in (None, 0, a2lib.CANNOT_RUN) for e in got):
         return "falsified"

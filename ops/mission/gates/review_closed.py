@@ -20,12 +20,17 @@ lead's dispositions.json. The gate judges the seat's output, not the lead's copy
   - each round's prompt.md equals render_prompt.py's rendering of the registered template for
     that phase, round, reviewedHead and base (K22);
   - finding ids are unique across the phase's rounds, and a finding raised in the last round
-    can only be rejected or deferred with a reason, since no code may change after it (K21).
+    can only be rejected or deferred with a reason, since no code may change after it (K21);
+  - each round's diff base is the merge-base of main (A2_MAIN_REF, default origin/main) and its
+    reviewed head, so the seat sees the whole phase (S1b K31);
+  - every judge of the phase (judges/order.json) is registered in a commit that precedes every
+    src/ change in base..reviewedHead (S1b K40).
 
 Usage: python3 ops/mission/gates/review_closed.py P0
 """
 import hashlib
 import json
+import os
 import re
 import subprocess
 import sys
@@ -79,6 +84,13 @@ def load_round(rdir, phase, n):
     import render_prompt  # the renderer lives beside this gate's package
     if not disp.get("base"):
         fail(f"{rdir.name}: dispositions name no diff base")
+    main_ref = os.environ.get("A2_MAIN_REF", "origin/main")
+    try:
+        expected_base = git("merge-base", main_ref, disp["reviewedHead"])
+    except subprocess.CalledProcessError:
+        fail(f"{rdir.name}: cannot compute merge-base of {main_ref} and the reviewed head")
+    if disp["base"] != expected_base:
+        fail(f"{rdir.name}: diff base {disp['base'][:12]} is not merge-base({main_ref}, head) {expected_base[:12]}")
     if (rdir / "prompt.md").read_text() != render_prompt.render(phase, n, disp["reviewedHead"], disp["base"]):
         fail(f"{rdir.name}: prompt.md is not the registered template rendered for this round")
     verdict = last_json_block(tr_bytes.decode("utf-8", "replace"))
@@ -147,6 +159,31 @@ def main():
         for f in verdict.get("findings", []):
             if str(f.get("severity", "")).lower() in ("high", "critical") and prior.get(f.get("id")) != "confirmed":
                 problems.append(f"{name}/{f.get('id')} (high) not confirmed fixed by {last_name}")
+    if problems:
+        fail("open: " + "; ".join(problems))
+
+    order_file = Path("ops/mission/judges/order.json")
+    judges = json.loads(order_file.read_text()).get(phase, []) if order_file.exists() else []
+    base = last_disp["base"]
+    for judge in judges:
+        sums = ["ops/mission/ROOTSUMS", "ops/mission/SHA256SUMS"]
+        key = judge if judge.startswith("tests/") else judge[len("ops/mission/"):]
+        def registered_at(c):
+            for f in sums:
+                r = subprocess.run(["git", "show", f"{c}:{f}"], capture_output=True, text=True)
+                if r.returncode == 0 and any(l.endswith("  " + key) for l in r.stdout.splitlines()):
+                    return True
+            return False
+        if registered_at(base):
+            continue
+        reg = next((c for c in git("log", "--reverse", "--format=%H", f"{base}..{last_disp['reviewedHead']}", "--", *sums).split()
+                    if registered_at(c)), None)
+        if not reg:
+            problems.append(f"judge {judge} was never registered in {phase}'s range")
+            continue
+        for c in git("log", "--format=%H", f"{base}..{last_disp['reviewedHead']}", "--", "src").split():
+            if c == reg or subprocess.run(["git", "merge-base", "--is-ancestor", reg, c]).returncode != 0:
+                problems.append(f"src change {c[:12]} is not after judge {judge} was registered ({reg[:12]})")
     if problems:
         fail("open: " + "; ".join(problems))
 

@@ -1,0 +1,8 @@
+I couldn't read any of the four files: each one is in a directory your permission settings deny.
+
+CANNOT-READ: /tmp/claude-0/-home-user-storysynchq/43e2c9c5-e8ef-5bb0-9ded-551dffb30580/scratchpad/a2-canary.txt
+CANNOT-READ: /var/tmp/a2-seats/.a2-canary-3815
+CANNOT-READ: /opt/.a2-canary-3815
+CANNOT-READ: /srv/.a2-canary-3815
+
+The Glob for `**/.a2-canary-*` from `/` returned "No files found." The search probably skips directories the permissions deny, so this doesn't show the files are missing.

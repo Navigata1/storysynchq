@@ -24,7 +24,8 @@ A phase's PR merges to `main` only when:
    skips gates that passed earlier, S1 critic K3) and appends a `phase-run` event with each
    gate's exit to the hash-chained ledger (K20). P1 and P5 never merge on their own runs;
    their files land in a merging phase's PR (K15);
-2. the head's GitHub CI (`verify`) is green and GitHub reports the PR mergeable;
+2. the head's GitHub CI (`verify`) is green, GitHub reports the PR mergeable, and the head
+   already contains main's tip, so what lands is what the ladder ran (S1b K30);
 3. after merging, the deployment of the merge commit is confirmed serving that SHA.
 A failed gate is a loopback (`loop.py fail <gate> --reason … --route <stage>`), never a
 retry until green. Exit 77 from a gate means "cannot run here" (access the operator must
@@ -49,7 +50,8 @@ PRs (C9).
   `ops/mission/render_prompt.py` from the registered `judges/review-prompt.tmpl`, and checked
   byte for byte by the gate, K22), the seat's own `transcript.md`, `seat.json` and
   `preflight.txt` (written by `seat.sh`), and the lead's `dispositions.json`.
-  `ops/mission/gates/review_closed.py` judges the seat's output, not the lead's copy: every
+  `ops/mission/gates/review_closed.py` judges the seat's recorded output, not the lead's summary
+  of it (advisory: see section 5): every
   seat finding needs a disposition at no lower severity, the last round must find no High and
   confirm every earlier High in its own "prior" map, and a judge, lock or the contract changed
   after the reviewed head voids the round. Finding ids are unique within a phase; a finding
@@ -61,7 +63,18 @@ Census: characters in `ops/**` and `protocol/a2/**` (process) against characters
 and `tests/**` changed by the mission (product), counted at close. Cap: process ≤ 40% of
 product changed. `protocol/` outside `a2/` is vendored upstream and not counted.
 
-## 5. Human attestations (advisory)
+## 5. What is enforced, and what is advisory
+
+Enforced by a check the lead cannot satisfy by writing a file: GitHub's own records, read
+by `merged_scan.py` (which PRs merged, their heads, merge commits, and the `verify`
+check-run), the build and test results of each gate run, and the registered sha256s.
+**Advisory** (they guard against accident, not against the lead, S1b K34): the review
+records under `reviews/` and the ledger are files the lead writes and could rewrite whole;
+their hashes prove internal consistency only. The seat has Read, Grep, Glob and Bash inside
+its clone; reads outside the clone are denied and proven absent by the canary (S1b K39). The
+human attestations below are advisory too.
+
+## 5a. Human attestations (advisory)
 
 A claim that rests on the operator's own act (applying migrations, reading production) is
 attested by a PR comment from `Navigata1` whose first line is `A2-ATTEST <name>`
@@ -75,6 +88,8 @@ never posts an A2-ATTEST line. The second half is discipline, so every hitl gate
 - **C7 first-load JS:** a reasoned per-route target (not the current size), registered by
   amendment together with `ops/mission/gates/js_budget.py` before P4's first commit; P4 may not
   raise it (S1 critic K23).
+- **First mission PR:** #6. `merged_scan.py` treats every PR merged into main from #6 on as a
+  mission PR (S1b K28).
 - **Production's Supabase project:** `pvtwlizzsbovwtkjvqix` (the host the deployed bundle names,
   read 2026-10-31). `cloud_e2e.sh` refuses any other project (K18).
 

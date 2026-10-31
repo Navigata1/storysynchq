@@ -1,13 +1,11 @@
 #!/usr/bin/env bash
-# Gate: the full Playwright suite (desktop + mobile, CI mode) against a production build of a
-# clean HEAD (prod_server.sh), judged by e2e_check.py: every required spec family must reach
-# its minimum passing count on both projects, and every skip must be allow-listed (K6, K17).
+# Gate: the full suite (desktop + mobile, CI mode) on a production build of a clean HEAD. Every
+# registered test must pass or be an allow-listed skip, every family in judges/required.json
+# must meet its minimum, plus any phase's own required files given as arguments (S1b K25, K26).
+#   bash ops/mission/gates/e2e_prod.sh [ops/mission/judges/required-P2.json ...]
 set -u
 cd "$(git rev-parse --show-toplevel)"
-REPORT=${TMPDIR:-/tmp}/a2-e2e-report.json
-rm -f "$REPORT"
-CI=1 PLAYWRIGHT_JSON_OUTPUT_NAME="$REPORT" bash ops/mission/gates/prod_server.sh npx playwright test --reporter=dot,json
-RC=$?
-[ -f "$REPORT" ] || exit "$RC"
-python3 ops/mission/gates/e2e_check.py "$REPORT" || exit 5
-exit "$RC"
+J=ops/mission/judges
+CHECK="--skips $J/e2e-skips.txt --present $J/e2e-present.txt --required $J/required.json"
+for extra in "$@"; do CHECK="$CHECK --required $extra"; done
+exec bash ops/mission/gates/judged.sh "$CHECK"

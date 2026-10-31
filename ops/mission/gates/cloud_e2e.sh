@@ -15,8 +15,8 @@ if [ "${A2_CLOUD_E2E:-}" != 1 ] || [ -z "${NEXT_PUBLIC_SUPABASE_URL:-}" ] || [ -
   exit 77
 fi
 case "$NEXT_PUBLIC_SUPABASE_URL" in
-  https://pvtwlizzsbovwtkjvqix.supabase.co*) ;;
+  https://pvtwlizzsbovwtkjvqix.supabase.co|https://pvtwlizzsbovwtkjvqix.supabase.co/) ;;
   *) echo "[FAIL] NEXT_PUBLIC_SUPABASE_URL is not production's project (pvtwlizzsbovwtkjvqix)"; exit 1 ;;
 esac
 [ -f tests/a2-cloud.spec.ts ] || { echo "[FAIL] tests/a2-cloud.spec.ts is not written yet"; exit 1; }
-CI=1 bash ops/mission/gates/prod_server.sh npx playwright test tests/a2-cloud.spec.ts
+exec bash ops/mission/gates/judged.sh "--required ops/mission/judges/required-P1-cloud.json" --project=desktop tests/a2-cloud.spec.ts

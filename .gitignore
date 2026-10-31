@@ -46,3 +46,6 @@ test-results/
 
 # python bytecode (mission gate scripts)
 __pycache__/
+
+# archipelago-2 mission: regenerated on every gate run by loop.py
+ops/mission/state-of-the-union.html
