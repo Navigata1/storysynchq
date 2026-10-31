@@ -48,5 +48,25 @@ registered by the ops/mission-rooted sums file), K12 (no gate exercises the AAC 
 New: K14 (high: C2b verified by a gate that never runs AAC), K15 (high: merged_scan accepts a
 non-merging phase and misses squash merges), K16-K22 (medium), K23-K24 (low).
 
-**Status: not ready.** By the contract's stop rule the plan does not kick off on this series.
-Dispositions are pending the operator's decision on how to proceed.
+**Status: not ready.** By the stop rule the plan did not kick off on series 1. The operator
+chose (2026-11-01): loop back to S1, repair, and run a fresh critic series; kick off only on
+"ready". Series 2's rounds live in `reviews/S1b/`.
+
+| id | sev | disposition | what changed |
+|---|---|---|---|
+| K9, K15 | high | **accepted** | `merged_scan.py` lists merged PRs from GitHub (squash and rebase merges count), accepts only an exit-0 phase-run of a *merging* phase (`a2lib.merging_phases`: gates carry the full ladder) at the PR head, and fails on zero mission merges. P6 now carries the full ladder; P1 and P5 merge nothing on their own runs. |
+| K11, K16 | medium | **accepted** | `gates/registered.py` (the G3 of every merging phase) verifies `SHA256SUMS` (rooted at ops/mission) and the new repo-rooted `ROOTSUMS` (playwright.config.ts, sums.py, loop.py, dogfood_lanes.py, and every tests/a2-*.spec.ts judge), and fails on any unregistered judge (proved with a planted stray file). |
+| K12, K14 | high | **accepted** | C2b is proved by `aac_publish.sh` (P5-G2): it probes `AudioEncoder.isConfigSupported` for mp4a.40.2 and exits 77 when no engine supports it; when one does, `tests/a2-aac.spec.ts` must publish AAC, play it, and play a recorder-native AAC tape. |
+| K17 | medium | **accepted** | Required families and their minimum passing counts per project live in the registered `judges/required.json`; each a2 judge is added with its count when registered. |
+| K18 | medium | **accepted** | `prod_server.sh` serves a production build of a clean HEAD (SHA-checked) for every browser gate (suite, WebKit, AAC, cloud). `cloud_e2e.sh` refuses any Supabase project but production's registered `pvtwlizzsbovwtkjvqix`. |
+| K19 | medium | **accepted** | Exit 77 = cannot run here (unverified); any other non-zero exit falsifies the claim. Per-gate exits are recorded. |
+| K20 | medium | **accepted** | `run_phase.py` writes a `phase-run` event (head, per-gate exits, evidence sha256) into loop.py's hash-chained ledger; the judges read it through `a2lib.phase_runs`, which refuses a broken chain. Fixtures added for derive_bundle, band, merged_scan and run_phase (45 fixtures pass). |
+| K21 | medium | **accepted** | Finding ids must be unique across a phase's rounds; a last-round finding can only be rejected or deferred with a reason. |
+| K22 | medium (judgement) | **accepted** | Phase prompts are rendered from the registered `judges/review-prompt.tmpl` by `render_prompt.py`; `review_closed.py` requires prompt.md to equal the rendering for that phase, round, head and base. (The S1 critic prompt is not a phase prompt and is not gated.) |
+| K23 | low | **accepted** | Contract section 6: one rule, a reasoned per-route target registered with js_budget.py before P4's first commit. |
+| K24 | low | **accepted** | Claims map to gate ids, not phases; C9 is checked live by merged_scan, so the band cannot flip on the close phase's own record. |
+
+**Process budget (contract section 4):** at this point the mission's process files (~80k
+characters under ops/ and protocol/a2/) exceed 40% of the product changed so far (PR #6:
+~760 lines in src/ and tests/). Recorded as over budget; repairs from here reuse `a2lib.py`
+rather than adding parallel scripts.

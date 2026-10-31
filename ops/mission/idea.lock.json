@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0",
   "id": "idea-storysync-poc-complete",
-  "frozenAt": "2026-10-31T22:55:00Z",
+  "frozenAt": "2026-11-01T00:30:00Z",
   "frozenBy": "claude-lead (operator: Navigata1, delegated 2026-10-31)",
   "problem": {
     "statement": "StorySync's POC is built to the Vision Reel (PR #5) and hardened (PR #6), but 'complete at production quality' has never been stated as checkable claims. Merges have rested on the builder's own reading; cloud sharing in production is unverified; layout, accessibility and cross-browser claims have no gate that could fail.",
@@ -27,7 +27,7 @@
     },
     {
       "claim": "C2b · The AAC path (record -> level -> AAC/M4A publish -> play) works on a browser with a WebCodecs AAC encoder",
-      "falsifiedBy": "the publish specs run on a browser whose AudioEncoder supports mp4a.40.2 and either publish WAV or fail; or no such browser is available to run them (headless Chromium has none)"
+      "falsifiedBy": "ops/mission/gates/aac_publish.sh, on an engine whose AudioEncoder reports mp4a.40.2 support, finds a published tape whose narration is not audio/mp4 or does not play; or no installed engine supports it (exit 77, unverified)"
     },
     {
       "claim": "C3 · The client keeps the COPPA posture: the parental gate stands before publish and share, one tap deletes the whole story, the Player sends no request to a third-party host, share codes are 128-bit",
@@ -59,7 +59,7 @@
     },
     {
       "claim": "C9 · Every merge to main in this mission crossed tsc, lint, build, the full suite on a production build, and an isolated-seat review round whose dispositions leave no open High",
-      "falsifiedBy": "ops/mission/gates/merged_scan.py finds a mission merge on main whose merged head has no exit-0 run of its phase in phase-runs.jsonl (every merging phase runs tsc, lint, the judges' sums and fixtures, the full suite on a production build, and its review gate)"
+      "falsifiedBy": "ops/mission/gates/merged_scan.py lists the PRs merged into main from GitHub and finds a mission PR whose head has no exit-0 phase-run of a merging phase (one whose gates carry the full ladder: tsc, lint, registered sums, the judges' fixtures, the suite on a production build, review) in the hash-chained ledger, or finds no mission merge at all"
     }
   ],
   "confidence": {

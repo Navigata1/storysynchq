@@ -1,0 +1,71 @@
+{
+  "reviewedHead": "71d713470a29ce8abd7cd6a07efbfd05585961ab",
+  "findings": [
+    {
+      "id": "K14",
+      "severity": "high",
+      "status": "fixed",
+      "note": "repaired after the loopback; confirmed or rejected by series 2 (reviews/S1b)"
+    },
+    {
+      "id": "K15",
+      "severity": "high",
+      "status": "fixed",
+      "note": "repaired after the loopback; confirmed or rejected by series 2 (reviews/S1b)"
+    },
+    {
+      "id": "K16",
+      "severity": "medium",
+      "status": "fixed",
+      "note": "repaired after the loopback; confirmed or rejected by series 2 (reviews/S1b)"
+    },
+    {
+      "id": "K17",
+      "severity": "medium",
+      "status": "fixed",
+      "note": "repaired after the loopback; confirmed or rejected by series 2 (reviews/S1b)"
+    },
+    {
+      "id": "K18",
+      "severity": "medium",
+      "status": "fixed",
+      "note": "repaired after the loopback; confirmed or rejected by series 2 (reviews/S1b)"
+    },
+    {
+      "id": "K19",
+      "severity": "medium",
+      "status": "fixed",
+      "note": "repaired after the loopback; confirmed or rejected by series 2 (reviews/S1b)"
+    },
+    {
+      "id": "K20",
+      "severity": "medium",
+      "status": "fixed",
+      "note": "repaired after the loopback; confirmed or rejected by series 2 (reviews/S1b)"
+    },
+    {
+      "id": "K21",
+      "severity": "medium",
+      "status": "fixed",
+      "note": "repaired after the loopback; confirmed or rejected by series 2 (reviews/S1b)"
+    },
+    {
+      "id": "K22",
+      "severity": "medium",
+      "status": "fixed",
+      "note": "repaired after the loopback; confirmed or rejected by series 2 (reviews/S1b)"
+    },
+    {
+      "id": "K23",
+      "severity": "low",
+      "status": "fixed",
+      "note": "repaired after the loopback; confirmed or rejected by series 2 (reviews/S1b)"
+    },
+    {
+      "id": "K24",
+      "severity": "low",
+      "status": "fixed",
+      "note": "repaired after the loopback; confirmed or rejected by series 2 (reviews/S1b)"
+    }
+  ]
+}

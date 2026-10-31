@@ -2,7 +2,7 @@
 """Re-run every gate of every phase at the final head (S1 critic K10).
 
 Runs each phase except the close phase through run_phase.py, so every gate runs fresh at
-HEAD and phase-runs.jsonl records the result; derive_bundle.py then reads those runs. Exit
+HEAD and a phase-run event lands in the ledger; derive_bundle.py then reads those runs. Exit
 0 only if every phase passes. A phase that waits on the human (P1, P5) is expected to fail
 here and is reported at its band, not hidden.
 

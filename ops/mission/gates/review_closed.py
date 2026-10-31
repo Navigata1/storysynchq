@@ -16,7 +16,11 @@ lead's dispositions.json. The gate judges the seat's output, not the lead's copy
   - stop rule (contract section 3, K8): the latest round finds no High, its "prior" map
     confirms every High from every earlier round, and there are at most 3 rounds;
   - after the reviewed head only ops/mission/reviews/** and ops/mission/evidence/** may
-    change (K7): a judge, a lock or the contract changed after review voids the round.
+    change (K7): a judge, a lock or the contract changed after review voids the round;
+  - each round's prompt.md equals render_prompt.py's rendering of the registered template for
+    that phase, round, reviewedHead and base (K22);
+  - finding ids are unique across the phase's rounds, and a finding raised in the last round
+    can only be rejected or deferred with a reason, since no code may change after it (K21).
 
 Usage: python3 ops/mission/gates/review_closed.py P0
 """
@@ -26,6 +30,8 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 ALLOWED_AFTER_REVIEW = ("ops/mission/reviews/", "ops/mission/evidence/")
 CLOSED = {"fixed", "rejected", "deferred"}
@@ -53,9 +59,9 @@ def last_json_block(text):
     return None
 
 
-def load_round(rdir):
+def load_round(rdir, phase, n):
     disp_path, seat_path, tr_path = rdir / "dispositions.json", rdir / "seat.json", rdir / "transcript.md"
-    for p in (disp_path, seat_path, tr_path):
+    for p in (disp_path, seat_path, tr_path, rdir / "prompt.md"):
         if not p.is_file():
             fail(f"{rdir.name}: {p.name} is missing")
     try:
@@ -70,6 +76,11 @@ def load_round(rdir):
         fail(f"{rdir.name}: isolation not proven (seat.json canaryAbsent is not true)")
     if seat.get("head") != disp.get("reviewedHead"):
         fail(f"{rdir.name}: seat reviewed {seat.get('head')!r} but dispositions name {disp.get('reviewedHead')!r}")
+    import render_prompt  # the renderer lives beside this gate's package
+    if not disp.get("base"):
+        fail(f"{rdir.name}: dispositions name no diff base")
+    if (rdir / "prompt.md").read_text() != render_prompt.render(phase, n, disp["reviewedHead"], disp["base"]):
+        fail(f"{rdir.name}: prompt.md is not the registered template rendered for this round")
     verdict = last_json_block(tr_bytes.decode("utf-8", "replace"))
     if not isinstance(verdict, dict):
         fail(f"{rdir.name}: the transcript ends in no parseable json verdict")
@@ -112,12 +123,22 @@ def main():
     if len(rounds) > MAX_ROUNDS:
         fail(f"{len(rounds)} rounds exceeds the stop rule's {MAX_ROUNDS}: the phase does not merge")
 
-    loaded = [(p.name, *load_round(p)) for p in rounds]
+    loaded = [(p.name, *load_round(p, phase, i + 1)) for i, p in enumerate(rounds)]
     problems = []
+    seen = {}
+    for name, _, verdict in loaded:
+        for f in verdict.get("findings", []):
+            if f.get("id") in seen:
+                problems.append(f"finding id {f.get('id')} repeats ({seen[f.get('id')]} and {name})")
+            seen[f.get("id")] = name
     for name, disp, verdict in loaded:
         problems += check_dispositions(name, disp, verdict)
 
     last_name, last_disp, last_verdict = loaded[-1]
+    mine = {f.get("id"): f for f in last_disp.get("findings", [])}
+    for f in last_verdict.get("findings", []):
+        if (mine.get(f.get("id")) or {}).get("status") == "fixed":
+            problems.append(f"{last_name}/{f.get('id')} marked fixed in the last round, where no code may change")
     last_highs = [f.get("id") for f in last_verdict.get("findings", []) if str(f.get("severity", "")).lower() in ("high", "critical")]
     if last_highs:
         problems.append(f"{last_name} found High {last_highs}: another round must confirm the repairs")

@@ -20,7 +20,7 @@ M = Path("ops/mission")
 
 
 def main():
-    if subprocess.run([sys.executable, str(M / "derive_bundle.py")]).returncode != 0:
+    if subprocess.run([sys.executable, str(Path(__file__).resolve().parents[1] / "derive_bundle.py")]).returncode != 0:
         print("[FAIL] could not derive the bundle")
         sys.exit(1)
     spec = importlib.util.spec_from_file_location("dogfood_lanes", "protocol/scripts/dogfood_lanes.py")

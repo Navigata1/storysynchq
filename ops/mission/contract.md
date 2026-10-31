@@ -19,13 +19,18 @@ Re-registering changed bytes is part of an amendment, never a quiet fix.
 ## 2. The merge rule
 
 A phase's PR merges to `main` only when:
-1. `python3 ops/mission/run_phase.py <P>` exited 0 at the PR head: it reruns every gate of the
-   phase fresh at that head (loop.py alone skips gates that passed at an earlier head, S1
-   critic K3) and appends the head and exit to `ops/mission/evidence/phase-runs.jsonl`;
+1. `python3 ops/mission/run_phase.py <P>` exited 0 at the PR head for a *merging* phase (one
+   whose gates carry the full ladder): it reruns every gate fresh at that head (loop.py alone
+   skips gates that passed earlier, S1 critic K3) and appends a `phase-run` event with each
+   gate's exit to the hash-chained ledger (K20). P1 and P5 never merge on their own runs;
+   their files land in a merging phase's PR (K15);
 2. the head's GitHub CI (`verify`) is green and GitHub reports the PR mergeable;
 3. after merging, the deployment of the merge commit is confirmed serving that SHA.
 A failed gate is a loopback (`loop.py fail <gate> --reason … --route <stage>`), never a
-retry until green. `ops/mission/gates/merged_scan.py` checks the rule after the fact (C9).
+retry until green. Exit 77 from a gate means "cannot run here" (access the operator must
+supply) and leaves its claim unverified; any other non-zero exit falsifies it (K19).
+`ops/mission/gates/merged_scan.py` checks the rule after the fact from GitHub's list of merged
+PRs (C9).
 
 ## 3. Review rounds
 
@@ -40,13 +45,15 @@ retry until green. `ops/mission/gates/merged_scan.py` checks the rule after the 
 - **Stop rule (frozen):** a phase's rounds stop when a round finds no High and every prior High
   is confirmed fixed by that round's own probe, or after 3 rounds (then the open items are
   reported at their band and the phase does not merge).
-- Each round lives in `ops/mission/reviews/<P>/round<N>/`: the prompt (from
-  `protocol/a2/templates/review-prompt.md`), the seat's own `transcript.md`, `seat.json` and
+- Each round lives in `ops/mission/reviews/<P>/round<N>/`: the prompt (rendered by
+  `ops/mission/render_prompt.py` from the registered `judges/review-prompt.tmpl`, and checked
+  byte for byte by the gate, K22), the seat's own `transcript.md`, `seat.json` and
   `preflight.txt` (written by `seat.sh`), and the lead's `dispositions.json`.
   `ops/mission/gates/review_closed.py` judges the seat's output, not the lead's copy: every
   seat finding needs a disposition at no lower severity, the last round must find no High and
   confirm every earlier High in its own "prior" map, and a judge, lock or the contract changed
-  after the reviewed head voids the round.
+  after the reviewed head voids the round. Finding ids are unique within a phase; a finding
+  raised in the last round can only be rejected or deferred with a reason (K21).
 
 ## 4. Process budget (archipelago-2 step 10)
 
@@ -63,10 +70,13 @@ not tamper-proof: the gate rejects any comment carrying the Claude Code footer, 
 never posts an A2-ATTEST line. The second half is discipline, so every hitl gate is reported
 **advisory**, never enforced.
 
-## 6. Registered budgets
+## 6. Registered values
 
-- **C7 first-load JS:** registered by amendment before P3's work starts (measured on the P2
-  head, then frozen; P3 may not raise it).
+- **C7 first-load JS:** a reasoned per-route target (not the current size), registered by
+  amendment together with `ops/mission/gates/js_budget.py` before P4's first commit; P4 may not
+  raise it (S1 critic K23).
+- **Production's Supabase project:** `pvtwlizzsbovwtkjvqix` (the host the deployed bundle names,
+  read 2026-10-31). `cloud_e2e.sh` refuses any other project (K18).
 
 ## Amendments
 

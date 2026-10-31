@@ -1,38 +1,59 @@
 {
-  "note": "Which phases prove each claim. Frozen with the locks; derive_bundle.py reads it.",
+  "note": "Which gates prove each claim (S1 critic K24: gates, not phases). Frozen with the locks; derive_bundle.py reads it. C9 is checked live, so the band does not depend on the close phase's own run record.",
   "proves": {
-    "C1": [
-      "P0"
-    ],
-    "C2": [
-      "P0"
-    ],
-    "C2b": [
-      "P5"
-    ],
-    "C3": [
-      "P0"
-    ],
-    "C3b": [
-      "P1"
-    ],
-    "C4": [
-      "P1"
-    ],
-    "C5": [
-      "P2"
-    ],
-    "C6": [
-      "P3"
-    ],
-    "C7": [
-      "P4"
-    ],
-    "C8": [
-      "P5"
-    ],
-    "C9": [
-      "P6"
-    ]
+    "C1": {
+      "gates": [
+        "P0-G5"
+      ]
+    },
+    "C2": {
+      "gates": [
+        "P0-G5"
+      ]
+    },
+    "C2b": {
+      "gates": [
+        "P5-G2"
+      ]
+    },
+    "C3": {
+      "gates": [
+        "P0-G5"
+      ]
+    },
+    "C3b": {
+      "gates": [
+        "P1-G1",
+        "P1-G2"
+      ]
+    },
+    "C4": {
+      "gates": [
+        "P1-G2"
+      ]
+    },
+    "C5": {
+      "gates": [
+        "P2-G5"
+      ]
+    },
+    "C6": {
+      "gates": [
+        "P3-G5"
+      ]
+    },
+    "C7": {
+      "gates": [
+        "P4-G6"
+      ]
+    },
+    "C8": {
+      "gates": [
+        "P5-G1"
+      ]
+    },
+    "C9": {
+      "live": "python3 ops/mission/gates/merged_scan.py"
+    }
   }
 }

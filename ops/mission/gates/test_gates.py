@@ -35,6 +35,8 @@ class ReviewClosed(unittest.TestCase):
         (self.root / "src.txt").write_text("code\n")
         (self.root / "ops/mission/gates").mkdir(parents=True)
         (self.root / "ops/mission/gates/judge.py").write_text("judge\n")
+        (self.root / "ops/mission/judges").mkdir(parents=True)
+        (self.root / "ops/mission/judges/review-prompt.tmpl").write_text("review {PHASE} r{ROUND} at {HEAD} from {BASE}; prior {PRIOR}\n")
         git(self.root, "add", ".")
         git(self.root, "commit", "-qm", "code")
         self.head = git(self.root, "rev-parse", "HEAD")
@@ -42,10 +44,17 @@ class ReviewClosed(unittest.TestCase):
     def tearDown(self):
         self.tmp.cleanup()
 
+    def prompt(self, n):
+        prior = ", ".join(f["id"] for k in range(1, n) for f in self.raised.get(k, [])) or "none"
+        return f"review P0 r{n} at {self.head} from {'b' * 40}; prior {prior}\n"
+
     def round(self, n, seat_findings=(), prior=None, verdict="amend", files=("src.txt",),
-              dispositions=None, canary=True, seat_head=None, tamper=False):
+              dispositions=None, canary=True, seat_head=None, tamper=False, prompt=None, last_fixed=False):
         d = self.root / f"ops/mission/reviews/P0/round{n}"
         d.mkdir(parents=True, exist_ok=True)
+        self.raised = getattr(self, "raised", {})
+        self.raised[n] = list(seat_findings)
+        (d / "prompt.md").write_text(prompt if prompt is not None else self.prompt(n))
         block = {"verdict": verdict, "prior": prior or {}, "filesRead": list(files), "findings": list(seat_findings)}
         text = "review text\n```json\n" + json.dumps(block) + "\n```\n"
         (d / "transcript.md").write_text(text)
@@ -55,8 +64,8 @@ class ReviewClosed(unittest.TestCase):
         if tamper:
             (d / "transcript.md").write_text(text + "edited\n")
         if dispositions is None:
-            dispositions = [{"id": f["id"], "severity": f["severity"], "status": "fixed"} for f in seat_findings]
-        (d / "dispositions.json").write_text(json.dumps({"reviewedHead": self.head, "findings": dispositions}))
+            dispositions = [{"id": f["id"], "severity": f["severity"], "status": "fixed" if last_fixed else "rejected", "reason": "r"} for f in seat_findings]
+        (d / "dispositions.json").write_text(json.dumps({"reviewedHead": self.head, "base": "b" * 40, "findings": dispositions}))
 
     def check(self):
         return run("review_closed.py", "P0", cwd=self.root)
@@ -75,7 +84,7 @@ class ReviewClosed(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stdout)
 
     def test_high_confirmed_by_next_round_passes(self):
-        self.round(1, [self.HIGH])
+        self.round(1, [self.HIGH], last_fixed=True)
         self.round(2, [], prior={"R1": "confirmed"}, verdict="approve")
         r = self.check()
         self.assertEqual(r.returncode, 0, r.stdout)
@@ -114,7 +123,7 @@ class ReviewClosed(unittest.TestCase):
         self.assertFails("no disposition")
 
     def test_downgraded_finding_fails(self):
-        self.round(1, [{"id": "R1", "severity": "medium"}], dispositions=[{"id": "R1", "severity": "low", "status": "fixed"}])
+        self.round(1, [{"id": "R1", "severity": "medium"}], dispositions=[{"id": "R1", "severity": "low", "status": "rejected", "reason": "r"}])
         self.assertFails("downgraded")
 
     def test_open_status_fails(self):
@@ -128,6 +137,19 @@ class ReviewClosed(unittest.TestCase):
     def test_high_in_last_round_fails(self):
         self.round(1, [self.HIGH])
         self.assertFails("another round must confirm")
+
+    def test_stale_prompt_fails(self):
+        self.round(1, [], prompt="review only README.md\n")
+        self.assertFails("registered template")
+
+    def test_repeated_id_fails(self):
+        self.round(1, [self.LOW], last_fixed=True)
+        self.round(2, [self.LOW], prior={})
+        self.assertFails("repeats")
+
+    def test_last_round_fixed_fails(self):
+        self.round(1, [self.LOW], last_fixed=True)
+        self.assertFails("last round")
 
     def test_earlier_high_unconfirmed_fails(self):
         self.round(1, [self.HIGH])
@@ -205,6 +227,8 @@ class E2ECheck(unittest.TestCase):
         self.root = Path(self.tmp.name)
         (self.root / "ops/mission/judges").mkdir(parents=True)
         (self.root / "ops/mission/judges/e2e-skips.txt").write_text("mobile › vision-a.spec.ts › desk only\n")
+        fams = {"vision-": 1, "wp-": 1, "critic-": 1, "fable-pass": 1, "storysync-roundtrip": 1}
+        (self.root / "ops/mission/judges/required.json").write_text(json.dumps({"projects": ["desktop", "mobile"], "families": fams}))
 
     def tearDown(self):
         self.tmp.cleanup()
@@ -234,9 +258,119 @@ class E2ECheck(unittest.TestCase):
     def test_missing_family_fails(self):
         self.assertIn("fable-pass", self.report(drop="fable-pass.spec.ts").stdout)
 
+    def test_below_minimum_fails(self):
+        req = self.root / "ops/mission/judges/required.json"
+        d = json.loads(req.read_text())
+        d["families"]["wp-"] = 2
+        req.write_text(json.dumps(d))
+        self.assertIn("needs 2", self.report().stdout)
+
     def test_unlisted_skip_fails(self):
         r = self.report(extra=[{"file": "wp-a.spec.ts", "title": "quietly off", "tests": [{"projectName": "desktop", "status": "skipped"}]}])
         self.assertIn("not on", r.stdout)
+
+
+class Records(unittest.TestCase):
+    """derive_bundle, band, merged_scan and run_phase read the chained ledger (S1 critic K19, K20, K15, K24)."""
+
+    REPO = GATES.parents[2]
+    LADDER = ["npx tsc --noEmit", "npm run lint", "python3 ops/mission/gates/registered.py",
+              "python3 -m unittest ops/mission/gates/test_gates.py", "bash ops/mission/gates/e2e_prod.sh",
+              "python3 ops/mission/gates/review_closed.py PX"]
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        git(self.root, "init", "-q")
+        m = self.root / "ops/mission"
+        (m / "evidence").mkdir(parents=True)
+        (self.root / "protocol").symlink_to(self.REPO / "protocol")
+        merging = {"id": "P0", "title": "t", "goal": "g", "gates": [{"id": f"P0-G{i+1}", "title": "t", "command": c} for i, c in enumerate(self.LADDER)], "evidenceRequired": ["static"]}
+        other = {"id": "P1", "title": "t", "goal": "g", "gates": [{"id": "P1-G1", "title": "t", "command": "true"}], "evidenceRequired": ["static"]}
+        (m / "plan.lock.json").write_text(json.dumps({"phases": [merging, other]}))
+        (m / "idea.lock.json").write_text(json.dumps({"definitionOfDone": [{"claim": "C1 · a", "falsifiedBy": "x"}, {"claim": "C2 · b", "falsifiedBy": "y"}]}))
+        (m / "claims.json").write_text(json.dumps({"proves": {"C1": {"gates": ["P0-G1"]}, "C2": {"gates": ["P1-G1"]}}}))
+        (self.root / "f.txt").write_text("x\n")
+        git(self.root, "add", "f.txt", "ops")
+        git(self.root, "commit", "-qm", "kickoff")
+        self.head = git(self.root, "rev-parse", "HEAD")
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def ledger(self, *runs):
+        code = "import sys,json;sys.path.insert(0,'protocol/scripts');import importlib.util as u;s=u.spec_from_file_location('l','protocol/scripts/loop.py');l=u.module_from_spec(s);s.loader.exec_module(l)\n"
+        for phase, head, gates in runs:
+            code += f"l.ledger_append({{'event':'phase-run','phase':{phase!r},'head':{head!r},'exit':0 if all(e==0 for _,e in {gates!r}) else 1,'gates':[{{'id':i,'exit':e,'evidenceSha256':None}} for i,e in {gates!r}]}})\n"
+        subprocess.run([sys.executable, "-c", code], cwd=self.root, check=True)
+
+    def bundle(self):
+        r = subprocess.run([sys.executable, str(self.REPO / "ops/mission/derive_bundle.py")], cwd=self.root, capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        return {c["claim"][:2]: c["status"] for c in json.loads((self.root / "ops/mission/evidence/bundle.json").read_text())["claims"]}
+
+    def test_verified_falsified_unverified(self):
+        self.ledger(("P0", self.head, [("P0-G1", 0)]), ("P1", self.head, [("P1-G1", 1)]))
+        self.assertEqual(self.bundle(), {"C1": "verified", "C2": "falsified"})
+
+    def test_cannot_run_is_unverified(self):
+        self.ledger(("P1", self.head, [("P1-G1", 77)]))
+        self.assertEqual(self.bundle()["C2"], "unverified")
+
+    def test_old_head_is_unverified(self):
+        self.ledger(("P0", "a" * 40, [("P0-G1", 0)]))
+        self.assertEqual(self.bundle()["C1"], "unverified")
+
+    def test_tampered_ledger_refused(self):
+        self.ledger(("P0", self.head, [("P0-G1", 0)]))
+        lp = self.root / "ops/mission/ledger.jsonl"
+        lp.write_text(lp.read_text().replace('"exit": 0', '"exit": 1', 1))
+        r = subprocess.run([sys.executable, str(self.REPO / "ops/mission/derive_bundle.py")], cwd=self.root, capture_output=True, text=True)
+        self.assertNotEqual(r.returncode, 0)
+
+    def band(self, declared):
+        (self.root / "ops/mission/governance.md").write_text(f"Band: {declared}/5\n")
+        return subprocess.run([sys.executable, str(self.REPO / "ops/mission/gates/band.py")], cwd=self.root, capture_output=True, text=True)
+
+    def test_band_must_equal_computed(self):
+        self.ledger(("P0", self.head, [("P0-G1", 0)]), ("P1", self.head, [("P1-G1", 1)]))
+        self.assertIn("1/5", self.band(5).stdout)
+        self.assertNotEqual(self.band(5).returncode, 0)
+        self.assertEqual(self.band(1).returncode, 0, self.band(1).stdout)
+
+    def scan(self, prs):
+        f = self.root / "prs.json"
+        f.write_text(json.dumps(prs))
+        env = {**os.environ, "A2_MERGED_PRS": str(f)}
+        (self.root / "ops/mission/state.json").write_text("{}")
+        git(self.root, "add", "ops/mission/state.json")
+        git(self.root, "commit", "-qm", "state")
+        h = git(self.root, "rev-parse", "HEAD")
+        return h, lambda: subprocess.run([sys.executable, str(self.REPO / "ops/mission/gates/merged_scan.py")], cwd=self.root, capture_output=True, text=True, env=env)
+
+    def test_scan_accepts_merging_phase_run(self):
+        h, run_scan = self.scan([])
+        (self.root / "prs.json").write_text(json.dumps([{"number": 1, "head": {"sha": h}, "merged_at": "x"}]))
+        self.ledger(("P0", h, [(g, 0) for g in [f"P0-G{i}" for i in range(1, 7)]]))
+        r = run_scan()
+        self.assertEqual(r.returncode, 0, r.stdout)
+
+    def test_scan_rejects_non_merging_phase_run(self):
+        h, run_scan = self.scan([])
+        (self.root / "prs.json").write_text(json.dumps([{"number": 1, "head": {"sha": h}, "merged_at": "x"}]))
+        self.ledger(("P1", h, [("P1-G1", 0)]))
+        self.assertIn("no green merging-phase run", run_scan().stdout)
+
+    def test_scan_with_no_merges_fails(self):
+        _, run_scan = self.scan([])
+        self.assertIn("nothing to check", run_scan().stdout)
+
+    def test_run_phase_refuses_drift(self):
+        st = json.loads((self.root / "ops/mission/plan.lock.json").read_text())
+        st["phases"][0]["gates"][0]["command"] = "true"
+        (self.root / "ops/mission/state.json").write_text(json.dumps(st))
+        r = subprocess.run([sys.executable, str(self.REPO / "ops/mission/run_phase.py"), "P0"], cwd=self.root, capture_output=True, text=True)
+        self.assertIn("differ", r.stdout)
 
 
 class BrowserAvailable(unittest.TestCase):

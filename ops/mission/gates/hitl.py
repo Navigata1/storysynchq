@@ -63,8 +63,8 @@ def main():
         if statements:
             found.append((c, statements))
     if not found:
-        print(f"[FAIL] no '{tag}' comment by {HUMAN} with statements (waiting on the operator)")
-        sys.exit(1)
+        print(f"[CANNOT RUN] no '{tag}' comment by {HUMAN} with statements (waiting on the operator)")
+        sys.exit(77)
     c, statements = found[-1]
     print(f"[PASS] {tag} by {HUMAN} at {c.get('created_at')}: {len(statements)} statement(s) [advisory: provenance is discipline, see docstring]")
 

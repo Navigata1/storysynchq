@@ -1,73 +1,76 @@
 #!/usr/bin/env python3
-"""Derive the evidence bundle from the mission's own records (S1 critic K10).
+"""Derive the evidence bundle from the mission's own records (S1 critic K10, K19, K24).
 
-Nobody writes ops/mission/evidence/bundle.json by hand. A claim's status comes from
-ops/mission/claims.json, which names the phases that prove each claim (frozen with the
-locks), and from ops/mission/evidence/phase-runs.jsonl (written by run_phase.py):
+Nobody writes ops/mission/evidence/bundle.json by hand. ops/mission/claims.json (frozen with
+the locks) maps each claim to the gates that prove it, or to a live command. A claim is:
 
-  verified    every proving phase's latest run is at HEAD with exit 0
-  unverified  otherwise (never run, run at an older head, or failing)
+  verified    every proving gate's latest phase-run at HEAD exited 0 (or the live command did)
+  falsified   any proving gate at HEAD exited with a code other than 0 and 77
+  unverified  otherwise: never run at HEAD, or a gate exited 77 ("cannot run here")
 
-Lanes take the evidence files the ledger recorded for each proving gate, with their
-sha256 recomputed from disk; a file whose bytes no longer match the ledger is a finding.
+Phase runs come from the hash-chained ledger (a2lib.phase_runs, which refuses a broken
+chain). Lanes carry each passing gate's evidence file with its sha256 recomputed; bytes that
+no longer match the ledger are a finding.
 
 Usage: python3 ops/mission/derive_bundle.py   (writes ops/mission/evidence/bundle.json)
 """
 import hashlib
 import json
 import subprocess
+import sys
 from pathlib import Path
 
-M = Path("ops/mission")
-LANE_OF = {"static": "static", "runtime-journey": "runtime-journey", "visual": "visual",
-           "recording": "recording", "resilience": "resilience"}
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import a2lib  # noqa: E402
+
+M = a2lib.M
+
+
+def status(spec, exits):
+    if "live" in spec:
+        return "verified" if subprocess.run(spec["live"], shell=True).returncode == 0 else "unverified"
+    got = [exits.get(g) for g in spec["gates"]]
+    if any(e not in (None, 0, a2lib.CANNOT_RUN) for e in got):
+        return "falsified"
+    return "verified" if got and all(e == 0 for e in got) else "unverified"
 
 
 def main():
-    head = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True).stdout.strip()
+    at = a2lib.head()
     idea = json.loads((M / "idea.lock.json").read_text())
-    plan = json.loads((M / "plan.lock.json").read_text())
+    plan = a2lib.plan()
     proves = json.loads((M / "claims.json").read_text())["proves"]
-    runs = {}
-    rp = M / "evidence/phase-runs.jsonl"
-    for line in (rp.read_text().splitlines() if rp.exists() else []):
-        r = json.loads(line)
-        runs[r["phase"]] = r
-    ledger = [json.loads(l) for l in (M / "ledger.jsonl").read_text().splitlines()] if (M / "ledger.jsonl").exists() else []
-    latest_ev = {}
-    for e in ledger:
-        if e.get("event") == "gate-run":
-            latest_ev[e["gate"]] = e
+    exits = a2lib.latest_gate_exits(at)
 
     claims = []
     for c in idea["definitionOfDone"]:
         cid = c["claim"].split(" ")[0]
-        phases = proves.get(cid, [])
-        ok = bool(phases) and all(runs.get(p, {}).get("head") == head and runs.get(p, {}).get("exit") == 0 for p in phases)
-        claims.append({"claim": c["claim"], "status": "verified" if ok else "unverified",
-                       "evidenceRefs": [g["id"] for p in plan["phases"] if p["id"] in phases for g in p["gates"]]})
+        spec = proves.get(cid, {"gates": []})
+        claims.append({"claim": c["claim"], "status": status(spec, exits), "evidenceRefs": spec.get("gates", [])})
 
+    ledger = [json.loads(l) for l in a2lib.loop().LEDGER.read_text().splitlines() if l.strip()] if a2lib.loop().LEDGER.exists() else []
+    gate_runs = {e["gate"]: e for e in ledger if e.get("event") == "gate-run"}
     lanes = {}
     for p in plan["phases"]:
         for g in p["gates"]:
-            e = latest_ev.get(g["id"])
-            if not e or e.get("status") != "passed":
+            e = gate_runs.get(g["id"])
+            if exits.get(g["id"]) != 0 or not e:
                 continue
             path = Path(e["evidence"])
             sha = hashlib.sha256(path.read_bytes()).hexdigest() if path.exists() else None
             for lane in p["evidenceRequired"]:
-                L = lanes.setdefault(LANE_OF[lane], {"artifacts": [], "findings": []})
+                L = lanes.setdefault(lane, {"artifacts": [], "findings": []})
                 if sha == e.get("evidenceSha256"):
                     L["artifacts"].append({"id": g["id"], "path": str(path), "sha256": sha, "kind": "gate-output"})
                 else:
                     L["findings"].append(f"{g['id']} evidence bytes do not match the ledger")
-    bundle = {"schemaVersion": "2.0", "target": f"storysynchq@{head[:12]}", "phaseId": "P6",
+    bundle = {"schemaVersion": "2.0", "target": f"storysynchq@{at[:12]}", "phaseId": "P6",
               "claimSurface": "ui", "claims": claims, "lanes": lanes}
     out = M / "evidence/bundle.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(bundle, indent=2) + "\n")
-    v = sum(1 for c in claims if c["status"] == "verified")
-    print(f"wrote {out}: {v}/{len(claims)} claims verified at {head[:12]}")
+    counts = {s: sum(1 for c in claims if c["status"] == s) for s in ("verified", "unverified", "falsified")}
+    print(f"wrote {out} at {at[:12]}: {counts}")
 
 
 if __name__ == "__main__":

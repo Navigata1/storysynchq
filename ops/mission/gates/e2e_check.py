@@ -3,7 +3,8 @@
 
 Fails unless:
   - the report has no failed, timed-out or interrupted test;
-  - every required spec family ran at least one test that passed, on each project;
+  - every family in ops/mission/judges/required.json reached its minimum number of passing
+    tests on each project (a missing or emptied judge fails, S1 critic K17);
   - every skipped test is on the registered allow-list ops/mission/judges/e2e-skips.txt
     (one "<project> › <file> › <title path>" per line). A skip that is not on the list is
     a test that silently stopped running.
@@ -15,8 +16,7 @@ import json
 import sys
 from pathlib import Path
 
-REQUIRED_FAMILIES = ("vision-", "wp-", "critic-", "fable-pass", "storysync-roundtrip")
-PROJECTS = ("desktop", "mobile")
+REQUIRED = Path("ops/mission/judges/required.json")
 ALLOW = Path("ops/mission/judges/e2e-skips.txt")
 
 
@@ -52,10 +52,12 @@ def main():
     bad = [f"{p} › {f} › {t}" for p, f, t, s in rows if s == "unexpected"]
     if bad:
         problems.append(f"{len(bad)} failed: {bad[:5]}")
-    for fam in REQUIRED_FAMILIES:
-        for proj in PROJECTS:
-            if not any(f.startswith(fam) and p == proj and s in ("expected", "flaky") for p, f, t, s in rows):
-                problems.append(f"no passing test from family {fam!r} on {proj}")
+    req = json.loads(REQUIRED.read_text())
+    for fam, minimum in req["families"].items():
+        for proj in req["projects"]:
+            n = sum(1 for p, f, t, s in rows if f.startswith(fam) and p == proj and s in ("expected", "flaky"))
+            if n < minimum:
+                problems.append(f"family {fam!r} on {proj}: {n} passing, needs {minimum}")
     allowed = set(ALLOW.read_text().splitlines()) if ALLOW.exists() else set()
     stray = [k for k in skips if k not in allowed]
     if stray:
@@ -64,7 +66,7 @@ def main():
     if problems:
         print("[FAIL] " + "; ".join(problems))
         sys.exit(1)
-    print(f"[PASS] {passed} passed, {len(skips)} skipped (all allow-listed), every required family ran on both projects")
+    print(f"[PASS] {passed} passed, {len(skips)} skipped (all allow-listed), every required family met its minimum")
 
 
 if __name__ == "__main__":

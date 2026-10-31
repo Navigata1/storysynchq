@@ -1,0 +1,11 @@
+{
+  "note": "Spec families e2e_check.py requires on each project, with the minimum number of passing tests per project. A family is a file-name prefix. The a2- judges are added, with their counts, by the amendment that registers each (S1 critic K17).",
+  "projects": ["desktop", "mobile"],
+  "families": {
+    "vision-": 1,
+    "wp-": 1,
+    "critic-": 1,
+    "fable-pass": 1,
+    "storysync-roundtrip": 1
+  }
+}
