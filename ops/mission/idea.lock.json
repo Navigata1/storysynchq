@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0",
   "id": "idea-storysync-poc-complete",
-  "frozenAt": "2026-10-31T22:10:00Z",
+  "frozenAt": "2026-10-31T22:55:00Z",
   "frozenBy": "claude-lead (operator: Navigata1, delegated 2026-10-31)",
   "problem": {
     "statement": "StorySync's POC is built to the Vision Reel (PR #5) and hardened (PR #6), but 'complete at production quality' has never been stated as checkable claims. Merges have rested on the builder's own reading; cloud sharing in production is unverified; layout, accessibility and cross-browser claims have no gate that could fail.",
@@ -11,19 +11,31 @@
       "Every claim below is reported at the band its evidence reached; a claim this environment cannot check is reported unverified, never proven"
     ]
   },
-  "domain": { "id": 6, "letter": "F", "name": "Elite Software Craft" },
+  "domain": {
+    "id": 6,
+    "letter": "F",
+    "name": "Elite Software Craft"
+  },
   "definitionOfDone": [
     {
       "claim": "C1 · The Child Journey completes in a production build (next build + next start) at 1280x720 and 375x812: add pictures, record a voice on each page, music added automatically, pass the parental gate, publish, open the published tape in the Player and hear it play through",
-      "falsifiedBy": "the full Playwright suite (CI=1 against next start) reports any failed test, or the journey specs (vision-*, wp-*, critic-*, fable-pass) are missing from the run"
+      "falsifiedBy": "ops/mission/gates/e2e_prod.sh (CI=1, next start of HEAD, clean tree) exits non-zero: a failed test, a required spec family (vision-, wp-, critic-, fable-pass, storysync-roundtrip) with no passing test on either project, or a skip not on the registered allow-list"
     },
     {
-      "claim": "C2 · A published tape carries only AAC/M4A or WAV narration, never Opus/WebM, and survives pack -> .storysync -> unpack with an identical manifest and assets",
+      "claim": "C2 · A published tape's narration is AAC/M4A or WAV, never Opus/WebM, and the WAV path survives pack -> .storysync -> unpack with an identical manifest and assets",
       "falsifiedBy": "tests/storysync-roundtrip.spec.ts or the manifest validator accepts an Opus/WebM audioUrl in a published manifest, or the round-trip diff is non-empty"
     },
     {
-      "claim": "C3 · COPPA posture holds: the parental gate stands before publish and share, one tap deletes the whole story, the Player sends no request to a third-party host, share codes are 128-bit unguessable",
+      "claim": "C2b · The AAC path (record -> level -> AAC/M4A publish -> play) works on a browser with a WebCodecs AAC encoder",
+      "falsifiedBy": "the publish specs run on a browser whose AudioEncoder supports mp4a.40.2 and either publish WAV or fail; or no such browser is available to run them (headless Chromium has none)"
+    },
+    {
+      "claim": "C3 · The client keeps the COPPA posture: the parental gate stands before publish and share, one tap deletes the whole story, the Player sends no request to a third-party host, share codes are 128-bit",
       "falsifiedBy": "a watchSends check observes a non-same-origin request from /read, a publish completes without the gate, delete leaves story data in storage, or a share code under 128 bits is generated"
+    },
+    {
+      "claim": "C3b · Production's database refuses anonymous listing: with only the shipped anon key, no select on storybooks, shared_links or page_media returns a row without a share code",
+      "falsifiedBy": "an anon-key select without a code against production's project returns any row (migration 003 not applied), or the check is never run against production"
     },
     {
       "claim": "C4 · A link shared from production opens the tape on another device with no account (cloud mode)",
@@ -47,17 +59,27 @@
     },
     {
       "claim": "C9 · Every merge to main in this mission crossed tsc, lint, build, the full suite on a production build, and an isolated-seat review round whose dispositions leave no open High",
-      "falsifiedBy": "ops/mission/gates/review_closed.py finds a merged phase without a dispositions file bound to its merged head, or with a High not confirmed fixed"
+      "falsifiedBy": "ops/mission/gates/merged_scan.py finds a mission merge on main whose merged head has no exit-0 run of its phase in phase-runs.jsonl (every merging phase runs tsc, lint, the judges' sums and fixtures, the full suite on a production build, and its review gate)"
     }
   ],
   "confidence": {
     "score": 6,
-    "biggestRisk": "C4 and C8 cannot be checked from this environment (production Supabase reads are denied by the session's permission policy; only Chromium is installed), so the mission's honest ceiling is band 3 until a human supplies that access.",
+    "biggestRisk": "C2b, C3b, C4 and C8 cannot be checked from this environment (production Supabase reads are denied by the session's permission policy; only Chromium is installed, without an AAC encoder), so the honest ceiling is band 3 until the operator supplies that access.",
     "nextAction": "Run the blind plan critic on these locks, then carry PR #6 through P0."
   },
-  "psznDedupe": { "checked": true, "nearestNeighbor": "docs/10x-plan.md work packages (WP-M/S/P/L)", "similarity": 0.3 },
+  "psznDedupe": {
+    "checked": true,
+    "nearestNeighbor": "docs/10x-plan.md work packages (WP-M/S/P/L)",
+    "similarity": 0.3
+  },
   "rejectedAlternatives": [
-    { "idea": "declare StorySync complete on the M6/M7 evidence alone", "reason": "those runs are the builder's own reading; no claim was frozen with a check before the work and cloud sharing was never exercised" },
-    { "idea": "build the video-driven engagement layer now", "reason": "its input (the video) is unreachable from this session; building it would rest on an imagined source. It enters as its own phase once the transcript arrives" }
+    {
+      "idea": "declare StorySync complete on the M6/M7 evidence alone",
+      "reason": "those runs are the builder's own reading; no claim was frozen with a check before the work and cloud sharing was never exercised"
+    },
+    {
+      "idea": "build the video-driven engagement layer now",
+      "reason": "its input (the video) is unreachable from this session; building it would rest on an imagined source. It enters as its own phase once the transcript arrives"
+    }
   ]
 }

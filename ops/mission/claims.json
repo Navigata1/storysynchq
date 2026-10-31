@@ -1,0 +1,38 @@
+{
+  "note": "Which phases prove each claim. Frozen with the locks; derive_bundle.py reads it.",
+  "proves": {
+    "C1": [
+      "P0"
+    ],
+    "C2": [
+      "P0"
+    ],
+    "C2b": [
+      "P5"
+    ],
+    "C3": [
+      "P0"
+    ],
+    "C3b": [
+      "P1"
+    ],
+    "C4": [
+      "P1"
+    ],
+    "C5": [
+      "P2"
+    ],
+    "C6": [
+      "P3"
+    ],
+    "C7": [
+      "P4"
+    ],
+    "C8": [
+      "P5"
+    ],
+    "C9": [
+      "P6"
+    ]
+  }
+}
