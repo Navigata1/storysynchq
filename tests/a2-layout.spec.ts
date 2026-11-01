@@ -7,16 +7,22 @@
  *   - document scrollWidth must not exceed innerWidth (no sideways scroll);
  *   - every visible interactive control must lie inside the viewport horizontally, and at its
  *     centre the topmost element must be the control itself or inside it (nothing overlaps it);
- *   - on the Studio with a photo, in landscape, the Stage photo is at least 120 px tall.
+ *   - on the Studio with a photo, in landscape, at rest and mid-take (the Voice sheet open),
+ *     at least 120 px of the Stage photo's height is on screen and uncovered: sampled down its
+ *     middle, the photo (or its frame) is the topmost element there (P2 review P2-R1-01).
  * A control is "visible" when it has a box, is not visibility:hidden or opacity:0, and is not
- * inside an inert or aria-hidden subtree. Off-screen parts of a horizontally scrolling strip
+ * inside an inert or aria-hidden subtree; a disabled control is locked, not judged; while a
+ * dialog is open only the controls inside it are judged. Off-screen parts of a horizontally scrolling strip
  * (the Filmstrip) are judged by their scroll container, not the viewport, and content that has
- * scrolled under fixed or sticky chrome (a header) is not "overlapped": scrolling reaches it.
+ * scrolled under fixed or sticky chrome is not "overlapped" while scrolling can still uncover
+ * it: under top chrome when the page can scroll up, under bottom chrome when it can scroll
+ * down (P2-R1-02).
  */
 
 import { expect, test, type Page } from "@playwright/test";
 import { randomBytes } from "node:crypto";
 import { restoreDraft, seedDeviceLibrary, seedStudioDraft } from "./fixtures/helpers";
+import { stubMicrophone } from "./fixtures/mic";
 
 const SIZES = [
   { name: "320", width: 320, height: 640 },
@@ -61,6 +67,20 @@ const SCREENS: Screen[] = [
       await page.goto("/studio");
       await restoreDraft(page);
       await expect(page.locator('[data-studio="stage-photo"]')).toBeVisible({ timeout: 15000 });
+    },
+  },
+  {
+    name: "studio (recording a take)",
+    photo: true,
+    open: async (page) => {
+      await stubMicrophone(page);
+      await seedStudioDraft(page, "twinkle", { narration: false });
+      await page.goto("/studio");
+      await restoreDraft(page);
+      await expect(page.locator('[data-studio="stage-photo"]')).toBeVisible({ timeout: 15000 });
+      await page.getByRole("button", { name: "Record my voice on this page" }).click();
+      await expect(page.locator(".studio[data-recording='true']")).toHaveCount(1);
+      await page.waitForTimeout(500); // the sheet rises as it opens; judge where it lands
     },
   },
   { name: "protocol", open: async (page) => void (await page.goto("/protocol")) },
@@ -112,8 +132,15 @@ async function layoutProblems(page: Page): Promise<{ scrollWidth: number; innerW
       }
       return null;
     };
+    // an open dialog (the Voice sheet mid-take) is on top by design: judge the controls in it
+    const dialogs = Array.from(document.querySelectorAll('[role="dialog"], dialog[open]')).filter((d) => {
+      const r = d.getBoundingClientRect();
+      return r.width > 0 && r.height > 0 && !hidden(d);
+    });
     for (const el of Array.from(document.querySelectorAll(SEL))) {
       if (el.closest("nextjs-portal")) continue; // the dev overlay, absent in production
+      if (dialogs.length && !dialogs.some((d) => d.contains(el))) continue;
+      if ((el as HTMLButtonElement).disabled || el.getAttribute("aria-disabled") === "true") continue; // locked, not laid out to be used
       const r = el.getBoundingClientRect();
       if (r.width < 1 || r.height < 1 || hidden(el)) continue;
       // screen-reader-only controls (1x1 clipped) and skip links are not laid-out controls
@@ -143,7 +170,14 @@ async function layoutProblems(page: Page): Promise<{ scrollWidth: number; innerW
       const hit = document.elementFromPoint((left + right) / 2, (top + bottom) / 2);
       if (hit?.closest("nextjs-portal")) continue; // the dev overlay, absent in production
       // content scrolled under fixed or sticky chrome (a header) is reachable by scrolling on
-      if (hit && pinned(hit) && !pinned(el)) continue;
+      // the Filmstrip's sticky handle covers a thumbnail only until the strip scrolls sideways
+      if (hit && strip && strip.contains(hit) && pinned(hit) && strip.scrollWidth > strip.clientWidth) continue;
+      if (hit && pinned(hit) && !pinned(el)) {
+        const chrome = hit.getBoundingClientRect();
+        const maxY = document.documentElement.scrollHeight - vh;
+        const underTop = chrome.top + chrome.height / 2 < vh / 2;
+        if (underTop ? window.scrollY > 0 : window.scrollY < maxY - 1) continue;
+      }
       if (hit && hit !== el && !el.contains(hit) && !hit.contains(el)) {
         const by = describe(hit) || hit.tagName;
         problems.push({ what: `covered at its centre by <${hit.tagName.toLowerCase()}> "${by}"`, label });
@@ -179,9 +213,18 @@ for (const screen of SCREENS) {
         await settle(page);
         await judge(page, `${screen.name} at ${size.name}`);
         if (screen.photo && size.width > size.height) {
-          const box = await page.locator('[data-studio="stage-photo"]').boundingBox();
-          expect(box, "the Stage photo is laid out").not.toBeNull();
-          expect(box!.height, `${size.name}: the landscape Stage photo is at least 120 px tall`).toBeGreaterThanOrEqual(120);
+          const seen = await page.locator('[data-studio="stage-photo"]').evaluate((photo) => {
+            const r = photo.getBoundingClientRect();
+            const frame = photo.closest('[data-sk="listening-ring"]') ?? photo;
+            const x = r.left + r.width / 2;
+            let rows = 0;
+            for (let y = Math.max(0, Math.ceil(r.top)); y < Math.min(window.innerHeight, r.bottom); y += 1) {
+              const hit = document.elementFromPoint(x, y);
+              if (hit && (hit === photo || frame.contains(hit))) rows += 1;
+            }
+            return rows;
+          });
+          expect(seen, `${screen.name} at ${size.name}: px of the Stage photo on screen and uncovered`).toBeGreaterThanOrEqual(120);
         }
       });
     }
