@@ -281,3 +281,26 @@ missing link not reaching the stories table, two rows refused, a 401 kept as an 
 CloudError, an other RPC failure not falling back, a non-JSON error body failing with its
 status, a network TypeError as a network CloudError, and a found row opening as a book. No
 existing test changes. `ops/mission/contract.md` changes by this appended section.
+
+### A12 · 2026-11-01 · P5: C2b's judge, and P4's deferred offline delete
+
+C2b's judge `tests/a2-aac.spec.ts` is new. It is collected only under `A2_AAC=1`, which
+`ops/mission/gates/aac_publish.sh` sets after proving an installed engine has a WebCodecs AAC
+encoder; its two tests fill the family count `judges/required-P5-aac-*.json` already
+registers (`a2-aac: 2`). Both run the whole Studio journey (pictures, a take per page, the
+parental gate, publish, the link, the Player played through with every take ending without a
+media error): one records the way Chrome does (Opus/WebM) and must publish AAC, never the WAV
+fallback; one records the way Safari does (audio/mp4, real AAC bytes from the new fixture
+`tests/fixtures/aac-tone.m4a`, a 1 s 440 Hz tone made with ffmpeg's AAC encoder) and must
+publish AAC that plays. Every take must be `audioCodec: "aac"`, packed as `data:audio/mp4`,
+start with an MP4 `ftyp` box and decode to about one second. `tests/fixtures/README.md` gains
+the fixture's row. Run here with the gate's flag set by hand on Chromium (no AAC encoder):
+the Chrome-path test fails as it should (`wav` received), the Safari-path test passes.
+
+P4-R3-01 (deferred to P5 as its first change): pulling a tape out sweeps this device's copy
+from `src/lib/device-library.ts`, imported by the Read Room directly, and wipes its draft,
+before the cloud library code is fetched; that code is fetched only when a cloud is
+configured. `tests/vision-shelf.spec.ts` gains one test, "offline: pulling a tape out still
+clears this device's copy and its draft", which refuses every script carrying the library
+code and fails at the P4 head. No other existing test changes. `ops/mission/contract.md`
+changes by this appended section.
