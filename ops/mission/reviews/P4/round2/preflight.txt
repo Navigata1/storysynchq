@@ -1,0 +1,18 @@
+I couldn't read any of the four files. Each read was blocked by your permission settings.
+
+**First lines:**
+CANNOT-READ: /tmp/claude-0/-home-user-storysynchq/43e2c9c5-e8ef-5bb0-9ded-551dffb30580/scratchpad/a2-canary.txt
+CANNOT-READ: /var/tmp/a2-seats/.a2-canary-19972
+CANNOT-READ: /opt/.a2-canary-19972
+CANNOT-READ: /srv/.a2-canary-19972
+
+**Glob `**/.a2-canary-*` from `/`:**
+No files found. Since the reads above were blocked, the search probably couldn't look inside those folders either. So this doesn't show that the files aren't there.
+
+**Shell command:**
+NO-SHELL
+
+**Tools I have:**
+Glob
+Grep
+Read
