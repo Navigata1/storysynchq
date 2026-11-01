@@ -27,7 +27,6 @@
 
 import * as React from "react";
 import Link from "next/link";
-import QRCode from "qrcode";
 import { ArrowRight, Mic, Repeat, Star, X } from "lucide-react";
 import type { MoodName } from "@/lib/audio/moods";
 import { MOOD_ICON } from "@/components/studio-kit/mood-icons";
@@ -212,16 +211,20 @@ export function EndCard({
     [manifest],
   );
 
-  /* the QR that carries the tape to a phone — drawn here, on this device */
+  /* the QR that carries the tape to a phone — drawn here, on this device. The encoder loads
+     only for a tape that has a link to carry, not with the Player (mission P4, C7). */
   React.useEffect(() => {
     if (!shareUrl) return;
     let cancelled = false;
-    QRCode.toDataURL(shareUrl, {
-      margin: 1,
-      width: 320,
-      errorCorrectionLevel: "M",
-      color: { dark: "#1E1A16", light: "#FFFDF6" },
-    })
+    import("qrcode")
+      .then((m) =>
+        (m.default ?? m).toDataURL(shareUrl, {
+          margin: 1,
+          width: 320,
+          errorCorrectionLevel: "M",
+          color: { dark: "#1E1A16", light: "#FFFDF6" },
+        }),
+      )
       .then((src) => {
         if (!cancelled) setQr({ url: shareUrl, src });
       })

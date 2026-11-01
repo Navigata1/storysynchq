@@ -45,10 +45,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Mic } from "lucide-react";
-import houseTape from "../../../public/demo/brave-little-star.ssync.json";
 import type { MoodName } from "@/lib/audio/moods";
-import type { SsyncManifest } from "@/lib/storysync/manifest";
-import { normalizeTapeManifest } from "@/lib/storysync/tape-source";
 import { BigButton } from "@/components/studio-kit/kit";
 import { MoodTapeChipGroup } from "@/components/studio-kit/MoodTapeChip";
 import { VoiceCassette } from "@/components/studio-kit/VoiceCassette";
@@ -56,7 +53,6 @@ import {
   creatorUrl,
   defaultMood,
   headerPicture,
-  houseTarget,
   readerOf,
   readYouLine,
   targetKey,
@@ -75,15 +71,7 @@ import {
 } from "./known-voices";
 import "./read-it-in.css";
 
-/**
- * The house tape exactly as the Read Room's demo door opens it (the same
- * permissive reader, so its resume key is the same), resolved at build time:
- * no runtime request.
- */
-export const HOUSE_TAPE: SsyncManifest = normalizeTapeManifest(houseTape) ?? (houseTape as unknown as SsyncManifest);
-
-/** The panel's target when it is about the house tape. */
-export const HOUSE_READ_IT_IN = houseTarget(HOUSE_TAPE);
+export { HOUSE_READ_IT_IN, HOUSE_TAPE } from "./house-tape";
 
 /** The voice chosen: the browser voice, a known name ("name:<name>"), or one typed here. */
 type VoiceChoice = "browser" | "new" | `name:${string}`;

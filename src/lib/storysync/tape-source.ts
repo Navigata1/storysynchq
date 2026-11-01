@@ -15,7 +15,6 @@
  * uploads anything; a code is only ever looked up.
  */
 
-import { getSharedBook } from "../cloud-storage";
 import type { SsyncManifest, SsyncPage } from "./manifest";
 
 /** The house tape, served from this app's own /public. */
@@ -89,6 +88,9 @@ export function deviceTapeByCode(code: string): SsyncManifest | null {
 export async function loadTapeByCode(code: string): Promise<SsyncManifest | null> {
   let cloud: SsyncManifest | null = null;
   try {
+    // the library layer loads with the first code it is asked for, not with every page that
+    // can open a tape (mission P4, C7: the demo and a file never need it)
+    const { getSharedBook } = await import("../cloud-storage");
     const book = await getSharedBook(code);
     cloud = book ? normalizeTapeManifest(book.ssyncData) : null;
   } catch {
