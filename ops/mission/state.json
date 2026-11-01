@@ -10,7 +10,7 @@
     "northStar": "The Child Journey (photos, a voice per page, auto music, publish, open the link) runs end to end in a production build and every step is pinned by a test that can fail; Every merge to main crosses the full ladder plus an isolated-seat review round with no open High; Every claim below is reported at the band its evidence reached; a claim this environment cannot check is reported unverified, never proven",
     "status": "active",
     "started": "2026-11-01",
-    "updated": "2026-11-01T11:32:04Z",
+    "updated": "2026-11-01T22:15:07Z",
     "sessionCount": 1
   },
   "policies": {
@@ -335,7 +335,7 @@
           "command": "bash ops/mission/gates/webkit_player.sh",
           "status": "failed",
           "evidence": "ops/mission/evidence/P5-G1-2026-11-01.txt",
-          "lastRun": "2026-11-01T11:32:03Z",
+          "lastRun": "2026-11-01T22:15:06Z",
           "notes": ""
         },
         {
@@ -344,7 +344,7 @@
           "command": "bash ops/mission/gates/aac_publish.sh",
           "status": "failed",
           "evidence": "ops/mission/evidence/P5-G2-2026-11-01.txt",
-          "lastRun": "2026-11-01T11:32:04Z",
+          "lastRun": "2026-11-01T22:15:07Z",
           "notes": ""
         }
       ],
