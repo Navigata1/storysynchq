@@ -798,3 +798,34 @@ deleting the story forgets it everywhere.**
 - Follow-up (P3-R1-03, P3-R2-02): the protocol format table's scroller, like READ THIS, is a
   named region with a Tab stop only while it actually scrolls; both re-measure when a web font
   swaps in, as well as on resize.
+
+## 2026-11-01 · P4 (C7): first-load JavaScript within a reasoned budget
+- Budget (contract A7, judges/js-budget.json): 170 KB gzip for /, /read, /protocol; 250 KB for
+  /studio. Measured by js_measure.mjs on a production build: scripts requested up to load.
+- What moved off first load: the Supabase client (src/lib/supabase-lazy.ts loads `./supabase`
+  on the first cloud call; "is the cloud configured" is read from the public env vars; /classic
+  keeps the direct import), the AAC encoder (imported at publish), the ZIP reader (imported
+  when a .storysync file is opened), and the Player (next/dynamic: /read shows the shelf first;
+  a share link fetches the Player while the tape loads).
+- Before → after: /read 248 → 161 KB, /studio 295 → 232 KB, / 143 → 139 KB, /protocol 167 → 164 KB.
+
+## 2026-11-01 · P4 round 1 (C7): the Player a share link opens is measured, and within budget
+- Correction to the entry above: "a share link fetches the Player while the tape loads" was not
+  true at 509e62f. The Player was a next/dynamic chunk fetched only once the tape was ready (a
+  blank screen meanwhile), the judge never measured it, and with a cloud configured the shelf
+  loaded supabase-js on every visit (P4-R1-01, -02, -04).
+- The judge (contract A9) now measures `/read?demo=1` and `/read?story=<code>` (the cloud
+  answered with the house tape) until the cover shows, on a build with a placeholder cloud
+  project, counting every script the page requests; link prefetch is excluded.
+- A share code resolves over plain PostgREST requests (src/lib/share-lookup.ts: the by-code
+  RPC, then the pre-003 two-step select), as the anonymous visitor supabase-js would be for
+  it. supabase-js loads for the shelf only with a sign-in stored on this device
+  (`sb-<ref>-auth-token`), and for publishing. A failed fetch of it is retried next call and
+  reported as `CloudError("network")`.
+- Every way a tape opens fetches the Player as it starts (`loadPlayer`), the reels stay up if
+  the tape is first, and a Player that cannot be fetched says so with Try again. The end card
+  (and its QR encoder) loads while the last page plays, with a plain end-of-tape fallback; the
+  "Read it in…" panel, the house tape and the tape library load in the room that shows them.
+- Measured: / 140 KB, /read 161, /read?demo=1 165, the share link 168, /protocol 164,
+  /studio 232. The share link has the least headroom (about 2 KB): anything new on the
+  Player's path should be weighed against it.

@@ -80,18 +80,16 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Lock, Play } from "lucide-react";
-import { loadStorysyncToStory } from "@/lib/storysync/container";
 import type { SsyncManifest } from "@/lib/storysync/manifest";
 import { HOUSE_TAPE_URL, loadTapeByCode, normalizeTapeManifest } from "@/lib/storysync/tape-source";
 import { REPLY_QUERY, REPLY_SEED_KEY, replySeed, serializeReplySeed } from "@/lib/storysync/reply";
-import { deleteBook, getBooks, isCloudEnabled } from "@/lib/cloud-storage";
-import { getUser } from "@/lib/supabase";
-import { clearDraft, DRAFT_KEY } from "@/components/studio/draft";
+import { getUser, isSupabaseConfigured as isCloudEnabled } from "@/lib/supabase-lazy";
+import { clearDraft, DRAFT_KEY } from "@/components/studio/draft-key";
 import { BigButton, GlassPanel, Reel, TapeLabel, TAPE } from "@/components/studio-kit/kit";
 import { Shelf, ShelfTape } from "@/components/studio-kit/Shelf";
 import { PullTapeIcon } from "@/components/studio-kit/PrintSlot";
-import { Player, type PlayerPlace } from "./Player";
-import { HOUSE_READ_IT_IN, HOUSE_TAPE, ReadItIn } from "./ReadItIn";
+import dynamic from "next/dynamic";
+import type { PlayerPlace } from "./Player";
 import { sentTarget, shelfTarget, targetLine, type ReadItInTarget } from "./read-it-in";
 import {
   bandLine,
@@ -132,6 +130,95 @@ import { forgetPlaces, placeKeysOfTape, readResume, writeResume } from "./resume
 import "./player.css";
 import "./read-room.css";
 import "./resume.css";
+
+/**
+ * The "Read it in…" panel shows only in the room you pick from (`offersReadItIn`), never on
+ * the way into a tape, so the Player a link opens does not carry it, nor the house tape it
+ * knows by heart (mission P4, C7): the room fetches both when it is the room that shows. If
+ * they cannot be fetched the room shows without the panel (its doors still work), and a
+ * failed fetch is dropped so the next visit tries again.
+ */
+let readItInModule: Promise<typeof import("./ReadItIn")> | null = null;
+function loadReadItIn() {
+  readItInModule ??= import("./ReadItIn").catch((err: unknown) => {
+    readItInModule = null;
+    throw err;
+  });
+  return readItInModule;
+}
+type ReadItInModule = typeof import("./ReadItIn");
+
+/**
+ * The tape library (`cloud-storage`: the shelf's cloud rows, pulling a tape out) is the
+ * room's, not the Player's, so it too is fetched when the room shows (mission P4, C7). A
+ * fetch that fails says so in words, and is tried again next time.
+ */
+let libraryModule: Promise<typeof import("@/lib/cloud-storage")> | null = null;
+function loadLibrary() {
+  libraryModule ??= import("@/lib/cloud-storage").catch(() => {
+    libraryModule = null;
+    throw new Error("This page could not reach its library code. Check the connection.");
+  });
+  return libraryModule;
+}
+
+/**
+ * The Player's code is not part of the room's first load (mission P4, C7): the room is what
+ * /read shows first. Every way a tape opens (a share link, the demo, a file, the shelf) calls
+ * `loadPlayer` as it starts, so the Player downloads while the tape itself does. If the tape
+ * arrives first, the room keeps its threading reels up (`PlayerLoading`) until the Player is
+ * ready. A failed prefetch is dropped, so the open that renders the Player fetches it again;
+ * once that render has settled on `PlayerUnavailable`, the page keeps it (next/dynamic holds
+ * its first result) and its Try again reloads the page.
+ */
+let playerModule: Promise<typeof import("./Player")> | null = null;
+function loadPlayer() {
+  playerModule ??= import("./Player").catch((err: unknown) => {
+    playerModule = null;
+    throw err;
+  });
+  return playerModule;
+}
+
+function PlayerLoading({ failed = false }: { failed?: boolean }) {
+  return (
+    <div className="pl-room">
+      <div className="pl-room-light" aria-hidden="true" />
+      <div className="pl-room-inner">
+        <GlassPanel className="flex flex-col items-center gap-5 px-6 py-14 text-center">
+          <span className="pl-loading-reels" aria-hidden="true">
+            <Reel spinning={!failed} size={34} />
+            <Reel spinning={!failed} size={34} />
+          </span>
+          <p
+            className="m-0 text-[11px] tracking-[0.26em] text-white/55 uppercase"
+            style={{ fontFamily: "var(--font-plex-mono), monospace" }}
+            role={failed ? "alert" : "status"}
+          >
+            {failed ? "The player would not load. Check the connection and try again." : "Threading the tape…"}
+          </p>
+          {failed ? (
+            <BigButton variant="ghost" label="Try again" onClick={() => window.location.reload()} />
+          ) : null}
+        </GlassPanel>
+      </div>
+    </div>
+  );
+}
+
+/** The Player that could not be fetched: say so, and offer the reload that fetches it again. */
+function PlayerUnavailable() {
+  return <PlayerLoading failed />;
+}
+
+const Player = dynamic(
+  () =>
+    loadPlayer().then(
+      (m) => m.Player,
+      () => PlayerUnavailable,
+    ),
+  { ssr: false, loading: () => <PlayerLoading /> },
+);
 
 /** Kraft/manila — the tape someone handed you on a file. */
 const KRAFT_LABEL = "#DFD2B8";
@@ -225,7 +312,7 @@ async function readLibraries(): Promise<{ device: unknown[]; cloud: unknown[] }>
   if (isCloudEnabled()) {
     try {
       const user = await getUser();
-      if (user) cloud = await getBooks(user.id);
+      if (user) cloud = await (await loadLibrary()).getBooks(user.id);
     } catch {
       cloud = [];
     }
@@ -427,6 +514,24 @@ export function ReadRoom() {
    * link or `?demo=1` is about to open its tape (unless that failed).
    */
   const offersReadItIn = (!code && !wantsDemo) || state.kind === "error";
+  /** The panel and the house tape (`loadReadItIn`), once the room that offers it has them. */
+  const [readItInKit, setReadItInKit] = React.useState<ReadItInModule | null>(null);
+  React.useEffect(() => {
+    if (!offersReadItIn) return;
+    // the room's own code: pulling a tape out should not wait on a download
+    void loadLibrary().catch(() => undefined);
+    if (readItInKit) return;
+    let live = true;
+    loadReadItIn().then(
+      (m) => {
+        if (live) setReadItInKit(m);
+      },
+      () => undefined,
+    );
+    return () => {
+      live = false;
+    };
+  }, [offersReadItIn, readItInKit]);
   const selected = shelf.find((item) => item.key === selectedId) ?? null;
   const armed = selected?.kind === "own" && armedId === selected.key;
   /** The selected tape's place, when it has one (T21). */
@@ -436,15 +541,16 @@ export function ReadRoom() {
     return resumePoint(places, key, total);
   }, [selected, places]);
   /** The tape the "Read it in…" panel is about: the selected tape, else the house tape. */
-  const readTarget = React.useMemo<ReadItInTarget>(() => {
-    if (readHouse || !selected) return HOUSE_READ_IT_IN;
+  const readTarget = React.useMemo<ReadItInTarget | null>(() => {
+    if (readHouse || !selected) return readItInKit?.HOUSE_READ_IT_IN ?? null;
     return selected.kind === "sent" ? sentTarget(selected.tape) : shelfTarget(selected.entry);
-  }, [readHouse, selected]);
+  }, [readHouse, selected, readItInKit]);
   /** Where the panel's tape was left (T21), for its header picture. */
   const readResumePage = React.useMemo(() => {
-    if (readTarget.kind !== "house") return resumeAt?.page ?? null;
+    if (readTarget?.kind !== "house" || !readItInKit) return resumeAt?.page ?? null;
+    const { HOUSE_TAPE } = readItInKit;
     return resumePoint(places, tapeKey(HOUSE_TAPE), HOUSE_TAPE.pages.length)?.page ?? null;
-  }, [readTarget, resumeAt, places]);
+  }, [readTarget, resumeAt, places, readItInKit]);
 
   /* ── the link this tape lives at (SSR-safe: read after mount) ─────────── */
   React.useEffect(() => {
@@ -464,6 +570,7 @@ export function ReadRoom() {
     if (!code) return;
     let cancelled = false;
     setState({ kind: "loading", what: "Finding that tape" });
+    void loadPlayer().catch(() => undefined);
     // One resolver for "what tape does this code mean" (the Creator's
     // ?open=<code> asks the same one): the cloud first, then this device.
     void loadTapeByCode(code).then(async (found) => {
@@ -586,7 +693,7 @@ export function ReadRoom() {
       setArmedId(null);
       if (!reduce) setPulling({ id: entry.id, leaving: false });
       try {
-        await deleteBook(entry.id);
+        await (await loadLibrary()).deleteBook(entry.id);
       } catch (error) {
         setPulling(null);
         setStatus({
@@ -635,6 +742,7 @@ export function ReadRoom() {
     (page = 1, startOver = false) => {
       if (!selected || pulling?.id === selected.key) return;
       setArmedId(null);
+      void loadPlayer().catch(() => undefined);
       const chosen: ShelfChoice = { page, startOver };
       if (selected.kind === "sent") {
         // a tape sent to you plays from its link, never from a stored copy
@@ -677,6 +785,7 @@ export function ReadRoom() {
   /* ── the demo tape ────────────────────────────────────────────────────── */
   const openDemo = React.useCallback(async () => {
     setState({ kind: "loading", what: "Threading the demo tape" });
+    void loadPlayer().catch(() => undefined);
     try {
       const response = await fetch(HOUSE_TAPE_URL);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -694,8 +803,11 @@ export function ReadRoom() {
   /* ── a .storysync container from this device ──────────────────────────── */
   const openFile = React.useCallback(async (file: File) => {
     setState({ kind: "loading", what: "Unwinding the tape" });
+    void loadPlayer().catch(() => undefined);
     try {
       const bytes = new Uint8Array(await file.arrayBuffer());
+      // the ZIP reader (fflate) loads when a file is opened, not with the room (mission P4, C7)
+      const { loadStorysyncToStory } = await import("@/lib/storysync/container");
       const manifest = loadStorysyncToStory(bytes);
       setState({ kind: "ready", manifest, origin: "file", ...placeFor(manifest, tapeKey(manifest)) });
     } catch (error) {
@@ -1124,7 +1236,7 @@ export function ReadRoom() {
                       />
                       {/* which tape this door is about, for a screen reader (the band's door names its tape the same way) */}
                       <span id="rin-house-target" className="sr-only">
-                        {targetLine(HOUSE_READ_IT_IN)}
+                        {readItInKit ? targetLine(readItInKit.HOUSE_READ_IT_IN) : null}
                       </span>
                     </div>
                   ) : null}
@@ -1151,8 +1263,8 @@ export function ReadRoom() {
               </div>
 
               {/* ──────────────────────────────────────── READ IT IN… (T22a) */}
-              {offersReadItIn ? (
-                <ReadItIn
+              {offersReadItIn && readItInKit && readTarget ? (
+                <readItInKit.ReadItIn
                   target={readTarget}
                   shelf={shelf}
                   resumePage={readResumePage}

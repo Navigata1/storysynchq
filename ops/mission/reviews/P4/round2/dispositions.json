@@ -1,0 +1,18 @@
+{
+  "reviewedHead": "fef3a0b97b098fbfd5c9fe873c926c930e99e6d9",
+  "base": "969eb13c19c6567bf96726e85eab25c2bef0a636",
+  "findings": [
+    {
+      "id": "P4-R2-01",
+      "severity": "medium",
+      "status": "fixed",
+      "note": "6bc9d9c (contract A11): tests/share-rest.spec.ts drives restShareClient through a PostgREST-shaped fake fetch: the RPC URL, method, anon-key headers and body; 404 PGRST202 falling back to the exact selects (their query strings); no link leaving the stories table unasked; two rows refused (PGRST116); 401 as an auth CloudError; a 500 not falling back; a non-JSON 503 body failing with its status; a fetch TypeError as a network CloudError; a found row opening as a book. 20 pass; with the HTTP status mapping broken, the 401 test fails."
+    },
+    {
+      "id": "P4-R2-02",
+      "severity": "low",
+      "status": "fixed",
+      "note": "d31f769: the end card and Player comments say a failed prefetch is retried by the render that needs it, and that once next/dynamic settles on the fallback the page keeps it (the Player's Try again reloads; the end card's fallback stays until reload)."
+    }
+  ]
+}

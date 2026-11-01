@@ -17,7 +17,9 @@ import { sanitizePageMoods } from "./page-moods";
 import type { ReplyRecord, StudioState } from "./types";
 import { blankState, pageHasContent } from "./types";
 
-export const DRAFT_KEY = "ssync-studio-draft";
+import { clearDraft, DRAFT_KEY } from "./draft-key";
+
+export { clearDraft, DRAFT_KEY } from "./draft-key";
 const DRAFT_VERSION = 1;
 
 interface DraftEnvelope {
@@ -109,14 +111,5 @@ export function saveDraft(state: StudioState): SaveOutcome {
     const name = err instanceof DOMException ? err.name : "";
     if (name === "QuotaExceededError" || name === "NS_ERROR_DOM_QUOTA_REACHED") return "quota";
     return "unavailable";
-  }
-}
-
-export function clearDraft(): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.removeItem(DRAFT_KEY);
-  } catch {
-    /* nothing we can do; the in-memory story is already gone */
   }
 }

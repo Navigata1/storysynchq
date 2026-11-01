@@ -1,0 +1,35 @@
+$ python3 -m unittest ops/mission/gates/test_gates.py
+exit 0
+--- stdout ---
+
+--- stderr ---
+..127.0.0.1 - - [01/Nov/2026 06:48:56] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [01/Nov/2026 06:48:56] "GET /read HTTP/1.1" 301 -
+127.0.0.1 - - [01/Nov/2026 06:48:56] "GET /read/ HTTP/1.1" 200 -
+127.0.0.1 - - [01/Nov/2026 06:48:56] code 404, message File not found
+127.0.0.1 - - [01/Nov/2026 06:48:56] "GET /demo/brave-little-star.ssync.json HTTP/1.1" 404 -
+./usr/lib/python3.11/unittest/suite.py:107: ResourceWarning: unclosed <socket.socket fd=3, family=2, type=1, proto=0, laddr=('127.0.0.1', 39477)>
+  for index, test in enumerate(self):
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+127.0.0.1 - - [01/Nov/2026 06:48:56] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [01/Nov/2026 06:48:56] "GET /read HTTP/1.1" 301 -
+127.0.0.1 - - [01/Nov/2026 06:48:56] "GET /read/ HTTP/1.1" 200 -
+127.0.0.1 - - [01/Nov/2026 06:48:56] "GET /demo/brave-little-star.ssync.json HTTP/1.1" 200 -
+./usr/lib/python3.11/unittest/suite.py:107: ResourceWarning: unclosed <socket.socket fd=3, family=2, type=1, proto=0, laddr=('127.0.0.1', 41231)>
+  for index, test in enumerate(self):
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+127.0.0.1 - - [01/Nov/2026 06:48:57] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [01/Nov/2026 06:48:57] "GET /read HTTP/1.1" 301 -
+127.0.0.1 - - [01/Nov/2026 06:48:57] "GET /read/ HTTP/1.1" 200 -
+127.0.0.1 - - [01/Nov/2026 06:48:57] "GET /demo/brave-little-star.ssync.json HTTP/1.1" 200 -
+./usr/lib/python3.11/unittest/suite.py:107: ResourceWarning: unclosed <socket.socket fd=3, family=2, type=1, proto=0, laddr=('127.0.0.1', 37583)>
+  for index, test in enumerate(self):
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+./usr/lib/python3.11/unittest/suite.py:84: ResourceWarning: unclosed <socket.socket fd=3, family=2, type=1, proto=0, laddr=('127.0.0.1', 46363)>
+  return self.run(*args, **kwds)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+.................................................................................
+----------------------------------------------------------------------
+Ran 87 tests in 19.496s
+
+OK

@@ -791,3 +791,36 @@ class Registered(unittest.TestCase):
     def test_missing_dependency_fails(self):
         self.write(["playwright.config.ts", "tests/a.spec.ts", "tests/fixtures"])
         self.assertIn("dependencies not in ROOTSUMS", self.check().stdout)
+
+
+class JsBudget(unittest.TestCase):
+    """js_budget.py: every budgeted route measured and within its frozen budget (C7)."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def check(self, measured):
+        f = Path(self.tmp.name) / "m.json"
+        f.write_text(json.dumps(measured))
+        env = {**os.environ, "A2_JS_MEASURED": str(f)}
+        return subprocess.run([sys.executable, str(GATES / "js_budget.py")], capture_output=True, text=True, env=env)
+
+    def ok(self):
+        return {r: {"gzipBytes": 1000, "top": []} for r in ("/", "/read", "/read?demo=1", "/read?story=a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2", "/protocol", "/studio")}
+
+    def test_within_budget_passes(self):
+        r = self.check(self.ok())
+        self.assertEqual(r.returncode, 0, r.stdout)
+
+    def test_over_budget_fails(self):
+        m = self.ok()
+        m["/read"]["gzipBytes"] = 10**6
+        self.assertIn("/read loads", self.check(m).stdout)
+
+    def test_unmeasured_route_fails(self):
+        m = self.ok()
+        del m["/studio"]
+        self.assertIn("/studio was not measured", self.check(m).stdout)

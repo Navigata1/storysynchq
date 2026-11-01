@@ -74,11 +74,47 @@ import {
   type ViewerChoices,
 } from "./prefs";
 import { useSpread } from "./useSpread";
-import { EndCard } from "./EndCard";
+import dynamic from "next/dynamic";
 import "./player.css";
 import "./spread.css";
 import "./deck.css";
 import "./resume.css";
+
+/**
+ * The end card is not part of the Player's first load (mission P4, C7): it is fetched while
+ * the last page plays (`loadEndCard`), so it is there when the tape ends. A failed prefetch
+ * is dropped, so the end of the tape fetches it again; if that fails too, the tape ends on
+ * `EndCardUnavailable`, which this page then keeps (next/dynamic holds its first result) until
+ * it is reloaded.
+ */
+let endCardModule: Promise<typeof import("./EndCard")> | null = null;
+function loadEndCard() {
+  endCardModule ??= import("./EndCard").catch((err: unknown) => {
+    endCardModule = null;
+    throw err;
+  });
+  return endCardModule;
+}
+/** If the end card could not be fetched, the tape still ends with its two ways on. */
+function EndCardUnavailable({ onReplay, onExit }: { onReplay: () => void; onExit?: () => void }) {
+  return (
+    <div className="pl-end" data-pl="end-unavailable" role="dialog" aria-modal="true" aria-label="The end" tabIndex={-1}>
+      <div className="pl-end-inner flex flex-col items-center gap-4 text-center">
+        <p className="m-0 text-white/80">The end. (The end card would not load.)</p>
+        <BigButton variant="gold" label="Play it again" onClick={onReplay} autoFocus />
+        {onExit ? <BigButton variant="ghost" label="Leave the story" onClick={onExit} /> : null}
+      </div>
+    </div>
+  );
+}
+const EndCard = dynamic(
+  () =>
+    loadEndCard().then(
+      (m) => m.EndCard,
+      () => EndCardUnavailable,
+    ),
+  { ssr: false },
+);
 
 /* ────────────────────────────────────────────────────────────── constants */
 
@@ -782,6 +818,11 @@ export function Player({
     focusStageRef.current = false;
     stageRef.current?.focus({ preventScroll: true });
   }, [ended]);
+
+  /* the last page is playing (or the reader jumped there): fetch the end card now */
+  React.useEffect(() => {
+    if (started && index >= total - 1) void loadEndCard().catch(() => undefined);
+  }, [started, index, total]);
 
   /* "Send a thank-you back": the room falls silent, then the Creator opens. */
   const reply = React.useMemo(

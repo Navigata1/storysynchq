@@ -222,3 +222,62 @@ P3's review (P3-R2-03) found the frozen C6 text in `ops/mission/idea.lock.json` 
 (/, /read and the Player, /studio, /protocol) and states /classic out of scope, so no report of
 C6 can claim more than `tests/a2-a11y.spec.ts` checks. `ops/mission/contract.md` changes by this
 appended section.
+
+### A7 · 2026-11-01 · C7's budget, and P3's deferred comment fix
+
+C7's per-route first-load JavaScript budget is registered in `ops/mission/judges/js-budget.json`
+with its judge `ops/mission/gates/js_budget.py` (measuring with `ops/mission/gates/js_measure.mjs`
+on a production build of HEAD), before P4's first `src/` change, as section 6 requires. The
+budget is reasoned, not measured: 170 KB gzip for every page a newcomer or a grandparent opens
+(/, /read, /protocol), the common first-load budget for a mid-range phone on a slow connection;
+250 KB for /studio, an authoring tool opened on purpose. At this head /read loads 248 KB and
+/studio 295 KB, so both are over; P4 brings them under and may not raise the budget.
+
+P3-R3-01: the header prose of `tests/vision-read-this.spec.ts` and `tests/a2-a11y.spec.ts` now
+says what their assertions check (READ THIS focusable only while its words overflow, an ink-red
+label; C6 on every product route). Comments only. `ops/mission/contract.md` changes by this
+appended section.
+
+### A8 · 2026-11-01 · The judges' own fixtures for C7
+
+`ops/mission/gates/test_gates.py` gains three fixtures for `js_budget.py` (within, over,
+unmeasured), part of registering C7's judge (A7). Fixtures only: no existing fixture changes.
+`ops/mission/contract.md` changes by this appended section.
+
+### A9 · 2026-11-01 · P4 round 1: C7's judge measures the Player and a configured build
+
+The P4 round 1 review found C7's judge blind in two places: the Player a share link opens
+is a lazy chunk `/read` alone never loads (P4-R1-01), and the measured build had no cloud
+configured, so the Supabase client production loads was never counted (P4-R1-04).
+`ops/mission/gates/js_measure.mjs` now measures the Player two ways, `/read?demo=1` (the
+landing's Press play) and `/read?story=<code>` (a share link, the cloud it asks answered with
+the house tape), each until its cover shows; waits for the network to settle on every route;
+and counts every same-origin script the page requested. Code a page fetches for pages it
+links to is not its first load, so router prefetches are aborted and the measuring browser has
+no IntersectionObserver (what starts Next's prefetch of links on screen; in this app it
+otherwise only plays the landing's reveal animations, which then show at once).
+`ops/mission/judges/js-budget.json` adds both Player routes at the 170 KB budget; no budget
+changes. `ops/mission/gates/js_budget.py` builds with a placeholder cloud project (no real URL
+or key; nothing real is ever asked). `ops/mission/gates/test_gates.py` adds the routes to its
+within-budget fixture. `ops/mission/contract.md` changes by this appended section.
+
+### A10 · 2026-11-01 · P4 round 1: the share-lookup judge reads where the lookup now lives
+
+P4's fix for P4-R1-01 moves the by-code share lookup out of `src/lib/supabase.ts` into
+`src/lib/share-lookup.ts`, so a share link opens without supabase-js; `supabase.ts` re-exports
+it. `tests/share-lookup.spec.ts`'s "the shared read goes through the by-code function first"
+read only `supabase.ts`. It now requires the `storybook_by_share_code` call in
+`share-lookup.ts` and still allows exactly that one RPC across both files. No other test in the
+file changes; its scans of every file under `src/` already cover the new module.
+`ops/mission/contract.md` changes by this appended section.
+
+### A11 · 2026-11-01 · P4 round 2: the REST share client gets its own tests
+
+P4-R2-01 found `restShareClient` (`src/lib/share-lookup.ts`), the path every production share
+link now resolves through, covered by no test. `tests/share-rest.spec.ts` is new and Node-side:
+with `fetch` replaced by a recorder answering like PostgREST, it pins the by-code RPC request
+(URL, method, anon-key headers, body), the 404 PGRST202 fallback to the exact selects, a
+missing link not reaching the stories table, two rows refused, a 401 kept as an auth
+CloudError, an other RPC failure not falling back, a non-JSON error body failing with its
+status, a network TypeError as a network CloudError, and a found row opening as a book. No
+existing test changes. `ops/mission/contract.md` changes by this appended section.

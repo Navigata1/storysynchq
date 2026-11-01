@@ -8,9 +8,10 @@
 // speech alignment), so the card is a teleprompter, never a read-along.
 //
 //   card     · while a take records with Voice open, above Stop: the page's
-//              words verbatim on paper, a labelled note, never focusable
+//              words verbatim on paper, a labelled note; focusable only while
+//              its words overflow (then one Tab stop, a named region; A4)
 //   look     · paper, 3 px ink border, radius 14, padding 14; label mono
-//              10.5 px tape-red; words Fraunces 600, 22 px (fluid to 28 on a
+//              10.5 px ink-red (A4; the dot stays tape-red); words Fraunces 600, 22 px (fluid to 28 on a
 //              wide sheet), line-height 1.35, ink
 //   still    · no highlight, one colour, nothing moves or changes in the take
 //   absent   · not recording, or recording a page with no words
