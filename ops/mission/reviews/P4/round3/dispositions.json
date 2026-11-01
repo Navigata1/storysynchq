@@ -1,0 +1,12 @@
+{
+  "reviewedHead": "95aa72c64677fceeb7f095f0e5bee4f35bcefd06",
+  "base": "969eb13c19c6567bf96726e85eab25c2bef0a636",
+  "findings": [
+    {
+      "id": "P4-R3-01",
+      "severity": "low",
+      "status": "deferred",
+      "reason": "Raised in P4's last round, so no code may change for it here. Deferred to P5 as its first change: the device-library sweep moves into a small module the Read Room imports directly (as draft-key.ts does for drafts) and runs before the library chunk is awaited, so a pulled-out tape leaves this device even offline; a test covers the offline case. Until then the failure is reported to the parent and a retry once online deletes every copy."
+    }
+  ]
+}
