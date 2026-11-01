@@ -1,0 +1,12 @@
+{
+  "reviewedHead": "69e9b71c566379543c5de1fd18282fade50e7ee3",
+  "base": "5b71bd1d2bb9ce99b76c282c1e2fecf9fde04677",
+  "findings": [
+    {
+      "id": "P3-R3-01",
+      "severity": "low",
+      "status": "deferred",
+      "reason": "Last round of P3 (3 of 3): no code may change after its reviewed head. Real but comment-only: T19's header prose ('never focusable', 'tape-red label') and a2-a11y's first line ('every route') lag the assertions, which are correct. Both specs are registered, so the wording rides the next phase's PR (P4) under a named amendment."
+    }
+  ]
+}
