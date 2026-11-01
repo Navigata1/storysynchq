@@ -1,10 +1,17 @@
 {
+  "note": "C3b and C4 (S1b K46): the count alone could be met by two C4 tests, so the anonymous-listing refusal is required by exact test key, one per table that holds a child's data. tests/a2-cloud.spec.ts must use these describe and test titles.",
   "projects": [
     "desktop"
   ],
   "families": {
     "a2-cloud": {
-      "desktop": 2
+      "desktop": 5
     }
-  }
+  },
+  "mustPass": [
+    "desktop › a2-cloud.spec.ts › anon listing refused › storybooks",
+    "desktop › a2-cloud.spec.ts › anon listing refused › shared_links",
+    "desktop › a2-cloud.spec.ts › anon listing refused › page_media",
+    "desktop › a2-cloud.spec.ts › cloud link › a published link opens in a fresh context with no account"
+  ]
 }

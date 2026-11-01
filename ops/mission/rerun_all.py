@@ -3,8 +3,10 @@
 
 Runs each phase except the close phase through run_phase.py, so every gate runs fresh at
 HEAD and a phase-run event lands in the ledger; derive_bundle.py then reads those runs. Exit
-0 only if every phase passes. A phase that waits on the human (P1, P5) is expected to fail
-here and is reported at its band, not hidden.
+0 only if every phase passes. A phase that waits on the human or on an engine this machine
+lacks (P1, P5) exits 77 per gate here and is reported unverified, not hidden. Merged phases'
+review gates still pass at the final head: review_closed.py judges after-review drift only up
+to the head of the PR that merged the phase (S1b K47).
 
 Usage: python3 ops/mission/rerun_all.py
 """

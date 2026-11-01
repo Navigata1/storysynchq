@@ -65,14 +65,35 @@ product changed. `protocol/` outside `a2/` is vendored upstream and not counted.
 
 ## 5. What is enforced, and what is advisory
 
-Enforced by a check the lead cannot satisfy by writing a file: GitHub's own records, read
-by `merged_scan.py` (which PRs merged, their heads, merge commits, and the `verify`
-check-run), the build and test results of each gate run, and the registered sha256s.
-**Advisory** (they guard against accident, not against the lead, S1b K34): the review
-records under `reviews/` and the ledger are files the lead writes and could rewrite whole;
-their hashes prove internal consistency only. The seat has Read, Grep, Glob and Bash inside
-its clone; reads outside the clone are denied and proven absent by the canary (S1b K39). The
-human attestations below are advisory too.
+**Enforced** means a check the lead cannot satisfy by writing a file, because GitHub runs it or
+GitHub keeps the record (S1b K34, K42):
+- the `verify` job of `.github/workflows/ci.yml`, run by GitHub on every PR head: tsc, lint,
+  build, the suite on desktop and mobile, `registered.py` (every judge matches its registered
+  sha256), the judges' own fixtures, and `frozen.py`, which compares the PR's `SHA256SUMS` and
+  `ROOTSUMS` with the base branch's and fails on any changed or removed entry that the same
+  PR's diff of this file does not name in an added line. So a registered judge (the gates,
+  the judge data, every `tests/*.spec.ts` and `tests/fixtures/**`, `playwright.config.ts`)
+  changes inside a PR only with an amendment here that names it;
+- GitHub's merge records, read by `merged_scan.py`: which PRs merged, their heads, merge
+  commits, and the `verify` check-run's conclusion.
+
+**Advisory** (it guards against accident, not against the lead): everything that runs only on
+the lead's machine. The review records under `reviews/`, the ledger and its phase-runs, the
+evidence files and the bundle are files the lead writes and could rewrite whole; their hashes
+prove internal consistency only. A local gate run is recomputable by anyone who reruns it at
+the same head, and is reported as such, but that it ran is the lead's record. Claims whose
+answer rests on a record nobody can recompute are marked `attested` in `claims.json` and held
+at unverified in the headline band (S1b K43).
+
+The review seat (A1) has Read, Grep and Glob only. Bash, the web tools and every write tool
+are disallowed, so it can run no command, reach no network and write nothing; its clone has
+no git remote, and the diff and log it needs are written into the clone as `.a2-review/`
+(S1b K39, K41). Reads outside the clone are denied, and the canary preflight (decoys in the
+lead's scratchpad, `/var/tmp/a2-seats`, `/opt` and `/srv`, read, globbed and tried through a
+shell) proves them absent; `seat.json` records the tool lists the seat ran with. The seat
+still runs as the lead's own user on the same machine; a separate uid or a namespace sandbox
+is not available here, so that residue is stated, not hidden. The human attestations below
+are advisory too.
 
 ## 5a. Human attestations (advisory)
 
@@ -100,6 +121,12 @@ never posts an A2-ATTEST line. The second half is discipline, so every hitl gate
 The locks, the judges and this contract were reworked before kickoff by the dispositions of
 the blind plan critic's rounds in `ops/mission/plan-readiness.md`; this is the text they
 produced. From kickoff on, this file changes only by amendment.
+
+Stated deviation (S1b K48): C1's own judge, `tests/a2-journey.spec.ts` (the whole Child
+Journey in one flow, required by exact key in `judges/required.json`), was written after
+PR #6's M7 product fixes, not before them. P0 therefore has no `judges/order.json` entry: the
+order rule cannot hold for P0 and is not claimed to. Every later phase registers its judges
+before its first `src/` change.
 
 ### A1 · 2026-10-31 · The review seat is an isolated Claude session
 

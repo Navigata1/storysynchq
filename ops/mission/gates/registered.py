@@ -5,11 +5,14 @@ judge is unregistered (S1 critic K7, K11, K16).
 Two sums files, both written and verified through protocol/a2/scripts/sums.py's one parser:
   ops/mission/SHA256SUMS   rooted at ops/mission: locks, claims map, contract, judges, seat
   ops/mission/ROOTSUMS     rooted at the repo: what the judges depend on outside ops/mission
-                           (playwright.config.ts, sums.py, loop.py, dogfood_lanes.py) and every
-                           tests/a2-*.spec.ts judge, registered before its phase's first fix
+                           (playwright.config.ts, sums.py, loop.py, dogfood_lanes.py), every
+                           tests/*.spec.ts and every file under tests/fixtures/ (S1b K42: the
+                           existing suite is C1-C3's judge too)
 Completeness: every file under ops/mission/gates/ and ops/mission/judges/, every top-level
-ops/mission/*.py and *.sh, and every tests/a2-*.spec.ts must be listed in one of them, and the
-four dependencies above must be in ROOTSUMS. An unregistered judge fails.
+ops/mission/*.py and *.sh, every tests/*.spec.ts and every file under tests/fixtures/ must be
+listed in one of them, and the four dependencies above must be in ROOTSUMS. An unregistered
+judge fails. Changing a registered file inside a PR needs a contract amendment naming it, which
+frozen.py checks in GitHub's CI (contract section 5).
 
 Usage: python3 ops/mission/gates/registered.py
 """
@@ -38,7 +41,8 @@ def main():
     must = {str(p) for d in ("gates", "judges") for p in (MISSION / d).rglob("*")
             if p.is_file() and "__pycache__" not in p.parts}
     must |= {str(p) for pat in ("*.py", "*.sh") for p in MISSION.glob(pat)}
-    must |= {str(p) for p in Path("tests").glob("a2-*.spec.ts")}
+    must |= {str(p) for p in Path("tests").glob("*.spec.ts")}
+    must |= {str(p) for p in Path("tests/fixtures").rglob("*") if p.is_file()}
     missing = sorted(must - registered - EXEMPT)
     if missing:
         problems.append(f"unregistered: {missing}")

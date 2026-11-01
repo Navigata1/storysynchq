@@ -8,4 +8,5 @@ cd "$(git rev-parse --show-toplevel)"
 J=ops/mission/judges
 CHECK="--skips $J/e2e-skips.txt --present $J/e2e-present.txt --required $J/required.json"
 for extra in "$@"; do CHECK="$CHECK --required $extra"; done
-exec bash ops/mission/gates/judged.sh "$CHECK"
+# desktop and mobile only, as CI runs them: a webkit project (P5) must not enter this gate (S1b K45)
+exec bash ops/mission/gates/judged.sh "$CHECK" --project=desktop --project=mobile

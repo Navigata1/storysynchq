@@ -98,3 +98,29 @@ merges skipped), K17 (no a2 family frozen). New: K25 (high), K26-K34 (medium), K
 | K40 | low | **accepted** | `judges/order.json` names each phase's judges; review_closed requires each to be registered in a commit before every src/ change in the phase's range (fixtures for both orders). |
 
 55 fixtures pass.
+
+### Round 2 · head 4ce0f22 · verdict amend
+
+Confirmed: K15, K17, K25-K33, K35-K38, K40. Rejected: K34 and K39 (the advisory relabel did not
+match what the lead can rewrite, and the seat had Bash). New: K42 (high), K41 and K43-K48
+(medium), K49-K51 (low).
+
+| id | sev | disposition | what changed |
+|---|---|---|---|
+| K42 | high | **accepted** | frozen.py runs in GitHub's verify job and compares the PR's sums with the base branch's; a changed or removed entry needs an added contract line naming it. tests/*.spec.ts and tests/fixtures/** are registered in ROOTSUMS, and registered.py requires them. Contract section 5 now names exactly what is enforced (GitHub-run CI and GitHub's merge records) and calls everything local advisory. |
+| K41 | medium | **accepted** | The seat has Read, Grep and Glob only (Bash, web and write tools disallowed); its clone's remote is removed; diff and log are written into .a2-review/; proxy and GitHub token variables are unset for it; the preflight also tries a shell; seat.json records both tool lists. A separate uid or namespace sandbox is not available here, and contract section 5 says so. |
+| K43 | medium | **accepted** | claims.json gives every claim a provenance (C3b and C9 attested); the bundle carries it; band.py computes the band twice and the headline holds attested claims at unverified. governance.md must declare both bands. Fixtures for both. |
+| K44 | medium | **accepted** | derive_bundle reads every run of a proving gate at HEAD (a2lib.gate_exits_history): any exit other than 0 or 77 falsifies the claim, even after a green rerun. Red-then-green fixture. |
+| K45 | medium | **accepted** | e2e_prod.sh and ci.yml run --project=desktop --project=mobile. The webkit project exists only under A2_WEBKIT=1 (webkit_player.sh sets it). playwright.config.ts collects a2-cloud only under A2_CLOUD_E2E=1 and a2-aac only under A2_AAC=1 (aac_publish.sh sets it), so the full suite carries no unregistered skip. |
+| K46 | medium | **accepted** | review_closed applies the order rule to every judge in order.json, whichever phase owns it, that is registered within the reviewed range; a phase's own judge must be registered there. required-P1-cloud.json names, by exact key, the anon-listing refusal test for storybooks, shared_links and page_media and the C4 link test (e2e_check 'mustPass'). Fixtures for both. |
+| K47 | medium | **accepted** | seat.sh records base and mainAtReview in seat.json; review_closed checks base = merge-base(mainAtReview, head) with mainAtReview in main's history, and once the phase has merged judges after-review drift only up to the head of the PR that merged it. Fixtures: merged phase with later work passes; unmerged drift still fails; mainAtReview off main fails. |
+| K48 | medium | **accepted** | tests/a2-journey.spec.ts runs the whole journey in one flow on both projects: pictures through the file input and Snap the next drawing, a take on every page from a Chrome-like recorder (Opus/WebM label, real tone), auto music, the gate with consent, publish (narration normalized to WAV here), the link opened and played through to the end card with no key pressed and narration heard on every page. required.json requires it by exact key. It was written after PR #6's M7 fixes; contract A0 states that deviation. |
+| K49 | low | **accepted** | gates/deployed.py (P6-G9, claim C10, checked live) fetches production, compares ssync-build with main's tip and loads /read and the demo tape; exit 77 when the network is denied (as here). Fixtures with a local server. |
+| K50 | low | **accepted** | C9's text now says the close PR's own merge is scanned after it lands and reported in its thread as an advisory record. |
+| K51 | low | **accepted** | hitl.py exits 77 when GitHub cannot be read; fixture with a failing gh. |
+| K34 | medium | **accepted** | Rejected by round 2; repaired with K42: contract section 5 rewritten (enforced = GitHub-run CI including frozen.py, and GitHub's merge records; everything local advisory). |
+| K39 | low | **accepted** | Rejected by round 2; repaired with K41: the seat no longer has Bash, and section 5 describes the seat as it now runs. |
+
+76 fixtures pass. The process budget stays over its 40% line, as recorded above: this round's
+changes are all mission judges, plus one product-facing test (the journey) and env-gated
+projects in playwright.config.ts.

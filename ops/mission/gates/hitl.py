@@ -33,8 +33,9 @@ def comments():
     r = subprocess.run(["gh", "api", "--paginate", f"repos/{REPO}/issues/comments?per_page=100"],
                        capture_output=True, text=True)
     if r.returncode != 0:
-        print(f"[FAIL] cannot read GitHub comments: {r.stderr.strip()[:200]}")
-        sys.exit(1)
+        # cannot run here, not a failure: an unreadable GitHub leaves C3b unverified (S1b K51)
+        print(f"[CANNOT RUN] cannot read GitHub comments: {r.stderr.strip()[:200]}")
+        sys.exit(77)
     out = []
     for chunk in r.stdout.replace("][", "]\n[").splitlines():
         if chunk.strip():

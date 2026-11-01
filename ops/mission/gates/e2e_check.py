@@ -12,7 +12,9 @@ Fails unless:
 Usage: python3 ops/mission/gates/e2e_check.py report.json [--required FILE ...] [--skips FILE] [--present FILE]
        python3 ops/mission/gates/e2e_check.py report.json --list-skips | --list-passed
   --required  family minimums (default judges/required.json); several files merge. A family
-              maps to a number (each project) or to {project: minimum} (S1b K25).
+              maps to a number (each project) or to {project: minimum} (S1b K25). A file may
+              also list "mustPass": exact test keys that must each pass, so a judge cannot meet
+              its count with the wrong tests (S1b K46).
   --skips     allow-listed skips; without it, any skip fails (S1b K32).
   --present   registered test keys that must each pass or be an allowed skip, so a deleted or
               renamed test fails the gate (S1b K26).
@@ -70,6 +72,9 @@ def main():
                 n = sum(1 for p, f, t, s in rows if f.startswith(fam) and p == proj and s in ("expected", "flaky"))
                 if n < need:
                     problems.append(f"family {fam!r} on {proj}: {n} passing, needs {need}")
+        missing = [k for k in req.get("mustPass", []) if k not in passed_keys]
+        if missing:
+            problems.append(f"{len(missing)} required test(s) did not pass: {missing[:5]}")
     skip_file = opt("--skips")
     allowed = set(Path(skip_file).read_text().splitlines()) if skip_file else set()
     stray = [k for k in skips if k not in allowed]

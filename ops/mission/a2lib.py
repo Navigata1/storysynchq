@@ -62,3 +62,14 @@ def latest_gate_exits(at_head):
         if e["head"] == at_head:
             latest[e["phase"]] = e
     return {g["id"]: g["exit"] for e in latest.values() for g in e["gates"]}
+
+
+def gate_exits_history(at_head):
+    """{gate id: [every exit recorded for it at at_head, oldest first]} (S1b K44: a red run at a
+    head is never erased by a rerun there; a repair is a new commit, so a new head)."""
+    out = {}
+    for e in phase_runs():
+        if e["head"] == at_head:
+            for g in e["gates"]:
+                out.setdefault(g["id"], []).append(g["exit"])
+    return out

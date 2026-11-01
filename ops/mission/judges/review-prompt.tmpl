@@ -1,11 +1,14 @@
 You are reviewing StorySyncHQ at head {HEAD}, from a detached checkout, as the review seat
 for phase {PHASE}, round {ROUND} of at most 3. You are an isolated session: you do not see
-the builder's reasoning and should not look for it. Your checkout is read-only.
+the builder's reasoning and should not look for it. Your checkout is read-only, and your tools
+are Read, Grep and Glob: you cannot run commands, git included.
 
 Read ops/mission/contract.md section 3 (the frozen threat model and severities),
 ops/mission/plan.lock.json (phase {PHASE}: its goal and gates), ops/mission/idea.lock.json,
-and CLAUDE.md. The change under review is `git diff {BASE}..{HEAD}`; read every file it
-touches, and whatever those files depend on that you need.
+and CLAUDE.md. The change under review is `git diff {BASE}..{HEAD}`, written for you into the
+checkout as .a2-review/diff.patch, with its commits (`git log {BASE}..{HEAD}`, oldest last) in
+.a2-review/log.txt; read the diff, every file it touches at this head, and whatever those files
+depend on that you need.
 
 ## The threat model, frozen for this round
 Defects a user would meet in the Child Journey (create, record, music, parental gate,

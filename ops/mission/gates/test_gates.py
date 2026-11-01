@@ -39,9 +39,11 @@ class ReviewClosed(unittest.TestCase):
         (self.root / "ops/mission/judges/review-prompt.tmpl").write_text("review {PHASE} r{ROUND} at {HEAD} from {BASE}; prior {PRIOR}\n")
         git(self.root, "add", ".")
         git(self.root, "commit", "-qm", "code")
-        self.head = git(self.root, "rev-parse", "HEAD")
         git(self.root, "branch", "mainline")
-        self.base = self.head
+        self.base = git(self.root, "rev-parse", "HEAD")
+        (self.root / "src.txt").write_text("the phase's work\n")
+        git(self.root, "commit", "-qam", "phase work")
+        self.head = git(self.root, "rev-parse", "HEAD")
 
     def tearDown(self):
         self.tmp.cleanup()
@@ -60,7 +62,8 @@ class ReviewClosed(unittest.TestCase):
         block = {"verdict": verdict, "prior": prior or {}, "filesRead": list(files), "findings": list(seat_findings)}
         text = "review text\n```json\n" + json.dumps(block) + "\n```\n"
         (d / "transcript.md").write_text(text)
-        seat = {"head": seat_head or self.head, "canaryAbsent": canary,
+        seat = {"head": seat_head or self.head, "canaryAbsent": canary, "base": self.base,
+                "mainAtReview": git(self.root, "rev-parse", "mainline"),
                 "transcriptSha256": hashlib.sha256(text.encode()).hexdigest(), "exit": 0}
         (d / "seat.json").write_text(json.dumps(seat))
         if tamper:
@@ -145,8 +148,7 @@ class ReviewClosed(unittest.TestCase):
         (self.root / "src.txt").write_text("phase work\n")
         git(self.root, "commit", "-qam", "phase work")
         self.head = git(self.root, "rev-parse", "HEAD")
-        self.base = git(self.root, "rev-parse", "HEAD^")  # merge-base is the commit before it, so this is fine...
-        self.round(1, [])
+        self.round(1, [])  # merge-base(main at review, head) is the base: fine...
         self.assertEqual(self.check().returncode, 0, self.check().stdout)
         self.base = self.head  # ...but naming the head itself as base hides the phase's diff
         self.round(1, [])
@@ -223,6 +225,52 @@ class ReviewClosed(unittest.TestCase):
         self.assertFails("outside reviews/")
 
 
+    def test_other_phase_judge_after_fix_fails(self):
+        """S1b K46: a P1 judge registered in P0's range after a src fix fails P0's review gate."""
+        self.judge_setup(register_first=False)
+        (self.root / "ops/mission/judges/order.json").write_text(json.dumps({"P1": ["tests/a2-x.spec.ts"]}))
+        git(self.root, "commit", "-qam", "owner is P1")
+        self.head = git(self.root, "rev-parse", "HEAD")
+        self.round(1, [])
+        self.assertFails("is not after judge")
+
+    def test_other_phase_judge_not_landed_passes(self):
+        (self.root / "ops/mission/judges/order.json").write_text(json.dumps({"P1": ["tests/a2-later.spec.ts"]}))
+        git(self.root, "add", "ops")
+        git(self.root, "commit", "-qm", "order")
+        self.head = git(self.root, "rev-parse", "HEAD")
+        self.round(1, [])
+        r = self.check()
+        self.assertEqual(r.returncode, 0, r.stdout)
+
+    def test_merged_phase_still_closes_after_later_work(self):
+        """S1b K47: after the phase merges, later phases' code does not void its review."""
+        self.round(1, [self.LOW])
+        git(self.root, "add", "ops")
+        git(self.root, "commit", "-qm", "dispositions")
+        pr_head = git(self.root, "rev-parse", "HEAD")
+        git(self.root, "checkout", "-q", "mainline")
+        git(self.root, "merge", "-q", "--no-ff", "-m", "merge P0", pr_head)
+        (self.root / "src.txt").write_text("next phase's work\n")
+        git(self.root, "commit", "-qam", "P2 work")  # on mainline, so main has moved past the merge
+        r = self.check()
+        self.assertEqual(r.returncode, 0, r.stdout)
+
+    def test_unmerged_drift_still_fails_after_main_moves(self):
+        self.round(1, [])
+        (self.root / "src.txt").write_text("changed after review\n")
+        git(self.root, "commit", "-qam", "sneak")
+        self.assertFails("outside reviews/")
+
+    def test_main_at_review_off_main_fails(self):
+        self.round(1, [])
+        d = self.root / "ops/mission/reviews/P0/round1/seat.json"
+        seat = json.loads(d.read_text())
+        seat["mainAtReview"] = "f" * 40
+        d.write_text(json.dumps(seat))
+        self.assertFails("mainAtReview")
+
+
 class Hitl(unittest.TestCase):
     """hitl.py accepts only Navigata1's own A2-ATTEST comment (S1 critic K4)."""
 
@@ -260,6 +308,17 @@ class Hitl(unittest.TestCase):
     def test_lead_footer_with_variant_fails(self):
         r = self.check([self.c("A2-ATTEST cloud-schema\nx\n---\n_Generated with [Claude Code](https://claude.ai/code)_")])
         self.assertIn("footer", r.stdout)
+
+    def test_unreadable_github_cannot_run(self):
+        """S1b K51: gh failing is 'cannot run here' (77), never a falsifying 1."""
+        bindir = Path(self.tmp.name) / "bin"
+        bindir.mkdir()
+        (bindir / "gh").write_text("#!/bin/sh\necho 'network down' >&2\nexit 1\n")
+        (bindir / "gh").chmod(0o755)
+        env = {k: v for k, v in os.environ.items() if k != "A2_HITL_COMMENTS"}
+        env["PATH"] = f"{bindir}:{env['PATH']}"
+        r = subprocess.run([sys.executable, str(GATES / "hitl.py"), "cloud-schema"], capture_output=True, text=True, env=env)
+        self.assertEqual(r.returncode, 77, r.stdout)
 
     def test_tag_not_first_line_fails(self):
         self.assertNotEqual(self.check([self.c("hello\nA2-ATTEST cloud-schema\nx")]).returncode, 0)
@@ -324,6 +383,22 @@ class E2ECheck(unittest.TestCase):
         r = self.report(extra=[{"file": "vision-a.spec.ts", "title": "desk only", "tests": [{"projectName": "mobile", "status": "skipped"}]}])
         self.assertIn("not allowed", r.stdout)
 
+    def test_must_pass_key_missing_fails(self):
+        """S1b K46: a family count met by the wrong tests does not satisfy a named key."""
+        req = self.root / "ops/mission/judges/required.json"
+        d = json.loads(req.read_text())
+        d["mustPass"] = ["desktop › vision-a.spec.ts › anon listing refused › storybooks"]
+        req.write_text(json.dumps(d))
+        self.assertIn("required test(s) did not pass", self.report().stdout)
+
+    def test_must_pass_key_present_passes(self):
+        req = self.root / "ops/mission/judges/required.json"
+        d = json.loads(req.read_text())
+        d["mustPass"] = ["desktop › vision-a.spec.ts › works"]
+        req.write_text(json.dumps(d))
+        r = self.report()
+        self.assertEqual(r.returncode, 0, r.stdout)
+
     def test_registered_test_gone_fails(self):
         (self.root / "present.txt").write_text("desktop › vision-a.spec.ts › works\ndesktop › vision-a.spec.ts › renamed away\n")
         self.args = ("--present", "present.txt")
@@ -349,7 +424,8 @@ class Records(unittest.TestCase):
         other = {"id": "P1", "title": "t", "goal": "g", "gates": [{"id": "P1-G1", "title": "t", "command": "true"}], "evidenceRequired": ["static"]}
         (m / "plan.lock.json").write_text(json.dumps({"phases": [merging, other]}))
         (m / "idea.lock.json").write_text(json.dumps({"definitionOfDone": [{"claim": "C1 · a", "falsifiedBy": "x"}, {"claim": "C2 · b", "falsifiedBy": "y"}]}))
-        (m / "claims.json").write_text(json.dumps({"proves": {"C1": {"gates": ["P0-G1"]}, "C2": {"gates": ["P1-G1"]}}}))
+        (m / "claims.json").write_text(json.dumps({"proves": {"C1": {"gates": ["P0-G1"], "provenance": "recomputable"},
+                                                           "C2": {"gates": ["P1-G1"], "provenance": "attested"}}}))
         (self.root / "f.txt").write_text("x\n")
         git(self.root, "add", "f.txt", "ops")
         git(self.root, "commit", "-qm", "kickoff")
@@ -373,6 +449,17 @@ class Records(unittest.TestCase):
         self.ledger(("P0", self.head, [("P0-G1", 0)]), ("P1", self.head, [("P1-G1", 1)]))
         self.assertEqual(self.bundle(), {"C1": "verified", "C2": "falsified"})
 
+    def test_red_then_green_at_head_is_falsified(self):
+        """S1b K44: a red proving gate at HEAD is not erased by a green rerun at the same head."""
+        self.ledger(("P0", self.head, [("P0-G1", 1)]), ("P0", self.head, [("P0-G1", 0)]))
+        self.assertEqual(self.bundle()["C1"], "falsified")
+
+    def test_bundle_carries_provenance(self):
+        self.ledger(("P0", self.head, [("P0-G1", 0)]))
+        self.bundle()
+        claims = json.loads((self.root / "ops/mission/evidence/bundle.json").read_text())["claims"]
+        self.assertEqual([c["provenance"] for c in claims], ["recomputable", "attested"])
+
     def test_cannot_run_is_unverified(self):
         self.ledger(("P1", self.head, [("P1-G1", 77)]))
         self.assertEqual(self.bundle()["C2"], "unverified")
@@ -388,9 +475,19 @@ class Records(unittest.TestCase):
         r = subprocess.run([sys.executable, str(self.REPO / "ops/mission/derive_bundle.py")], cwd=self.root, capture_output=True, text=True)
         self.assertNotEqual(r.returncode, 0)
 
-    def band(self, declared):
-        (self.root / "ops/mission/governance.md").write_text(f"Band: {declared}/5\n")
+    def band(self, declared, loose=None):
+        (self.root / "ops/mission/governance.md").write_text(
+            f"Band: {declared}/5\nBand counting attested claims: {declared if loose is None else loose}/5\n")
         return subprocess.run([sys.executable, str(self.REPO / "ops/mission/gates/band.py")], cwd=self.root, capture_output=True, text=True)
+
+    def test_attested_claim_held_unverified_in_headline_band(self):
+        """S1b K43: an attested 'verified' does not raise the headline band."""
+        self.ledger(("P0", self.head, [("P0-G1", 0)]), ("P1", self.head, [("P1-G1", 0)]))
+        r = self.band(1, 1)
+        self.assertEqual(r.returncode, 0, r.stdout)
+        strict, loose = r.stdout.split("strict (", 1)[1].split("), ", 1)
+        self.assertIn("unverified claim", strict)      # C2 (attested) held at unverified: cap 3
+        self.assertNotIn("unverified claim", loose)    # counted as derived: no cap
 
     def test_band_must_equal_computed(self):
         self.ledger(("P0", self.head, [("P0-G1", 0)]), ("P1", self.head, [("P1-G1", 1)]))
@@ -472,9 +569,124 @@ class BrowserAvailable(unittest.TestCase):
     def test_bad_engine_name_fails(self):
         self.assertNotEqual(run("browser_available.py", "netscape", cwd=GATES).returncode, 0)
 
+    @unittest.skipUnless(Path("/opt/pw-browsers/chromium").exists(), "the preinstalled Chromium exists only on the build machine")
     def test_chromium_launches(self):
         self.assertEqual(run("browser_available.py", "chromium", cwd=GATES).returncode, 0)
 
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Frozen(unittest.TestCase):
+    """frozen.py (CI): a registered entry changes only with an amendment naming it (S1b K42)."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        git(self.root, "init", "-q")
+        m = self.root / "ops/mission"
+        m.mkdir(parents=True)
+        (m / "SHA256SUMS").write_text("a" * 64 + "  gates/judge.py\n")
+        (m / "ROOTSUMS").write_text("b" * 64 + "  tests/a2-x.spec.ts\n")
+        (m / "contract.md").write_text("# contract\n")
+        git(self.root, "add", ".")
+        git(self.root, "commit", "-qm", "base")
+        git(self.root, "branch", "base")
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def commit(self, sums=None, root=None, amendment=None):
+        m = self.root / "ops/mission"
+        if sums is not None:
+            (m / "SHA256SUMS").write_text(sums)
+        if root is not None:
+            (m / "ROOTSUMS").write_text(root)
+        if amendment:
+            (m / "contract.md").write_text((m / "contract.md").read_text() + amendment + "\n")
+        git(self.root, "commit", "-qam", "change")
+        return run("frozen.py", "base", cwd=self.root)
+
+    def test_unchanged_passes(self):
+        r = self.commit(amendment="unrelated note")
+        self.assertEqual(r.returncode, 0, r.stdout)
+
+    def test_new_entry_passes(self):
+        r = self.commit(sums="a" * 64 + "  gates/judge.py\n" + "c" * 64 + "  gates/new.py\n")
+        self.assertEqual(r.returncode, 0, r.stdout)
+
+    def test_changed_without_amendment_fails(self):
+        r = self.commit(root="d" * 64 + "  tests/a2-x.spec.ts\n")
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("tests/a2-x.spec.ts changed", r.stdout)
+
+    def test_removed_without_amendment_fails(self):
+        r = self.commit(sums="")
+        self.assertIn("ops/mission/gates/judge.py removed", r.stdout)
+
+    def test_changed_with_amendment_passes(self):
+        r = self.commit(root="d" * 64 + "  tests/a2-x.spec.ts\n", amendment="A9: tests/a2-x.spec.ts tightened")
+        self.assertEqual(r.returncode, 0, r.stdout)
+
+    def test_base_without_sums_passes(self):
+        """The PR that introduces the sums files has nothing frozen to compare against."""
+        r2 = self.root / "fresh"
+        r2.mkdir()
+        git(r2, "init", "-q")
+        (r2 / "x").write_text("x\n")
+        git(r2, "add", "x")
+        git(r2, "commit", "-qm", "main without sums")
+        git(r2, "branch", "base")
+        (r2 / "ops/mission").mkdir(parents=True)
+        (r2 / "ops/mission/SHA256SUMS").write_text("a" * 64 + "  gates/judge.py\n")
+        git(r2, "add", "ops")
+        git(r2, "commit", "-qm", "introduce sums")
+        r = run("frozen.py", "base", cwd=r2)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+class Deployed(unittest.TestCase):
+    """deployed.py: production serves main's tip and the demo loads (S1b K49)."""
+
+    def setUp(self):
+        import http.server
+        import threading
+        self.tmp = tempfile.TemporaryDirectory()
+        root = Path(self.tmp.name)
+        (root / "read").mkdir()
+        (root / "read/index.html").write_text("reader\n")
+        (root / "demo").mkdir()
+        (root / "demo/brave-little-star.ssync.json").write_text(json.dumps({"pages": [{"text": "x"}]}))
+        self.root = root
+        handler = lambda *a, **k: http.server.SimpleHTTPRequestHandler(*a, directory=str(root), **k)
+        self.httpd = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
+        self.httpd.RequestHandlerClass.log_message = lambda *a: None
+        threading.Thread(target=self.httpd.serve_forever, daemon=True).start()
+        self.url = f"http://127.0.0.1:{self.httpd.server_address[1]}"
+
+    def tearDown(self):
+        self.httpd.shutdown()
+        self.tmp.cleanup()
+
+    def check(self, served, tip="a" * 40):
+        (self.root / "index.html").write_text(f'<html><head><meta name="ssync-build" content="{served}"/></head></html>')
+        env = {**os.environ, "A2_SITE": self.url, "A2_MAIN_SHA": tip, "NO_PROXY": "127.0.0.1", "no_proxy": "127.0.0.1"}
+        return subprocess.run([sys.executable, str(GATES / "deployed.py")], capture_output=True, text=True, env=env)
+
+    def test_tip_served_passes(self):
+        r = self.check("a" * 40)
+        self.assertEqual(r.returncode, 0, r.stdout)
+
+    def test_stale_build_fails(self):
+        r = self.check("b" * 40)
+        self.assertEqual(r.returncode, 1, r.stdout)
+        self.assertIn("main's tip", r.stdout)
+
+    def test_missing_demo_fails(self):
+        (self.root / "demo/brave-little-star.ssync.json").unlink()
+        self.assertIn("demo tape", self.check("a" * 40).stdout)
+
+    def test_unreachable_cannot_run(self):
+        env = {**os.environ, "A2_SITE": "http://127.0.0.1:9", "A2_MAIN_SHA": "a" * 40, "NO_PROXY": "127.0.0.1", "no_proxy": "127.0.0.1"}
+        r = subprocess.run([sys.executable, str(GATES / "deployed.py")], capture_output=True, text=True, env=env)
+        self.assertEqual(r.returncode, 77, r.stdout)

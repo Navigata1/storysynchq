@@ -18,4 +18,6 @@ const pw=require('playwright');
 [ -f tests/a2-aac.spec.ts ] || { echo "[FAIL] tests/a2-aac.spec.ts is not written yet"; exit 1; }
 # chromium is the suite's desktop project (playwright.config.ts has no "chromium" project, S1b K32)
 PROJECT=$([ "$ENGINE" = chromium ] && echo desktop || echo "$ENGINE")
+export A2_AAC=1   # the spec is collected only under this flag (S1b K45)
+[ "$PROJECT" = webkit ] && export A2_WEBKIT=1
 exec bash ops/mission/gates/judged.sh "--required ops/mission/judges/required-P5-aac-$PROJECT.json" --project="$PROJECT" tests/a2-aac.spec.ts

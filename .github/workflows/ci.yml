@@ -24,11 +24,22 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the mission's frozen-judge check compares against the base branch
 
       - uses: actions/setup-node@v4
         with:
           node-version: 24 # matches the Vercel project's runtime
           cache: npm
+
+      # archipelago-2 mission (ops/mission): enforced here because GitHub runs it, not the lead.
+      - name: Mission judges frozen (no registered judge changed without an amendment)
+        if: github.event_name == 'pull_request'
+        run: python3 ops/mission/gates/frozen.py origin/${{ github.base_ref }}
+      - name: Mission judges match their registered sha256
+        run: python3 ops/mission/gates/registered.py
+      - name: Mission judges' own fixtures
+        run: python3 -m unittest ops/mission/gates/test_gates.py
 
       - run: npm ci
       - name: Typecheck
@@ -57,7 +68,7 @@ jobs:
           npx next start -p 3000 > next-start.log 2>&1 &
           npx --yes wait-on --timeout 60000 http://localhost:3000/
       - name: Playwright
-        run: npx playwright test
+        run: npx playwright test --project=desktop --project=mobile
 
       - name: Upload Playwright report
         if: failure()

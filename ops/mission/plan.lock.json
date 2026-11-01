@@ -285,6 +285,11 @@
         },
         {
           "id": "P6-G9",
+          "title": "The production deployment serves main's tip and the demo tape loads (C10)",
+          "command": "python3 ops/mission/gates/deployed.py"
+        },
+        {
+          "id": "P6-G10",
           "title": "Ledger chain intact",
           "command": "python3 protocol/scripts/loop.py verify-ledger"
         }
