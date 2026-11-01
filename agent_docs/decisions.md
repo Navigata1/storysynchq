@@ -773,3 +773,9 @@ deleting the story forgets it everywhere.**
   textarea over "Add a picture". Below 600 px the room is not locked to one screen, so the
   Stage row had no height to give. Fix: on landscape screens under 600 px tall the picture
   zone holds max(150px, 50dvh) and the rest of the room follows it down the page.
+- P2 review (P2-R1-01): mid-take on a landscape phone the photo was buried (0 px uncovered at
+  844×390 and 667×375: the sheet or card over it, and the page scrolled away). Under 600 px tall
+  in landscape (below 1024 px wide) a take now lays the room out as one screen: the photo on the
+  left, the Voice card docked on the right (min(400px, 52vw)), and the strip, rail, transport and
+  the Stage's words step aside (pages are locked mid-take, the card has its own Stop, READ THIS
+  carries the words).

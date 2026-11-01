@@ -844,4 +844,44 @@
     .studio-title-input,
     .studio-progress-bar { transition-duration: 1ms; }
   }
+
+  /* --------------------------------------- a take on a phone held sideways */
+  /* Under 600 px tall in landscape there is no room for the photo above a
+     sheet or beside a floating card, and the page would scroll the photo
+     away (mission C5, P2 review P2-R1-01). For the take the room becomes one
+     screen: the photo on the left, the Voice card docked on the right, and
+     the strip, the rail, the transport and the Stage's words step aside (the
+     pages are locked while recording, the card carries its own Stop, and
+     READ THIS carries the words). */
+  @media (orientation: landscape) and (max-height: 599.98px) and (max-width: 1023.98px) {
+    .studio[data-recording="true"] {
+      --studio-take-card: min(400px, 52vw);
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: auto minmax(0, 1fr);
+      grid-template-areas: "top" "stage";
+      height: 100dvh;
+      min-height: 0;
+      overflow: hidden;
+    }
+    .studio[data-recording="true"] .studio-area-film,
+    .studio[data-recording="true"] .studio-area-rail,
+    .studio[data-recording="true"] .studio-area-transport { display: none; }
+    .studio[data-recording="true"] .studio-area-tool { grid-area: stage; }
+    /* the words are on READ THIS in the card; the photo takes their room */
+    .studio[data-recording="true"] [data-studio="stage-text"] { display: none !important; } /* over its `flex` utility */
+    .studio[data-recording="true"] .studio-toolpanel {
+      position: absolute;
+      inset: 8px 8px 8px auto;
+      width: var(--studio-take-card);
+      max-height: none;
+      border-radius: 18px;
+      padding-bottom: 12px;
+    }
+    .studio[data-recording="true"] .stage-zone,
+    .studio[data-take-sheet="true"][data-recording="true"] .stage-zone {
+      flex: 1 1 0;
+      height: auto;
+      margin-right: calc(var(--studio-take-card) + 8px);
+    }
+  }
 }
