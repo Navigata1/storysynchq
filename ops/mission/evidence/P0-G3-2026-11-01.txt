@@ -1,0 +1,6 @@
+$ python3 ops/mission/gates/registered.py
+exit 0
+--- stdout ---
+[PASS] 128 registered files verified; no judge unregistered
+
+--- stderr ---
