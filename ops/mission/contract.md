@@ -243,3 +243,20 @@ appended section.
 `ops/mission/gates/test_gates.py` gains three fixtures for `js_budget.py` (within, over,
 unmeasured), part of registering C7's judge (A7). Fixtures only: no existing fixture changes.
 `ops/mission/contract.md` changes by this appended section.
+
+### A9 · 2026-11-01 · P4 round 1: C7's judge measures the Player and a configured build
+
+The P4 round 1 review found C7's judge blind in two places: the Player a share link opens
+is a lazy chunk `/read` alone never loads (P4-R1-01), and the measured build had no cloud
+configured, so the Supabase client production loads was never counted (P4-R1-04).
+`ops/mission/gates/js_measure.mjs` now measures the Player two ways, `/read?demo=1` (the
+landing's Press play) and `/read?story=<code>` (a share link, the cloud it asks answered with
+the house tape), each until its cover shows; waits for the network to settle on every route;
+and counts every same-origin script the page requested. Code a page fetches for pages it
+links to is not its first load, so router prefetches are aborted and the measuring browser has
+no IntersectionObserver (what starts Next's prefetch of links on screen; in this app it
+otherwise only plays the landing's reveal animations, which then show at once).
+`ops/mission/judges/js-budget.json` adds both Player routes at the 170 KB budget; no budget
+changes. `ops/mission/gates/js_budget.py` builds with a placeholder cloud project (no real URL
+or key; nothing real is ever asked). `ops/mission/gates/test_gates.py` adds the routes to its
+within-budget fixture. `ops/mission/contract.md` changes by this appended section.

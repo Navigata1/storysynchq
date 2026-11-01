@@ -809,7 +809,7 @@ class JsBudget(unittest.TestCase):
         return subprocess.run([sys.executable, str(GATES / "js_budget.py")], capture_output=True, text=True, env=env)
 
     def ok(self):
-        return {r: {"gzipBytes": 1000, "top": []} for r in ("/", "/read", "/protocol", "/studio")}
+        return {r: {"gzipBytes": 1000, "top": []} for r in ("/", "/read", "/read?demo=1", "/read?story=a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2", "/protocol", "/studio")}
 
     def test_within_budget_passes(self):
         r = self.check(self.ok())
