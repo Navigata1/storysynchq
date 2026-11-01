@@ -829,3 +829,16 @@ deleting the story forgets it everywhere.**
 - Measured: / 140 KB, /read 161, /read?demo=1 165, the share link 168, /protocol 164,
   /studio 232. The share link has the least headroom (about 2 KB): anything new on the
   Player's path should be weighed against it.
+
+## 2026-11-01 · P5 (C8, C2b): the judges land; both gates cannot run in this container
+- P4-R3-01: pulling a tape out sweeps this device's copy (`src/lib/device-library.ts`, imported
+  by the Read Room) and its draft before any cloud code is fetched; the library code is fetched
+  only when a cloud is configured. Offline, a child's voice still leaves the device. If the
+  cloud half then fails, the parent is told the device copy is gone and the cloud copy stays.
+- C2b's judge `tests/a2-aac.spec.ts` (contract A12): a Chrome-style take (Opus/WebM) must
+  publish as AAC, never WAV, and a Safari-style take (real AAC/MP4, `tests/fixtures/aac-tone.m4a`)
+  must stay AAC; both play through in the Player with no media error.
+- P5 ran at aec4631: P5-G1 (WebKit) and P5-G2 (AAC encoder) both exit 77. This container has
+  only Chromium 153, with no AAC encoder, and the Playwright download host is blocked, so C8
+  and C2b stay unverified. They need a machine with WebKit and a WebCodecs AAC encoder (a Mac:
+  `npx playwright install webkit`, and Chrome on macOS has one).
