@@ -24,6 +24,7 @@ so tests can drive the app into the reference states (s03–s07).
 | `helpers.ts` | Page helpers: `openTapeInReadRoom`, `seedStudioDraft`, `restoreDraft`, `seedDeviceLibrary` |
 | `generate-fixtures.ts`, `generate.config.ts` | The generator and its own Playwright config |
 | `aac-tone.m4a` | A 1 s 440 Hz tone, AAC-LC in MP4 (48 kHz mono, ffmpeg's AAC encoder): what Safari's recorder hands back, for `tests/a2-aac.spec.ts` (C2b) |
+| `chromium-opus-in-mp4.m4a` | 0.58 s of headless Chromium's fake-microphone tone, recorded by MediaRecorder asked for `audio/mp4`: Opus inside MP4 (`audio/mp4;codecs=opus`), for `tests/a2-codec.spec.ts` (the codec rule) |
 
 ## Provenance
 

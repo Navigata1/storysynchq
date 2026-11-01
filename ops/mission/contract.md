@@ -304,3 +304,27 @@ configured. `tests/vision-shelf.spec.ts` gains one test, "offline: pulling a tap
 clears this device's copy and its draft", which refuses every script carrying the library
 code and fails at the P4 head. No other existing test changes. `ops/mission/contract.md`
 changes by this appended section.
+
+### A13 · 2026-11-01 · P5: the codec rule meets Chromium's MP4, and the AAC probe runs in a secure context
+
+Probing for P5 found that Chromium (126+) records Opus inside MP4 when MediaRecorder is asked
+for "audio/mp4" (`audio/mp4;codecs=opus`). The recorder asked for a bare MP4 first, and
+publish passed every MP4 through as AAC, so a Chrome take could be published as Opus labelled
+AAC, against the codec rule (CLAUDE.md section 2). `tests/a2-codec.spec.ts` is new. It pins:
+- the recorder's order: AAC by name first, then WebM, a bare MP4 last;
+- the codec check: an MP4 is AAC only when neither its type nor its sample description says
+  Opus;
+- the publish compliance check;
+- a Studio publish of a Chromium Opus-in-MP4 take, whose published bytes must carry no Opus
+  and must still decode.
+
+It fails on the old rule. Its fixture `tests/fixtures/chromium-opus-in-mp4.m4a` is a real
+recording by headless Chromium's fake microphone (a test tone). It also reads A12's
+`aac-tone.m4a`. `tests/fixtures/README.md` gains the fixture's row.
+
+`ops/mission/gates/aac_publish.sh` probed for the encoder on `about:blank`, which is not a
+secure context, so WebCodecs is absent there: a browser that has an AAC encoder would read as
+one that does not, and the gate would exit 77 where it can run. It now probes from a blank
+page it serves on 127.0.0.1, a secure origin. Here the answer is unchanged: this Chromium has
+WebCodecs, with Opus but no AAC (exit 77). No existing test changes. `ops/mission/contract.md`
+changes by this appended section.
