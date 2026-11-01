@@ -17,7 +17,6 @@ import Link from "next/link";
 import { ArrowLeft, Circle, FolderOpen, Heart, MoreHorizontal, Pen } from "lucide-react";
 import { BigButton, GlassPanel, ModeToggle, Reel } from "@/components/studio-kit/kit";
 import { blobToDataUrl, dataUrlToBlob } from "@/lib/audio/recorder";
-import { normalizeNarration } from "@/lib/audio/transcode";
 import { processImageSafe } from "@/lib/images";
 import {
   validateManifest,
@@ -45,7 +44,7 @@ import {
   shareBook,
   type BookInput,
 } from "@/lib/cloud-storage";
-import { getUser, signIn, signUp } from "@/lib/supabase";
+import { getUser, signIn, signUp } from "@/lib/supabase-lazy";
 import { forgetPlaces, placeKeysOfStories, placeKeysOfTape } from "@/components/player/resume-store";
 import { VOICE_PARAM, voiceFromHash, voiceName } from "@/components/player/known-voices";
 
@@ -1315,6 +1314,8 @@ export default function Studio() {
                   ? "audio/mp4"
                   : "audio/wav"
                 : meta?.mimeType || blob.type;
+              // the encoder (mp4-muxer) loads at publish, not with the room (mission P4, C7)
+              const { normalizeNarration } = await import("@/lib/audio/transcode");
               const normalized = await normalizeNarration(blob, mime, levelOn ? { level: true } : undefined);
               const levelling = normalized.levelling;
               if (levelling?.outcome === "skipped") leftAsRecorded += 1;

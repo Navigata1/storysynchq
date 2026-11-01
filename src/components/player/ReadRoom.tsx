@@ -80,17 +80,17 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Lock, Play } from "lucide-react";
-import { loadStorysyncToStory } from "@/lib/storysync/container";
 import type { SsyncManifest } from "@/lib/storysync/manifest";
 import { HOUSE_TAPE_URL, loadTapeByCode, normalizeTapeManifest } from "@/lib/storysync/tape-source";
 import { REPLY_QUERY, REPLY_SEED_KEY, replySeed, serializeReplySeed } from "@/lib/storysync/reply";
 import { deleteBook, getBooks, isCloudEnabled } from "@/lib/cloud-storage";
-import { getUser } from "@/lib/supabase";
+import { getUser } from "@/lib/supabase-lazy";
 import { clearDraft, DRAFT_KEY } from "@/components/studio/draft";
 import { BigButton, GlassPanel, Reel, TapeLabel, TAPE } from "@/components/studio-kit/kit";
 import { Shelf, ShelfTape } from "@/components/studio-kit/Shelf";
 import { PullTapeIcon } from "@/components/studio-kit/PrintSlot";
-import { Player, type PlayerPlace } from "./Player";
+import dynamic from "next/dynamic";
+import type { PlayerPlace } from "./Player";
 import { HOUSE_READ_IT_IN, HOUSE_TAPE, ReadItIn } from "./ReadItIn";
 import { sentTarget, shelfTarget, targetLine, type ReadItInTarget } from "./read-it-in";
 import {
@@ -132,6 +132,12 @@ import { forgetPlaces, placeKeysOfTape, readResume, writeResume } from "./resume
 import "./player.css";
 import "./read-room.css";
 import "./resume.css";
+
+/**
+ * The Player loads when a tape opens, not with the room's shelf (mission P4, C7): the room is
+ * what /read shows first, and a share link fetches the Player while the tape itself loads.
+ */
+const Player = dynamic(() => import("./Player").then((m) => m.Player), { ssr: false });
 
 /** Kraft/manila — the tape someone handed you on a file. */
 const KRAFT_LABEL = "#DFD2B8";
@@ -696,6 +702,8 @@ export function ReadRoom() {
     setState({ kind: "loading", what: "Unwinding the tape" });
     try {
       const bytes = new Uint8Array(await file.arrayBuffer());
+      // the ZIP reader (fflate) loads when a file is opened, not with the room (mission P4, C7)
+      const { loadStorysyncToStory } = await import("@/lib/storysync/container");
       const manifest = loadStorysyncToStory(bytes);
       setState({ kind: "ready", manifest, origin: "file", ...placeFor(manifest, tapeKey(manifest)) });
     } catch (error) {

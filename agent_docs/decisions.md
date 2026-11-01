@@ -798,3 +798,13 @@ deleting the story forgets it everywhere.**
 - Follow-up (P3-R1-03, P3-R2-02): the protocol format table's scroller, like READ THIS, is a
   named region with a Tab stop only while it actually scrolls; both re-measure when a web font
   swaps in, as well as on resize.
+
+## 2026-11-01 · P4 (C7): first-load JavaScript within a reasoned budget
+- Budget (contract A7, judges/js-budget.json): 170 KB gzip for /, /read, /protocol; 250 KB for
+  /studio. Measured by js_measure.mjs on a production build: scripts requested up to load.
+- What moved off first load: the Supabase client (src/lib/supabase-lazy.ts loads `./supabase`
+  on the first cloud call; "is the cloud configured" is read from the public env vars; /classic
+  keeps the direct import), the AAC encoder (imported at publish), the ZIP reader (imported
+  when a .storysync file is opened), and the Player (next/dynamic: /read shows the shelf first;
+  a share link fetches the Player while the tape loads).
+- Before → after: /read 248 → 161 KB, /studio 295 → 232 KB, / 143 → 139 KB, /protocol 167 → 164 KB.

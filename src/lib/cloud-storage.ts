@@ -18,18 +18,9 @@
 // unguessable share codes and resolves them, so `/read?story=<code>` opens the
 // tape on the device that made it even with no cloud configured at all.
 
-import {
-  isSupabaseConfigured,
-  supabase,
-  saveStorybook,
-  getUserStorybooks,
-  deleteStorybook as sbDelete,
-  getStorybookByShareCode,
-  createShareLink,
-  getSession,
-  type ShareLookupClient,
-  type SharedStorybookRow,
-} from "./supabase";
+// The cloud client loads only when a cloud call is made (supabase-lazy.ts, mission P4).
+import type { ShareLookupClient, SharedStorybookRow } from "./supabase";
+import { isSupabaseConfigured, loadSupabase } from "./supabase-lazy";
 import { mintShareCode, ShareCodeError } from "./share-code";
 
 export const LIBRARY_KEY = "ssync-library";
@@ -216,6 +207,7 @@ export async function saveBook(
   if (existingId) return updateBook(existingId, userId, book);
 
   if (isSupabaseConfigured()) {
+    const { getSession, saveStorybook } = await loadSupabase();
     const session = await getSession().catch(() => null);
     if (!session) {
       throw new CloudError(
@@ -279,6 +271,7 @@ export async function updateBook(
   book: BookInput,
 ): Promise<StoredBook> {
   if (isSupabaseConfigured()) {
+    const { getSession, supabase } = await loadSupabase();
     const session = await getSession().catch(() => null);
     if (!session) {
       throw new CloudError(
@@ -327,6 +320,7 @@ export async function updateBook(
 
 export async function getBooks(userId: string): Promise<StoredBook[]> {
   if (isSupabaseConfigured()) {
+    const { getUserStorybooks } = await loadSupabase();
     const results = (await getUserStorybooks(userId)) as StorybookRow[];
     return results.map((r) => fromRow(r));
   }
@@ -347,9 +341,13 @@ const SHARE_CODE_SHAPE = /^[0-9a-f]+$/;
  */
 export async function resolveShareCode(
   code: string,
-  client: ShareLookupClient | null = supabase,
+  stub?: ShareLookupClient | null,
 ): Promise<StoredBook | null> {
-  if (!client || !SHARE_CODE_SHAPE.test(code)) return null;
+  if (!SHARE_CODE_SHAPE.test(code)) return null;
+  if (stub === null || (stub === undefined && !isSupabaseConfigured())) return null;
+  const { getStorybookByShareCode, supabase } = await loadSupabase();
+  const client = stub ?? supabase;
+  if (!client) return null;
   let row: SharedStorybookRow | null;
   try {
     row = await getStorybookByShareCode(code, client);
@@ -387,6 +385,7 @@ const UNSAFE_LINK =
 export async function shareBook(storybookId: string): Promise<string> {
   if (isSupabaseConfigured()) {
     try {
+      const { createShareLink } = await loadSupabase();
       const link = (await createShareLink(storybookId)) as { share_code: string };
       return link.share_code;
     } catch (err) {
@@ -431,6 +430,7 @@ export async function deleteBook(id: string): Promise<void> {
   }
 
   if (isSupabaseConfigured()) {
+    const { supabase, deleteStorybook: sbDelete } = await loadSupabase();
     if (supabase) {
       // Revoke the link first so a half-failed delete can never leave a live
       // code pointing at a child's voice.
