@@ -10,7 +10,7 @@
     "northStar": "The Child Journey (photos, a voice per page, auto music, publish, open the link) runs end to end in a production build and every step is pinned by a test that can fail; Every merge to main crosses the full ladder plus an isolated-seat review round with no open High; Every claim below is reported at the band its evidence reached; a claim this environment cannot check is reported unverified, never proven",
     "status": "active",
     "started": "2026-11-01",
-    "updated": "2026-11-01T04:21:39Z",
+    "updated": "2026-11-01T07:23:57Z",
     "sessionCount": 1
   },
   "policies": {
@@ -189,61 +189,61 @@
       "id": "P3",
       "title": "Accessibility: zero serious or critical axe violations",
       "goal": "C6. The judge tests/a2-a11y.spec.ts is committed and registered before any fix commit; it runs inside the full suite on the production build.",
-      "status": "pending",
+      "status": "in_progress",
       "sessionsEstimate": "1-2",
       "gates": [
         {
           "id": "P3-G1",
           "title": "TypeScript strict: no errors",
           "command": "npx tsc --noEmit",
-          "status": "pending",
-          "evidence": null,
-          "lastRun": null,
+          "status": "passed",
+          "evidence": "ops/mission/evidence/P3-G1-2026-11-01.txt",
+          "lastRun": "2026-11-01T06:48:38Z",
           "notes": ""
         },
         {
           "id": "P3-G2",
           "title": "ESLint: no errors",
           "command": "npm run lint",
-          "status": "pending",
-          "evidence": null,
-          "lastRun": null,
+          "status": "passed",
+          "evidence": "ops/mission/evidence/P3-G2-2026-11-01.txt",
+          "lastRun": "2026-11-01T06:48:55Z",
           "notes": ""
         },
         {
           "id": "P3-G3",
           "title": "Judges, locks, contract and the judges' dependencies match their registered sha256; no judge unregistered",
           "command": "python3 ops/mission/gates/registered.py",
-          "status": "pending",
-          "evidence": null,
-          "lastRun": null,
+          "status": "passed",
+          "evidence": "ops/mission/evidence/P3-G3-2026-11-01.txt",
+          "lastRun": "2026-11-01T06:48:55Z",
           "notes": ""
         },
         {
           "id": "P3-G4",
           "title": "The judges' own fixtures pass",
           "command": "python3 -m unittest ops/mission/gates/test_gates.py",
-          "status": "pending",
-          "evidence": null,
-          "lastRun": null,
+          "status": "passed",
+          "evidence": "ops/mission/evidence/P3-G4-2026-11-01.txt",
+          "lastRun": "2026-11-01T06:49:15Z",
           "notes": ""
         },
         {
           "id": "P3-G5",
           "title": "Full suite on a production build of a clean HEAD (desktop + mobile, CI mode)",
           "command": "bash ops/mission/gates/e2e_prod.sh ops/mission/judges/required-P3.json",
-          "status": "pending",
-          "evidence": null,
-          "lastRun": null,
+          "status": "passed",
+          "evidence": "ops/mission/evidence/P3-G5-2026-11-01.txt",
+          "lastRun": "2026-11-01T07:23:57Z",
           "notes": ""
         },
         {
           "id": "P3-G6",
           "title": "Review rounds for P3 closed at this head",
           "command": "python3 ops/mission/gates/review_closed.py P3",
-          "status": "pending",
-          "evidence": null,
-          "lastRun": null,
+          "status": "passed",
+          "evidence": "ops/mission/evidence/P3-G6-2026-11-01.txt",
+          "lastRun": "2026-11-01T07:23:57Z",
           "notes": ""
         }
       ],
