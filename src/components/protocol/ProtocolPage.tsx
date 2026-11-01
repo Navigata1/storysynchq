@@ -446,7 +446,8 @@ export function ProtocolPage() {
               never sent to a server just to be transcoded:
             </p>
 
-            <div className="pr-table-scroll">
+            {/* scrolls sideways on a phone: a named region the keyboard can reach (WCAG 2.1.1) */}
+            <div className="pr-table-scroll" role="region" aria-label="How each recording format is normalized (scrolls sideways)" tabIndex={0}>
               <table className="pr-table">
                 <caption className="sr-only">
                   How each recording format is normalized when a story is published

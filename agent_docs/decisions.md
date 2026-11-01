@@ -784,3 +784,14 @@ deleting the story forgets it everywhere.**
   card mid-take brings the transport's Stop back under the photo. Focus follows the one live
   Stop at every width (`stopAside`), and focus left on a control the layout has hidden counts
   as lost (P2-R2-02).
+
+## 2026-11-01 · P3 (C6): accessibility fixes the axe judge found
+- Contrast: the landing deck readout's amber 0.5→0.64 alpha (3.4→4.9:1); the READ THIS label and
+  the Listening pill use the existing ink red `--ss-red-ink` (#b4301f) for text on paper and
+  under white type; the dot and the ring keep tape red.
+- Keyboard: the protocol format table's sideways scroller is a named region with a Tab stop;
+  READ THIS words take a Tab stop (a named region) only while they overflow, so Tab still runs
+  Close Voice → Stop when they fit (T19's rule holds for words that fit).
+- P2-R3-02: closing the Voice card mid-take on a landscape phone brings the page's words back
+  as a compact line; the Stage's head row, status line and progress rule step aside (the
+  Listening pill and the transport carry the take), keeping the photo ≥120 px.

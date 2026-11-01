@@ -118,6 +118,20 @@ const MIC_HELP: Record<MicPermissionError, { title: string; body: string }> = {
  * Memoised on the words alone: the take's ticking clock never touches it.
  */
 const ReadThis = React.memo(function ReadThis({ words }: { words: string }) {
+  // Only words that overflow need a key to scroll them (WCAG 2.1.1; axe
+  // scrollable-region-focusable). While they fit the card takes no Tab stop,
+  // so Tab still runs from Close Voice straight to Stop.
+  const wordsRef = React.useRef<HTMLParagraphElement | null>(null);
+  const [overflows, setOverflows] = React.useState(false);
+  React.useLayoutEffect(() => {
+    const el = wordsRef.current;
+    if (!el) return;
+    const measure = () => setOverflows(el.scrollHeight > el.clientHeight + 1);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [words]);
   return (
     <div role="note" aria-label="Read this" data-studio="read-this" className="read-this">
       {/* The note's name already says it; the printed label is for the eye. */}
@@ -125,11 +139,17 @@ const ReadThis = React.memo(function ReadThis({ words }: { words: string }) {
         <span data-studio="read-this-dot" className="read-this-dot" />
         READ THIS
       </p>
-      {/* Long words scroll here. A browser would put a scroller with nothing
-          focusable inside into the Tab order on its own; -1 keeps Tab going
-          from Close Voice straight to Stop. The same words stay in the
-          Stage's own box, which the keyboard reaches. */}
-      <p data-studio="read-this-words" className="read-this-words" tabIndex={-1}>
+      {/* Long words scroll here, and then the keyboard can reach them to
+          scroll (a named region, one Tab stop); words that fit take none, so
+          Tab goes from Close Voice straight to Stop. */}
+      <p
+        ref={wordsRef}
+        data-studio="read-this-words"
+        className="read-this-words"
+        tabIndex={overflows ? 0 : -1}
+        role={overflows ? "region" : undefined}
+        aria-label={overflows ? "The words to read (scrolls)" : undefined}
+      >
         {words}
       </p>
     </div>

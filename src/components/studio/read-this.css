@@ -73,7 +73,7 @@
     line-height: 1;
     letter-spacing: 0.18em;
     text-transform: uppercase;
-    color: var(--ss-red);
+    color: var(--ss-red-ink); /* the ink red: 4.5:1+ on paper; the dot keeps tape red */
   }
 
   .read-this-dot {

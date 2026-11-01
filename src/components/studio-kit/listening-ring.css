@@ -52,7 +52,8 @@
     padding: 0 14px 0 12px;
     border-radius: 999px;
     white-space: nowrap;
-    background: var(--sk-lr-red);
+    /* the ink red under white type: 4.5:1+ (tape red was 4.07:1); the ring keeps tape red */
+    background: var(--ss-red-ink, #b4301f);
     color: #fff;
     font: 600 13px/1 var(--ss-ui);
     font-variant-numeric: tabular-nums;
