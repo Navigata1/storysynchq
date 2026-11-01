@@ -36,7 +36,7 @@ const SIZES = [
   { name: "landscape 667x375", width: 667, height: 375 },
 ] as const;
 
-type Screen = { name: string; open: (page: Page) => Promise<void>; photo?: boolean; stop?: boolean };
+type Screen = { name: string; open: (page: Page) => Promise<void>; photo?: boolean; stop?: boolean; words?: boolean };
 
 const settle = async (page: Page) => {
   await page.evaluate(() => document.fonts.ready.then(() => true));
@@ -87,6 +87,7 @@ const SCREENS: Screen[] = [
     name: "studio (recording, Voice card closed)",
     photo: true,
     stop: true,
+    words: true,
     open: async (page) => {
       await stubMicrophone(page);
       await seedStudioDraft(page, "twinkle", { narration: false });
@@ -96,8 +97,11 @@ const SCREENS: Screen[] = [
       await page.getByRole("button", { name: "Record my voice on this page" }).click();
       await expect(page.locator(".studio[data-recording='true']")).toHaveCount(1);
       await page.waitForTimeout(500);
+      // the state is the card closed, never silently the card open (P2-R3-03)
       const close = page.getByRole("button", { name: "Close Voice" });
-      if (await close.isVisible()) await close.click();
+      await expect(close).toBeVisible();
+      await close.click();
+      await expect(page.locator('[data-studio="tool-card"]')).toHaveCount(0);
       await expect(page.locator(".studio[data-recording='true']"), "closing the card does not end the take").toHaveCount(1);
       await page.waitForTimeout(300);
     },
@@ -197,6 +201,10 @@ async function layoutProblems(page: Page): Promise<{ scrollWidth: number; innerW
         const h = hit.getBoundingClientRect();
         const onLeft = h.left + h.width / 2 < s.left + s.width / 2;
         if (onLeft ? strip.scrollLeft > 0 : strip.scrollLeft < strip.scrollWidth - strip.clientWidth - 1) continue;
+        // the strip cannot scroll the way that clears it: a real overlap, never passed on to
+        // the page-level chrome rule below (P2-R3-01)
+        problems.push({ what: `covered at its centre by the strip's pinned "${describe(hit)}", which no scroll clears`, label });
+        continue;
       }
       if (hit && pinned(hit) && !pinned(el)) {
         const chrome = hit.getBoundingClientRect();
@@ -251,6 +259,19 @@ for (const screen of SCREENS) {
             }).length,
           );
           expect(stops, `${screen.name} at ${size.name}: a Stop on screen and uncovered`).toBeGreaterThan(0);
+        }
+        if (screen.words) {
+          // mid-take, card closed: the page's words are on screen, whole line visible and
+          // uncovered (P2-R3-02, P3-R1-01)
+          const words = page.locator('[data-studio="stage-text"] textarea');
+          await expect(words, `${screen.name} at ${size.name}: the page's words are shown`).toBeVisible();
+          expect((await words.inputValue()).trim().length, "the words are the page's").toBeGreaterThan(0);
+          const top = await words.evaluate((el) => {
+            const r = el.getBoundingClientRect();
+            const hit = document.elementFromPoint(r.left + r.width / 2, r.top + Math.min(r.height / 2, 12));
+            return r.height >= 16 && r.top >= 0 && r.bottom <= innerHeight + 0.5 && !!hit && (hit === el || el.contains(hit));
+          });
+          expect(top, `${screen.name} at ${size.name}: the words are on screen and uncovered`).toBe(true);
         }
         if (screen.photo && size.width > size.height) {
           const seen = await page.locator('[data-studio="stage-photo"]').evaluate((photo) => {

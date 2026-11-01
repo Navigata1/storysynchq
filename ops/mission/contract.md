@@ -184,3 +184,41 @@ P0 without a third critic series."
 `ops/mission/plan-readiness.md` records, without a further critic series, and the plan is
 ready by this ruling. Main's ruleset (`ops/mission/hitl/ruleset.md`) is the operator's act; until
 `A2-ATTEST ruleset` is on record, contract section 5 counts CI as advisory.
+
+### A3 · 2026-11-01 · P2's deferred judge repairs, and C6's judge
+
+`tests/a2-layout.spec.ts` changes as P2's last review round asked (P2-R3-01, P2-R3-03): a
+thumbnail under the Filmstrip's pinned handle that no scroll clears is reported, not excused,
+and the "recording, Voice card closed" state asserts the card really closed before judging.
+Both make the judge stricter; it still passes at this head (144 of 144). `tests/a2-a11y.spec.ts`
+is C6's judge, new and registered before P3's first `src/` change; it injects axe-core, now a
+pinned devDependency (4.11.1, test-only, not shipped).
+
+### A4 · 2026-11-01 · READ THIS meets WCAG: the T19 spec follows
+
+`tests/vision-read-this.spec.ts` pinned two things C6's judge found to fail WCAG AA: the READ
+THIS label in tape red on paper (3.99:1) and the rule that the card never takes a Tab stop,
+even when its words scroll (axe scrollable-region-focusable, serious). It now asserts the ink
+red (`--ss-red-ink`, 4.5:1 or better) and that the card takes no Tab stop unless its words
+overflow, and then exactly one: the words, a named region, between Close Voice and Stop. The
+tape-red dot, the card's paper, ink and type are unchanged.
+This PR also appends to `ops/mission/contract.md` itself (A3 and A4), which changes that file's
+registered sum.
+
+### A5 · 2026-11-01 · P3 round 1: the judges cover more, and C6 states its scope
+
+`tests/a2-layout.spec.ts` now asserts the page's words are on screen and uncovered mid-take
+with the Voice card closed (P3-R1-01). `tests/a2-a11y.spec.ts` adds the Player's Reading
+options dialog (P3-R1-02) and states its scope: C6 covers the five product routes (/, /read,
+the Player, /studio, /protocol) and the dialogs it opens; /classic, which CLAUDE.md keeps
+untouched, is out of scope and has serious contrast failures (gray-500 card text) that C6 does
+not claim to clear. Both judges get stricter or wider. `ops/mission/contract.md` changes by
+this appended section.
+
+### A6 · 2026-11-01 · C6's claim text says the scope A5 set
+
+P3's review (P3-R2-03) found the frozen C6 text in `ops/mission/idea.lock.json` still read
+"Every route", while its judge and A5 exclude /classic. The claim now names the product routes
+(/, /read and the Player, /studio, /protocol) and states /classic out of scope, so no report of
+C6 can claim more than `tests/a2-a11y.spec.ts` checks. `ops/mission/contract.md` changes by this
+appended section.

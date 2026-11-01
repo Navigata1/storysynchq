@@ -1,0 +1,24 @@
+{
+  "reviewedHead": "a56c6198e3a60688f74f9db50f3fb9cbf11406fb",
+  "base": "5b71bd1d2bb9ce99b76c282c1e2fecf9fde04677",
+  "findings": [
+    {
+      "id": "P3-R2-01",
+      "severity": "low",
+      "status": "fixed",
+      "note": "8a79092: decisions.md now says the format table's scroller, like READ THIS, is a named region with a Tab stop only while it scrolls."
+    },
+    {
+      "id": "P3-R2-02",
+      "severity": "low",
+      "status": "fixed",
+      "note": "8a79092: READ THIS words and the format table re-measure after document.fonts.ready and on every fonts 'loadingdone', as well as on resize; listeners are removed on unmount. a2-a11y, T19 and protocol specs pass."
+    },
+    {
+      "id": "P3-R2-03",
+      "severity": "low",
+      "status": "fixed",
+      "note": "8a79092: C6's claim text in idea.lock names the product routes and states /classic out of scope (contract A6), so no report of C6 can claim more than its judge checks."
+    }
+  ]
+}

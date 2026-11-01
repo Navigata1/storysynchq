@@ -50,6 +50,8 @@ const WIDE_SHEET: Size = { width: 760, height: 1000 };
 const PAPER = "rgb(255, 253, 246)";
 const INK = "rgb(30, 26, 22)";
 const RED = "rgb(227, 69, 47)";
+/** The ink red for red text on paper: tape red there is 3.99:1, under WCAG AA (mission P3, C6). */
+const INK_RED = "rgb(180, 48, 31)";
 
 const SEL = {
   card: '[data-studio="read-this"]',
@@ -208,21 +210,45 @@ async function expectCardAboveStop(page: Page, where: string): Promise<void> {
   expect(inside(s, tool), `${where}: Stop lives in the Voice card`).toBe(true);
 }
 
-/** Nothing in the card is a Tab stop: no control, no positive tabindex, no keyboard scroller. */
+/**
+ * Nothing in the card is a Tab stop: no control, no positive tabindex. The one exception is
+ * the words when they overflow: then they are a named region the keyboard can reach to
+ * scroll (WCAG 2.1.1; mission P3, C6), and only then.
+ */
 async function expectNotFocusable(page: Page): Promise<void> {
   await expect(card(page).locator("a, button, input, textarea, select, [contenteditable]")).toHaveCount(0);
-  const stops = await card(page).evaluate((el) =>
-    [el, ...Array.from(el.querySelectorAll<HTMLElement>("*"))]
-      .filter((n) => (n as HTMLElement).tabIndex >= 0)
-      .map((n) => `${n.tagName}.${n.className}`),
+  const { stops, overflows } = await card(page).evaluate((el) => {
+    const words = el.querySelector<HTMLElement>('[data-studio="read-this-words"]');
+    return {
+      overflows: !!words && words.scrollHeight > words.clientHeight + 1,
+      stops: [el, ...Array.from(el.querySelectorAll<HTMLElement>("*"))]
+        .filter((n) => (n as HTMLElement).tabIndex >= 0)
+        .map((n) => (n as HTMLElement).getAttribute("data-studio") ?? `${n.tagName}.${n.className}`),
+    };
+  });
+  expect(stops, "the card has no Tab stop but its words, and those only when they overflow").toEqual(
+    overflows ? ["read-this-words"] : [],
   );
-  expect(stops, "the card has no Tab stop").toEqual([]);
 }
 
-/** Tab goes from Close Voice straight to Stop: the card takes no stop of its own. */
+/**
+ * Tab goes from Close Voice straight to Stop: the card takes no stop of its own, unless its
+ * words overflow (by any amount: the card gives way first), and then the words are one stop,
+ * a named region, between Close Voice and Stop (WCAG 2.1.1; mission P3, C6).
+ */
 async function expectTabSkipsCard(page: Page, where: string): Promise<void> {
+  const overflows = await page
+    .locator('[data-studio="read-this-words"]')
+    .evaluate((w) => w.scrollHeight > w.clientHeight + 1);
   await page.getByRole("button", { name: "Close Voice" }).focus();
   await page.keyboard.press("Tab");
+  if (overflows) {
+    expect(
+      await page.evaluate(() => document.activeElement?.getAttribute("data-studio")),
+      `${where}: Tab from Close Voice reaches the scrolling words`,
+    ).toBe("read-this-words");
+    await page.keyboard.press("Tab");
+  }
   expect(
     await page.evaluate(() => document.activeElement?.getAttribute("data-studio")),
     `${where}: Tab from Close Voice lands on Stop`,
@@ -285,12 +311,18 @@ test.describe("T19 · READ THIS while the tape is listening", () => {
     await expectTabSkipsCard(page, "project viewport");
     await stopTake(page);
 
-    // Long words make the card scroll; a scroller still takes no Tab stop.
+    // Long words make the card scroll; then the scroller is one Tab stop (a named region the
+    // keyboard can scroll, WCAG 2.1.1, mission P3), between Close Voice and Stop.
     await typeWords(page, LONG_WORDS);
     await startTake(page);
     await expect(card(page)).toBeVisible();
     await expectNotFocusable(page);
-    await expectTabSkipsCard(page, "project viewport, long words");
+    await page.getByRole("button", { name: "Close Voice" }).focus();
+    await page.keyboard.press("Tab");
+    expect(await page.evaluate(() => document.activeElement?.getAttribute("data-studio")), "Tab from Close Voice reaches the scrolling words").toBe("read-this-words");
+    await expect(page.getByRole("region", { name: /The words to read/ })).toBeFocused();
+    await page.keyboard.press("Tab");
+    expect(await page.evaluate(() => document.activeElement?.getAttribute("data-studio")), "and then Stop").toBe("voice-record");
     await stopTake(page);
   });
 
@@ -342,7 +374,7 @@ test.describe("T19 · READ THIS while the tape is listening", () => {
     expect(look.card.radius, "radius 14").toEqual(["14px", "14px", "14px", "14px"]);
     expect(look.card.padding, "padding 14").toEqual(["14px", "14px", "14px", "14px"]);
 
-    expect(look.label.color, "tape-red label").toBe(RED);
+    expect(look.label.color, "ink-red label (4.5:1+ on paper; mission P3, C6)").toBe(INK_RED);
     expect(look.label.size).toBeCloseTo(10.5, 1);
     expect(look.label.family, "the label is mono").toMatch(/plex|mono/);
     expect(look.label.transform).toBe("uppercase");

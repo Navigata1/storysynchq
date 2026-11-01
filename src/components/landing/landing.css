@@ -443,7 +443,7 @@
   letter-spacing: 0.2em;
   white-space: nowrap;
   text-transform: uppercase;
-  color: rgba(255, 180, 60, 0.5);
+  color: rgba(255, 180, 60, 0.64); /* 4.9:1 on the black window (WCAG AA; 0.5 was 3.4:1) */
 }
 
 .ls-deck-vents {

@@ -869,8 +869,29 @@
     .studio[data-recording="true"] .studio-area-rail,
     .studio[data-take-card="true"] .studio-area-transport { display: none; }
     .studio[data-recording="true"] .studio-area-tool { grid-area: stage; }
-    /* the words are on READ THIS in the card; the photo takes their room */
-    .studio[data-recording="true"] [data-studio="stage-text"] { display: none !important; } /* over its `flex` utility */
+    /* while the card is open the words are on READ THIS and the photo takes
+       their room; close it and the Stage's words come back, one tight line
+       pair, so the reader never loses them (P2-R3-02) */
+    .studio[data-take-card="true"] [data-studio="stage-text"] { display: none !important; } /* over its `flex` utility */
+    .studio[data-recording="true"]:not([data-take-card="true"]) [data-studio="stage-text"] {
+      padding-block: 2px 4px;
+      gap: 2px;
+    }
+    /* the Stage's head row, status line and progress rule step aside: the
+       Listening pill and the transport already say it is recording and for
+       how long */
+    .studio[data-recording="true"]:not([data-take-card="true"]) [data-studio="stage-head"],
+    .studio[data-recording="true"]:not([data-take-card="true"]) [data-studio="stage-status"],
+    .studio[data-recording="true"]:not([data-take-card="true"]) [data-studio="stage-text"] > div:has(> .studio-progress-bar) {
+      display: none !important;
+    }
+    /* !important: over the textarea's own min-h/max-h/text utilities */
+    .studio[data-recording="true"]:not([data-take-card="true"]) .studio-story-text {
+      min-height: 0 !important;
+      max-height: 2.7em !important;
+      font-size: 15px !important;
+      line-height: 1.3 !important;
+    }
     .studio[data-recording="true"] .studio-toolpanel {
       position: absolute;
       inset: 8px 8px 8px auto;
