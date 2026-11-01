@@ -779,3 +779,8 @@ deleting the story forgets it everywhere.**
   left, the Voice card docked on the right (min(400px, 52vw)), and the strip, rail, transport and
   the Stage's words step aside (pages are locked mid-take, the card has its own Stop, READ THIS
   carries the words).
+- P2 review round 2: the landscape take must never leave the child without a Stop (P2-R2-01).
+  The transport steps aside only while the Voice card is open (`data-take-card`); closing the
+  card mid-take brings the transport's Stop back under the photo. Focus follows the one live
+  Stop at every width (`stopAside`), and focus left on a control the layout has hidden counts
+  as lost (P2-R2-02).

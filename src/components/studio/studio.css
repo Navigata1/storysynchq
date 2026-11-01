@@ -849,23 +849,25 @@
   /* Under 600 px tall in landscape there is no room for the photo above a
      sheet or beside a floating card, and the page would scroll the photo
      away (mission C5, P2 review P2-R1-01). For the take the room becomes one
-     screen: the photo on the left, the Voice card docked on the right, and
-     the strip, the rail, the transport and the Stage's words step aside (the
-     pages are locked while recording, the card carries its own Stop, and
-     READ THIS carries the words). */
+     screen: the photo, and under it the transport; the strip, the rail and
+     the Stage's words step aside (the pages are locked while recording and
+     READ THIS carries the words). While the Voice card is open
+     (data-take-card) it docks on the right, the photo takes the left, and
+     the transport steps aside too, as the card carries its own Stop; close
+     the card and the transport's Stop is back (P2-R2-01). */
   @media (orientation: landscape) and (max-height: 599.98px) and (max-width: 1023.98px) {
     .studio[data-recording="true"] {
       --studio-take-card: min(400px, 52vw);
       grid-template-columns: minmax(0, 1fr);
-      grid-template-rows: auto minmax(0, 1fr);
-      grid-template-areas: "top" "stage";
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      grid-template-areas: "top" "stage" "transport";
       height: 100dvh;
       min-height: 0;
       overflow: hidden;
     }
     .studio[data-recording="true"] .studio-area-film,
     .studio[data-recording="true"] .studio-area-rail,
-    .studio[data-recording="true"] .studio-area-transport { display: none; }
+    .studio[data-take-card="true"] .studio-area-transport { display: none; }
     .studio[data-recording="true"] .studio-area-tool { grid-area: stage; }
     /* the words are on READ THIS in the card; the photo takes their room */
     .studio[data-recording="true"] [data-studio="stage-text"] { display: none !important; } /* over its `flex` utility */
@@ -879,9 +881,10 @@
     }
     .studio[data-recording="true"] .stage-zone,
     .studio[data-take-sheet="true"][data-recording="true"] .stage-zone {
+      --stage-pad: 8px; /* every pixel of height goes to the photo here */
       flex: 1 1 0;
       height: auto;
-      margin-right: calc(var(--studio-take-card) + 8px);
     }
+    .studio[data-take-card="true"] .stage-zone { margin-right: calc(var(--studio-take-card) + 8px); }
   }
 }
