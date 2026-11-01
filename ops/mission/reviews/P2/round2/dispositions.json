@@ -1,0 +1,24 @@
+{
+  "reviewedHead": "af2fa7d880346b7917aa9b46d4a62f7e977f5b4e",
+  "base": "543cf86d461a1d3cdd528b7a88e7c01c0226c5a0",
+  "findings": [
+    {
+      "id": "P2-R2-01",
+      "severity": "high",
+      "status": "fixed",
+      "note": "Judge first (941ee92): a 'recording, Voice card closed' state that requires a visible, uncovered Stop; on the pre-fix build both landscape sizes fail. Fix (09a58e9): the transport steps aside only while the Voice card is open (data-take-card), so closing the card mid-take brings its Stop back under the photo. Escape does not close the card mid-take in this layout (probed: focus stays on the card's Stop); its Close key does, and that is the judged path."
+    },
+    {
+      "id": "P2-R2-02",
+      "severity": "medium",
+      "status": "fixed",
+      "note": "09a58e9: the focus hand-off follows stopAside (the phone take sheet or the docked landscape card), so a keyboard REC at 844x390 lands on the card's Stop (probed); focus left on a control the layout hid counts as lost and moves to the transport's Stop."
+    },
+    {
+      "id": "P2-R2-03",
+      "severity": "low",
+      "status": "fixed",
+      "note": "941ee92: the Filmstrip's sticky handle is excused only while the strip can scroll the way that clears it (scrollLeft > 0 for a handle on the left, room to scroll for one on the right)."
+    }
+  ]
+}
