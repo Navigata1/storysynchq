@@ -270,3 +270,14 @@ read only `supabase.ts`. It now requires the `storybook_by_share_code` call in
 `share-lookup.ts` and still allows exactly that one RPC across both files. No other test in the
 file changes; its scans of every file under `src/` already cover the new module.
 `ops/mission/contract.md` changes by this appended section.
+
+### A11 · 2026-11-01 · P4 round 2: the REST share client gets its own tests
+
+P4-R2-01 found `restShareClient` (`src/lib/share-lookup.ts`), the path every production share
+link now resolves through, covered by no test. `tests/share-rest.spec.ts` is new and Node-side:
+with `fetch` replaced by a recorder answering like PostgREST, it pins the by-code RPC request
+(URL, method, anon-key headers, body), the 404 PGRST202 fallback to the exact selects, a
+missing link not reaching the stories table, two rows refused, a 401 kept as an auth
+CloudError, an other RPC failure not falling back, a non-JSON error body failing with its
+status, a network TypeError as a network CloudError, and a found row opening as a book. No
+existing test changes. `ops/mission/contract.md` changes by this appended section.
