@@ -29,6 +29,7 @@ const MIGRATION_003 = path.join(REPO_ROOT, "supabase", "migrations", "003_share_
 const MIGRATION_001 = path.join(REPO_ROOT, "supabase", "migrations", "001_initial_schema.sql");
 const SRC_DIR = path.join(REPO_ROOT, "src");
 const SUPABASE = path.join(SRC_DIR, "lib", "supabase.ts");
+const SHARE_LOOKUP = path.join(SRC_DIR, "lib", "share-lookup.ts");
 
 /** A 128-bit code of this test's own (never the reel's cast code). */
 const CODE_128 = "5e0c7a91d2b84f36a1c09e7d3b6f2a48";
@@ -393,9 +394,12 @@ test.describe("share lookup · nothing in src/ lists links or stories", () => {
   });
 
   test("the shared read goes through the by-code function first", () => {
-    const source = fs.readFileSync(SUPABASE, "utf8");
-    expect(source).toMatch(/\.rpc\(\s*["']storybook_by_share_code["']\s*,\s*\{\s*code\s*\}\s*\)/);
+    // The lookup lives in share-lookup.ts (mission P4, contract A10) so a share link opens
+    // without supabase-js; supabase.ts only re-exports it. Both are read: one RPC between them.
+    const lookup = fs.readFileSync(SHARE_LOOKUP, "utf8");
+    expect(lookup).toMatch(/\.rpc\(\s*["']storybook_by_share_code["']\s*,\s*\{\s*code\s*\}\s*\)/);
     // No other RPC, and no other way in.
+    const source = lookup + fs.readFileSync(SUPABASE, "utf8");
     const rpcs = [...source.matchAll(/\.rpc\(\s*["']([^"']+)["']/g)].map((m) => m[1]);
     expect(rpcs).toEqual(["storybook_by_share_code"]);
   });

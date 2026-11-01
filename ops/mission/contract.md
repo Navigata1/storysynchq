@@ -260,3 +260,13 @@ otherwise only plays the landing's reveal animations, which then show at once).
 changes. `ops/mission/gates/js_budget.py` builds with a placeholder cloud project (no real URL
 or key; nothing real is ever asked). `ops/mission/gates/test_gates.py` adds the routes to its
 within-budget fixture. `ops/mission/contract.md` changes by this appended section.
+
+### A10 · 2026-11-01 · P4 round 1: the share-lookup judge reads where the lookup now lives
+
+P4's fix for P4-R1-01 moves the by-code share lookup out of `src/lib/supabase.ts` into
+`src/lib/share-lookup.ts`, so a share link opens without supabase-js; `supabase.ts` re-exports
+it. `tests/share-lookup.spec.ts`'s "the shared read goes through the by-code function first"
+read only `supabase.ts`. It now requires the `storybook_by_share_code` call in
+`share-lookup.ts` and still allows exactly that one RPC across both files. No other test in the
+file changes; its scans of every file under `src/` already cover the new module.
+`ops/mission/contract.md` changes by this appended section.
