@@ -326,5 +326,11 @@ recording by headless Chromium's fake microphone (a test tone). It also reads A1
 secure context, so WebCodecs is absent there: a browser that has an AAC encoder would read as
 one that does not, and the gate would exit 77 where it can run. It now probes from a blank
 page it serves on 127.0.0.1, a secure origin. Here the answer is unchanged: this Chromium has
-WebCodecs, with Opus but no AAC (exit 77). No existing test changes. `ops/mission/contract.md`
-changes by this appended section.
+WebCodecs, with Opus but no AAC (exit 77).
+
+A correction to A12's text: run here with the gate's flag set by hand, A12's Safari-path test
+does not pass. Its take is published as AAC, but this Chromium cannot decode AAC at all
+(`EncodingError: Unable to decode audio data`, the same at A12's own head 1b5532d), so the
+decode assertion fails. Neither of A12's tests can pass without an engine that encodes and
+decodes AAC, which is why the gate runs only after proving one exists. No existing test
+changes. `ops/mission/contract.md` changes by this appended section.

@@ -842,3 +842,21 @@ deleting the story forgets it everywhere.**
   only Chromium 153, with no AAC encoder, and the Playwright download host is blocked, so C8
   and C2b stay unverified. They need a machine with WebKit and a WebCodecs AAC encoder (a Mac:
   `npx playwright install webkit`, and Chrome on macOS has one).
+
+## 2026-11-01 · P5, continued: the codec rule meets Chromium's MP4 (A13)
+- Probing for P5 found that Chromium (126+) records Opus inside MP4 when asked for "audio/mp4"
+  (`audio/mp4;codecs=opus`, an `Opus` sample entry with its `dOps` box). The recorder asked for
+  a bare MP4 first, and publish passed every MP4 through as AAC, so a Chrome take could be
+  published as Opus labelled AAC.
+  - The recorder now asks for `audio/mp4;codecs=mp4a.40.2` first, then WebM, and a bare MP4
+    only last.
+  - Publish calls an MP4 AAC only when neither its type nor its sample description says Opus
+    (`recordedAsAac`, transcode.ts). Anything else goes through the draft ladder (AAC where
+    WebCodecs can, else WAV).
+  - `isPublishCompliant` refuses any type naming opus, webm or ogg.
+  - Pinned by tests/a2-codec.spec.ts, which fails on the old rule.
+- The AAC gate's encoder probe ran on `about:blank`. WebCodecs is secure-context only, so a
+  capable browser read as incapable. The probe now runs from a page served on 127.0.0.1. The
+  answer here is unchanged: Opus yes, AAC no (exit 77).
+- This Chromium cannot decode AAC either, so neither of tests/a2-aac.spec.ts's two tests can
+  pass here (A13 corrects A12's text, which said the Safari-path test passes).
