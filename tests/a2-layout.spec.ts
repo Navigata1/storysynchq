@@ -96,8 +96,11 @@ const SCREENS: Screen[] = [
       await page.getByRole("button", { name: "Record my voice on this page" }).click();
       await expect(page.locator(".studio[data-recording='true']")).toHaveCount(1);
       await page.waitForTimeout(500);
+      // the state is the card closed, never silently the card open (P2-R3-03)
       const close = page.getByRole("button", { name: "Close Voice" });
-      if (await close.isVisible()) await close.click();
+      await expect(close).toBeVisible();
+      await close.click();
+      await expect(page.locator('[data-studio="tool-card"]')).toHaveCount(0);
       await expect(page.locator(".studio[data-recording='true']"), "closing the card does not end the take").toHaveCount(1);
       await page.waitForTimeout(300);
     },
@@ -197,6 +200,10 @@ async function layoutProblems(page: Page): Promise<{ scrollWidth: number; innerW
         const h = hit.getBoundingClientRect();
         const onLeft = h.left + h.width / 2 < s.left + s.width / 2;
         if (onLeft ? strip.scrollLeft > 0 : strip.scrollLeft < strip.scrollWidth - strip.clientWidth - 1) continue;
+        // the strip cannot scroll the way that clears it: a real overlap, never passed on to
+        // the page-level chrome rule below (P2-R3-01)
+        problems.push({ what: `covered at its centre by the strip's pinned "${describe(hit)}", which no scroll clears`, label });
+        continue;
       }
       if (hit && pinned(hit) && !pinned(el)) {
         const chrome = hit.getBoundingClientRect();

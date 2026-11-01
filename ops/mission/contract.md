@@ -184,3 +184,12 @@ P0 without a third critic series."
 `ops/mission/plan-readiness.md` records, without a further critic series, and the plan is
 ready by this ruling. Main's ruleset (`ops/mission/hitl/ruleset.md`) is the operator's act; until
 `A2-ATTEST ruleset` is on record, contract section 5 counts CI as advisory.
+
+### A3 · 2026-11-01 · P2's deferred judge repairs, and C6's judge
+
+`tests/a2-layout.spec.ts` changes as P2's last review round asked (P2-R3-01, P2-R3-03): a
+thumbnail under the Filmstrip's pinned handle that no scroll clears is reported, not excused,
+and the "recording, Voice card closed" state asserts the card really closed before judging.
+Both make the judge stricter; it still passes at this head (144 of 144). `tests/a2-a11y.spec.ts`
+is C6's judge, new and registered before P3's first `src/` change; it injects axe-core, now a
+pinned devDependency (4.11.1, test-only, not shipped).
