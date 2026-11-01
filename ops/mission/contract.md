@@ -204,3 +204,13 @@ overflow, and then exactly one: the words, a named region, between Close Voice a
 tape-red dot, the card's paper, ink and type are unchanged.
 This PR also appends to `ops/mission/contract.md` itself (A3 and A4), which changes that file's
 registered sum.
+
+### A5 · 2026-11-01 · P3 round 1: the judges cover more, and C6 states its scope
+
+`tests/a2-layout.spec.ts` now asserts the page's words are on screen and uncovered mid-take
+with the Voice card closed (P3-R1-01). `tests/a2-a11y.spec.ts` adds the Player's Reading
+options dialog (P3-R1-02) and states its scope: C6 covers the five product routes (/, /read,
+the Player, /studio, /protocol) and the dialogs it opens; /classic, which CLAUDE.md keeps
+untouched, is out of scope and has serious contrast failures (gray-500 card text) that C6 does
+not claim to clear. Both judges get stricter or wider. `ops/mission/contract.md` changes by
+this appended section.

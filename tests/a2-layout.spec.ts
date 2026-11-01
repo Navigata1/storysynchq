@@ -36,7 +36,7 @@ const SIZES = [
   { name: "landscape 667x375", width: 667, height: 375 },
 ] as const;
 
-type Screen = { name: string; open: (page: Page) => Promise<void>; photo?: boolean; stop?: boolean };
+type Screen = { name: string; open: (page: Page) => Promise<void>; photo?: boolean; stop?: boolean; words?: boolean };
 
 const settle = async (page: Page) => {
   await page.evaluate(() => document.fonts.ready.then(() => true));
@@ -87,6 +87,7 @@ const SCREENS: Screen[] = [
     name: "studio (recording, Voice card closed)",
     photo: true,
     stop: true,
+    words: true,
     open: async (page) => {
       await stubMicrophone(page);
       await seedStudioDraft(page, "twinkle", { narration: false });
@@ -258,6 +259,19 @@ for (const screen of SCREENS) {
             }).length,
           );
           expect(stops, `${screen.name} at ${size.name}: a Stop on screen and uncovered`).toBeGreaterThan(0);
+        }
+        if (screen.words) {
+          // mid-take, card closed: the page's words are on screen, whole line visible and
+          // uncovered (P2-R3-02, P3-R1-01)
+          const words = page.locator('[data-studio="stage-text"] textarea');
+          await expect(words, `${screen.name} at ${size.name}: the page's words are shown`).toBeVisible();
+          expect((await words.inputValue()).trim().length, "the words are the page's").toBeGreaterThan(0);
+          const top = await words.evaluate((el) => {
+            const r = el.getBoundingClientRect();
+            const hit = document.elementFromPoint(r.left + r.width / 2, r.top + Math.min(r.height / 2, 12));
+            return r.height >= 16 && r.top >= 0 && r.bottom <= innerHeight + 0.5 && !!hit && (hit === el || el.contains(hit));
+          });
+          expect(top, `${screen.name} at ${size.name}: the words are on screen and uncovered`).toBe(true);
         }
         if (screen.photo && size.width > size.height) {
           const seen = await page.locator('[data-studio="stage-photo"]').evaluate((photo) => {

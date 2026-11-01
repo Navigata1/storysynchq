@@ -1,7 +1,13 @@
 /**
  * C6's judge (archipelago-2 mission, phase P3): every route has zero serious or critical
  * axe-core violations in its first-screen state and in each open dialog the suite reaches
- * (idea.lock C6; judges/required-P3.json needs 8 passing per project).
+ * (idea.lock C6; judges/required-P3.json needs 8 passing per project). Routes: /, /read, the
+ * Player, /studio, /protocol. Dialogs: the Player's Reading options, the restore prompt, the
+ * parental gate, the publish card, the Voice card mid-take (P3-R1-02).
+ *
+ * Out of scope, stated: /classic, the previous single-file app, which CLAUDE.md keeps
+ * untouched. axe finds serious contrast failures there (gray-500 card text); C6 is reported
+ * for the five product routes above, never for /classic.
  *
  * axe-core (devDependency, pinned) is injected into the page and run on the whole document,
  * WCAG 2.0/2.1/2.2 A and AA rules plus best practices. A violation fails the test when its
@@ -90,6 +96,19 @@ test.describe("a11y", () => {
   test("protocol, first screen", async ({ page }) => {
     await page.goto("/protocol");
     await expectClean(page, "/protocol");
+  });
+
+  test("dialog: the Player's Reading options", async ({ page }) => {
+    const code = randomBytes(16).toString("hex");
+    await seedDeviceLibrary(page, "twinkle", { shareCode: code });
+    await page.goto(`/read?story=${code}`);
+    const root = page.locator(".pl-root");
+    await expect(root).toHaveAttribute("data-view", "cover", { timeout: 20000 });
+    await page.getByRole("button", { name: /Tap to Begin/ }).click();
+    await expect(root).toHaveAttribute("data-view", "page");
+    await page.getByRole("button", { name: "Reading options" }).first().click();
+    await expect(page.getByRole("dialog", { name: "Reading options" })).toBeVisible({ timeout: 10000 });
+    await expectClean(page, "reading options");
   });
 
   test("dialog: the parental gate", async ({ page }) => {
