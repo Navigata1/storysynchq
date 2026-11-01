@@ -766,3 +766,21 @@ deleting the story forgets it everywhere.**
   head, CI green, up to date with main, a merge commit (no squash or rebase).
 - Main's ruleset (ops/mission/hitl/ruleset.md) is the operator's act; until it is attested, CI
   counts as advisory (contract section 5).
+
+## 2026-11-01 · P2 (C5): the Stage on a phone held sideways
+- tests/a2-layout.spec.ts (registered first) found the Studio's picture zone collapsing under
+  600 px tall in landscape: a 24 px photo at 844×390, none at 667×375, and the READ THIS
+  textarea over "Add a picture". Below 600 px the room is not locked to one screen, so the
+  Stage row had no height to give. Fix: on landscape screens under 600 px tall the picture
+  zone holds max(150px, 50dvh) and the rest of the room follows it down the page.
+- P2 review (P2-R1-01): mid-take on a landscape phone the photo was buried (0 px uncovered at
+  844×390 and 667×375: the sheet or card over it, and the page scrolled away). Under 600 px tall
+  in landscape (below 1024 px wide) a take now lays the room out as one screen: the photo on the
+  left, the Voice card docked on the right (min(400px, 52vw)), and the strip, rail, transport and
+  the Stage's words step aside (pages are locked mid-take, the card has its own Stop, READ THIS
+  carries the words).
+- P2 review round 2: the landscape take must never leave the child without a Stop (P2-R2-01).
+  The transport steps aside only while the Voice card is open (`data-take-card`); closing the
+  card mid-take brings the transport's Stop back under the photo. Focus follows the one live
+  Stop at every width (`stopAside`), and focus left on a control the layout has hidden counts
+  as lost (P2-R2-02).

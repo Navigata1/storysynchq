@@ -99,4 +99,12 @@
   @media (min-width: 640px) {
     .stage-zone { --stage-pad: 18px; }
   }
+
+  /* A phone on its side (under 600 px tall): the room is not locked to one screen
+     there, so the Stage row has no height of its own to give and the zone would
+     collapse to a sliver. Hold half the screen for the picture; the words, the
+     filmstrip and the transport follow it down the page (mission C5). */
+  @media (orientation: landscape) and (max-height: 599.98px) {
+    .stage-zone { flex: 0 0 auto; height: max(150px, 50dvh); }
+  }
 }

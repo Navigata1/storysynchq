@@ -1,0 +1,18 @@
+{
+  "reviewedHead": "2441b2a02785375f0e99f5acfae8eb1b9972d663",
+  "base": "543cf86d461a1d3cdd528b7a88e7c01c0226c5a0",
+  "findings": [
+    {
+      "id": "P2-R1-01",
+      "severity": "medium",
+      "status": "fixed",
+      "note": "Judge first (7ac94c2): a new 'recording a take' state, and the landscape photo check counts uncovered px down the photo's middle; it found 0 px at 844x390 and 667x375. Fix (570b894): under 600 px tall in landscape (below 1024 px) a take lays the room out as one screen, photo left, Voice card docked right; strip, rail, transport and the Stage's words step aside."
+    },
+    {
+      "id": "P2-R1-02",
+      "severity": "low",
+      "status": "fixed",
+      "note": "7ac94c2: chrome is excused only while scrolling can uncover the control. The direction is the reverse of the finding's text: content under TOP chrome is uncovered by scrolling up, so it needs scrollY > 0; under BOTTOM chrome it needs room to scroll down. The Filmstrip's sticky handle is excused only while its strip scrolls sideways."
+    }
+  ]
+}

@@ -183,6 +183,8 @@ const AUTOSAVE_MS = 900;
 
 /** Below 768px the room is a phone's: the tool card is a bottom sheet. */
 const PHONE_QUERY = "(max-width: 767.98px)";
+/** A phone or small tablet held sideways: under 600px tall, under 1024px wide (studio.css "a take on a phone held sideways"). */
+const SHORT_LANDSCAPE_QUERY = "(orientation: landscape) and (max-height: 599.98px) and (max-width: 1023.98px)";
 
 /** A media query, read after mount (false on the server and the first paint). */
 function useMediaQuery(query: string): boolean {
@@ -429,6 +431,7 @@ export default function Studio() {
   );
   /** A phone (< 768px): the Voice sheet covers the foot of the room there. */
   const phone = useMediaQuery(PHONE_QUERY);
+  const shortLandscape = useMediaQuery(SHORT_LANDSCAPE_QUERY);
 
   const pages = state.manifest.pages;
   const page: SsyncPage | undefined = pages[activeIndex];
@@ -1640,6 +1643,14 @@ export default function Studio() {
    * Stop, so the transport underneath recedes and takes no focus or tap.
    */
   const transportAside = phone && recording && tool === "voice";
+  /*
+   * Held sideways and short, a take docks the Voice card beside the photo and
+   * the transport steps aside while the card is open; close the card and the
+   * transport's Stop is back (P2 review P2-R2-01). `stopAside` is either case:
+   * the one live Stop is the card's.
+   */
+  const cardAside = shortLandscape && recording && tool === "voice";
+  const stopAside = transportAside || cardAside;
 
   /*
    * The take sheet never covers the picture being read: the Stage's picture
@@ -1686,20 +1697,22 @@ export default function Studio() {
   const wasAsideRef = React.useRef(false);
   React.useLayoutEffect(() => {
     const was = wasAsideRef.current;
-    wasAsideRef.current = transportAside;
+    wasAsideRef.current = stopAside;
     const room = roomRef.current;
     const area = transportAreaRef.current;
-    if (!room || !area || was === transportAside) return;
+    if (!room || !area || was === stopAside) return;
     const active = document.activeElement;
-    const lost = !active || active === document.body || !room.contains(active);
-    if (transportAside) {
+    // focus on a control the layout has hidden (the rail mid-take, held sideways) is lost too
+    const lost =
+      !active || active === document.body || !room.contains(active) || active.getClientRects().length === 0;
+    if (stopAside) {
       if (lost || area.contains(active)) {
         room.querySelector<HTMLElement>('[data-studio="tool-card"] [data-studio="voice-record"]')?.focus();
       }
     } else if (recordingRef.current && lost) {
       area.querySelector<HTMLElement>('[data-sk="transport"][data-kind="stop"]')?.focus();
     }
-  }, [transportAside]);
+  }, [stopAside]);
   /** The active page's mood: its own, else the story's (T24a). The Stage names it. */
   const pageMood = effectiveMood(state, page?.id);
   /** How many pages have their own mood; the Music card says so before it sets every page. */
@@ -1759,6 +1772,7 @@ export default function Studio() {
       className="studio"
       data-recording={recording ? "true" : "false"}
       data-take-sheet={transportAside ? "true" : undefined}
+      data-take-card={cardAside ? "true" : undefined}
       data-advanced={advanced ? "true" : undefined}
       // The publish card is a modal: the room behind it takes no focus, no
       // tap and is not read (the card is rendered outside it, below).
@@ -2133,8 +2147,8 @@ export default function Studio() {
       <div
         ref={transportAreaRef}
         className="studio-area-transport"
-        data-aside={transportAside ? "true" : undefined}
-        inert={transportAside}
+        data-aside={stopAside ? "true" : undefined}
+        inert={stopAside}
       >
         <Transport
           playing={audio.playing}
