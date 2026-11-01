@@ -766,3 +766,10 @@ deleting the story forgets it everywhere.**
   head, CI green, up to date with main, a merge commit (no squash or rebase).
 - Main's ruleset (ops/mission/hitl/ruleset.md) is the operator's act; until it is attested, CI
   counts as advisory (contract section 5).
+
+## 2026-11-01 · P2 (C5): the Stage on a phone held sideways
+- tests/a2-layout.spec.ts (registered first) found the Studio's picture zone collapsing under
+  600 px tall in landscape: a 24 px photo at 844×390, none at 667×375, and the READ THIS
+  textarea over "Add a picture". Below 600 px the room is not locked to one screen, so the
+  Stage row had no height to give. Fix: on landscape screens under 600 px tall the picture
+  zone holds max(150px, 50dvh) and the rest of the room follows it down the page.
