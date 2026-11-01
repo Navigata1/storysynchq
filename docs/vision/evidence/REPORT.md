@@ -391,6 +391,15 @@ These are grouped by screen and collected from each ticket's deviations section 
 
 Each item was checked against the M6 commits. Items M6 fixed are not listed.
 
+> **Update, M7 (PR 6, 2026-10-29).** Fixed since this report: the "ON THIS DEVICE" label after a failed save,
+> `shareBook`'s own error sentence, the 320px sideways scroll, the 640–767px two-row top bar, the long voice name under
+> the record dot, the `/protocol` Visual readout ellipsis (§2), the filmstrip stopping the bed, repeated announcements,
+> the gate/consent midnight edge, the draft-download promise, a paused browser voice re-reading its page (now resumes at
+> the word it reached; voices with no word boundaries still restart), the `wp-landing` sweep timeout, and every item
+> under "Leftovers and cleanup" (`uploadMedia` and `consentRecords` removed, one `MOOD_ICON`). Still open: everything
+> under "Not exercised in CI", landscape phones, the per-page mood of a source page with no music (needs a decision,
+> see `agent_docs/decisions.md` M7), and the remaining test-stability notes. Details: `agent_docs/decisions.md`, M7.
+
 **Not exercised in CI:**
 
 - **Cloud mode has not been tested end to end.** CI has no Supabase. The following are covered only by pure-function tests, by the dev-only seam, or not at all:

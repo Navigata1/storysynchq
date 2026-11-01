@@ -1,0 +1,8 @@
+{
+  "note": "Each phase's judges. review_closed.py requires the commit that registers each (in SHA256SUMS or ROOTSUMS) to precede every src/ change in the phase's reviewed range (S1b K40).",
+  "P1": ["tests/a2-cloud.spec.ts"],
+  "P2": ["tests/a2-layout.spec.ts"],
+  "P3": ["tests/a2-a11y.spec.ts"],
+  "P4": ["ops/mission/gates/js_budget.py"],
+  "P5": ["tests/a2-aac.spec.ts"]
+}

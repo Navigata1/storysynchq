@@ -1,0 +1,11 @@
+{
+  "projects": [
+    "webkit"
+  ],
+  "families": {
+    "wp-player": 1,
+    "critic-player": 1,
+    "vision-reader-m6": 1,
+    "storysync-roundtrip": 1
+  }
+}

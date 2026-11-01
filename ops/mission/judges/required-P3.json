@@ -1,0 +1,13 @@
+{
+  "note": "C6's judge, frozen before it exists (S1b K25): 5 routes + 3 dialogs on each project.",
+  "projects": [
+    "desktop",
+    "mobile"
+  ],
+  "families": {
+    "a2-a11y": {
+      "desktop": 8,
+      "mobile": 8
+    }
+  }
+}

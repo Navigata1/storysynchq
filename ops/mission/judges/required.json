@@ -1,0 +1,19 @@
+{
+  "note": "Spec families e2e_check.py requires on each project, with the minimum number of passing tests per project. A family is a file-name prefix. The a2- judges are added, with their counts, by the amendment that registers each (S1 critic K17). a2-journey (S1b K48) is C1's own judge: the whole Child Journey in one flow, required by exact key on both projects.",
+  "projects": [
+    "desktop",
+    "mobile"
+  ],
+  "families": {
+    "vision-": 1,
+    "wp-": 1,
+    "critic-": 1,
+    "fable-pass": 1,
+    "storysync-roundtrip": 1,
+    "a2-journey": 1
+  },
+  "mustPass": [
+    "desktop › a2-journey.spec.ts › child journey › photos in, a take per page, music, gate, publish, play through",
+    "mobile › a2-journey.spec.ts › child journey › photos in, a take per page, music, gate, publish, play through"
+  ]
+}

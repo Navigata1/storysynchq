@@ -15,7 +15,8 @@
 // segments are not tape).
 //
 // speechSynthesis is stubbed (as tests/vision-reader-deck-chip.spec.ts does):
-// `__boundary(charIndex)` lights a word, `__endUtterance()` ends the line.
+// `__boundary(charIndex)` lights a word, `__endUtterance()` ends the line, and
+// `__spoken` lists every line the page asked the voice to speak.
 
 import { randomBytes } from "node:crypto";
 import { test, expect, type Locator, type Page } from "@playwright/test";
@@ -37,6 +38,7 @@ async function stubSpeech(page: Page): Promise<void> {
   await page.addInitScript(() => {
     const w = window as unknown as Record<string, unknown>;
     w.__utt = null;
+    w.__spoken = [] as string[];
     class FakeUtterance {
       text: string;
       rate = 1;
@@ -55,6 +57,7 @@ async function stubSpeech(page: Page): Promise<void> {
       value: {
         speak(u: FakeUtterance) {
           w.__utt = u;
+          (w.__spoken as string[]).push(u.text);
           u.onstart?.();
         },
         cancel() {},
@@ -349,6 +352,59 @@ test.describe("T09b · tape-pack progress (desktop, s02)", () => {
     await expect(page.locator(ROOT)).toHaveAttribute("data-page", "2");
     await expectFill(page, 1, "the wordless page 2 after its beat");
     await expect.poll(async () => (await packs(page)).right - (await packs(page)).left).toBeGreaterThan(4);
+  });
+
+  test("a paused browser voice · play picks the page up at the word it reached; the strip and the lit word never step back (T09b)", async ({
+    page,
+  }) => {
+    test.setTimeout(60000);
+    await stubSpeech(page);
+    await begin(page, "/read?demo=1");
+    await waitForUtterance(page, "Once upon a time");
+    const content = await page.evaluate(() => (window as unknown as { __utt: { text: string } }).__utt.text);
+    const words = [...content.matchAll(/\S+/g)].map((m) => ({ text: m[0], start: m.index ?? 0 }));
+    expect(words.length, "page 1 has enough words to pause inside").toBeGreaterThan(10);
+    const LIT = 6;
+    const now = page.locator('[data-pl="word"].is-now');
+
+    // the voice reaches word 6: the tape is (6 + 1) / N into page 1 of 8
+    await lightWord(page, content, LIT);
+    await expect(now).toHaveText(words[LIT].text);
+    const reached = (LIT + 1) / words.length / 8;
+    await expectFill(page, reached, "word 6 lit");
+
+    // pause: the voice stops; the strip holds and the word it stopped on stays lit
+    await page.keyboard.press(" ");
+    await expect(page.getByRole("button", { name: /^play$/i })).toBeVisible();
+    await page.waitForTimeout(900);
+    await expect(now).toHaveText(words[LIT].text);
+    await expectFill(page, reached, "while paused");
+
+    // play: the voice speaks on from word 6, never from the top of the page
+    await page.keyboard.press(" ");
+    await page.waitForFunction(() => (window as unknown as { __spoken: string[] }).__spoken.length >= 2, null, {
+      timeout: 10000,
+    });
+    const spoken = await page.evaluate(() => (window as unknown as { __spoken: string[] }).__spoken);
+    expect(spoken).toHaveLength(2);
+    expect(spoken[0]).toBe(content);
+    expect(spoken[1], "the second line starts at the word the voice had reached").toBe(content.slice(words[LIT].start));
+
+    // the resumed line's own boundaries count from its start: its first word is word 6 …
+    await page.evaluate(() => (window as unknown as { __boundary: (n: number) => void }).__boundary(0));
+    await expect(now).toHaveText(words[LIT].text);
+    await expectFill(page, reached, "resumed at word 6");
+    // … and its third word is word 8, further along the tape
+    const third = words[LIT + 2].start - words[LIT].start;
+    await page.evaluate((n) => (window as unknown as { __boundary: (n: number) => void }).__boundary(n), third);
+    await expect(now).toHaveText(words[LIT + 2].text);
+    await expectFill(page, (LIT + 3) / words.length / 8, "word 8 lit after the resume");
+
+    // turning the page forgets the place: page 2 starts at its first word
+    await page.keyboard.press("ArrowRight");
+    await waitForUtterance(page, "Every night");
+    const last = await page.evaluate(() => (window as unknown as { __spoken: string[] }).__spoken.at(-1));
+    expect(last).toBe(HOUSE_PAGE_2);
   });
 
   test("motion · the packs and the fill ease out over ~600 ms", async ({ page }) => {

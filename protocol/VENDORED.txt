@@ -1,0 +1,18 @@
+storysynchq vendors the archipelago-2 build method in this folder.
+
+Source: Navigata1/archipelago-2 @ daaa3075af1355793eec606f0b46a0af6f416512 (2026-10-19),
+cloned 2026-10-31.
+
+- protocol/{ARCHIPELAGO-README.md, SHA256SUMS, examples/, schemas/, scripts/, templates/}
+  are byte-identical to archipelago-2's protocol/ (archipelago v1). Verify with:
+    python3 protocol/a2/scripts/sums.py verify protocol/SHA256SUMS
+  (not --complete: this VENDORED.txt and a2/ are additions the upstream list omits;
+  PROVENANCE.txt is upstream's own, describing its copy from archipelago v1).
+- protocol/a2/scripts/{stamp.sh, sums.py, convergence.py} and protocol/a2/templates/*.md
+  are byte-identical to archipelago-2's skills/archipelago-2/{scripts,templates}.
+  Verify with:  python3 protocol/a2/scripts/sums.py verify --complete protocol/a2/SHA256SUMS
+- Not vendored: review-run.sh and profile.sb.template (a macOS sandbox profile and a
+  Codex runner; this mission runs on Linux with no second model family reachable).
+  The reviewer seat used instead is ops/mission/seat.sh, described in ops/mission/contract.md.
+
+Run every protocol command from the repository root (the scripts hardcode ops/mission/*).

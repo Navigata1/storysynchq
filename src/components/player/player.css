@@ -893,13 +893,6 @@
   .pl-qr-copy {
     min-width: 0;
   }
-  .pl-qr-title {
-    margin: 0 0 4px;
-    font-family: var(--font-fraunces), Georgia, serif;
-    font-size: 17px;
-    font-weight: 700;
-    line-height: 1.2;
-  }
   .pl-qr-url {
     margin: 0;
     overflow-wrap: anywhere;

@@ -82,7 +82,11 @@ export interface StudioAudio {
   clearMicError: () => void;
   unlock: () => Promise<void>;
   play: (fromIndex?: number) => Promise<void>;
-  stop: () => void;
+  /**
+   * Stop playback (and a browser voice). The bed stops with it, unless
+   * `keepBed`: the Music card is open, and the bed follows the card.
+   */
+  stop: (options?: { keepBed?: boolean }) => void;
   toggleRecord: () => Promise<void>;
   cancelRecording: () => void;
   /** Music bed follows playback, and the Music tool panel while it is open. */
@@ -226,7 +230,7 @@ export function useStudioAudio({
     }
   }, []);
 
-  const stop = useCallback(() => {
+  const stop = useCallback((options?: { keepBed?: boolean }) => {
     playingRef.current = false;
     clearAdvance();
     cancelSpeech();
@@ -241,7 +245,7 @@ export function useStudioAudio({
     setDucking(false);
     setPlaying(false);
     setPosition(0);
-    musicActiveRef.current = false;
+    if (!options?.keepBed) musicActiveRef.current = false;
     syncMix();
   }, [cancelSpeech, clearAdvance, setDucking, syncMix]);
 

@@ -1,0 +1,74 @@
+{
+  "note": "Which gates prove each claim (S1 critic K24: gates, not phases). Frozen with the locks; derive_bundle.py reads it. C9 is checked live, so the band does not depend on the close phase's own run record. Provenance (S1b K43): 'recomputable' when anyone can rerun the proving gates at HEAD and get the same answer; 'attested' when the answer also rests on a record nobody can recompute (C3b: the operator's attestation comment; C9: the ledger's phase-runs at earlier heads). band.py holds attested claims at unverified for the headline band. C10 is checked live like C9: band.py runs inside the close phase, before that phase's own run is in the ledger.",
+  "proves": {
+    "C1": {
+      "gates": [
+        "P0-G5"
+      ],
+      "provenance": "recomputable"
+    },
+    "C2": {
+      "gates": [
+        "P0-G5"
+      ],
+      "provenance": "recomputable"
+    },
+    "C2b": {
+      "gates": [
+        "P5-G2"
+      ],
+      "provenance": "recomputable"
+    },
+    "C3": {
+      "gates": [
+        "P0-G5"
+      ],
+      "provenance": "recomputable"
+    },
+    "C3b": {
+      "gates": [
+        "P1-G1",
+        "P1-G2"
+      ],
+      "provenance": "attested"
+    },
+    "C4": {
+      "gates": [
+        "P1-G2"
+      ],
+      "provenance": "recomputable"
+    },
+    "C5": {
+      "gates": [
+        "P2-G5"
+      ],
+      "provenance": "recomputable"
+    },
+    "C6": {
+      "gates": [
+        "P3-G5"
+      ],
+      "provenance": "recomputable"
+    },
+    "C7": {
+      "gates": [
+        "P4-G6"
+      ],
+      "provenance": "recomputable"
+    },
+    "C8": {
+      "gates": [
+        "P5-G1"
+      ],
+      "provenance": "recomputable"
+    },
+    "C9": {
+      "live": "python3 ops/mission/gates/merged_scan.py",
+      "provenance": "attested"
+    },
+    "C10": {
+      "live": "python3 ops/mission/gates/deployed.py",
+      "provenance": "recomputable"
+    }
+  }
+}

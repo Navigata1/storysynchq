@@ -380,6 +380,9 @@ test.describe("WP-L · /protocol", () => {
    * blocks scroll inside themselves; the PAGE never does.
    */
   test("neither route scrolls sideways, at any width from 320 to 1440", async ({ page }) => {
+    // 18 full page loads, each waiting for network idle: ~30 s on a loaded
+    // dev server, which is the default per-test budget. Give the sweep its own.
+    test.setTimeout(90_000);
     const widths = [320, 375, 390, 414, 768, 900, 1024, 1280, 1440];
     for (const route of ["/", "/protocol"]) {
       for (const width of widths) {

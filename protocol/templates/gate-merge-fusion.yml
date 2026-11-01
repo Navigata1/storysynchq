@@ -1,0 +1,138 @@
+# ARCHIPELAGO Gate-Merge Fusion — portable CI template.
+#
+# Copy this to `.github/workflows/gates.yml` in any project. It makes the GATE
+# the merge authority instead of a human click, so no one becomes the merge
+# bottleneck. A PR crosses into the default branch only on evidence a check
+# could have failed on — never on a claim.
+#
+# Two parts:
+#   1. `verify` — the gates. The UNIVERSAL steps (archipelago contracts, band-cap
+#      scorer, secret scan) are fixed; the "PROJECT GATES" block is yours to swap
+#      for your stack (npm / cargo / pytest / go / hvigor …).
+#   2. `merge`  — squash-merges on green. UNIVERSAL. Do not edit its guards.
+#
+# Why no branch protection? That's a paid feature on private repos. This template
+# needs none: the merge job is the authority, on every plan tier, free.
+#
+# Honest limits (documented, not hidden):
+#   - The gate runs the PR's OWN workflow, so a PR could weaken the gate then
+#     self-approve. GUARDED below: any PR that edits .github/workflows/** is held
+#     for a human, never auto-merged.
+#   - A direct push to the default branch bypasses the gate. Rule: never push to
+#     the default branch; always via PR. (Add branch protection if you have Pro.)
+#   - If your test step tolerates "no tests" (e.g. --passWithNoTests), a PR with
+#     zero tests still passes that step — carrying real tests + an evidence bundle
+#     per phase is the builder's discipline, enforced by the band-cap gate.
+
+name: gates
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+concurrency:
+  group: gates-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # full history so the secret-scan diff has the base ref
+
+      # ── PROJECT GATES: replace this block with your stack's checks. ──────────
+      # Each must be able to FAIL. Examples:
+      #   JS/TS:  npm ci ; npx tsc --noEmit ; npm run lint ; npm test -- --ci
+      #   Rust:   cargo fmt --check ; cargo clippy -- -D warnings ; cargo test
+      #   Python: pip install -e '.[dev]' ; ruff check . ; mypy . ; pytest
+      #   Go:     go vet ./... ; golangci-lint run ; go test ./...
+      - name: Project gates
+        run: |
+          echo "::error::Replace the 'Project gates' step with your stack's checks."
+          exit 1
+      # ────────────────────────────────────────────────────────────────────────
+
+      # ── UNIVERSAL: archipelago contracts + band-cap dogfood scorer. ─────────
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Archipelago contracts + dogfood band
+        run: |
+          python3 -m pip install --quiet jsonschema || true
+          PROTO="$RUNNER_TEMP/archipelago"
+          git clone --depth 1 https://github.com/Navigata1/archipelago "$PROTO"
+          if [ -f ops/mission/plan.lock.json ]; then
+            python3 "$PROTO/scripts/validate_contracts.py" ops/mission/plan.lock.json
+            python3 "$PROTO/scripts/test_shell_agnostic.py"
+          else
+            echo "No mission lock on this PR — contract gate skipped (recorded, not a silent pass)."
+          fi
+          if [ -f ops/mission/evidence/bundle.json ]; then
+            echo "Scoring the phase evidence bundle (passes ONLY at band 5)..."
+            python3 "$PROTO/scripts/dogfood_lanes.py" ops/mission/evidence/bundle.json
+          else
+            echo "No evidence bundle on this PR — band gate skipped (recorded)."
+          fi
+
+      # ── UNIVERSAL: secret scan (VALUES, not identifier names). ──────────────
+      - name: Secret scan (PR diff)
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          RANGE="${BASE_SHA:-HEAD~1}...HEAD"
+          if git diff "$RANGE" -- . ':(exclude).github/workflows/**' \
+              | grep -Eq "(sb_secret_[A-Za-z0-9]{20}|sk-ant-[A-Za-z0-9_-]{24}|sk-[A-Za-z0-9]{32}|gh[posru]_[A-Za-z0-9]{30}|github_pat_[A-Za-z0-9_]{30}|AKIA[0-9A-Z]{16}|eyJ[A-Za-z0-9._-]{60}|-----BEGIN [A-Z ]*PRIVATE KEY)"; then
+            echo "::error::Possible secret VALUE in diff — blocked."
+            exit 1
+          fi
+          echo "clean"
+
+  # ── UNIVERSAL: the gate IS the merge authority. Do not edit these guards. ──
+  merge:
+    needs: verify
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.draft == false &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # A PR that edits the gate itself is NOT auto-merged — it waits for a human.
+      # The gate cannot rewrite its own rules and then approve itself.
+      - name: Gate-change guard
+        id: guard
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if git diff --name-only "${BASE_SHA}...HEAD" | grep -q '^.github/workflows/'; then
+            echo "touches_gate=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "touches_gate=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Hold for human review (gate change)
+        if: steps.guard.outputs.touches_gate == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr comment ${{ github.event.pull_request.number }} --repo ${{ github.repository }} \
+            --body "🔒 Gate passed, but this PR edits the gate itself (\`.github/workflows/**\`). Auto-merge is withheld by design — a human must review changes to the merge authority." || true
+
+      - name: Squash-merge on green
+        if: steps.guard.outputs.touches_gate == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr merge ${{ github.event.pull_request.number }} \
+            --repo ${{ github.repository }} --squash --delete-branch

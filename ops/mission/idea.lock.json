@@ -1,0 +1,89 @@
+{
+  "schemaVersion": "1.0",
+  "id": "idea-storysync-poc-complete",
+  "frozenAt": "2026-11-01T00:30:00Z",
+  "frozenBy": "claude-lead (operator: Navigata1, delegated 2026-10-31)",
+  "problem": {
+    "statement": "StorySync's POC is built to the Vision Reel (PR #5) and hardened (PR #6), but 'complete at production quality' has never been stated as checkable claims. Merges have rested on the builder's own reading; cloud sharing in production is unverified; layout, accessibility and cross-browser claims have no gate that could fail.",
+    "successCriteria": [
+      "The Child Journey (photos, a voice per page, auto music, publish, open the link) runs end to end in a production build and every step is pinned by a test that can fail",
+      "Every merge to main crosses the full ladder plus an isolated-seat review round with no open High",
+      "Every claim below is reported at the band its evidence reached; a claim this environment cannot check is reported unverified, never proven"
+    ]
+  },
+  "domain": {
+    "id": 6,
+    "letter": "F",
+    "name": "Elite Software Craft"
+  },
+  "definitionOfDone": [
+    {
+      "claim": "C1 · The Child Journey completes in a production build (next build + next start) at 1280x720 and 375x812: add pictures, record a voice on each page, music added automatically, pass the parental gate, publish, open the published tape in the Player and hear it play through",
+      "falsifiedBy": "ops/mission/gates/e2e_prod.sh (CI=1, next start of HEAD, clean tree) exits non-zero: tests/a2-journey.spec.ts (the whole journey in one flow: photos through the file input, a take on every page, auto music, the gate, publish, the published tape played through) fails on either project, any other test fails, a required spec family (vision-, wp-, critic-, fable-pass, storysync-roundtrip, a2-journey) has no passing test on either project, or a skip is not on the registered allow-list"
+    },
+    {
+      "claim": "C2 · A published tape's narration is AAC/M4A or WAV, never Opus/WebM, and the WAV path survives pack -> .storysync -> unpack with an identical manifest and assets",
+      "falsifiedBy": "tests/storysync-roundtrip.spec.ts or the manifest validator accepts an Opus/WebM audioUrl in a published manifest, or the round-trip diff is non-empty"
+    },
+    {
+      "claim": "C2b · The AAC path (record -> level -> AAC/M4A publish -> play) works on a browser with a WebCodecs AAC encoder",
+      "falsifiedBy": "ops/mission/gates/aac_publish.sh, on an engine whose AudioEncoder reports mp4a.40.2 support, finds a published tape whose narration is not audio/mp4 or does not play; or no installed engine supports it (exit 77, unverified)"
+    },
+    {
+      "claim": "C3 · The client keeps the COPPA posture: the parental gate stands before publish and share, one tap deletes the whole story, the Player sends no request to a third-party host, share codes are 128-bit",
+      "falsifiedBy": "a watchSends check observes a non-same-origin request from /read, a publish completes without the gate, delete leaves story data in storage, or a share code under 128 bits is generated"
+    },
+    {
+      "claim": "C3b · Production's database refuses anonymous listing: with only the shipped anon key, no select on storybooks, shared_links or page_media returns a row without a share code",
+      "falsifiedBy": "an anon-key select without a code against production's project returns any row (migration 003 not applied), or the check is never run against production"
+    },
+    {
+      "claim": "C4 · A link shared from production opens the tape on another device with no account (cloud mode)",
+      "falsifiedBy": "a cloud end-to-end run against production's Supabase project (publish on one browser context, open the link in a fresh context) fails, or the production schema lacks storybooks / storybook_by_share_code"
+    },
+    {
+      "claim": "C5 · No route scrolls sideways and no control is clipped or overlapped at 320-1440px wide and on landscape phones (844x390, 667x375); in landscape the Stage photo stays visible",
+      "falsifiedBy": "tests/a2-layout.spec.ts finds document scrollWidth > innerWidth on any route at any listed size, an interactive control whose box leaves the viewport, or a landscape Stage photo under 120px tall"
+    },
+    {
+      "claim": "C6 · Every route has zero serious or critical axe-core violations in its first-screen state and in each open dialog the suite reaches",
+      "falsifiedBy": "tests/a2-a11y.spec.ts reports any violation with impact serious or critical"
+    },
+    {
+      "claim": "C7 · First-load JavaScript per route stays within the frozen budget registered in ops/mission/contract.md",
+      "falsifiedBy": "ops/mission/gates/js_budget.py reads the production build's per-route first-load JS and finds any route over its budget"
+    },
+    {
+      "claim": "C8 · The Player reads a tape in WebKit (the Safari engine) as it does in Chromium",
+      "falsifiedBy": "the Player journey specs fail under a WebKit project, or no WebKit browser is available to run them"
+    },
+    {
+      "claim": "C9 · Every merge to main in this mission before the close PR crossed tsc, lint, build, the full suite on a production build, and an isolated-seat review round whose dispositions leave no open High; the close PR's own merge is scanned after it lands and reported in its PR thread as an advisory record, since no gate can run on a merge that has not happened (S1b K50)",
+      "falsifiedBy": "ops/mission/gates/merged_scan.py lists the PRs merged into main from GitHub and finds a mission PR whose head has no exit-0 phase-run of a merging phase (one whose gates carry the full ladder: tsc, lint, registered sums, the judges' fixtures, the suite on a production build, review) in the hash-chained ledger, or finds no mission merge at all"
+    },
+    {
+      "claim": "C10 · The production deployment serves main's tip and opens the demo tape: storysynchq.vercel.app's ssync-build is main's tip and /read loads the demo tape's data (merge rule 3, S1b K49)",
+      "falsifiedBy": "ops/mission/gates/deployed.py fetches the production site and finds an ssync-build other than main's tip, or a /read page or demo tape file that does not load; exit 77 (unverified) when the network to the site is denied"
+    }
+  ],
+  "confidence": {
+    "score": 6,
+    "biggestRisk": "C2b, C3b, C4 and C8 cannot be checked from this environment (production Supabase reads are denied by the session's permission policy; only Chromium is installed, without an AAC encoder), so the honest ceiling is band 3 until the operator supplies that access.",
+    "nextAction": "Run the blind plan critic on these locks, then carry PR #6 through P0."
+  },
+  "psznDedupe": {
+    "checked": true,
+    "nearestNeighbor": "docs/10x-plan.md work packages (WP-M/S/P/L)",
+    "similarity": 0.3
+  },
+  "rejectedAlternatives": [
+    {
+      "idea": "declare StorySync complete on the M6/M7 evidence alone",
+      "reason": "those runs are the builder's own reading; no claim was frozen with a check before the work and cloud sharing was never exercised"
+    },
+    {
+      "idea": "build the video-driven engagement layer now",
+      "reason": "its input (the video) is unreachable from this session; building it would rest on an imagined source. It enters as its own phase once the transcript arrives"
+    }
+  ]
+}

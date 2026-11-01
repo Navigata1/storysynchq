@@ -1,0 +1,12 @@
+{
+  "note": "C5's judge, frozen before it exists (S1b K25): 5 routes x 7 sizes, set by its own viewports, on the desktop project.",
+  "projects": [
+    "desktop",
+    "mobile"
+  ],
+  "families": {
+    "a2-layout": {
+      "desktop": 35
+    }
+  }
+}

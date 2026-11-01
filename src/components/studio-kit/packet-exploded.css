@@ -429,23 +429,23 @@
   }
 
   /* A stack ≥ 600 px wide (FIG. 1 beside the cards at ≥ 1140 px, or alone from
-     768 px) prints each readout as designed: the head line and the tail line
-     never wrap inside a clause — a tail too long for its plate ends in an
-     ellipsis (the whole value stays in the DOM, read by assistive tech) — and a
-     pencil note takes at most two lines. Narrower (1088–1139 px, 556 px) the
-     readouts wrap between words, as T23b requires. */
+     768 px) prints each readout as designed: the head line never wraps inside
+     a clause, and a pencil note takes at most two lines. The tail starts on its
+     own line and, when it is longer than the plate (the Visual plate's alt
+     text), wraps between words onto one more line rather than ending in an
+     ellipsis: every word a sighted reader is shown can be read (the plate's
+     40 px print is taller than three mono lines, so the plate keeps its
+     height). Narrower (1088–1139 px, 556 px) the readouts wrap between words,
+     as T23b requires. */
   @container sk-px (min-width: 600px) {
     .sk-px-file {
       overflow-wrap: normal;
     }
-    .sk-px-line,
-    .sk-px-tail {
+    .sk-px-line {
       white-space: nowrap;
     }
     .sk-px-tail {
       display: block;
-      overflow: hidden;
-      text-overflow: ellipsis;
     }
     .sk-px-file--empty {
       display: -webkit-box;

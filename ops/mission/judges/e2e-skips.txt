@@ -1,0 +1,48 @@
+desktop › studio-hardening.spec.ts › hardening 3 · 320px: no sideways scroll › the page is no wider than the screen, the transport's keys inside it
+desktop › studio-polish.spec.ts › polish 6 · the ready card as the cloud library's link › a PNG QR, 'Share the link…' and the unlisted note
+desktop › vision-publish-card.spec.ts › T16 · the printed tape, landscape › 10 · the QR is a printed sticker: paper, a 2px ink rule, radius 10
+mobile › studio-hardening.spec.ts › hardening 4 · the top bar is one row from 640 to 767px › Exit, Open a tape, the title, Simple and Finish share one row
+mobile › studio-hardening.spec.ts › hardening 6 · picking a page with the Music card open keeps the bed › the bed plays on, into the picked page's mood
+mobile › studio-hardening.spec.ts › hardening 8 · the same feeling twice is announced twice › the live region empties, then says it again
+mobile › studio-polish.spec.ts › polish 4 · the docked inspector's slider names keep clear of their tracks › 1180: TIMING MULTIPLIER ends 8+ px before its slider
+mobile › studio-polish.spec.ts › polish 4 · the docked inspector's slider names keep clear of their tracks › 1290: TIMING MULTIPLIER ends 8+ px before its slider
+mobile › studio-polish.spec.ts › polish 6 · the ready card as the cloud library's link › a PNG QR, 'Share the link…' and the unlisted note
+mobile › vision-fidelity.spec.ts › T25 · vision fidelity sweep › s01 · landing: the tape poised in the deck, the one light behind the play key
+mobile › vision-fidelity.spec.ts › T25 · vision fidelity sweep › s02 · reader 1120x700: house tape page 2, "cats" lit, the deck chip's three sounds
+mobile › vision-fidelity.spec.ts › T25 · vision fidelity sweep › s02 · reader 375x812: house tape page 2, "cats" lit, the deck chip's three sounds
+mobile › vision-fidelity.spec.ts › T25 · vision fidelity sweep › s03 · studio 1180x820: Simple mode, Twinkle page 3, Voice open; then a take listening
+mobile › vision-fidelity.spec.ts › T25 · vision fidelity sweep › s03 · studio 375x812: the phone column, Twinkle page 3
+mobile › vision-fidelity.spec.ts › T25 · vision fidelity sweep › s04 · gate 1180x820: the grown-up moment beside the seven-layer sheet; the stamp inked
+mobile › vision-fidelity.spec.ts › T25 · vision fidelity sweep › s05 · publish 1180x820: the printed tape, MADE IN 7:48, the private link
+mobile › vision-fidelity.spec.ts › T25 · vision fidelity sweep › s05 · publish 375x812: the printed tape, MADE IN 7:48, the private link
+mobile › vision-fidelity.spec.ts › T25 · vision fidelity sweep › s05 · reader 390x844: the published Twinkle link opens on its cover, VOICE: MIA; then page 3
+mobile › vision-fidelity.spec.ts › T25 · vision fidelity sweep › s06 · end card 390x844: the tape label and the J-card liner notes
+mobile › vision-fidelity.spec.ts › T25 · vision fidelity sweep › s06 · reply 390x844: the Creator opened as a one-page reply; READ THIS while it listens
+mobile › vision-fidelity.spec.ts › T25 · vision fidelity sweep › s07 · shelf 1140x712: Grandma's tape sent and NEW, Twinkle lifted where it stopped, Read it in… the house tape in Hush
+mobile › vision-fidelity.spec.ts › T25 · vision fidelity sweep › s08 · protocol 1140x712: hero, FIG. 1 taken apart, the three cards
+mobile › vision-fidelity.spec.ts › T25 · vision fidelity sweep › s08 · protocol 375x812: hero, FIG. 1 taken apart, the three cards
+mobile › vision-fidelity.spec.ts › T25 · vision fidelity sweep › s09 · advanced 1290x900: the house tape on page 3 in its own Hush; TYPE A FEELING resolves to Hush
+mobile › vision-fidelity.spec.ts › T25 · vision fidelity sweep › s10 · read-from-qr 390x844: /read?story=<code> opens the tape with no account
+mobile › vision-page-moods.spec.ts › T24a · a re-voiced tape keeps its arc › ?open=house&mood=Hush: one mood on every page
+mobile › vision-page-moods.spec.ts › T24a · a re-voiced tape keeps its arc › ?open=house: pages 4–5 Adventure and 6–8 Calm over a Wonder story
+mobile › vision-page-moods.spec.ts › T24a · publish and play each page's mood › Simple mode's Music card names the overrides, and choosing there sets every page
+mobile › vision-page-moods.spec.ts › T24a · publish and play each page's mood › deleting a page drops its override; moving a page keeps it
+mobile › vision-page-moods.spec.ts › T24a · publish and play each page's mood › page 3 Hush publishes Hush on page 3 only, twice; the Reader plays it
+mobile › vision-page-moods.spec.ts › T24a · the Creator's preview bed plays the page's own mood › playback from page 2 (Wonder) turns to page 3 (Hush) and the bed crossfades by default
+mobile › vision-page-moods.spec.ts › T24a · the Inspector's MOOD row, the Stage and the lane › a restored draft keeps its overrides and drops stray entries
+mobile › vision-page-moods.spec.ts › T24a · the Inspector's MOOD row, the Stage and the lane › keyboard: page mood → whole-story mood → T17's switch, in that order
+mobile › vision-page-moods.spec.ts › T24a · the Inspector's MOOD row, the Stage and the lane › page 3 → Hush: the page select, the line, the Stage status row and the lane
+mobile › vision-publish-card.spec.ts › T16 · the printed tape, landscape › 10 · the QR is a printed sticker: paper, a 2px ink rule, radius 10
+mobile › vision-sent-to-you.spec.ts › T20b · fidelity capture (s07 row A) › 1140×712: Goodnight, Mia sent and NEW, Twinkle selected
+mobile › vision-sent-to-you.spec.ts › T20b · fidelity capture (s07 row A) › the sent tape's band (1140×712 and 375×812) and a dead remembered link (375×812)
+mobile › vision-studio-room.spec.ts › M6 · s09 the Advanced inspector › 1180×820: the inspector runs the full height beside the Stage, strip and transport
+mobile › vision-studio-room.spec.ts › M6 · s09 the Advanced inspector › 1290×900: s09's density, legible headings and notes, and the music bed as a switch
+mobile › vision-studio-room.spec.ts › M6 · s09 the Advanced inspector › 1290×900: the inspector runs the full height beside the Stage, strip and transport
+mobile › vision-type-a-feeling.spec.ts › T24b · fidelity (s09) › 1290×900: the house tape, Advanced, page 3, "a quiet lullaby for bedtime" → Hush
+mobile › vision-type-a-feeling.spec.ts › T24b · the TYPE A FEELING row (desktop seam) › "a bit scary" → "Use for every page": the story is Suspense, no page keeps its own; Finish publishes it
+mobile › vision-type-a-feeling.spec.ts › T24b · the TYPE A FEELING row (desktop seam) › "xyzzy" → Wonder, and the line says it is the house default
+mobile › vision-type-a-feeling.spec.ts › T24b · the TYPE A FEELING row (desktop seam) › Simple mode is unchanged: no field until Advanced, and none after it closes
+mobile › vision-type-a-feeling.spec.ts › T24b · the TYPE A FEELING row (desktop seam) › empty input: no pill, both actions disabled (also for punctuation only)
+mobile › vision-type-a-feeling.spec.ts › T24b · the TYPE A FEELING row (desktop seam) › keyboard: the input, then "Use for page N", then "Use for every page", each with the kit focus ring
+mobile › vision-type-a-feeling.spec.ts › T24b · the TYPE A FEELING row (desktop seam) › page 3: "a quiet lullaby for bedtime" → Hush; Enter makes page 3 Hush
+mobile › vision-type-a-feeling.spec.ts › T24b · the TYPE A FEELING row (desktop seam) › the typed words are never stored or sent; only the mood name is applied

@@ -1,0 +1,87 @@
+{
+  "reviewedHead": "915ee66fdef13557001d110dca4734dfa79a173b",
+  "findings": [
+    {
+      "id": "K25",
+      "severity": "high",
+      "status": "fixed"
+    },
+    {
+      "id": "K26",
+      "severity": "medium",
+      "status": "fixed"
+    },
+    {
+      "id": "K27",
+      "severity": "medium",
+      "status": "fixed"
+    },
+    {
+      "id": "K28",
+      "severity": "medium",
+      "status": "fixed"
+    },
+    {
+      "id": "K29",
+      "severity": "medium",
+      "status": "fixed"
+    },
+    {
+      "id": "K30",
+      "severity": "medium",
+      "status": "fixed"
+    },
+    {
+      "id": "K31",
+      "severity": "medium",
+      "status": "fixed"
+    },
+    {
+      "id": "K32",
+      "severity": "medium",
+      "status": "fixed"
+    },
+    {
+      "id": "K33",
+      "severity": "medium",
+      "status": "fixed"
+    },
+    {
+      "id": "K34",
+      "severity": "medium",
+      "status": "fixed",
+      "note": "accepted as stated: review records and ledger reported advisory (contract section 5); C9's enforced part is GitHub's records"
+    },
+    {
+      "id": "K35",
+      "severity": "low",
+      "status": "fixed"
+    },
+    {
+      "id": "K36",
+      "severity": "low",
+      "status": "fixed"
+    },
+    {
+      "id": "K37",
+      "severity": "low",
+      "status": "fixed"
+    },
+    {
+      "id": "K38",
+      "severity": "low",
+      "status": "fixed"
+    },
+    {
+      "id": "K39",
+      "severity": "low",
+      "status": "fixed",
+      "note": "accepted as stated: the seat's tool line corrected; the isolation property (no reads outside the clone) is what the canary proves"
+    },
+    {
+      "id": "K40",
+      "severity": "low",
+      "status": "fixed"
+    }
+  ]
+}

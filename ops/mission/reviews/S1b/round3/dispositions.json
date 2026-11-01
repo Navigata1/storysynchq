@@ -1,0 +1,71 @@
+{
+  "reviewedHead": "c34892e488600df698cd1937acd92d17c4db4185",
+  "findings": [
+    {
+      "id": "K52",
+      "severity": "high",
+      "status": "deferred",
+      "reason": "last round of series 2, where no code may change: stop rule reached, plan not ready; the repair waits on the operator's ruling. The CI guard runs from a workflow file the PR itself can rewrite. Real; a code-only fix (pull_request_target running main's frozen.py) still lets an admin push bypass it. The binding fix is a GitHub ruleset on main, which only the operator can set."
+    },
+    {
+      "id": "K53",
+      "severity": "medium",
+      "status": "deferred",
+      "reason": "last round of series 2, where no code may change: stop rule reached, plan not ready; the repair waits on the operator's ruling. Any added line naming a path counts as an amendment, and contract lines can be removed unchecked. Real: require a new dated '### A<n>' section and fail on removed contract lines."
+    },
+    {
+      "id": "K54",
+      "severity": "medium",
+      "status": "deferred",
+      "reason": "last round of series 2, where no code may change: stop rule reached, plan not ready; the repair waits on the operator's ruling. The seat had more tools than Read/Grep/Glob (Artifact, SendMessage, Workflow and others reachable). Real isolation gap: restrict the set with --tools and record the session's effective tools from its init event."
+    },
+    {
+      "id": "K55",
+      "severity": "medium",
+      "status": "deferred",
+      "reason": "last round of series 2, where no code may change: stop rule reached, plan not ready; the repair waits on the operator's ruling. Player.tsx:885 ends a page on a media error, so undecodable narration still reaches the end card. Real: count ended events with no error, and decode each published take."
+    },
+    {
+      "id": "K57",
+      "severity": "medium",
+      "status": "deferred",
+      "reason": "last round of series 2, where no code may change: stop rule reached, plan not ready; the repair waits on the operator's ruling. A direct push to main is never scanned. Real: walk main's first-parent history since kickoff."
+    },
+    {
+      "id": "K56",
+      "severity": "low",
+      "status": "deferred",
+      "reason": "last round of series 2, where no code may change: stop rule reached, plan not ready; the repair waits on the operator's ruling. Squash merges break review_closed later. Real: fix the merge method (merge commits, ^2 == PR head)."
+    },
+    {
+      "id": "K58",
+      "severity": "low",
+      "status": "deferred",
+      "reason": "last round of series 2, where no code may change: stop rule reached, plan not ready; the repair waits on the operator's ruling. registered.py has no fixture. Real: add them."
+    },
+    {
+      "id": "K34",
+      "severity": "medium",
+      "status": "deferred",
+      "reason": "last round of series 2, where no code may change: stop rule reached, plan not ready; the repair waits on the operator's ruling. Rejected again: rests on K52 (the CI it calls enforced can be rewritten by the PR)."
+    },
+    {
+      "id": "K39",
+      "severity": "low",
+      "status": "deferred",
+      "reason": "last round of series 2, where no code may change: stop rule reached, plan not ready; the repair waits on the operator's ruling. Rejected again: rests on K54 (the seat's toolset is wider than stated)."
+    },
+    {
+      "id": "K41",
+      "severity": "medium",
+      "status": "deferred",
+      "reason": "last round of series 2, where no code may change: stop rule reached, plan not ready; the repair waits on the operator's ruling. Rejected: rests on K54."
+    },
+    {
+      "id": "K42",
+      "severity": "high",
+      "status": "deferred",
+      "reason": "last round of series 2, where no code may change: stop rule reached, plan not ready; the repair waits on the operator's ruling. Rejected: rests on K52."
+    }
+  ]
+}

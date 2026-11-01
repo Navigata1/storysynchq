@@ -123,6 +123,10 @@
     overflow-wrap: anywhere;
     hyphens: manual;
   }
+  /* beside a dot or a plus the name ends where the dashed line does */
+  .sk-voice-label--mark .sk-voice-name {
+    margin-right: 10px;
+  }
 
   .sk-voice-rec {
     position: absolute;

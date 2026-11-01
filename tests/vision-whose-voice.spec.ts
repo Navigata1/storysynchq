@@ -321,6 +321,34 @@ test.describe("T22b · whose voice on /read", () => {
     expect(await rowNames(page)).toEqual(["Browser voice", "Grandma Rose, reading now", "Mia", SOMEONE_NEW]);
   });
 
+  test("a long name stops short of the record dot and the plus (REPORT §6, T22b)", async ({ page }) => {
+    await seedShelf(page, { library: [twinkleRow()], sent: [grandmaRef()] });
+    await openRoom(page);
+    await house(page).getByRole("button", { name: "Read it in…" }).click();
+    await expect(cassettes(page)).toHaveCount(4);
+    await page.evaluate(() => document.fonts.ready);
+
+    // Each marked cassette, given a name as long as the field allows: every drawn
+    // line of it ends at least 1px before the dot or the plus begins.
+    const overlaps = await cassettes(page).evaluateAll((els) =>
+      els.flatMap((el) => {
+        const mark = el.querySelector<HTMLElement>('[data-sk="voice-rec"], [data-sk="voice-new"]');
+        if (!mark) return [];
+        const name = el.querySelector<HTMLElement>('[data-sk="voice-name"]')!;
+        name.textContent = "Great-Grandmother Rosalind Featherstone";
+        const range = document.createRange();
+        range.selectNodeContents(name);
+        const markLeft = mark.getBoundingClientRect().left;
+        const clip = name.getBoundingClientRect();
+        // only the lines the clamp lets show
+        const shown = [...range.getClientRects()].filter((r) => r.width > 0 && r.top < clip.bottom - 1);
+        const right = Math.max(...shown.map((r) => Math.min(r.right, clip.right)));
+        return right > markLeft - 1 ? [{ kind: el.getAttribute("data-kind"), right, markLeft }] : [];
+      }),
+    );
+    expect(overlaps).toEqual([]);
+  });
+
   test("keyboard: ← → move between cassettes, each with a visible focus ring; Someone new moves focus to its field", async ({
     page,
   }) => {

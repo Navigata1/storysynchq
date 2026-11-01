@@ -1,0 +1,72 @@
+{
+  "reviewedHead": "f8e047e533a6e1098c89c98f52c9e107be9e397c",
+  "findings": [
+    {
+      "id": "K1",
+      "severity": "high",
+      "status": "fixed"
+    },
+    {
+      "id": "K2",
+      "severity": "high",
+      "status": "fixed"
+    },
+    {
+      "id": "K3",
+      "severity": "high",
+      "status": "fixed"
+    },
+    {
+      "id": "K4",
+      "severity": "high",
+      "status": "fixed",
+      "note": "accepted in part: gates added; attestation provenance reported advisory (cannot be made tamper-proof with the operator's token)"
+    },
+    {
+      "id": "K5",
+      "severity": "high",
+      "status": "fixed"
+    },
+    {
+      "id": "K6",
+      "severity": "medium",
+      "status": "fixed"
+    },
+    {
+      "id": "K7",
+      "severity": "medium",
+      "status": "fixed"
+    },
+    {
+      "id": "K8",
+      "severity": "medium",
+      "status": "fixed"
+    },
+    {
+      "id": "K9",
+      "severity": "medium",
+      "status": "fixed"
+    },
+    {
+      "id": "K10",
+      "severity": "medium",
+      "status": "fixed"
+    },
+    {
+      "id": "K11",
+      "severity": "medium",
+      "status": "fixed",
+      "note": "accepted in part: judges written at their phase's start before its first fix, registered in SHA256SUMS"
+    },
+    {
+      "id": "K12",
+      "severity": "low",
+      "status": "fixed"
+    },
+    {
+      "id": "K13",
+      "severity": "low",
+      "status": "fixed"
+    }
+  ]
+}

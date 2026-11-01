@@ -1,0 +1,3 @@
+CANNOT-READ
+
+My permission settings block access to the folder that file is in, so I couldn't open it.

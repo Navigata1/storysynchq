@@ -28,22 +28,9 @@
 import * as React from "react";
 import Link from "next/link";
 import QRCode from "qrcode";
-import {
-  ArrowRight,
-  Cloud,
-  CloudRain,
-  Compass,
-  Eye,
-  Leaf,
-  Mic,
-  Moon,
-  Repeat,
-  Star,
-  Sun,
-  X,
-  type LucideIcon,
-} from "lucide-react";
+import { ArrowRight, Mic, Repeat, Star, X } from "lucide-react";
 import type { MoodName } from "@/lib/audio/moods";
+import { MOOD_ICON } from "@/components/studio-kit/mood-icons";
 import type { SsyncManifest } from "@/lib/storysync/manifest";
 import { replyLine } from "@/lib/storysync/reply";
 import { BigButton, TapeLabel } from "@/components/studio-kit/kit";
@@ -66,18 +53,6 @@ const KEY_LABEL: Record<LinerKey, string> = {
   "MADE IN": "Made in",
   OWNER: "Owner",
   CONSENT: "Consent",
-};
-
-/** Each mood's icon (brief design_system: the sprite's Lucide symbols). */
-const MOOD_ICON: Record<MoodName, LucideIcon> = {
-  Wonder: Star,
-  Adventure: Compass,
-  Calm: Moon,
-  Joy: Sun,
-  Hush: Cloud,
-  Rain: CloudRain,
-  Suspense: Eye,
-  Melancholy: Leaf,
 };
 
 const FOCUSABLE = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])';
