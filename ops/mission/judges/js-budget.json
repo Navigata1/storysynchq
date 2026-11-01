@@ -1,0 +1,9 @@
+{
+  "note": "C7's frozen per-route first-load JavaScript budget, gzip bytes (contract A7). Reasoned, not measured: 170 KB is the common mobile first-load budget for a mid-range phone on a slow connection, and it binds every page a newcomer or a grandparent opens (the landing, the Player a share link opens, the protocol page). The Studio is an authoring tool opened on purpose, with the camera, the recorder and the music bed, so it is allowed 250 KB. P4 may not raise these (contract section 6).",
+  "routes": {
+    "/": 174080,
+    "/read": 174080,
+    "/protocol": 174080,
+    "/studio": 256000
+  }
+}

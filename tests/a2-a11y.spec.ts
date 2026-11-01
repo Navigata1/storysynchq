@@ -1,5 +1,5 @@
 /**
- * C6's judge (archipelago-2 mission, phase P3): every route has zero serious or critical
+ * C6's judge (archipelago-2 mission, phase P3): every product route has zero serious or critical
  * axe-core violations in its first-screen state and in each open dialog the suite reaches
  * (idea.lock C6; judges/required-P3.json needs 8 passing per project). Routes: /, /read, the
  * Player, /studio, /protocol. Dialogs: the Player's Reading options, the restore prompt, the

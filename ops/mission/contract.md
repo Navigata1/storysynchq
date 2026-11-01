@@ -222,3 +222,18 @@ P3's review (P3-R2-03) found the frozen C6 text in `ops/mission/idea.lock.json` 
 (/, /read and the Player, /studio, /protocol) and states /classic out of scope, so no report of
 C6 can claim more than `tests/a2-a11y.spec.ts` checks. `ops/mission/contract.md` changes by this
 appended section.
+
+### A7 · 2026-11-01 · C7's budget, and P3's deferred comment fix
+
+C7's per-route first-load JavaScript budget is registered in `ops/mission/judges/js-budget.json`
+with its judge `ops/mission/gates/js_budget.py` (measuring with `ops/mission/gates/js_measure.mjs`
+on a production build of HEAD), before P4's first `src/` change, as section 6 requires. The
+budget is reasoned, not measured: 170 KB gzip for every page a newcomer or a grandparent opens
+(/, /read, /protocol), the common first-load budget for a mid-range phone on a slow connection;
+250 KB for /studio, an authoring tool opened on purpose. At this head /read loads 248 KB and
+/studio 295 KB, so both are over; P4 brings them under and may not raise the budget.
+
+P3-R3-01: the header prose of `tests/vision-read-this.spec.ts` and `tests/a2-a11y.spec.ts` now
+says what their assertions check (READ THIS focusable only while its words overflow, an ink-red
+label; C6 on every product route). Comments only. `ops/mission/contract.md` changes by this
+appended section.
