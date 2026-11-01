@@ -446,8 +446,7 @@ export function ProtocolPage() {
               never sent to a server just to be transcoded:
             </p>
 
-            {/* scrolls sideways on a phone: a named region the keyboard can reach (WCAG 2.1.1) */}
-            <div className="pr-table-scroll" role="region" aria-label="How each recording format is normalized (scrolls sideways)" tabIndex={0}>
+            <TableScroller label="How each recording format is normalized (scrolls sideways)">
               <table className="pr-table">
                 <caption className="sr-only">
                   How each recording format is normalized when a story is published
@@ -471,7 +470,7 @@ export function ProtocolPage() {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </TableScroller>
           </div>
         </section>
 
@@ -523,6 +522,36 @@ export function ProtocolPage() {
           </nav>
         </div>
       </footer>
+    </div>
+  );
+}
+
+/**
+ * The format table's sideways scroller. While it scrolls (a phone) it is a named region the
+ * keyboard can reach to scroll it (WCAG 2.1.1; axe scrollable-region-focusable); where the
+ * whole table fits it takes no Tab stop (P3-R1-03).
+ */
+function TableScroller({ label, children }: { label: string; children: React.ReactNode }) {
+  const ref = React.useRef<HTMLDivElement | null>(null);
+  const [scrolls, setScrolls] = React.useState(false);
+  React.useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const measure = () => setScrolls(el.scrollWidth > el.clientWidth + 1);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+  return (
+    <div
+      ref={ref}
+      className="pr-table-scroll"
+      role={scrolls ? "region" : undefined}
+      aria-label={scrolls ? label : undefined}
+      tabIndex={scrolls ? 0 : undefined}
+    >
+      {children}
     </div>
   );
 }
