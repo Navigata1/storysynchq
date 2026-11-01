@@ -1,0 +1,24 @@
+{
+  "reviewedHead": "7665e2de101831f00aba7bfff9dec6963cc93234",
+  "base": "5b71bd1d2bb9ce99b76c282c1e2fecf9fde04677",
+  "findings": [
+    {
+      "id": "P3-R1-01",
+      "severity": "medium",
+      "status": "fixed",
+      "note": "d35ecfd: a2-layout's 'recording, Voice card closed' state asserts the stage-text textarea is visible, holds the page's words, and is on screen and uncovered, at every size (the photo check at 120 px still applies in landscape)."
+    },
+    {
+      "id": "P3-R1-02",
+      "severity": "low",
+      "status": "fixed",
+      "note": "d35ecfd: a2-a11y adds the Player's Reading options dialog. /classic was tried and has serious contrast failures (gray-500 card text); CLAUDE.md keeps /classic untouched, so C6's scope is stated in the judge and in contract A5: the five product routes and their dialogs, never /classic."
+    },
+    {
+      "id": "P3-R1-03",
+      "severity": "low",
+      "status": "fixed",
+      "note": "6cabdb7: the format table's scroller takes role=region, a name and a Tab stop only while it scrolls (scrollWidth > clientWidth), as READ THIS does; a2-a11y (protocol, both projects) passes."
+    }
+  ]
+}
