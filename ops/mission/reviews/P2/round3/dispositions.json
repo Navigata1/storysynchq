@@ -1,0 +1,24 @@
+{
+  "reviewedHead": "c2e9ac57ad549a8aeb9eee50aea6a5bc71b18de3",
+  "base": "543cf86d461a1d3cdd528b7a88e7c01c0226c5a0",
+  "findings": [
+    {
+      "id": "P2-R3-01",
+      "severity": "low",
+      "status": "deferred",
+      "reason": "last round of P2 (3 of 3): no code may change after its reviewed head, so the repair rides the next phase's PR (P3), judge first, under that phase's own review. Real: when the strip cannot scroll the clearing way the overlap must be reported, not passed to the page-level chrome exemption (this also closes P2-R2-03, which round 3 rejected)."
+    },
+    {
+      "id": "P2-R3-02",
+      "severity": "low",
+      "status": "deferred",
+      "reason": "last round of P2 (3 of 3): no code may change after its reviewed head, so the repair rides the next phase's PR (P3), judge first, under that phase's own review. Real: scope the Stage-words rule to data-take-card, or bring the words back when the card closes, keeping the photo at 120 px or more; the decision log's 'READ THIS carries the words' holds only while the card is open until then."
+    },
+    {
+      "id": "P2-R3-03",
+      "severity": "low",
+      "status": "deferred",
+      "reason": "last round of P2 (3 of 3): no code may change after its reviewed head, so the repair rides the next phase's PR (P3), judge first, under that phase's own review. Real: the closed-card state must assert the Close key is visible, click it, and assert the card is gone before judging."
+    }
+  ]
+}
