@@ -144,3 +144,20 @@ finding is deferred to the operator's ruling (contract section 3's stop rule).
 | K39 | low | Rejected again: rests on K54 (the seat's toolset is wider than stated). |
 | K41 | medium | Rejected: rests on K54. |
 | K42 | high | Rejected: rests on K52. |
+
+### After the stop rule · the operator's ruling (contract A2): repair, then kick off
+
+The operator chose "Fix, then kick off": repair series 2 round 3's findings and treat the plan
+as ready without a third series. Repairs:
+
+| id | sev | what changed |
+|---|---|---|
+| K52, K42, K34 | high | `.github/workflows/mission-guard.yml` runs `frozen` under `pull_request_target`: GitHub runs it as it stands on main, checks the PR head out as data, and runs main's own `frozen.py`. Every `.github/workflows/` file is registered (ci.yml included), so a PR that rewrites CI needs a named amendment. Binding only with main's ruleset, the operator's act (`ops/mission/hitl/ruleset.md`); until `A2-ATTEST ruleset`, section 5 counts CI as advisory. Not done in code: merged_scan does not check a check-run's workflow path. |
+| K53 | medium | `frozen.py`: the contract is append-only (the head's file must begin with the base's), what is appended must begin with a new `### A<n> · <date> · <title>` heading numbered after the last, and a changed judge must be named inside that appended text. Section 5 says CI enforces visibility, not prevention. Fixtures: stray line, edited contract, reused number. |
+| K54, K41, K39 | medium | seat.sh passes `--tools Read,Grep,Glob`, runs the preflight as a stream and records the session's own init-event tool list as `effectiveTools`; review_closed fails on any tool beyond the three. Probe: the init event lists exactly Glob, Grep, Read. Fixture for a wider set. |
+| K55 | medium | The journey counts a take only on an `ended` event with no media error and a duration over 0.5 s, and decodes every published take (`decodeAudioData`, about 1 s each). Sabotage check: a truncated take fails at "page 1 narration decodes". |
+| K57 | medium | merged_scan walks main's first-parent line from `MAIN_AT_KICKOFF` (dd727b1) and fails on any commit that is not a mission PR's merge commit. Fixture: a direct push. |
+| K56 | low | Contract section 2: merge commits only. merged_scan requires the merge commit to have two parents, the second the PR head. Fixture: a squash. |
+| K58 | low | Fixtures for registered.py: a good tree, an unregistered spec, an unregistered fixture, a changed byte, a missing dependency. |
+
+87 judge fixtures pass; 128 registered files verify.

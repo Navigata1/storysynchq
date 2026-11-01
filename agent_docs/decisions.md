@@ -757,3 +757,12 @@ deleting the story forgets it everywhere.**
 - **Left open, needs Jon:** a page with no music in a source tape opens in the Studio as the story mood, while the Player
   plays it silent. Matching the Player needs a "silent page" state the per-page mood store does not have (touches
   publish, Inspector, mood lane, Simple mode and the gate's sheet).
+
+## 2026-11-01 · archipelago-2 mission kicked off (idea-storysync-poc-complete)
+- Plan critic: series 1 (3 rounds) and series 2 (3 rounds) both hit the stop rule; the operator
+  ruled "fix, then kick off" (ops/mission/contract.md A2). Every finding is recorded with its
+  repair in ops/mission/plan-readiness.md.
+- Merges to main follow contract section 2: a green `run_phase.py` of a merging phase at the PR
+  head, CI green, up to date with main, a merge commit (no squash or rebase).
+- Main's ruleset (ops/mission/hitl/ruleset.md) is the operator's act; until it is attested, CI
+  counts as advisory (contract section 5).

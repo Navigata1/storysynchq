@@ -9,7 +9,8 @@ Two sums files, both written and verified through protocol/a2/scripts/sums.py's 
                            tests/*.spec.ts and every file under tests/fixtures/ (S1b K42: the
                            existing suite is C1-C3's judge too)
 Completeness: every file under ops/mission/gates/ and ops/mission/judges/, every top-level
-ops/mission/*.py and *.sh, every tests/*.spec.ts and every file under tests/fixtures/ must be
+ops/mission/*.py and *.sh, every tests/*.spec.ts, every file under tests/fixtures/ and every
+.github/workflows/ file (the CI that runs the judges, S1b K52) must be
 listed in one of them, and the four dependencies above must be in ROOTSUMS. An unregistered
 judge fails. Changing a registered file inside a PR needs a contract amendment naming it, which
 frozen.py checks in GitHub's CI (contract section 5).
@@ -43,6 +44,7 @@ def main():
     must |= {str(p) for pat in ("*.py", "*.sh") for p in MISSION.glob(pat)}
     must |= {str(p) for p in Path("tests").glob("*.spec.ts")}
     must |= {str(p) for p in Path("tests/fixtures").rglob("*") if p.is_file()}
+    must |= {str(p) for p in Path(".github/workflows").glob("*") if p.is_file()}  # S1b K52
     missing = sorted(must - registered - EXEMPT)
     if missing:
         problems.append(f"unregistered: {missing}")

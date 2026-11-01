@@ -163,21 +163,36 @@ test.describe("child journey", () => {
       expect(p.music, `page ${i + 1} has music nobody had to add`).toBeTruthy();
     }
 
+    // every published take decodes to the recorded second of sound (S1b K55)
+    const durations = await page.evaluate(async (urls: string[]) => {
+      const ctx = new OfflineAudioContext(1, 16000, 16000);
+      const out: number[] = [];
+      for (const url of urls) {
+        const bytes = await (await fetch(url)).arrayBuffer();
+        out.push((await ctx.decodeAudioData(bytes)).duration);
+      }
+      return out;
+    }, pages.map((p) => p.text?.audioUrl ?? ""));
+    for (const [i, d] of durations.entries()) expect(d, `page ${i + 1} narration decodes to ~1 s`).toBeGreaterThan(0.8);
+
     // the grandparent moment: open the link and let the tape play itself through
     await page.goto(shareUrl);
     const root = page.locator(".pl-root");
     await expect(root).toHaveAttribute("data-view", "cover", { timeout: 20000 });
     await page.evaluate(() => {
+      // a take counts only when it plays to its end without a media error (S1b K55): the
+      // Player turns the page on an error too, so reaching the end card alone proves nothing
       const heard: string[] = [];
       (window as unknown as { __heard: string[] }).__heard = heard;
-      const start = AudioBufferSourceNode.prototype.start;
-      AudioBufferSourceNode.prototype.start = function (...args: Parameters<typeof start>) {
-        if (this.buffer && this.buffer.duration > 0.5 && this.buffer.duration < 1.5) heard.push(String(this.buffer.duration));
-        return start.apply(this, args);
-      };
+      const watched = new WeakSet<HTMLMediaElement>();
       const play = HTMLMediaElement.prototype.play;
       HTMLMediaElement.prototype.play = function () {
-        if (this.currentSrc || this.src) heard.push(this.currentSrc || this.src);
+        if (!watched.has(this)) {
+          watched.add(this);
+          this.addEventListener("ended", () => {
+            if (this.error === null && this.duration > 0.5) heard.push(this.currentSrc.slice(0, 40));
+          });
+        }
         return play.apply(this);
       };
     });
@@ -185,6 +200,6 @@ test.describe("child journey", () => {
     await expect(root).toHaveAttribute("data-view", "page");
     await expect(root, "the tape turns its own pages to the end").toHaveAttribute("data-view", "end", { timeout: 90000 });
     const heard = await page.evaluate(() => (window as unknown as { __heard: string[] }).__heard.length);
-    expect(heard, "the narration played on every page").toBeGreaterThanOrEqual(PAGES);
+    expect(heard, "every page's narration played to its end with no media error").toBeGreaterThanOrEqual(PAGES);
   });
 });

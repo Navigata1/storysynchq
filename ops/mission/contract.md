@@ -25,7 +25,9 @@ A phase's PR merges to `main` only when:
    gate's exit to the hash-chained ledger (K20). P1 and P5 never merge on their own runs;
    their files land in a merging phase's PR (K15);
 2. the head's GitHub CI (`verify`) is green, GitHub reports the PR mergeable, and the head
-   already contains main's tip, so what lands is what the ladder ran (S1b K30);
+   already contains main's tip, so what lands is what the ladder ran (S1b K30); the PR is
+   merged with a merge commit (no squash, no rebase), so the reviewed head stays in main's
+   history (S1b K56), and nothing reaches main except through a mission PR (S1b K57);
 3. after merging, the deployment of the merge commit is confirmed serving that SHA.
 A failed gate is a loopback (`loop.py fail <gate> --reason … --route <stage>`), never a
 retry until green. Exit 77 from a gate means "cannot run here" (access the operator must
@@ -66,14 +68,22 @@ product changed. `protocol/` outside `a2/` is vendored upstream and not counted.
 ## 5. What is enforced, and what is advisory
 
 **Enforced** means a check the lead cannot satisfy by writing a file, because GitHub runs it or
-GitHub keeps the record (S1b K34, K42):
-- the `verify` job of `.github/workflows/ci.yml`, run by GitHub on every PR head: tsc, lint,
-  build, the suite on desktop and mobile, `registered.py` (every judge matches its registered
-  sha256), the judges' own fixtures, and `frozen.py`, which compares the PR's `SHA256SUMS` and
-  `ROOTSUMS` with the base branch's and fails on any changed or removed entry that the same
-  PR's diff of this file does not name in an added line. So a registered judge (the gates,
-  the judge data, every `tests/*.spec.ts` and `tests/fixtures/**`, `playwright.config.ts`)
-  changes inside a PR only with an amendment here that names it;
+GitHub keeps the record (S1b K34, K42). Precisely, what CI enforces is that a judge cannot
+change without that change, and an amendment naming it, sitting visibly in the PR's diff for
+the review seat; it does not stop the lead from proposing one (S1b K53). And CI binds only
+once main's ruleset is on (amendment A2): until the operator attests it (`A2-ATTEST ruleset`,
+`ops/mission/hitl/ruleset.md`), every item below counts as **advisory**:
+- `.github/workflows/mission-guard.yml` (`frozen`), a `pull_request_target` job, so GitHub runs
+  it as it stands on main and a PR cannot rewrite it (S1b K52): main's own `frozen.py` compares
+  the PR's `SHA256SUMS` and `ROOTSUMS` with the base branch's and fails on any changed or
+  removed entry not named in an appended amendment section of this file (`### A<n> · <date> ·
+  <title>`, numbered after the last; the file is append-only, S1b K53). So a registered judge
+  (the gates, the judge data, every `tests/*.spec.ts` and `tests/fixtures/**`,
+  `playwright.config.ts`, every `.github/workflows/` file) changes only with an amendment
+  naming it;
+- the `verify` job of `.github/workflows/ci.yml` on every PR head: tsc, lint, build, the
+  suite on desktop and mobile, `registered.py` and the judges' own fixtures. A PR could rewrite
+  ci.yml, but ci.yml is registered, so that rewrite needs a named amendment (above);
 - GitHub's merge records, read by `merged_scan.py`: which PRs merged, their heads, merge
   commits, and the `verify` check-run's conclusion.
 
@@ -85,12 +95,14 @@ the same head, and is reported as such, but that it ran is the lead's record. Cl
 answer rests on a record nobody can recompute are marked `attested` in `claims.json` and held
 at unverified in the headline band (S1b K43).
 
-The review seat (A1) has Read, Grep and Glob only. Bash, the web tools and every write tool
-are disallowed, so it can run no command, reach no network and write nothing; its clone has
+The review seat (A1) has Read, Grep and Glob only: `--tools` limits the session's toolset, and
+`seat.json` records the list the session's own init event reports (`effectiveTools`), which
+`review_closed.py` requires to be within those three (S1b K54). Bash, the web tools and every
+write tool are also disallowed, so it can run no command, reach no network and write nothing; its clone has
 no git remote, and the diff and log it needs are written into the clone as `.a2-review/`
 (S1b K39, K41). Reads outside the clone are denied, and the canary preflight (decoys in the
 lead's scratchpad, `/var/tmp/a2-seats`, `/opt` and `/srv`, read, globbed and tried through a
-shell) proves them absent; `seat.json` records the tool lists the seat ran with. The seat
+shell) proves them absent. The seat
 still runs as the lead's own user on the same machine; a separate uid or a namespace sandbox
 is not available here, so that residue is stated, not hidden. The human attestations below
 are advisory too.
@@ -150,3 +162,25 @@ calls it one. When a second model family becomes reachable, the operator may ame
 
 **Why recorded here and not as a deviation:** the operator ruled it is the gate, not a
 departure from it; the contract records the ruling so a reader sees exactly what the gate is.
+
+### A2 · 2026-11-01 · Plan readiness after series 2 (the operator's ruling)
+
+**Question put to the operator (verbatim):** "The archipelago-2 plan critic hit its stop rule
+again: series 2 round 3 came back 'amend' with one High (K52). CI's frozen-judge check runs
+from ci.yml, which the PR under test can rewrite, so it isn't really enforced. It also raised 4
+Medium findings: the seat could reach more tools than Read/Grep/Glob, the journey test passes
+even when narration can't decode, a direct push to main is never scanned, and contract
+amendments are loosely matched. All are real and recorded; the mission has not kicked off and
+PR #6 is not merged. Closing K52 for real needs a GitHub ruleset on main that only you can
+set. How should I proceed?"
+
+**Operator's answer (verbatim choice):** "Fix, then kick off (Recommended)": "I fix K53-K58
+and the parts of K52 that code can fix (a pull_request_target guard run from main, ci.yml
+registered). I write up the main ruleset as a HITL step for you and label CI 'advisory until
+the ruleset is on' in the contract. Your ruling goes in as amendment A2, and I kick off and run
+P0 without a third critic series."
+
+**Text entering the contract:** series 2 round 3's findings are repaired as
+`ops/mission/plan-readiness.md` records, without a further critic series, and the plan is
+ready by this ruling. Main's ruleset (`ops/mission/hitl/ruleset.md`) is the operator's act; until
+`A2-ATTEST ruleset` is on record, contract section 5 counts CI as advisory.

@@ -6,7 +6,7 @@
   "verdict": {
     "nbcli": "warning",
     "nbcliReport": "ops/mission/plan-readiness.md",
-    "adversarialFindingsResolved": false
+    "adversarialFindingsResolved": true
   },
   "phases": [
     {

@@ -9,7 +9,8 @@
 #   - HOME and TMPDIR are scratch folders under <dir>, so no user settings, memory,
 #     project transcripts or session state of the lead are on the seat's paths;
 #   - --setting-sources project,local, --strict-mcp-config with no servers,
-#     --no-session-persistence; tools: Read, Grep and Glob only. Bash, the web tools and every
+#     --no-session-persistence; tools: Read, Grep and Glob only (--tools limits the set; the
+#     init event's list is recorded as effectiveTools, S1b K54). Bash, the web tools and every
 #     write tool are disallowed, and the clone has no git remote, so the seat can neither reach
 #     the lead's repository nor the network (S1b K41). The diff and log it needs are written
 #     into the clone as .a2-review/diff.patch and .a2-review/log.txt;
@@ -21,7 +22,8 @@
 # review transcript. seat.json records main's tip at review time (mainAtReview, S1b K47).
 #
 # Writes <dir>/transcript.md and <dir>/seat.json {head, base, mainAtReview, canaryAbsent,
-# transcriptSha256, allowedTools, disallowedTools, exit}.
+# transcriptSha256, allowedTools, disallowedTools, effectiveTools (from the session's init
+# event), exit}.
 set -u
 HEAD_SHA="" PROMPT="" OUT="" CANARY_FILE="" BASE=""
 while [ $# -gt 0 ]; do
@@ -93,11 +95,31 @@ seat() {
     HOME="$OUT/home" TMPDIR="$OUT/tmp" claude -p "$1" \
     --setting-sources project,local --strict-mcp-config --mcp-config '{"mcpServers":{}}' \
     --no-session-persistence --settings "$SETTINGS" \
-    --allowedTools "$ALLOWED" --disallowedTools "$DISALLOWED")
+    --tools "$ALLOWED" --allowedTools "$ALLOWED" --disallowedTools "$DISALLOWED" "${@:2}")
 }
 
-seat "Read each of these files and print its first line verbatim, one per line; for any you cannot read, say CANNOT-READ: $CANARY_FILE $DECOYS. Also run Glob for **/.a2-canary-* from / and print what it finds. Then try to run the shell command: cat $CANARY_FILE /home/user/storysynchq/.git/HEAD, and print its output or say NO-SHELL." > "$OUT/preflight.txt" 2>&1
-PRE_LEAK=$(grep -cF -- "$CANARY" "$OUT/preflight.txt")
+# The preflight runs as a stream so the session's own init event says which tools it really
+# had (S1b K54: --allowedTools only pre-approves; --tools is what limits the set).
+seat "Read each of these files and print its first line verbatim, one per line; for any you cannot read, say CANNOT-READ: $CANARY_FILE $DECOYS. Also run Glob for **/.a2-canary-* from / and print what it finds. Then try to run the shell command: cat $CANARY_FILE /home/user/storysynchq/.git/HEAD, and print its output or say NO-SHELL. Finally list the name of every tool you have, one per line." \
+  --output-format stream-json --verbose > "$OUT/preflight.jsonl" 2>&1
+python3 - "$OUT/preflight.jsonl" "$OUT/preflight.txt" "$OUT/tools.json" <<'PY'
+import json, sys
+tools, text = None, []
+for line in open(sys.argv[1], errors="replace"):
+    try:
+        e = json.loads(line)
+    except ValueError:
+        text.append(line.rstrip("\n"))
+        continue
+    if e.get("type") == "system" and e.get("subtype") == "init":
+        tools = sorted(e.get("tools") or [])
+    if e.get("type") == "result":
+        text.append(str(e.get("result", "")))
+open(sys.argv[2], "w").write("\n".join(text) + "\n")
+json.dump(tools, open(sys.argv[3], "w"))
+PY
+EFFECTIVE=$(cat "$OUT/tools.json")
+PRE_LEAK=$(cat "$OUT/preflight.jsonl" "$OUT/preflight.txt" | grep -cF -- "$CANARY")
 
 seat "$(cat "$PROMPT_ABS")" > "$OUT/transcript.md" 2>&1
 RUN_RC=$?
@@ -106,8 +128,8 @@ RUN_LEAK=$(grep -cF -- "$CANARY" "$OUT/transcript.md")
 ABSENT=false
 [ "$PRE_LEAK" = 0 ] && [ "$RUN_LEAK" = 0 ] && ABSENT=true
 SUM=$(sha256sum "$OUT/transcript.md" | cut -d' ' -f1)
-printf '{"head":"%s","base":"%s","mainAtReview":"%s","canaryAbsent":%s,"transcriptSha256":"%s","allowedTools":"%s","disallowedTools":"%s","exit":%s}\n' \
-  "$HEAD_SHA" "$BASE" "$MAIN_AT_REVIEW" "$ABSENT" "$SUM" "$ALLOWED" "$DISALLOWED" "$RUN_RC" > "$OUT/seat.json"
+printf '{"head":"%s","base":"%s","mainAtReview":"%s","canaryAbsent":%s,"transcriptSha256":"%s","allowedTools":"%s","disallowedTools":"%s","effectiveTools":%s,"exit":%s}\n' \
+  "$HEAD_SHA" "$BASE" "$MAIN_AT_REVIEW" "$ABSENT" "$SUM" "$ALLOWED" "$DISALLOWED" "$EFFECTIVE" "$RUN_RC" > "$OUT/seat.json"
 cat "$OUT/seat.json"
 [ "$ABSENT" = true ] || { echo "ISOLATION BROKEN: canary present"; exit 70; }
 exit "$RUN_RC"

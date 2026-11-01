@@ -53,7 +53,8 @@ class ReviewClosed(unittest.TestCase):
         return f"review P0 r{n} at {self.head} from {self.base}; prior {prior}\n"
 
     def round(self, n, seat_findings=(), prior=None, verdict="amend", files=("src.txt",),
-              dispositions=None, canary=True, seat_head=None, tamper=False, prompt=None, last_fixed=False):
+              dispositions=None, canary=True, seat_head=None, tamper=False, prompt=None, last_fixed=False,
+              tools=("Glob", "Grep", "Read")):
         d = self.root / f"ops/mission/reviews/P0/round{n}"
         d.mkdir(parents=True, exist_ok=True)
         self.raised = getattr(self, "raised", {})
@@ -63,6 +64,7 @@ class ReviewClosed(unittest.TestCase):
         text = "review text\n```json\n" + json.dumps(block) + "\n```\n"
         (d / "transcript.md").write_text(text)
         seat = {"head": seat_head or self.head, "canaryAbsent": canary, "base": self.base,
+                "effectiveTools": list(tools),
                 "mainAtReview": git(self.root, "rev-parse", "mainline"),
                 "transcriptSha256": hashlib.sha256(text.encode()).hexdigest(), "exit": 0}
         (d / "seat.json").write_text(json.dumps(seat))
@@ -119,6 +121,10 @@ class ReviewClosed(unittest.TestCase):
     def test_canary_present_fails(self):
         self.round(1, [], canary=False)
         self.assertFails("isolation")
+
+    def test_wider_toolset_fails(self):
+        self.round(1, [], tools=("Glob", "Grep", "Read", "SendMessage"))
+        self.assertFails("effective tools")
 
     def test_seat_head_mismatch_fails(self):
         self.round(1, [], seat_head="f" * 40)
@@ -504,12 +510,14 @@ class Records(unittest.TestCase):
         h = git(self.root, "rev-parse", "HEAD")
         tree = git(self.root, "rev-parse", "HEAD^{tree}")
         mc = git(self.root, "commit-tree", tree, "-p", m0, "-p", h, "-m", "merge")
+        git(self.root, "branch", "-f", "mainref", mc)
         return m0, h, mc
 
     def scan(self, prs, checks):
         (self.root / "prs.json").write_text(json.dumps(prs))
         (self.root / "checks.json").write_text(json.dumps(checks))
-        env = {**os.environ, "A2_MERGED_PRS": str(self.root / "prs.json"), "A2_CHECKS": str(self.root / "checks.json"), "A2_NO_FETCH": "1"}
+        env = {**os.environ, "A2_MERGED_PRS": str(self.root / "prs.json"), "A2_CHECKS": str(self.root / "checks.json"), "A2_NO_FETCH": "1",
+               "A2_MAIN_REF": getattr(self, "main_ref", "mainref"), "A2_MAIN_AT_KICKOFF": self.head}
         return subprocess.run([sys.executable, str(self.REPO / "ops/mission/gates/merged_scan.py")], cwd=self.root, capture_output=True, text=True, env=env)
 
     def green(self, h, ok=True):
@@ -543,6 +551,22 @@ class Records(unittest.TestCase):
         mc2 = git(self.root, "commit-tree", tree, "-p", m1, "-p", h, "-m", "merge onto moved main")
         self.green(h)
         self.assertIn("never laddered", self.scan([{"number": 6, "head": {"sha": h}, "merge_commit_sha": mc2}], {h: "success"}).stdout)
+
+    def test_scan_rejects_direct_push_to_main(self):
+        m0, h, mc = self.scan_setup()
+        self.green(h)
+        tree = git(self.root, "rev-parse", f"{mc}^{{tree}}")
+        pushed = git(self.root, "commit-tree", tree, "-p", mc, "-m", "pushed straight to main")
+        git(self.root, "branch", "-f", "mainref", pushed)
+        self.assertIn("direct push", self.scan([{"number": 6, "head": {"sha": h}, "merge_commit_sha": mc}], {h: "success"}).stdout)
+
+    def test_scan_rejects_squash_merge(self):
+        m0, h, mc = self.scan_setup()
+        self.green(h)
+        tree = git(self.root, "rev-parse", f"{h}^{{tree}}")
+        squash = git(self.root, "commit-tree", tree, "-p", m0, "-m", "squash")
+        git(self.root, "branch", "-f", "mainref", squash)
+        self.assertIn("merge commits only", self.scan([{"number": 6, "head": {"sha": h}, "merge_commit_sha": squash}], {h: "success"}).stdout)
 
     def test_scan_rejects_red_ci(self):
         m0, h, mc = self.scan_setup()
@@ -609,7 +633,7 @@ class Frozen(unittest.TestCase):
         return run("frozen.py", "base", cwd=self.root)
 
     def test_unchanged_passes(self):
-        r = self.commit(amendment="unrelated note")
+        r = self.commit(amendment="\n### A1 · 2026-11-01 · A note\n\nunrelated note")
         self.assertEqual(r.returncode, 0, r.stdout)
 
     def test_new_entry_passes(self):
@@ -626,8 +650,26 @@ class Frozen(unittest.TestCase):
         self.assertIn("ops/mission/gates/judge.py removed", r.stdout)
 
     def test_changed_with_amendment_passes(self):
-        r = self.commit(root="d" * 64 + "  tests/a2-x.spec.ts\n", amendment="A9: tests/a2-x.spec.ts tightened")
+        r = self.commit(root="d" * 64 + "  tests/a2-x.spec.ts\n",
+                        amendment="\n### A1 · 2026-11-01 · Tighten the layout judge\n\ntests/a2-x.spec.ts tightened")
         self.assertEqual(r.returncode, 0, r.stdout)
+
+    def test_naming_line_outside_a_section_fails(self):
+        """S1b K53: a stray appended line is not an amendment."""
+        r = self.commit(root="d" * 64 + "  tests/a2-x.spec.ts\n", amendment="A9: tests/a2-x.spec.ts tightened")
+        self.assertIn("heading", r.stdout)
+
+    def test_edited_contract_fails(self):
+        (self.root / "ops/mission/contract.md").write_text("# contract, rewritten\n")
+        r = self.commit(amendment="\n### A1 · 2026-11-01 · x\n\nnothing")
+        self.assertIn("edited, not appended", r.stdout)
+
+    def test_reused_amendment_number_fails(self):
+        (self.root / "ops/mission/contract.md").write_text("# contract\n\n### A1 · 2026-10-31 · first\n")
+        git(self.root, "commit", "-qam", "A1")
+        git(self.root, "branch", "-f", "base")
+        r = self.commit(amendment="\n### A1 · 2026-11-01 · again\n\ntext")
+        self.assertIn("reuses a number", r.stdout)
 
     def test_base_without_sums_passes(self):
         """The PR that introduces the sums files has nothing frozen to compare against."""
@@ -690,3 +732,62 @@ class Deployed(unittest.TestCase):
         env = {**os.environ, "A2_SITE": "http://127.0.0.1:9", "A2_MAIN_SHA": "a" * 40, "NO_PROXY": "127.0.0.1", "no_proxy": "127.0.0.1"}
         r = subprocess.run([sys.executable, str(GATES / "deployed.py")], capture_output=True, text=True, env=env)
         self.assertEqual(r.returncode, 77, r.stdout)
+
+
+class Registered(unittest.TestCase):
+    """registered.py: every judge matches its sum and none is unregistered (S1b K58)."""
+
+    REPO = GATES.parents[2]
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        import shutil  # sums.py refuses a symlink on a registered path, so copy the dependencies
+        for dep in ("protocol/a2/scripts/sums.py", "protocol/scripts/loop.py", "protocol/scripts/dogfood_lanes.py"):
+            (self.root / dep).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy(self.REPO / dep, self.root / dep)
+        (self.root / "ops/mission/gates").mkdir(parents=True)
+        (self.root / "ops/mission/judges").mkdir()
+        (self.root / "ops/mission/gates/g.py").write_text("gate\n")
+        (self.root / "ops/mission/judges/j.json").write_text("{}\n")
+        (self.root / "tests/fixtures").mkdir(parents=True)
+        (self.root / "tests/a.spec.ts").write_text("spec\n")
+        (self.root / "tests/fixtures/f.ts").write_text("fixture\n")
+        (self.root / "playwright.config.ts").write_text("config\n")
+        self.write()
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def write(self, root_paths=None):
+        sums = "protocol/a2/scripts/sums.py"
+        subprocess.run([sys.executable, sums, "write", "--root", "ops/mission", "--out", "ops/mission/SHA256SUMS", "gates", "judges"],
+                       cwd=self.root, check=True, capture_output=True)
+        paths = root_paths or ["playwright.config.ts", "protocol/a2/scripts/sums.py", "protocol/scripts/loop.py",
+                               "protocol/scripts/dogfood_lanes.py", "tests/a.spec.ts", "tests/fixtures"]
+        subprocess.run([sys.executable, sums, "write", "--root", ".", "--out", "ops/mission/ROOTSUMS", *paths],
+                       cwd=self.root, check=True, capture_output=True)
+
+    def check(self):
+        return run("registered.py", cwd=self.root)
+
+    def test_good_passes(self):
+        r = self.check()
+        self.assertEqual(r.returncode, 0, r.stdout)
+
+    def test_unregistered_spec_fails(self):
+        (self.root / "tests/x.spec.ts").write_text("new judge\n")
+        self.assertIn("unregistered", self.check().stdout)
+
+    def test_unregistered_fixture_fails(self):
+        (self.root / "tests/fixtures/deep").mkdir()
+        (self.root / "tests/fixtures/deep/new.ts").write_text("helper\n")
+        self.assertIn("unregistered", self.check().stdout)
+
+    def test_changed_byte_fails(self):
+        (self.root / "ops/mission/gates/g.py").write_text("gate, loosened\n")
+        self.assertNotEqual(self.check().returncode, 0)
+
+    def test_missing_dependency_fails(self):
+        self.write(["playwright.config.ts", "tests/a.spec.ts", "tests/fixtures"])
+        self.assertIn("dependencies not in ROOTSUMS", self.check().stdout)

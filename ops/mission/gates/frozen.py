@@ -4,14 +4,20 @@
 
 For each of ops/mission/SHA256SUMS and ops/mission/ROOTSUMS, compare the base branch's
 entries with the head's. An entry whose sha256 changed, or that was removed, passes only if
-the PR's own diff of ops/mission/contract.md adds a line naming that path. New entries are
-free (a judge is born registered). A base with no sums file (the PR that introduces them)
-passes.
+the PR appends to ops/mission/contract.md an amendment section, a heading
+"### A<n> · <date> · <title>" numbered after the base's last one, whose text names that path
+(S1b K53). The contract is append-only: the head's file must begin with the base's file byte
+for byte, and what is appended must begin with such a heading. New entries are free (a judge
+is born registered). A base with no sums file (the PR that introduces them) passes.
 
 Usage (CI):  python3 ops/mission/gates/frozen.py <base-ref>      e.g. origin/main
 """
+import re
 import subprocess
 import sys
+
+CONTRACT = "ops/mission/contract.md"
+HEADING = re.compile(r"^### A(\d+) · \d{4}-\d{2}-\d{2} · .+$", re.M)
 
 SUMS = {"ops/mission/SHA256SUMS": "ops/mission/", "ops/mission/ROOTSUMS": ""}
 
@@ -37,9 +43,26 @@ def main():
         print(__doc__)
         sys.exit(64)
     base = git("merge-base", sys.argv[1], "HEAD").stdout.strip()
-    added_lines = [l[1:] for l in git("diff", f"{base}..HEAD", "--", "ops/mission/contract.md").stdout.splitlines()
-                   if l.startswith("+") and not l.startswith("+++")]
     problems = []
+    was = git("show", f"{base}:{CONTRACT}", check=False)
+    now = git("show", f"HEAD:{CONTRACT}", check=False)
+    before = was.stdout if was.returncode == 0 else ""
+    after = now.stdout if now.returncode == 0 else ""
+    amended = ""
+    if was.returncode == 0:
+        if not after.startswith(before):
+            problems.append(f"{CONTRACT} was edited, not appended to: amendments only add text at its end")
+        else:
+            appended = after[len(before):]
+            last = max([int(n) for n in HEADING.findall(before)] or [-1])
+            if appended.strip():
+                first = HEADING.search(appended)
+                if not first or appended[:first.start()].strip():
+                    problems.append(f"text appended to {CONTRACT} does not begin with an '### A<n> · <date> · <title>' heading")
+                elif any(int(n) <= last for n in HEADING.findall(appended)):
+                    problems.append(f"an appended amendment reuses a number at or below A{last}")
+                else:
+                    amended = appended
     for path, prefix in SUMS.items():
         before = git("show", f"{base}:{path}", check=False)
         if before.returncode != 0:
@@ -51,7 +74,7 @@ def main():
             if new.get(name) == digest:
                 continue
             what = "removed" if name not in new else "changed"
-            if not any(name in l for l in added_lines):
+            if name not in amended:
                 problems.append(f"{name} {what} with no contract amendment naming it")
     if problems:
         print("[FAIL] " + "; ".join(problems))

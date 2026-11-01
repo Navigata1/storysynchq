@@ -1,0 +1,48 @@
+# archipelago-2 mission guard (contract section 5, S1b K52).
+#
+# pull_request_target runs this file as it stands on the BASE branch, so a PR cannot rewrite or
+# remove the check that judges it. It checks the PR head out as data only: nothing from the PR
+# is executed. The judge that runs is the base branch's own ops/mission/gates/frozen.py, which
+# only reads git objects (git show, merge-base); it fails when a registered judge (a gate, judge
+# data, a test, a workflow) changed without an appended contract amendment naming it.
+#
+# This is binding only once main's ruleset requires the `mission-guard / frozen` check, forbids
+# direct pushes and allows merge commits only. Setting that ruleset is the operator's act
+# (ops/mission/hitl/ruleset.md); until it is attested, contract section 5 counts CI as advisory.
+name: mission-guard
+
+on:
+  pull_request_target:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  frozen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: The base branch's judges (the definition the PR cannot rewrite)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+          persist-credentials: false
+      - name: The PR head, as data only
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: pr
+          fetch-depth: 0
+          persist-credentials: false
+      - name: No registered judge changed without an amendment naming it
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [ ! -f base/ops/mission/gates/frozen.py ]; then
+            echo "the base branch has no mission judges yet (this is the PR that introduces them)"
+            exit 0
+          fi
+          cd pr
+          python3 -I ../base/ops/mission/gates/frozen.py "$BASE_SHA"

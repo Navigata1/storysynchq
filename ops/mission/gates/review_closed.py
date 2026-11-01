@@ -7,7 +7,8 @@ lead's dispositions.json. The gate judges the seat's output, not the lead's copy
 (S1 critic K1, K2):
 
   - seat.json's head equals dispositions.reviewedHead, its transcriptSha256 matches
-    transcript.md, and its canaryAbsent is true (K13);
+    transcript.md, its canaryAbsent is true (K13), and its effectiveTools (the session's init
+    event) are within Read, Grep and Glob (S1b K54);
   - the transcript's last fenced json block is a completed review (verdict approve,
     amend or ready) that lists the files it read;
   - every finding in every round's transcript appears in that round's dispositions,
@@ -47,6 +48,7 @@ CLOSED = {"fixed", "rejected", "deferred"}
 DONE = {"approve", "amend", "ready"}
 RANK = {"low": 0, "medium": 1, "high": 2, "critical": 3}
 MAX_ROUNDS = 3
+SEAT_TOOLS = {"Read", "Grep", "Glob"}
 
 
 def fail(msg):
@@ -102,6 +104,9 @@ def load_round(rdir, phase, n):
         fail(f"{rdir.name}: transcript.md does not match seat.json's transcriptSha256")
     if seat.get("canaryAbsent") is not True:
         fail(f"{rdir.name}: isolation not proven (seat.json canaryAbsent is not true)")
+    tools = seat.get("effectiveTools")
+    if not isinstance(tools, list) or not tools or set(tools) - SEAT_TOOLS:
+        fail(f"{rdir.name}: the seat's effective tools {tools!r} are not within {sorted(SEAT_TOOLS)} (S1b K54)")
     if seat.get("head") != disp.get("reviewedHead"):
         fail(f"{rdir.name}: seat reviewed {seat.get('head')!r} but dispositions name {disp.get('reviewedHead')!r}")
     import render_prompt  # the renderer lives beside this gate's package
