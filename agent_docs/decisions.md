@@ -795,3 +795,6 @@ deleting the story forgets it everywhere.**
 - P2-R3-02: closing the Voice card mid-take on a landscape phone brings the page's words back
   as a compact line; the Stage's head row, status line and progress rule step aside (the
   Listening pill and the transport carry the take), keeping the photo ≥120 px.
+- Follow-up (P3-R1-03, P3-R2-02): the protocol format table's scroller, like READ THIS, is a
+  named region with a Tab stop only while it actually scrolls; both re-measure when a web font
+  swaps in, as well as on resize.

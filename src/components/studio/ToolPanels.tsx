@@ -130,7 +130,15 @@ const ReadThis = React.memo(function ReadThis({ words }: { words: string }) {
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(el);
-    return () => observer.disconnect();
+    // a web font swapping in reflows the content without resizing a capped box (P3-R2-02)
+    let live = true;
+    document.fonts?.ready.then(() => live && measure());
+    document.fonts?.addEventListener("loadingdone", measure);
+    return () => {
+      live = false;
+      observer.disconnect();
+      document.fonts?.removeEventListener("loadingdone", measure);
+    };
   }, [words]);
   return (
     <div role="note" aria-label="Read this" data-studio="read-this" className="read-this">

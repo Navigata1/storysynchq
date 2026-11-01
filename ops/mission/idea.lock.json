@@ -46,7 +46,7 @@
       "falsifiedBy": "tests/a2-layout.spec.ts finds document scrollWidth > innerWidth on any route at any listed size, an interactive control whose box leaves the viewport, or a landscape Stage photo under 120px tall"
     },
     {
-      "claim": "C6 · Every route has zero serious or critical axe-core violations in its first-screen state and in each open dialog the suite reaches",
+      "claim": "C6 · Every product route (/, /read and the Player, /studio, /protocol) has zero serious or critical axe-core violations in its first-screen state and in each open dialog the suite reaches; /classic, the preserved previous app CLAUDE.md keeps untouched, is out of scope (contract A5, A6)",
       "falsifiedBy": "tests/a2-a11y.spec.ts reports any violation with impact serious or critical"
     },
     {

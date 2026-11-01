@@ -214,3 +214,11 @@ the Player, /studio, /protocol) and the dialogs it opens; /classic, which CLAUDE
 untouched, is out of scope and has serious contrast failures (gray-500 card text) that C6 does
 not claim to clear. Both judges get stricter or wider. `ops/mission/contract.md` changes by
 this appended section.
+
+### A6 · 2026-11-01 · C6's claim text says the scope A5 set
+
+P3's review (P3-R2-03) found the frozen C6 text in `ops/mission/idea.lock.json` still read
+"Every route", while its judge and A5 exclude /classic. The claim now names the product routes
+(/, /read and the Player, /studio, /protocol) and states /classic out of scope, so no report of
+C6 can claim more than `tests/a2-a11y.spec.ts` checks. `ops/mission/contract.md` changes by this
+appended section.
