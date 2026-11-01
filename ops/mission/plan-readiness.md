@@ -124,3 +124,23 @@ match what the lead can rewrite, and the seat had Bash). New: K42 (high), K41 an
 76 fixtures pass. The process budget stays over its 40% line, as recorded above: this round's
 changes are all mission judges, plus one product-facing test (the journey) and env-gated
 projects in playwright.config.ts.
+
+### Round 3 · head c34892e · verdict amend · stop rule reached (3 of 3)
+
+Confirmed: K43-K51. Rejected: K34, K39, K41, K42. New: K52 (high), K53-K55 and K57 (medium),
+K56 and K58 (low). The plan is **not ready** and the mission has not kicked off; every
+finding is deferred to the operator's ruling (contract section 3's stop rule).
+
+| id | sev | finding |
+|---|---|---|
+| K52 | high | The CI guard runs from a workflow file the PR itself can rewrite. Real; a code-only fix (pull_request_target running main's frozen.py) still lets an admin push bypass it. The binding fix is a GitHub ruleset on main, which only the operator can set. |
+| K53 | medium | Any added line naming a path counts as an amendment, and contract lines can be removed unchecked. Real: require a new dated '### A<n>' section and fail on removed contract lines. |
+| K54 | medium | The seat had more tools than Read/Grep/Glob (Artifact, SendMessage, Workflow and others reachable). Real isolation gap: restrict the set with --tools and record the session's effective tools from its init event. |
+| K55 | medium | Player.tsx:885 ends a page on a media error, so undecodable narration still reaches the end card. Real: count ended events with no error, and decode each published take. |
+| K57 | medium | A direct push to main is never scanned. Real: walk main's first-parent history since kickoff. |
+| K56 | low | Squash merges break review_closed later. Real: fix the merge method (merge commits, ^2 == PR head). |
+| K58 | low | registered.py has no fixture. Real: add them. |
+| K34 | medium | Rejected again: rests on K52 (the CI it calls enforced can be rewritten by the PR). |
+| K39 | low | Rejected again: rests on K54 (the seat's toolset is wider than stated). |
+| K41 | medium | Rejected: rests on K54. |
+| K42 | high | Rejected: rests on K52. |
