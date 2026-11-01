@@ -82,8 +82,10 @@ import "./resume.css";
 
 /**
  * The end card is not part of the Player's first load (mission P4, C7): it is fetched while
- * the last page plays (`loadEndCard`), so it is there when the tape ends. A failed fetch is
- * dropped so the end of the tape tries again.
+ * the last page plays (`loadEndCard`), so it is there when the tape ends. A failed prefetch
+ * is dropped, so the end of the tape fetches it again; if that fails too, the tape ends on
+ * `EndCardUnavailable`, which this page then keeps (next/dynamic holds its first result) until
+ * it is reloaded.
  */
 let endCardModule: Promise<typeof import("./EndCard")> | null = null;
 function loadEndCard() {

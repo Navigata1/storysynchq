@@ -132,13 +132,6 @@ import "./read-room.css";
 import "./resume.css";
 
 /**
- * The Player's code is not part of the room's first load (mission P4, C7): the room is what
- * /read shows first. Every way a tape opens (a share link, the demo, a file, the shelf) calls
- * `loadPlayer` as it starts, so the Player downloads while the tape itself does; a failed
- * download is dropped so the next open tries again. If the tape arrives first, the room keeps
- * its threading reels up (`PlayerLoading`) until the Player is ready.
- */
-/**
  * The "Read it in…" panel shows only in the room you pick from (`offersReadItIn`), never on
  * the way into a tape, so the Player a link opens does not carry it, nor the house tape it
  * knows by heart (mission P4, C7): the room fetches both when it is the room that shows. If
@@ -169,6 +162,15 @@ function loadLibrary() {
   return libraryModule;
 }
 
+/**
+ * The Player's code is not part of the room's first load (mission P4, C7): the room is what
+ * /read shows first. Every way a tape opens (a share link, the demo, a file, the shelf) calls
+ * `loadPlayer` as it starts, so the Player downloads while the tape itself does. If the tape
+ * arrives first, the room keeps its threading reels up (`PlayerLoading`) until the Player is
+ * ready. A failed prefetch is dropped, so the open that renders the Player fetches it again;
+ * once that render has settled on `PlayerUnavailable`, the page keeps it (next/dynamic holds
+ * its first result) and its Try again reloads the page.
+ */
 let playerModule: Promise<typeof import("./Player")> | null = null;
 function loadPlayer() {
   playerModule ??= import("./Player").catch((err: unknown) => {
