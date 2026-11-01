@@ -1,0 +1,30 @@
+{
+  "reviewedHead": "f298c80ee7339ca5e61605c312003f972dc6b91d",
+  "base": "969eb13c19c6567bf96726e85eab25c2bef0a636",
+  "findings": [
+    {
+      "id": "P4-R1-01",
+      "severity": "high",
+      "status": "fixed",
+      "note": "1502ec0 (contract A9): js_measure.mjs measures /read?demo=1 and /read?story=<code> (the placeholder cloud answered with the house tape) until the Player's cover shows, counting every same-origin script requested; js-budget.json binds both at 170 KB. fc12162 brings them under: demo 165 KB, share link 168 KB."
+    },
+    {
+      "id": "P4-R1-02",
+      "severity": "high",
+      "status": "fixed",
+      "note": "fc12162: loadPlayer() is called as every tape open starts (share, demo, file, shelf) and is the dynamic() loader, with the threading reels as its loading view and a Try again view if the fetch fails. 362b537 corrects the decisions.md claim; the ReadRoom comment says what the code does."
+    },
+    {
+      "id": "P4-R1-03",
+      "severity": "medium",
+      "status": "fixed",
+      "note": "fc12162: loadSupabase drops a rejected import so the next call fetches again; cloud-storage's cloudModule() turns a failed fetch into CloudError('network') for save, update, shelf read, share and delete. The Player, end card, panel and library loaders drop failures the same way."
+    },
+    {
+      "id": "P4-R1-04",
+      "severity": "low",
+      "status": "fixed",
+      "note": "1502ec0: js_budget.py builds with a placeholder cloud project. fc12162: getUser() loads the client only when a supabase-js sign-in is stored on this device, and a share link resolves without the client (share-lookup.ts), so the configured build's /read is 161 KB with nothing deferred past the measurement."
+    }
+  ]
+}
