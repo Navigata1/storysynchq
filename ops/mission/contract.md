@@ -193,3 +193,14 @@ and the "recording, Voice card closed" state asserts the card really closed befo
 Both make the judge stricter; it still passes at this head (144 of 144). `tests/a2-a11y.spec.ts`
 is C6's judge, new and registered before P3's first `src/` change; it injects axe-core, now a
 pinned devDependency (4.11.1, test-only, not shipped).
+
+### A4 · 2026-11-01 · READ THIS meets WCAG: the T19 spec follows
+
+`tests/vision-read-this.spec.ts` pinned two things C6's judge found to fail WCAG AA: the READ
+THIS label in tape red on paper (3.99:1) and the rule that the card never takes a Tab stop,
+even when its words scroll (axe scrollable-region-focusable, serious). It now asserts the ink
+red (`--ss-red-ink`, 4.5:1 or better) and that the card takes no Tab stop unless its words
+overflow, and then exactly one: the words, a named region, between Close Voice and Stop. The
+tape-red dot, the card's paper, ink and type are unchanged.
+This PR also appends to `ops/mission/contract.md` itself (A3 and A4), which changes that file's
+registered sum.

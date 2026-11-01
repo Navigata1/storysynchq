@@ -64,7 +64,7 @@ e8f00294c8ca6655f38eaec1455885d1bd2c1b3e03f7615b3817058f0c02b6c7  tests/vision-n
 c4e8fbc1da6a48e80d262c40077c3efdb8fa2eb9b441fa8490818ecb63461f85  tests/vision-protocol-packet.spec.ts
 797143a0477e4544395cc6bd311becab910c0eb0a666802c197fdc9bfa3485e1  tests/vision-publish-card.spec.ts
 edda3e7337b36d49c299b773b82b8066f8933b53e6f091e4a56151027f674ab4  tests/vision-read-it-in.spec.ts
-1023da6786563acd1403f198f68e0b45b8e337df62069bec57bb273fec0f12b2  tests/vision-read-this.spec.ts
+43f14ddb3ab24e3bdd0643d9491be79b71caaa4dfc4e47ad0a10229d40db638f  tests/vision-read-this.spec.ts
 3c6084fcc980d88cf6aa99186216dcd4dcfb52d944ff47d8c71d8cf90b833169  tests/vision-reader-author-a11y.spec.ts
 19c8ed7714cf5f185a59d37281e5941523c366e8cd4bbc26f3ca63fbc42a3e8a  tests/vision-reader-crossfade.spec.ts
 a6118c1687f1737d86620b67266c76664f4b74a4d74c93502c0aa00881f9bc6e  tests/vision-reader-deck-chip.spec.ts
