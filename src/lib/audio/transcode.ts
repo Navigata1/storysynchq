@@ -60,7 +60,33 @@ const WAV_SAMPLE_RATE = 16000;
 
 export function isPublishCompliant(mimeType: string): boolean {
   const m = mimeType.toLowerCase();
+  // "audio/mp4;codecs=opus" is MP4 but not AAC: Opus is never valid in a published story
+  if (/opus|webm|ogg|vorbis|flac/.test(m)) return false;
   return m.includes("mp4") || m.includes("aac") || m.includes("m4a") || m.includes("wav");
+}
+
+/** Whether `bytes` holds the four-character code `code` (an MP4 box or sample-entry type). */
+function hasFourcc(bytes: Uint8Array, code: string): boolean {
+  const [a, b, c, d] = Array.from(code, (ch) => ch.charCodeAt(0));
+  for (let i = 0; i + 3 < bytes.length; i++) {
+    if (bytes[i] === a && bytes[i + 1] === b && bytes[i + 2] === c && bytes[i + 3] === d) return true;
+  }
+  return false;
+}
+
+/**
+ * Whether a recording can be published as the AAC/MP4 it says it is. An MP4 is AAC unless its
+ * type names another codec or its sample description carries Opus: Chromium records Opus in
+ * MP4 ("audio/mp4;codecs=opus", an `Opus` sample entry with its `dOps` box), and passing that
+ * through would publish Opus labelled as AAC. MediaRecorder writes the sample description
+ * (`moov`) before any audio, so the first 64 KB holds it.
+ */
+export async function recordedAsAac(blob: Blob, mimeType?: string): Promise<boolean> {
+  const type = (mimeType || blob.type || "").toLowerCase();
+  if (!(type.includes("mp4") || type.includes("aac") || type.includes("m4a"))) return false;
+  if (/opus|webm|ogg|vorbis|flac/.test(type)) return false;
+  const head = new Uint8Array(await blob.slice(0, 64 * 1024).arrayBuffer());
+  return !hasFourcc(head, "Opus") && !hasFourcc(head, "dOps");
 }
 
 async function aacEncoderSupported(): Promise<boolean> {
@@ -186,7 +212,7 @@ export async function normalizeNarration(
 
   const type = (mimeType || blob.type || "").toLowerCase();
 
-  if (type.includes("mp4") || type.includes("aac") || type.includes("m4a")) {
+  if (await recordedAsAac(blob, type)) {
     return { blob, mimeType: "audio/mp4", codec: "aac", ext: "m4a", wasTranscoded: false };
   }
   if (type.includes("wav")) {
@@ -217,7 +243,7 @@ async function normalizeLevelled(blob: Blob, mimeType?: string): Promise<Normali
       : { blob, mimeType: "audio/wav", codec: "wav", ext: "wav", wasTranscoded: false, levelling };
 
   /* AAC/MP4 (Safari): level only where it can go back to AAC */
-  if (type.includes("mp4") || type.includes("aac") || type.includes("m4a")) {
+  if (await recordedAsAac(blob, type)) {
     if (!(await aacEncoderSupported())) return asRecorded("aac", skipped("aac-encoder-unavailable"));
     let levelled: LevelledPcm;
     try {
