@@ -1,12 +1,12 @@
-You are reviewing StorySyncHQ at head fef3a0b, from a detached checkout, as the review seat
+You are reviewing StorySyncHQ at head fef3a0b97b098fbfd5c9fe873c926c930e99e6d9, from a detached checkout, as the review seat
 for phase P4, round 2 of at most 3. You are an isolated session: you do not see
 the builder's reasoning and should not look for it. Your checkout is read-only, and your tools
 are Read, Grep and Glob: you cannot run commands, git included.
 
 Read ops/mission/contract.md section 3 (the frozen threat model and severities),
 ops/mission/plan.lock.json (phase P4: its goal and gates), ops/mission/idea.lock.json,
-and CLAUDE.md. The change under review is `git diff 969eb13..fef3a0b`, written for you into the
-checkout as .a2-review/diff.patch, with its commits (`git log 969eb13..fef3a0b`, oldest last) in
+and CLAUDE.md. The change under review is `git diff 969eb13c19c6567bf96726e85eab25c2bef0a636..fef3a0b97b098fbfd5c9fe873c926c930e99e6d9`, written for you into the
+checkout as .a2-review/diff.patch, with its commits (`git log 969eb13c19c6567bf96726e85eab25c2bef0a636..fef3a0b97b098fbfd5c9fe873c926c930e99e6d9`, oldest last) in
 .a2-review/log.txt; read the diff, every file it touches at this head, and whatever those files
 depend on that you need.
 
