@@ -237,3 +237,9 @@ P3-R3-01: the header prose of `tests/vision-read-this.spec.ts` and `tests/a2-a11
 says what their assertions check (READ THIS focusable only while its words overflow, an ink-red
 label; C6 on every product route). Comments only. `ops/mission/contract.md` changes by this
 appended section.
+
+### A8 · 2026-11-01 · The judges' own fixtures for C7
+
+`ops/mission/gates/test_gates.py` gains three fixtures for `js_budget.py` (within, over,
+unmeasured), part of registering C7's judge (A7). Fixtures only: no existing fixture changes.
+`ops/mission/contract.md` changes by this appended section.
