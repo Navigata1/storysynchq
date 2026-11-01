@@ -36,7 +36,7 @@ const SIZES = [
   { name: "landscape 667x375", width: 667, height: 375 },
 ] as const;
 
-type Screen = { name: string; open: (page: Page) => Promise<void>; photo?: boolean };
+type Screen = { name: string; open: (page: Page) => Promise<void>; photo?: boolean; stop?: boolean };
 
 const settle = async (page: Page) => {
   await page.evaluate(() => document.fonts.ready.then(() => true));
@@ -81,6 +81,25 @@ const SCREENS: Screen[] = [
       await page.getByRole("button", { name: "Record my voice on this page" }).click();
       await expect(page.locator(".studio[data-recording='true']")).toHaveCount(1);
       await page.waitForTimeout(500); // the sheet rises as it opens; judge where it lands
+    },
+  },
+  {
+    name: "studio (recording, Voice card closed)",
+    photo: true,
+    stop: true,
+    open: async (page) => {
+      await stubMicrophone(page);
+      await seedStudioDraft(page, "twinkle", { narration: false });
+      await page.goto("/studio");
+      await restoreDraft(page);
+      await expect(page.locator('[data-studio="stage-photo"]')).toBeVisible({ timeout: 15000 });
+      await page.getByRole("button", { name: "Record my voice on this page" }).click();
+      await expect(page.locator(".studio[data-recording='true']")).toHaveCount(1);
+      await page.waitForTimeout(500);
+      const close = page.getByRole("button", { name: "Close Voice" });
+      if (await close.isVisible()) await close.click();
+      await expect(page.locator(".studio[data-recording='true']"), "closing the card does not end the take").toHaveCount(1);
+      await page.waitForTimeout(300);
     },
   },
   { name: "protocol", open: async (page) => void (await page.goto("/protocol")) },
@@ -170,8 +189,15 @@ async function layoutProblems(page: Page): Promise<{ scrollWidth: number; innerW
       const hit = document.elementFromPoint((left + right) / 2, (top + bottom) / 2);
       if (hit?.closest("nextjs-portal")) continue; // the dev overlay, absent in production
       // content scrolled under fixed or sticky chrome (a header) is reachable by scrolling on
-      // the Filmstrip's sticky handle covers a thumbnail only until the strip scrolls sideways
-      if (hit && strip && strip.contains(hit) && pinned(hit) && strip.scrollWidth > strip.clientWidth) continue;
+      // the Filmstrip's sticky handle covers a thumbnail only until the strip scrolls the way
+      // that clears it: a handle on the strip's left needs scrollLeft > 0, on its right room
+      // still to scroll (P2-R2-03)
+      if (hit && strip && strip.contains(hit) && pinned(hit)) {
+        const s = strip.getBoundingClientRect();
+        const h = hit.getBoundingClientRect();
+        const onLeft = h.left + h.width / 2 < s.left + s.width / 2;
+        if (onLeft ? strip.scrollLeft > 0 : strip.scrollLeft < strip.scrollWidth - strip.clientWidth - 1) continue;
+      }
       if (hit && pinned(hit) && !pinned(el)) {
         const chrome = hit.getBoundingClientRect();
         const maxY = document.documentElement.scrollHeight - vh;
@@ -212,6 +238,20 @@ for (const screen of SCREENS) {
         await screen.open(page);
         await settle(page);
         await judge(page, `${screen.name} at ${size.name}`);
+        if (screen.stop) {
+          // mid-take there is always a Stop on screen, uncovered (P2-R2-01)
+          const stops = await page.evaluate(() =>
+            Array.from(document.querySelectorAll("button")).filter((b) => {
+              const name = (b.getAttribute("aria-label") || b.innerText || "").trim();
+              if (!/^Stop/.test(name)) return false;
+              const r = b.getBoundingClientRect();
+              if (r.width < 1 || r.height < 1 || r.right < 0 || r.left > innerWidth || r.bottom < 0 || r.top > innerHeight) return false;
+              const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+              return !!hit && (hit === b || b.contains(hit));
+            }).length,
+          );
+          expect(stops, `${screen.name} at ${size.name}: a Stop on screen and uncovered`).toBeGreaterThan(0);
+        }
         if (screen.photo && size.width > size.height) {
           const seen = await page.locator('[data-studio="stage-photo"]').evaluate((photo) => {
             const r = photo.getBoundingClientRect();
