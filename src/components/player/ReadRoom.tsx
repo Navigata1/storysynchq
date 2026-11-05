@@ -85,7 +85,7 @@ import { HOUSE_TAPE_URL, loadTapeByCode, normalizeTapeManifest } from "@/lib/sto
 import { REPLY_QUERY, REPLY_SEED_KEY, replySeed, serializeReplySeed } from "@/lib/storysync/reply";
 import { getUser, isSupabaseConfigured as isCloudEnabled } from "@/lib/supabase-lazy";
 import { clearDraft, DRAFT_KEY } from "@/components/studio/draft-key";
-import { sweepDeviceCopy } from "@/lib/device-library";
+import { pullTapeOut } from "@/lib/device-library";
 import { BigButton, GlassPanel, Reel, TapeLabel, TAPE } from "@/components/studio-kit/kit";
 import { Shelf, ShelfTape } from "@/components/studio-kit/Shelf";
 import { PullTapeIcon } from "@/components/studio-kit/PrintSlot";
@@ -693,27 +693,29 @@ export function ReadRoom() {
       const reduce = prefersReducedMotion();
       setArmedId(null);
       if (!reduce) setPulling({ id: entry.id, leaving: false });
-      // This device's copy and its draft go first, from code already on the page, so the
-      // child's voice leaves this device even when the cloud library code cannot be fetched
-      // (offline). Only the cloud half waits on that code (P4-R3-01).
-      let sweptHere = false;
-      try {
-        sweptHere = sweepDeviceCopy(entry.id);
-        forgetDraftOf(entry.id);
-        if (isCloudEnabled()) await (await loadLibrary()).deleteBook(entry.id);
-      } catch (error) {
-        const why = error instanceof Error && error.message ? error.message : "Try again.";
+      // This device's copy goes first, from code already on the page, so the child's voice
+      // leaves this device even when the cloud library code cannot be fetched (offline); only
+      // the cloud half waits on that code (P4-R3-01). The draft and reading places are
+      // forgotten once a copy is really gone (pullTapeOut, P6-R1-02).
+      const outcome = await pullTapeOut(entry.id, {
+        forgetHere: () => {
+          forgetDraftOf(entry.id);
+          setPlaces(forgetPlaces(placeKeysOfTape(entry.manifest, entry)));
+        },
+        cloud: isCloudEnabled() ? async () => (await loadLibrary()).deleteBook(entry.id) : undefined,
+      });
+      if (outcome.kind !== "gone") {
         setPulling(null);
         setStatus({
           kind: "kept",
-          message: sweptHere
-            ? `This device's copy is gone, but the cloud copy is still on the shelf. ${why}`
-            : `That tape is still on the shelf. ${why}`,
+          message:
+            outcome.kind === "cloud-unreached"
+              ? `Taken off this device. The cloud library could not be reached, so a cloud copy may still be there. ${outcome.why}`
+              : `That tape is still on the shelf. ${outcome.why}`,
         });
         void readShelf(previousVisit.current).then(setShelf);
         return;
       }
-      setPlaces(forgetPlaces(placeKeysOfTape(entry.manifest, entry)));
       setStatus((current) => ({ kind: "pulled", n: current.kind === "pulled" ? current.n + 1 : 1 }));
 
       const leave = () => {

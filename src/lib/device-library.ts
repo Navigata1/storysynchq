@@ -37,3 +37,44 @@ export function sweepDeviceCopy(id: string): boolean {
   }
   return true;
 }
+
+/** What pulling a tape out did, for the Read Room to say exactly that. */
+export type PullOutcome =
+  /** every copy this device could reach is gone */
+  | { kind: "gone" }
+  /** gone from this device; the cloud half could not be done, so a cloud copy may remain */
+  | { kind: "cloud-unreached"; why: string }
+  /** nothing was removed */
+  | { kind: "kept"; why: string };
+
+const reason = (err: unknown) => (err instanceof Error && err.message ? err.message : "Try again.");
+
+/**
+ * Pull tape `id` out (one-tap deletion, PRIVACY.md): this device's copy first, from code already
+ * here, so a child's voice leaves this device even offline (P4-R3-01); then, when a cloud is
+ * configured, `cloud` removes its link and its cloud row. `forgetHere` (its draft, its reading
+ * places) runs once a copy is really gone: after a device sweep, or a cloud delete. A cloud-only
+ * tape whose cloud cannot be reached keeps both (P6-R1-02).
+ */
+export async function pullTapeOut(
+  id: string,
+  steps: { forgetHere: () => void; cloud?: () => Promise<void> },
+): Promise<PullOutcome> {
+  let swept: boolean;
+  try {
+    swept = sweepDeviceCopy(id);
+  } catch (err) {
+    return { kind: "kept", why: reason(err) };
+  }
+  if (steps.cloud) {
+    try {
+      await steps.cloud();
+    } catch (err) {
+      if (!swept) return { kind: "kept", why: reason(err) };
+      steps.forgetHere();
+      return { kind: "cloud-unreached", why: reason(err) };
+    }
+  }
+  steps.forgetHere();
+  return { kind: "gone" };
+}
