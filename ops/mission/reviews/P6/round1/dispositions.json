@@ -1,0 +1,30 @@
+{
+  "reviewedHead": "a37f76e5311018e28ca418e5b7e6aba16bf23e5c",
+  "base": "4ddec560d6ca10dd1f7d3cda59bdbe0350c64d5d",
+  "findings": [
+    {
+      "id": "P6-R1-01",
+      "severity": "medium",
+      "status": "fixed",
+      "note": "9ac5d15: on republish the Studio re-checks the bytes of every take labelled 'aac' (recordedAsAac); one whose bytes say Opus goes through the ladder. ed895be (A15): tests/a2-codec.spec.ts gains 'Opus bytes labelled aac are normalized, not passed through', seeding a draft whose levelled takes are the Opus fixture labelled aac; it fails without 9ac5d15 ('page 1: no Opus carried on by the republish') and passes with it (CI verify green at 6edca34). 6edca34: governance says the fix covers new takes and republishes, and that a tape already handed out keeps its narration until republished."
+    },
+    {
+      "id": "P6-R1-02",
+      "severity": "medium",
+      "status": "fixed",
+      "note": "3fea338: pullTapeOut (src/lib/device-library.ts) sweeps the device copy, then the cloud half when configured, forgets the draft and places only once a copy is really gone, and reports gone / cloud-unreached / kept; the room says 'Taken off this device. The cloud library could not be reached, so a cloud copy may still be there' and never claims a cloud copy exists. ed895be (A15): tests/a2-pullout.spec.ts (Node-side, stand-in localStorage) pins all five branches including the cloud-configured ones; removing the cloud-only guard turns it red."
+    },
+    {
+      "id": "P6-R1-03",
+      "severity": "low",
+      "status": "fixed",
+      "note": "6edca34: governance and the P4 incident note state both red phase-run records at ae62697 (09:50:43Z, 09:51:54Z), written by the two overlapping run_phase processes (the orphan and the re-run)."
+    },
+    {
+      "id": "P6-R1-04",
+      "severity": "low",
+      "status": "fixed",
+      "note": "ed895be: A14 now says the no-network helper is narrowed by exactly one same-origin exclusion (the browser's own icon fetch) and that no other-origin or page-script request can hide behind it; governance's line says the same."
+    }
+  ]
+}
