@@ -20,6 +20,7 @@ import path from "node:path";
 import { pickRecordingMime } from "../src/lib/audio/recorder";
 import { isPublishCompliant, recordedAsAac } from "../src/lib/audio/transcode";
 import { REPO_ROOT } from "./fixtures/tapes";
+import { DRAFT_KEY, restoreDraft, studioDraftState } from "./fixtures/helpers";
 
 const OPUS_IN_MP4 = fs.readFileSync(path.join(REPO_ROOT, "tests", "fixtures", "chromium-opus-in-mp4.m4a"));
 /** Real AAC-LC in MP4 (ffmpeg's encoder), what Safari's recorder hands back (tests/fixtures/README.md). */
@@ -189,5 +190,67 @@ test.describe("codec rule · a take recorded as Chromium's MP4 is published with
     expect(found.opus, "the published take carries no Opus").toBe(false);
     // the fixture is about 0.58 s of tone
     expect(found.duration).toBeGreaterThan(0.4);
+  });
+});
+
+/**
+ * P6-R1-01: before the codec check, Chromium's Opus-in-MP4 was published labelled "aac". A
+ * republish passes a labelled take straight through, so that label must not be trusted
+ * blindly: the Studio re-checks the bytes of every take labelled AAC.
+ */
+test.describe("codec rule · a take an older publish mislabelled AAC is re-checked on republish", () => {
+  test("Opus bytes labelled aac are normalized, not passed through", async ({ page }) => {
+    test.setTimeout(120000);
+    const state = studioDraftState("twinkle", { published: true });
+    const opus = `data:audio/mp4;base64,${OPUS_IN_MP4.toString("base64")}`;
+    for (const p of state.manifest.pages) {
+      p.text = { ...(p.text ?? { content: "" }), audioUrl: opus, audioCodec: "aac" };
+      // already levelled, so levelling alone would not send it through the ladder
+      state.recordings[String(p.id)] = { mimeType: "audio/mp4", duration: 0.6, levelled: true };
+    }
+    await page.addInitScript(
+      ({ key, json }) => {
+        try {
+          if (window.sessionStorage.getItem("a2-codec-seeded")) return;
+          const draft = JSON.parse(json);
+          draft.startedAt = new Date(Date.now() - 600000).toISOString();
+          window.localStorage.setItem(key, JSON.stringify({ v: 1, savedAt: new Date().toISOString(), state: draft }));
+          window.sessionStorage.setItem("a2-codec-seeded", "1");
+        } catch {
+          /* about:blank has no storage */
+        }
+      },
+      { key: DRAFT_KEY, json: JSON.stringify(state) },
+    );
+    await page.goto("/studio");
+    await restoreDraft(page);
+
+    await page.getByRole("button", { name: "Finish my story" }).click();
+    const question = page.locator('label[for="studio-gate-answer"]');
+    await expect(question).toContainText(/\d+\s*[×x*]\s*\d+/, { timeout: 10000 });
+    const [, a, b] = (await question.innerText()).match(/(\d+)\s*[×x*]\s*(\d+)/)!;
+    await page.locator("#studio-gate-answer").fill(String(Number(a) * Number(b)));
+    await page.locator("#studio-gate-consent").check();
+    await page.getByRole("button", { name: "Continue" }).click();
+    await expect(page.getByRole("heading", { name: "Your tape is ready" })).toBeVisible({ timeout: 90000 });
+
+    const takes = await page.evaluate(() => {
+      const lib = JSON.parse(localStorage.getItem("ssync-library") ?? "[]");
+      const pages = lib[lib.length - 1]?.ssyncData?.pages ?? [];
+      return pages.map((p: { text?: { audioUrl?: string; audioCodec?: string } }) => ({
+        url: String(p.text?.audioUrl ?? ""),
+        codec: String(p.text?.audioCodec ?? ""),
+      }));
+    });
+    expect(takes.length).toBeGreaterThan(0);
+    for (const [i, take] of takes.entries()) {
+      expect(["aac", "wav"], `page ${i + 1}`).toContain(take.codec);
+      const opusInside = await page.evaluate(async (url: string) => {
+        const bytes = new Uint8Array(await (await fetch(url)).arrayBuffer());
+        const text = Array.from(bytes.slice(0, 64 * 1024), (c) => String.fromCharCode(c)).join("");
+        return text.includes("Opus") || text.includes("dOps");
+      }, take.url);
+      expect(opusInside, `page ${i + 1}: no Opus carried on by the republish`).toBe(false);
+    }
   });
 });

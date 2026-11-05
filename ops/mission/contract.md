@@ -351,4 +351,25 @@ at 1ef8c89 found two judge problems, neither a product change:
   flaky on mobile). It now waits for that card's animations to finish before measuring. The
   file passes three times over with no retries (144 tests).
 
-No assertion is removed or loosened. `ops/mission/contract.md` changes by this appended section.
+No assertion is removed. The no-network helper is narrowed by exactly the one exclusion above:
+same-origin, the browser's own icon fetch. No request to any other origin, and no request a
+page script makes, can hide behind it (corrected per P6-R1-04). `ops/mission/contract.md`
+changes by this appended section.
+
+### A15 · 2026-11-05 · P6 round 1: republished takes re-checked, one-tap deletion pinned branch by branch
+
+- P6-R1-01: a take an earlier publish labelled `aac` was passed straight through on
+  republish. Before A13's check, that label could sit on Chromium's Opus-in-MP4. The Studio now
+  re-checks the bytes of every take labelled AAC (`recordedAsAac`). A take whose bytes say Opus
+  goes through the ladder. `tests/a2-codec.spec.ts` gains "Opus bytes labelled aac are
+  normalized, not passed through". It seeds a draft whose levelled takes are the Opus fixture
+  labelled `aac`, then republishes.
+- P6-R1-02: pulling a tape out is now `pullTapeOut` (src/lib/device-library.ts). It sweeps this
+  device's copy first, then the cloud half when a cloud is configured. It forgets the draft and
+  reading places only once a copy is really gone, and it reports what happened ("gone",
+  "cloud-unreached", "kept"). The Read Room no longer claims a cloud copy exists when the cloud
+  merely could not be reached. `tests/a2-pullout.spec.ts` is new and Node-side, with a stand-in
+  localStorage. It pins every branch, including the cloud-configured ones the e2e build cannot
+  reach, and fails if a cloud-only tape is reported removed.
+
+No existing assertion changes. `ops/mission/contract.md` changes by this appended section.
