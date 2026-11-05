@@ -12,10 +12,13 @@
  *                       a claim that a cloud copy exists
  *   cloud-only tape, cloud unreachable    nothing removed, nothing forgotten; "kept"
  *   storage refuses the write             nothing forgotten, the cloud not asked; "kept"
+ *
+ * and what the Read Room says for each (pullOutcomeLine, P6-R2-03): nothing extra when every
+ * copy is gone, never a claim that a cloud copy exists when the cloud merely was not reached.
  */
 
 import { expect, test } from "@playwright/test";
-import { LIBRARY_KEY, pullTapeOut } from "../src/lib/device-library";
+import { LIBRARY_KEY, pullOutcomeLine, pullTapeOut } from "../src/lib/device-library";
 
 /** A stand-in `window.localStorage`; `refuseWrites` makes setItem throw like a full or locked store. */
 function withStorage(rows: { id: string }[], refuseWrites = false) {
@@ -125,5 +128,23 @@ test.describe("pullTapeOut · one-tap deletion, every branch", () => {
     } finally {
       s.restore();
     }
+  });
+});
+
+test.describe("pullOutcomeLine · what the grown-up is told", () => {
+  test("every copy gone: no line (the room says Pulled out.)", () => {
+    expect(pullOutcomeLine({ kind: "gone" })).toBeNull();
+  });
+
+  test("cloud unreached: off this device, and a cloud copy only 'may' remain", () => {
+    const line = pullOutcomeLine({ kind: "cloud-unreached", why: "offline" })!;
+    expect(line).toBe(
+      "Taken off this device. The cloud library could not be reached, so a cloud copy may still be there. offline",
+    );
+    expect(line, "never asserts a cloud copy exists").not.toMatch(/cloud copy is still|still on the shelf/);
+  });
+
+  test("kept: the tape is still on the shelf, with the reason", () => {
+    expect(pullOutcomeLine({ kind: "kept", why: "Try again." })).toBe("That tape is still on the shelf. Try again.");
   });
 });

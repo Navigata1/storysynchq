@@ -373,3 +373,14 @@ changes by this appended section.
   reach, and fails if a cloud-only tape is reported removed.
 
 No existing assertion changes. `ops/mission/contract.md` changes by this appended section.
+
+### A16 · 2026-11-05 · P6 round 2: the pull-out wording is pinned
+
+P6-R2-03: the Read Room's words for each pull-out outcome were inline and untested. They are
+now `pullOutcomeLine` in `src/lib/device-library.ts`. `tests/a2-pullout.spec.ts` gains three
+tests for it, which pin:
+- no line when every copy is gone;
+- for an unreachable cloud, "a cloud copy may still be there", never a claim that one exists;
+- for a kept tape, the reason.
+
+No existing assertion changes. `ops/mission/contract.md` changes by this appended section.
