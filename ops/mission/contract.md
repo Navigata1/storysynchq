@@ -334,3 +334,21 @@ does not pass. Its take is published as AAC, but this Chromium cannot decode AAC
 decode assertion fails. Neither of A12's tests can pass without an engine that encodes and
 decodes AAC, which is why the gate runs only after proving one exists. No existing test
 changes. `ops/mission/contract.md` changes by this appended section.
+
+### A14 · 2026-11-05 · P6: two judges meet Chromium 153
+
+The close runs on a new container image whose Chromium is 153 (it was 140). The early full run
+at 1ef8c89 found two judge problems, neither a product change:
+
+- `tests/fixtures/sends.ts`: `watchSends` recorded the browser's own favicon load as something
+  the page sent. After a client-side navigation, Chromium 153 fetches the app's declared
+  `/icons/icon-512x512.png` again: resource type "other", no initiating script. That failed
+  vision-revoice's "nothing on the network" check on both projects. The helper now leaves out
+  exactly that: a same-origin `/icons/…` or `/favicon.ico` request of resource type "other".
+  Every other request is still recorded. All ten specs that use the helper pass (388 tests).
+- `tests/vision-reader-end-card.spec.ts`: "the action pair stacks below 360 px" measured the
+  two buttons while the end card's rise-in animation was still moving them (2 px overlap,
+  flaky on mobile). It now waits for that card's animations to finish before measuring. The
+  file passes three times over with no retries (144 tests).
+
+No assertion is removed or loosened. `ops/mission/contract.md` changes by this appended section.
