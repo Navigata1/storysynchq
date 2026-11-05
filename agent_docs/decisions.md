@@ -860,3 +860,18 @@ deleting the story forgets it everywhere.**
   answer here is unchanged: Opus yes, AAC no (exit 77).
 - This Chromium cannot decode AAC either, so neither of tests/a2-aac.spec.ts's two tests can
   pass here (A13 corrects A12's text, which said the Safari-path test passes).
+
+## 2026-11-05 · P6 (close): republished takes re-checked; one-tap deletion says exactly what happened
+- This supersedes the P5 entry's line that, when the cloud half fails, "the parent is told the
+  device copy is gone and the cloud copy stays". The room no longer claims a cloud copy exists.
+- P6-R1-01: a take an earlier publish labelled `aac` was passed straight through on republish.
+  Before the codec check, that label could sit on Chromium's Opus-in-MP4. The Studio now
+  re-checks the bytes of every take labelled AAC (`recordedAsAac`); Opus goes through the
+  ladder. A tape already handed out keeps its narration until it is republished.
+- P6-R1-02: pulling a tape out is `pullTapeOut` (src/lib/device-library.ts). It sweeps this
+  device's copy first, then the cloud half when a cloud is configured. It forgets the draft and
+  reading places only once a copy is really gone, and reports gone / cloud-unreached / kept.
+  `pullOutcomeLine` gives the words. For an unreachable cloud they are "Taken off this device.
+  The cloud library could not be reached, so a cloud copy may still be there." A cloud-only
+  tape whose cloud cannot be reached keeps its draft and places.
+- Judged by tests/a2-codec.spec.ts and tests/a2-pullout.spec.ts (contract A15, A16).
