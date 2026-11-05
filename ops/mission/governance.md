@@ -57,17 +57,24 @@ four claims above already cap both bands at 3.
 
 Each merged with a merge commit at the exact head its recorded run passed. CI `verify` and
 `frozen` were green there, the PR was mergeable and contained main, and production was
-confirmed serving the merge commit afterwards. One recorded run was red: P4 at ae62697. The
-cause was an orphaned test runner from a run the lead had killed, not the product. It stays
-in the ledger, and is explained in ops/mission/reviews/P4/run-incident-2026-11-01.md. The
-re-run was at a new head.
+confirmed serving the merge commit afterwards. Two recorded P4 runs were red, both at ae62697
+(09:50:43Z and 09:51:54Z). They were two overlapping `run_phase.py` processes, the orphan of a
+run the lead had killed and the lead's re-run, each failing from the other's interference,
+not the product. Both stay in the ledger, and ops/mission/reviews/P4/run-incident-2026-11-01.md
+explains them. The re-run was at a new head.
 
 P1 (cloud) and P5 (WebKit, AAC) merge nothing on their own runs (contract section 2). P5's
 work lands with this PR:
 - the codec rule against Chromium's MP4: Chromium records Opus inside MP4 when asked for
-  "audio/mp4", and publish passed every MP4 through as AAC. Fixed in dc85923, judged by
-  tests/a2-codec.spec.ts (A13);
-- one-tap deletion offline: P4-R3-01, fixed in aec4631, judged by tests/vision-shelf.spec.ts;
+  "audio/mp4", and publish passed every MP4 through as AAC. For new takes this is fixed in
+  dc85923 (A13). A republish now re-checks the bytes of every take an earlier publish
+  labelled AAC (P6-R1-01, A15). A tape already published from Chromium before this fix keeps
+  its Opus-labelled-AAC narration until it is republished. The app cannot rewrite a copy it
+  already handed out. Judged by tests/a2-codec.spec.ts;
+- one-tap deletion offline: P4-R3-01, fixed in aec4631, judged by tests/vision-shelf.spec.ts.
+  Every branch is in `pullTapeOut`: with or without a cloud, the cloud unreachable, and
+  storage refusing the write. They are judged by tests/a2-pullout.spec.ts, and the room no
+  longer claims a cloud copy it does not know exists (P6-R1-02, A15);
 - the AAC judge tests/a2-aac.spec.ts (A12);
 - the AAC gate's encoder probe, now run in a secure context (A13).
 
@@ -111,8 +118,9 @@ lead's own user on the same machine. No second model family was reachable.
   P3-R3-01 in P4, P4-R3-01 in P5). P6's own rounds are under reviews/P6/.
 - C7's headroom is thin on the share-link Player: 168 of 170 KB. New code on the Player's path
   should be weighed against it.
-- The close runs on Chromium 153 (P0 to P4 ran on 140). Two judges needed repair for it, with
-  no assertion loosened (A14): the no-network helper had counted the browser's own favicon
-  load as a send, and an end-card layout test measured mid-animation.
+- The close runs on Chromium 153 (P0 to P4 ran on 140). Two judges needed repair for it
+  (A14). The no-network helper had counted the browser's own favicon load as a send; it now
+  leaves out that one narrow, same-origin case. An end-card layout test measured
+  mid-animation.
 - Two lead sessions worked this branch in parallel during P5; the second rebuilt on the
   first's commits without rewriting them, and A13 corrects one line of A12's text.
