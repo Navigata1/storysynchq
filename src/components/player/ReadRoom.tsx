@@ -85,7 +85,7 @@ import { HOUSE_TAPE_URL, loadTapeByCode, normalizeTapeManifest } from "@/lib/sto
 import { REPLY_QUERY, REPLY_SEED_KEY, replySeed, serializeReplySeed } from "@/lib/storysync/reply";
 import { getUser, isSupabaseConfigured as isCloudEnabled } from "@/lib/supabase-lazy";
 import { clearDraft, DRAFT_KEY } from "@/components/studio/draft-key";
-import { pullTapeOut } from "@/lib/device-library";
+import { pullOutcomeLine, pullTapeOut } from "@/lib/device-library";
 import { BigButton, GlassPanel, Reel, TapeLabel, TAPE } from "@/components/studio-kit/kit";
 import { Shelf, ShelfTape } from "@/components/studio-kit/Shelf";
 import { PullTapeIcon } from "@/components/studio-kit/PrintSlot";
@@ -704,15 +704,10 @@ export function ReadRoom() {
         },
         cloud: isCloudEnabled() ? async () => (await loadLibrary()).deleteBook(entry.id) : undefined,
       });
-      if (outcome.kind !== "gone") {
+      const notAll = pullOutcomeLine(outcome);
+      if (notAll !== null) {
         setPulling(null);
-        setStatus({
-          kind: "kept",
-          message:
-            outcome.kind === "cloud-unreached"
-              ? `Taken off this device. The cloud library could not be reached, so a cloud copy may still be there. ${outcome.why}`
-              : `That tape is still on the shelf. ${outcome.why}`,
-        });
+        setStatus({ kind: "kept", message: notAll });
         void readShelf(previousVisit.current).then(setShelf);
         return;
       }

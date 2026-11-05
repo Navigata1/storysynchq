@@ -78,3 +78,19 @@ export async function pullTapeOut(
   steps.forgetHere();
   return { kind: "gone" };
 }
+
+/**
+ * What the Read Room tells the grown-up after a pull-out that did not remove every copy, or
+ * `null` when it did (the room then says "Pulled out."). Never claims a cloud copy exists: an
+ * unreachable cloud is said as exactly that (P6-R1-02).
+ */
+export function pullOutcomeLine(outcome: PullOutcome): string | null {
+  switch (outcome.kind) {
+    case "gone":
+      return null;
+    case "cloud-unreached":
+      return `Taken off this device. The cloud library could not be reached, so a cloud copy may still be there. ${outcome.why}`;
+    case "kept":
+      return `That tape is still on the shelf. ${outcome.why}`;
+  }
+}
