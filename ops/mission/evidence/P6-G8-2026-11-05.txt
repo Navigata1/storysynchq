@@ -1,0 +1,9 @@
+$ python3 ops/mission/gates/band.py
+exit 0
+--- stdout ---
+[PASS] 4 mission PR(s): each green on a merging phase at its head, up to date with main, CI green
+[PASS] https://storysynchq.vercel.app serves main's tip 4ddec560d6ca; /read and the demo tape load
+wrote ops/mission/evidence/bundle.json at 22b45e23d9df: {'verified': 8, 'unverified': 4, 'falsified': 0}
+[PASS] declared bands equal the computed bands: 3/5 strict (unverified claim(s) -> cap 3; lane score 85/100 -> raw band 4; caps [3, 5]), 3/5 counting attested
+
+--- stderr ---

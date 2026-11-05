@@ -1,0 +1,6 @@
+$ python3 ops/mission/gates/js_budget.py
+exit 0
+--- stdout ---
+[PASS] first-load JS within budget: / 140k/170k, /read 162k/170k, /read?demo=1 166k/170k, /read?story=a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2 169k/170k, /protocol 164k/170k, /studio 232k/250k
+
+--- stderr ---

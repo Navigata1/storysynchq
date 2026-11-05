@@ -1,0 +1,6 @@
+$ python3 ops/mission/gates/review_closed.py P2
+exit 0
+--- stdout ---
+[PASS] P2: 3 round(s) closed at c2e9ac57ad54, 8 findings, none open
+
+--- stderr ---

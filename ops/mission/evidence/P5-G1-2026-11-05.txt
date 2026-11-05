@@ -1,0 +1,6 @@
+$ bash ops/mission/gates/webkit_player.sh
+exit 77
+--- stdout ---
+[FAIL] webkit does not launch: Error: browserType.launch: Executable doesn't exist at /opt/pw-browsers/webkit-2248/pw_run.sh
+
+--- stderr ---

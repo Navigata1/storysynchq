@@ -1,0 +1,6 @@
+$ python3 ops/mission/gates/hitl.py cloud-schema
+exit 77
+--- stdout ---
+[CANNOT RUN] no 'A2-ATTEST cloud-schema' comment by Navigata1 with statements (waiting on the operator)
+
+--- stderr ---

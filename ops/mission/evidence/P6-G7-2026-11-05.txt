@@ -1,0 +1,6 @@
+$ python3 ops/mission/gates/merged_scan.py
+exit 0
+--- stdout ---
+[PASS] 4 mission PR(s): each green on a merging phase at its head, up to date with main, CI green
+
+--- stderr ---

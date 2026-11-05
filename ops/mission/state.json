@@ -10,7 +10,7 @@
     "northStar": "The Child Journey (photos, a voice per page, auto music, publish, open the link) runs end to end in a production build and every step is pinned by a test that can fail; Every merge to main crosses the full ladder plus an isolated-seat review round with no open High; Every claim below is reported at the band its evidence reached; a claim this environment cannot check is reported unverified, never proven",
     "status": "active",
     "started": "2026-11-01",
-    "updated": "2026-11-01T22:15:07Z",
+    "updated": "2026-11-05T10:33:12Z",
     "sessionCount": 1
   },
   "policies": {
@@ -32,8 +32,8 @@
           "title": "TypeScript strict: no errors",
           "command": "npx tsc --noEmit",
           "status": "passed",
-          "evidence": "ops/mission/evidence/P0-G1-2026-11-01.txt",
-          "lastRun": "2026-11-01T01:37:00Z",
+          "evidence": "ops/mission/evidence/P0-G1-2026-11-05.txt",
+          "lastRun": "2026-11-05T06:41:22Z",
           "notes": ""
         },
         {
@@ -41,8 +41,8 @@
           "title": "ESLint: no errors",
           "command": "npm run lint",
           "status": "passed",
-          "evidence": "ops/mission/evidence/P0-G2-2026-11-01.txt",
-          "lastRun": "2026-11-01T01:37:14Z",
+          "evidence": "ops/mission/evidence/P0-G2-2026-11-05.txt",
+          "lastRun": "2026-11-05T06:41:43Z",
           "notes": ""
         },
         {
@@ -50,8 +50,8 @@
           "title": "Judges, locks, contract and the judges' dependencies match their registered sha256; no judge unregistered",
           "command": "python3 ops/mission/gates/registered.py",
           "status": "passed",
-          "evidence": "ops/mission/evidence/P0-G3-2026-11-01.txt",
-          "lastRun": "2026-11-01T01:37:14Z",
+          "evidence": "ops/mission/evidence/P0-G3-2026-11-05.txt",
+          "lastRun": "2026-11-05T06:41:43Z",
           "notes": ""
         },
         {
@@ -59,8 +59,8 @@
           "title": "The judges' own fixtures pass",
           "command": "python3 -m unittest ops/mission/gates/test_gates.py",
           "status": "passed",
-          "evidence": "ops/mission/evidence/P0-G4-2026-11-01.txt",
-          "lastRun": "2026-11-01T01:37:33Z",
+          "evidence": "ops/mission/evidence/P0-G4-2026-11-05.txt",
+          "lastRun": "2026-11-05T06:42:05Z",
           "notes": ""
         },
         {
@@ -68,8 +68,8 @@
           "title": "Full suite on a production build of a clean HEAD (desktop + mobile, CI mode)",
           "command": "bash ops/mission/gates/e2e_prod.sh",
           "status": "passed",
-          "evidence": "ops/mission/evidence/P0-G5-2026-11-01.txt",
-          "lastRun": "2026-11-01T02:08:59Z",
+          "evidence": "ops/mission/evidence/P0-G5-2026-11-05.txt",
+          "lastRun": "2026-11-05T07:27:45Z",
           "notes": ""
         },
         {
@@ -77,8 +77,8 @@
           "title": "Review rounds for P0 closed at this head",
           "command": "python3 ops/mission/gates/review_closed.py P0",
           "status": "passed",
-          "evidence": "ops/mission/evidence/P0-G6-2026-11-01.txt",
-          "lastRun": "2026-11-01T02:08:59Z",
+          "evidence": "ops/mission/evidence/P0-G6-2026-11-05.txt",
+          "lastRun": "2026-11-05T07:27:45Z",
           "notes": ""
         },
         {
@@ -86,8 +86,8 @@
           "title": "Ledger chain intact",
           "command": "python3 protocol/scripts/loop.py verify-ledger",
           "status": "passed",
-          "evidence": "ops/mission/evidence/P0-G7-2026-11-01.txt",
-          "lastRun": "2026-11-01T02:08:59Z",
+          "evidence": "ops/mission/evidence/P0-G7-2026-11-05.txt",
+          "lastRun": "2026-11-05T07:27:45Z",
           "notes": ""
         }
       ],
@@ -97,25 +97,25 @@
       "id": "P1",
       "title": "Cloud truth: the database posture and a production link",
       "goal": "C3b and C4. Needs the operator: an A2-ATTEST cloud-schema comment and an authorised cloud run. Moved first after P0 because C3b is a live COPPA question (S1 critic K5). P1 merges nothing itself: tests/a2-cloud.spec.ts and any fix land in the next merging phase's PR, which runs the full ladder (S1 critic K15).",
-      "status": "pending",
+      "status": "in_progress",
       "sessionsEstimate": "1",
       "gates": [
         {
           "id": "P1-G1",
           "title": "Operator's attestation of production's schema (advisory provenance)",
           "command": "python3 ops/mission/gates/hitl.py cloud-schema",
-          "status": "pending",
-          "evidence": null,
-          "lastRun": null,
+          "status": "failed",
+          "evidence": "ops/mission/evidence/P1-G1-2026-11-05.txt",
+          "lastRun": "2026-11-05T07:28:46Z",
           "notes": ""
         },
         {
           "id": "P1-G2",
           "title": "Cloud end to end against production, and anonymous listing refused",
           "command": "bash ops/mission/gates/cloud_e2e.sh",
-          "status": "pending",
-          "evidence": null,
-          "lastRun": null,
+          "status": "failed",
+          "evidence": "ops/mission/evidence/P1-G2-2026-11-05.txt",
+          "lastRun": "2026-11-05T07:28:46Z",
           "notes": ""
         }
       ],
@@ -133,8 +133,8 @@
           "title": "TypeScript strict: no errors",
           "command": "npx tsc --noEmit",
           "status": "passed",
-          "evidence": "ops/mission/evidence/P2-G1-2026-11-01.txt",
-          "lastRun": "2026-11-01T03:48:05Z",
+          "evidence": "ops/mission/evidence/P2-G1-2026-11-05.txt",
+          "lastRun": "2026-11-05T07:28:57Z",
           "notes": ""
         },
         {
@@ -142,8 +142,8 @@
           "title": "ESLint: no errors",
           "command": "npm run lint",
           "status": "passed",
-          "evidence": "ops/mission/evidence/P2-G2-2026-11-01.txt",
-          "lastRun": "2026-11-01T03:48:19Z",
+          "evidence": "ops/mission/evidence/P2-G2-2026-11-05.txt",
+          "lastRun": "2026-11-05T07:29:18Z",
           "notes": ""
         },
         {
@@ -151,8 +151,8 @@
           "title": "Judges, locks, contract and the judges' dependencies match their registered sha256; no judge unregistered",
           "command": "python3 ops/mission/gates/registered.py",
           "status": "passed",
-          "evidence": "ops/mission/evidence/P2-G3-2026-11-01.txt",
-          "lastRun": "2026-11-01T03:48:19Z",
+          "evidence": "ops/mission/evidence/P2-G3-2026-11-05.txt",
+          "lastRun": "2026-11-05T07:29:18Z",
           "notes": ""
         },
         {
@@ -160,8 +160,8 @@
           "title": "The judges' own fixtures pass",
           "command": "python3 -m unittest ops/mission/gates/test_gates.py",
           "status": "passed",
-          "evidence": "ops/mission/evidence/P2-G4-2026-11-01.txt",
-          "lastRun": "2026-11-01T03:48:38Z",
+          "evidence": "ops/mission/evidence/P2-G4-2026-11-05.txt",
+          "lastRun": "2026-11-05T07:29:39Z",
           "notes": ""
         },
         {
@@ -169,8 +169,8 @@
           "title": "Full suite on a production build of a clean HEAD (desktop + mobile, CI mode)",
           "command": "bash ops/mission/gates/e2e_prod.sh ops/mission/judges/required-P2.json",
           "status": "passed",
-          "evidence": "ops/mission/evidence/P2-G5-2026-11-01.txt",
-          "lastRun": "2026-11-01T04:21:39Z",
+          "evidence": "ops/mission/evidence/P2-G5-2026-11-05.txt",
+          "lastRun": "2026-11-05T08:14:29Z",
           "notes": ""
         },
         {
@@ -178,8 +178,8 @@
           "title": "Review rounds for P2 closed at this head",
           "command": "python3 ops/mission/gates/review_closed.py P2",
           "status": "passed",
-          "evidence": "ops/mission/evidence/P2-G6-2026-11-01.txt",
-          "lastRun": "2026-11-01T04:21:39Z",
+          "evidence": "ops/mission/evidence/P2-G6-2026-11-05.txt",
+          "lastRun": "2026-11-05T08:14:30Z",
           "notes": ""
         }
       ],
@@ -197,8 +197,8 @@
           "title": "TypeScript strict: no errors",
           "command": "npx tsc --noEmit",
           "status": "passed",
-          "evidence": "ops/mission/evidence/P3-G1-2026-11-01.txt",
-          "lastRun": "2026-11-01T06:48:38Z",
+          "evidence": "ops/mission/evidence/P3-G1-2026-11-05.txt",
+          "lastRun": "2026-11-05T08:14:57Z",
           "notes": ""
         },
         {
@@ -206,8 +206,8 @@
           "title": "ESLint: no errors",
           "command": "npm run lint",
           "status": "passed",
-          "evidence": "ops/mission/evidence/P3-G2-2026-11-01.txt",
-          "lastRun": "2026-11-01T06:48:55Z",
+          "evidence": "ops/mission/evidence/P3-G2-2026-11-05.txt",
+          "lastRun": "2026-11-05T08:15:15Z",
           "notes": ""
         },
         {
@@ -215,8 +215,8 @@
           "title": "Judges, locks, contract and the judges' dependencies match their registered sha256; no judge unregistered",
           "command": "python3 ops/mission/gates/registered.py",
           "status": "passed",
-          "evidence": "ops/mission/evidence/P3-G3-2026-11-01.txt",
-          "lastRun": "2026-11-01T06:48:55Z",
+          "evidence": "ops/mission/evidence/P3-G3-2026-11-05.txt",
+          "lastRun": "2026-11-05T08:15:16Z",
           "notes": ""
         },
         {
@@ -224,8 +224,8 @@
           "title": "The judges' own fixtures pass",
           "command": "python3 -m unittest ops/mission/gates/test_gates.py",
           "status": "passed",
-          "evidence": "ops/mission/evidence/P3-G4-2026-11-01.txt",
-          "lastRun": "2026-11-01T06:49:15Z",
+          "evidence": "ops/mission/evidence/P3-G4-2026-11-05.txt",
+          "lastRun": "2026-11-05T08:15:36Z",
           "notes": ""
         },
         {
@@ -233,8 +233,8 @@
           "title": "Full suite on a production build of a clean HEAD (desktop + mobile, CI mode)",
           "command": "bash ops/mission/gates/e2e_prod.sh ops/mission/judges/required-P3.json",
           "status": "passed",
-          "evidence": "ops/mission/evidence/P3-G5-2026-11-01.txt",
-          "lastRun": "2026-11-01T07:23:57Z",
+          "evidence": "ops/mission/evidence/P3-G5-2026-11-05.txt",
+          "lastRun": "2026-11-05T08:59:51Z",
           "notes": ""
         },
         {
@@ -242,8 +242,8 @@
           "title": "Review rounds for P3 closed at this head",
           "command": "python3 ops/mission/gates/review_closed.py P3",
           "status": "passed",
-          "evidence": "ops/mission/evidence/P3-G6-2026-11-01.txt",
-          "lastRun": "2026-11-01T07:23:57Z",
+          "evidence": "ops/mission/evidence/P3-G6-2026-11-05.txt",
+          "lastRun": "2026-11-05T08:59:51Z",
           "notes": ""
         }
       ],
@@ -261,8 +261,8 @@
           "title": "TypeScript strict: no errors",
           "command": "npx tsc --noEmit",
           "status": "passed",
-          "evidence": "ops/mission/evidence/P4-G1-2026-11-01.txt",
-          "lastRun": "2026-11-01T09:53:15Z",
+          "evidence": "ops/mission/evidence/P4-G1-2026-11-05.txt",
+          "lastRun": "2026-11-05T09:00:22Z",
           "notes": ""
         },
         {
@@ -270,8 +270,8 @@
           "title": "ESLint: no errors",
           "command": "npm run lint",
           "status": "passed",
-          "evidence": "ops/mission/evidence/P4-G2-2026-11-01.txt",
-          "lastRun": "2026-11-01T09:53:30Z",
+          "evidence": "ops/mission/evidence/P4-G2-2026-11-05.txt",
+          "lastRun": "2026-11-05T09:00:41Z",
           "notes": ""
         },
         {
@@ -279,8 +279,8 @@
           "title": "Judges, locks, contract and the judges' dependencies match their registered sha256; no judge unregistered",
           "command": "python3 ops/mission/gates/registered.py",
           "status": "passed",
-          "evidence": "ops/mission/evidence/P4-G3-2026-11-01.txt",
-          "lastRun": "2026-11-01T09:53:30Z",
+          "evidence": "ops/mission/evidence/P4-G3-2026-11-05.txt",
+          "lastRun": "2026-11-05T09:00:41Z",
           "notes": ""
         },
         {
@@ -288,8 +288,8 @@
           "title": "The judges' own fixtures pass",
           "command": "python3 -m unittest ops/mission/gates/test_gates.py",
           "status": "passed",
-          "evidence": "ops/mission/evidence/P4-G4-2026-11-01.txt",
-          "lastRun": "2026-11-01T09:53:51Z",
+          "evidence": "ops/mission/evidence/P4-G4-2026-11-05.txt",
+          "lastRun": "2026-11-05T09:01:02Z",
           "notes": ""
         },
         {
@@ -297,8 +297,8 @@
           "title": "Full suite on a production build of a clean HEAD (desktop + mobile, CI mode)",
           "command": "bash ops/mission/gates/e2e_prod.sh",
           "status": "passed",
-          "evidence": "ops/mission/evidence/P4-G5-2026-11-01.txt",
-          "lastRun": "2026-11-01T10:31:13Z",
+          "evidence": "ops/mission/evidence/P4-G5-2026-11-05.txt",
+          "lastRun": "2026-11-05T09:45:34Z",
           "notes": ""
         },
         {
@@ -306,8 +306,8 @@
           "title": "Per-route first-load JS within the registered budget",
           "command": "python3 ops/mission/gates/js_budget.py",
           "status": "passed",
-          "evidence": "ops/mission/evidence/P4-G6-2026-11-01.txt",
-          "lastRun": "2026-11-01T10:31:50Z",
+          "evidence": "ops/mission/evidence/P4-G6-2026-11-05.txt",
+          "lastRun": "2026-11-05T09:46:12Z",
           "notes": ""
         },
         {
@@ -315,8 +315,8 @@
           "title": "Review rounds for P4 closed at this head",
           "command": "python3 ops/mission/gates/review_closed.py P4",
           "status": "passed",
-          "evidence": "ops/mission/evidence/P4-G7-2026-11-01.txt",
-          "lastRun": "2026-11-01T10:31:50Z",
+          "evidence": "ops/mission/evidence/P4-G7-2026-11-05.txt",
+          "lastRun": "2026-11-05T09:46:12Z",
           "notes": ""
         }
       ],
@@ -334,8 +334,8 @@
           "title": "Player specs pass under WebKit on a production build of HEAD",
           "command": "bash ops/mission/gates/webkit_player.sh",
           "status": "failed",
-          "evidence": "ops/mission/evidence/P5-G1-2026-11-01.txt",
-          "lastRun": "2026-11-01T22:15:06Z",
+          "evidence": "ops/mission/evidence/P5-G1-2026-11-05.txt",
+          "lastRun": "2026-11-05T09:46:33Z",
           "notes": ""
         },
         {
@@ -343,8 +343,8 @@
           "title": "The AAC publish path runs and plays on a browser with a WebCodecs AAC encoder",
           "command": "bash ops/mission/gates/aac_publish.sh",
           "status": "failed",
-          "evidence": "ops/mission/evidence/P5-G2-2026-11-01.txt",
-          "lastRun": "2026-11-01T22:15:07Z",
+          "evidence": "ops/mission/evidence/P5-G2-2026-11-05.txt",
+          "lastRun": "2026-11-05T09:46:34Z",
           "notes": ""
         }
       ],
@@ -354,97 +354,97 @@
       "id": "P6",
       "title": "Close: every gate again at the final head, merges scanned, band reported as computed",
       "goal": "The close PR (governance, evidence bundle) through the full ladder; every mission merge scanned; the band declared as the evidence computes it.",
-      "status": "pending",
+      "status": "in_progress",
       "sessionsEstimate": "1",
       "gates": [
         {
           "id": "P6-G1",
           "title": "TypeScript strict: no errors",
           "command": "npx tsc --noEmit",
-          "status": "pending",
-          "evidence": null,
-          "lastRun": null,
+          "status": "passed",
+          "evidence": "ops/mission/evidence/P6-G1-2026-11-05.txt",
+          "lastRun": "2026-11-05T09:46:52Z",
           "notes": ""
         },
         {
           "id": "P6-G2",
           "title": "ESLint: no errors",
           "command": "npm run lint",
-          "status": "pending",
-          "evidence": null,
-          "lastRun": null,
+          "status": "passed",
+          "evidence": "ops/mission/evidence/P6-G2-2026-11-05.txt",
+          "lastRun": "2026-11-05T09:47:10Z",
           "notes": ""
         },
         {
           "id": "P6-G3",
           "title": "Judges, locks, contract and the judges' dependencies match their registered sha256; no judge unregistered",
           "command": "python3 ops/mission/gates/registered.py",
-          "status": "pending",
-          "evidence": null,
-          "lastRun": null,
+          "status": "passed",
+          "evidence": "ops/mission/evidence/P6-G3-2026-11-05.txt",
+          "lastRun": "2026-11-05T09:47:10Z",
           "notes": ""
         },
         {
           "id": "P6-G4",
           "title": "The judges' own fixtures pass",
           "command": "python3 -m unittest ops/mission/gates/test_gates.py",
-          "status": "pending",
-          "evidence": null,
-          "lastRun": null,
+          "status": "passed",
+          "evidence": "ops/mission/evidence/P6-G4-2026-11-05.txt",
+          "lastRun": "2026-11-05T09:47:30Z",
           "notes": ""
         },
         {
           "id": "P6-G5",
           "title": "Full suite on a production build of a clean HEAD (desktop + mobile, CI mode)",
           "command": "bash ops/mission/gates/e2e_prod.sh",
-          "status": "pending",
-          "evidence": null,
-          "lastRun": null,
+          "status": "passed",
+          "evidence": "ops/mission/evidence/P6-G5-2026-11-05.txt",
+          "lastRun": "2026-11-05T10:32:59Z",
           "notes": ""
         },
         {
           "id": "P6-G6",
           "title": "Review rounds for P6 closed at this head",
           "command": "python3 ops/mission/gates/review_closed.py P6",
-          "status": "pending",
-          "evidence": null,
-          "lastRun": null,
+          "status": "passed",
+          "evidence": "ops/mission/evidence/P6-G6-2026-11-05.txt",
+          "lastRun": "2026-11-05T10:32:59Z",
           "notes": ""
         },
         {
           "id": "P6-G7",
           "title": "Every mission PR merged to main crossed a merging phase at its own head",
           "command": "python3 ops/mission/gates/merged_scan.py",
-          "status": "pending",
-          "evidence": null,
-          "lastRun": null,
+          "status": "passed",
+          "evidence": "ops/mission/evidence/P6-G7-2026-11-05.txt",
+          "lastRun": "2026-11-05T10:33:04Z",
           "notes": ""
         },
         {
           "id": "P6-G8",
           "title": "Declared band equals the band the derived bundle computes",
           "command": "python3 ops/mission/gates/band.py",
-          "status": "pending",
-          "evidence": null,
-          "lastRun": null,
+          "status": "passed",
+          "evidence": "ops/mission/evidence/P6-G8-2026-11-05.txt",
+          "lastRun": "2026-11-05T10:33:10Z",
           "notes": ""
         },
         {
           "id": "P6-G9",
           "title": "The production deployment serves main's tip and the demo tape loads (C10)",
           "command": "python3 ops/mission/gates/deployed.py",
-          "status": "pending",
-          "evidence": null,
-          "lastRun": null,
+          "status": "passed",
+          "evidence": "ops/mission/evidence/P6-G9-2026-11-05.txt",
+          "lastRun": "2026-11-05T10:33:11Z",
           "notes": ""
         },
         {
           "id": "P6-G10",
           "title": "Ledger chain intact",
           "command": "python3 protocol/scripts/loop.py verify-ledger",
-          "status": "pending",
-          "evidence": null,
-          "lastRun": null,
+          "status": "passed",
+          "evidence": "ops/mission/evidence/P6-G10-2026-11-05.txt",
+          "lastRun": "2026-11-05T10:33:12Z",
           "notes": ""
         }
       ],

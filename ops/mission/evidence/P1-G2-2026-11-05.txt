@@ -1,0 +1,6 @@
+$ bash ops/mission/gates/cloud_e2e.sh
+exit 77
+--- stdout ---
+[CANNOT RUN] cloud e2e not authorised in this environment (needs A2_CLOUD_E2E=1 and production's public Supabase URL and anon key)
+
+--- stderr ---
