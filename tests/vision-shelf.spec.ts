@@ -406,6 +406,34 @@ test.describe("T20a · the shelf on /read", () => {
     await expect(faces(page)).toHaveCount(1, { timeout: 20000 });
   });
 
+  test("offline: pulling a tape out still clears this device's copy and its draft (P4-R3-01)", async ({ page }) => {
+    // The tape library code (cloud-storage, the only script carrying "Making the link") can
+    // never be fetched, as on a device that went offline before the room's prefetch landed.
+    let refused = 0;
+    await page.route("**/_next/static/chunks/**", async (route) => {
+      const response = await route.fetch();
+      const body = await response.text();
+      if (body.includes("Making the link")) {
+        refused++;
+        await route.abort("internetdisconnected");
+        return;
+      }
+      await route.fulfill({ response, body });
+    });
+    await seedShelf(page, {
+      library: twoTapes(),
+      draft: publishedDraft(TWINKLE_CODE, TWINKLE_CODE),
+    });
+    await openShelf(page);
+    await expect.poll(() => refused, { message: "the room tried to fetch the library code" }).toBeGreaterThan(0);
+    await band(page).getByRole("button", { name: "Pull the tape out" }).click();
+    await band(page).getByRole("button", { name: "Tap again to delete everything" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "Pulled out." })).toHaveText(PULLED, { timeout: 5000 });
+    await expect(face(page, TWINKLE_CODE)).toHaveCount(0, { timeout: 5000 });
+    expect((await readLibrary(page)).map((r) => r.id), "this device's copy is gone").toEqual([BATH_CODE]);
+    expect(await page.evaluate((k) => window.localStorage.getItem(k), DRAFT_KEY), "its Studio draft").toBeNull();
+  });
+
   test("pulling a tape out leaves a draft of another story alone", async ({ page }) => {
     await seedShelf(page, {
       library: twoTapes(),

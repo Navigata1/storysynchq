@@ -29,3 +29,19 @@ review and evidence records may change (review_closed.py, K7). This note is the 
 P4 is re-run there with no other process on port 3000 and no orphaned runner. The red entries
 stay in the ledger. From now on the lead starts recorded runs from a command line that does
 not contain the server patterns `prod_server.sh` matches.
+
+**Addendum (P6-R1-03).** The ledger holds two red phase-run records at ae62697, not one:
+09:50:43Z and 09:51:54Z, both P4-G2=2 and P4-G5=5. Two `run_phase.py P4` processes wrote them:
+the orphaned first run (its shell was killed, its Python process was not, and it ran on) and
+the second run. They overlapped, so each failed from the other's interference, and each
+appended its own phase-run when it finished. Neither is explained by the product. The green
+run at 0e3d2c3 is the one P4 merged on.
+
+**Addendum 2 (P6-R2-02): why both records carry P4-G2=2.** `run_phase.py` builds a phase-run
+record by reading each gate's evidence file when the run ends, and those files are named by
+gate and date only (`P4-G2-2026-11-01.txt`), so the two overlapping runs shared them. The
+orphan's own lint gate passed: its gate-run event at 08:59:42Z has `status: passed`. The
+second run's lint gate crashed at 09:00:26Z, on the `test-results/` directory the orphan was
+rewriting, and overwrote the shared evidence file. Both phase-run records then read that file,
+so both carry G2=2 with the same evidence hash. The ledger's gate-run events, not the
+phase-run records, show what each run's own gates did.

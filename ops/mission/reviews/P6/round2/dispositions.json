@@ -1,0 +1,24 @@
+{
+  "reviewedHead": "5e6707ce98d4a583924c8e289ea3e9eeaa29f5d8",
+  "base": "4ddec560d6ca10dd1f7d3cda59bdbe0350c64d5d",
+  "findings": [
+    {
+      "id": "P6-R2-01",
+      "severity": "low",
+      "status": "fixed",
+      "note": "f3dbe1a: decisions.md gains a dated P6 entry that supersedes the P5 line ('the cloud copy stays'), recording the republish byte re-check (P6-R1-01) and pullTapeOut's outcomes and wording (P6-R1-02)."
+    },
+    {
+      "id": "P6-R2-02",
+      "severity": "low",
+      "status": "fixed",
+      "note": "f3dbe1a: the P4 incident note's second addendum explains that run_phase builds a phase-run record from per-date evidence files the two runs shared; the orphan's own G2 gate-run passed (08:59:42Z), the second run's crashed (09:00:26Z) and overwrote the shared file, so both records read G2=2; the gate-run events show what each run's gates did."
+    },
+    {
+      "id": "P6-R2-03",
+      "severity": "low",
+      "status": "fixed",
+      "note": "b1a4c9a: the outcome-to-words mapping is pullOutcomeLine (device-library.ts), used by the Read Room. 5a0e597 (A16): tests/a2-pullout.spec.ts pins it: no line when gone; 'a cloud copy may still be there' for an unreachable cloud, never a claim one exists; the reason for a kept tape. 8 pass; vision-shelf (64) passes on a production build."
+    }
+  ]
+}

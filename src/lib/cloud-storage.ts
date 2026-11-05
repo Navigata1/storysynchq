@@ -27,8 +27,9 @@ import {
 } from "./share-lookup";
 import { cloudProject, isSupabaseConfigured, loadSupabase } from "./supabase-lazy";
 import { mintShareCode, ShareCodeError } from "./share-code";
+import { LIBRARY_KEY, sweepDeviceCopy } from "./device-library";
 
-export const LIBRARY_KEY = "ssync-library";
+export { LIBRARY_KEY };
 
 export interface StoredBook {
   id: string;
@@ -442,12 +443,10 @@ export async function shareBook(storybookId: string): Promise<string> {
 export async function deleteBook(id: string): Promise<void> {
   // Always sweep the on-device copy first, cloud or not: a tape the cloud
   // refused was kept here, and a leftover copy of a child's voice is not okay.
-  const library = readLibrary();
-  if (library.some((b) => b.id === id)) {
-    writeLibrary(
-      library.filter((b) => b.id !== id),
-      "Deleting the tape",
-    );
+  try {
+    sweepDeviceCopy(id);
+  } catch {
+    throw new CloudError("unknown", "Deleting the tape: this browser would not save it.");
   }
 
   if (isSupabaseConfigured()) {

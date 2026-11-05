@@ -829,3 +829,49 @@ deleting the story forgets it everywhere.**
 - Measured: / 140 KB, /read 161, /read?demo=1 165, the share link 168, /protocol 164,
   /studio 232. The share link has the least headroom (about 2 KB): anything new on the
   Player's path should be weighed against it.
+
+## 2026-11-01 · P5 (C8, C2b): the judges land; both gates cannot run in this container
+- P4-R3-01: pulling a tape out sweeps this device's copy (`src/lib/device-library.ts`, imported
+  by the Read Room) and its draft before any cloud code is fetched; the library code is fetched
+  only when a cloud is configured. Offline, a child's voice still leaves the device. If the
+  cloud half then fails, the parent is told the device copy is gone and the cloud copy stays.
+- C2b's judge `tests/a2-aac.spec.ts` (contract A12): a Chrome-style take (Opus/WebM) must
+  publish as AAC, never WAV, and a Safari-style take (real AAC/MP4, `tests/fixtures/aac-tone.m4a`)
+  must stay AAC; both play through in the Player with no media error.
+- P5 ran at aec4631: P5-G1 (WebKit) and P5-G2 (AAC encoder) both exit 77. This container has
+  only Chromium 153, with no AAC encoder, and the Playwright download host is blocked, so C8
+  and C2b stay unverified. They need a machine with WebKit and a WebCodecs AAC encoder (a Mac:
+  `npx playwright install webkit`, and Chrome on macOS has one).
+
+## 2026-11-01 · P5, continued: the codec rule meets Chromium's MP4 (A13)
+- Probing for P5 found that Chromium (126+) records Opus inside MP4 when asked for "audio/mp4"
+  (`audio/mp4;codecs=opus`, an `Opus` sample entry with its `dOps` box). The recorder asked for
+  a bare MP4 first, and publish passed every MP4 through as AAC, so a Chrome take could be
+  published as Opus labelled AAC.
+  - The recorder now asks for `audio/mp4;codecs=mp4a.40.2` first, then WebM, and a bare MP4
+    only last.
+  - Publish calls an MP4 AAC only when neither its type nor its sample description says Opus
+    (`recordedAsAac`, transcode.ts). Anything else goes through the draft ladder (AAC where
+    WebCodecs can, else WAV).
+  - `isPublishCompliant` refuses any type naming opus, webm or ogg.
+  - Pinned by tests/a2-codec.spec.ts, which fails on the old rule.
+- The AAC gate's encoder probe ran on `about:blank`. WebCodecs is secure-context only, so a
+  capable browser read as incapable. The probe now runs from a page served on 127.0.0.1. The
+  answer here is unchanged: Opus yes, AAC no (exit 77).
+- This Chromium cannot decode AAC either, so neither of tests/a2-aac.spec.ts's two tests can
+  pass here (A13 corrects A12's text, which said the Safari-path test passes).
+
+## 2026-11-05 · P6 (close): republished takes re-checked; one-tap deletion says exactly what happened
+- This supersedes the P5 entry's line that, when the cloud half fails, "the parent is told the
+  device copy is gone and the cloud copy stays". The room no longer claims a cloud copy exists.
+- P6-R1-01: a take an earlier publish labelled `aac` was passed straight through on republish.
+  Before the codec check, that label could sit on Chromium's Opus-in-MP4. The Studio now
+  re-checks the bytes of every take labelled AAC (`recordedAsAac`); Opus goes through the
+  ladder. A tape already handed out keeps its narration until it is republished.
+- P6-R1-02: pulling a tape out is `pullTapeOut` (src/lib/device-library.ts). It sweeps this
+  device's copy first, then the cloud half when a cloud is configured. It forgets the draft and
+  reading places only once a copy is really gone, and reports gone / cloud-unreached / kept.
+  `pullOutcomeLine` gives the words. For an unreachable cloud they are "Taken off this device.
+  The cloud library could not be reached, so a cloud copy may still be there." A cloud-only
+  tape whose cloud cannot be reached keeps its draft and places.
+- Judged by tests/a2-codec.spec.ts and tests/a2-pullout.spec.ts (contract A15, A16).

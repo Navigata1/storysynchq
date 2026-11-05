@@ -85,6 +85,7 @@ import { HOUSE_TAPE_URL, loadTapeByCode, normalizeTapeManifest } from "@/lib/sto
 import { REPLY_QUERY, REPLY_SEED_KEY, replySeed, serializeReplySeed } from "@/lib/storysync/reply";
 import { getUser, isSupabaseConfigured as isCloudEnabled } from "@/lib/supabase-lazy";
 import { clearDraft, DRAFT_KEY } from "@/components/studio/draft-key";
+import { pullOutcomeLine, pullTapeOut } from "@/lib/device-library";
 import { BigButton, GlassPanel, Reel, TapeLabel, TAPE } from "@/components/studio-kit/kit";
 import { Shelf, ShelfTape } from "@/components/studio-kit/Shelf";
 import { PullTapeIcon } from "@/components/studio-kit/PrintSlot";
@@ -692,22 +693,24 @@ export function ReadRoom() {
       const reduce = prefersReducedMotion();
       setArmedId(null);
       if (!reduce) setPulling({ id: entry.id, leaving: false });
-      try {
-        await (await loadLibrary()).deleteBook(entry.id);
-      } catch (error) {
+      // This device's copy goes first, from code already on the page, so the child's voice
+      // leaves this device even when the cloud library code cannot be fetched (offline); only
+      // the cloud half waits on that code (P4-R3-01). The draft and reading places are
+      // forgotten once a copy is really gone (pullTapeOut, P6-R1-02).
+      const outcome = await pullTapeOut(entry.id, {
+        forgetHere: () => {
+          forgetDraftOf(entry.id);
+          setPlaces(forgetPlaces(placeKeysOfTape(entry.manifest, entry)));
+        },
+        cloud: isCloudEnabled() ? async () => (await loadLibrary()).deleteBook(entry.id) : undefined,
+      });
+      const notAll = pullOutcomeLine(outcome);
+      if (notAll !== null) {
         setPulling(null);
-        setStatus({
-          kind: "kept",
-          message:
-            error instanceof Error && error.message
-              ? `That tape is still on the shelf. ${error.message}`
-              : "That tape is still on the shelf. Try again.",
-        });
+        setStatus({ kind: "kept", message: notAll });
         void readShelf(previousVisit.current).then(setShelf);
         return;
       }
-      forgetDraftOf(entry.id);
-      setPlaces(forgetPlaces(placeKeysOfTape(entry.manifest, entry)));
       setStatus((current) => ({ kind: "pulled", n: current.kind === "pulled" ? current.n + 1 : 1 }));
 
       const leave = () => {

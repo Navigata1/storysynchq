@@ -709,6 +709,8 @@ test("T12 · end card · the action pair stacks below 360 px", async ({ page }) 
   test.setTimeout(90000);
   await page.setViewportSize({ width: 340, height: 720 });
   const { end } = await twinkleEnd(page);
+  // measured once the card has risen in: mid-animation its transform moves the boxes (contract A14)
+  await end.locator(".pl-end-inner").evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
   const again = await end.getByRole("button", { name: "Read it again" }).boundingBox();
   const make = await end.getByRole("button", { name: "Make your own story" }).boundingBox();
   expect(make!.y).toBeGreaterThanOrEqual(again!.y + again!.height);

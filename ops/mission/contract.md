@@ -281,3 +281,106 @@ missing link not reaching the stories table, two rows refused, a 401 kept as an 
 CloudError, an other RPC failure not falling back, a non-JSON error body failing with its
 status, a network TypeError as a network CloudError, and a found row opening as a book. No
 existing test changes. `ops/mission/contract.md` changes by this appended section.
+
+### A12 · 2026-11-01 · P5: C2b's judge, and P4's deferred offline delete
+
+C2b's judge `tests/a2-aac.spec.ts` is new. It is collected only under `A2_AAC=1`, which
+`ops/mission/gates/aac_publish.sh` sets after proving an installed engine has a WebCodecs AAC
+encoder; its two tests fill the family count `judges/required-P5-aac-*.json` already
+registers (`a2-aac: 2`). Both run the whole Studio journey (pictures, a take per page, the
+parental gate, publish, the link, the Player played through with every take ending without a
+media error): one records the way Chrome does (Opus/WebM) and must publish AAC, never the WAV
+fallback; one records the way Safari does (audio/mp4, real AAC bytes from the new fixture
+`tests/fixtures/aac-tone.m4a`, a 1 s 440 Hz tone made with ffmpeg's AAC encoder) and must
+publish AAC that plays. Every take must be `audioCodec: "aac"`, packed as `data:audio/mp4`,
+start with an MP4 `ftyp` box and decode to about one second. `tests/fixtures/README.md` gains
+the fixture's row. Run here with the gate's flag set by hand on Chromium (no AAC encoder):
+the Chrome-path test fails as it should (`wav` received), the Safari-path test passes.
+
+P4-R3-01 (deferred to P5 as its first change): pulling a tape out sweeps this device's copy
+from `src/lib/device-library.ts`, imported by the Read Room directly, and wipes its draft,
+before the cloud library code is fetched; that code is fetched only when a cloud is
+configured. `tests/vision-shelf.spec.ts` gains one test, "offline: pulling a tape out still
+clears this device's copy and its draft", which refuses every script carrying the library
+code and fails at the P4 head. No other existing test changes. `ops/mission/contract.md`
+changes by this appended section.
+
+### A13 · 2026-11-01 · P5: the codec rule meets Chromium's MP4, and the AAC probe runs in a secure context
+
+Probing for P5 found that Chromium (126+) records Opus inside MP4 when MediaRecorder is asked
+for "audio/mp4" (`audio/mp4;codecs=opus`). The recorder asked for a bare MP4 first, and
+publish passed every MP4 through as AAC, so a Chrome take could be published as Opus labelled
+AAC, against the codec rule (CLAUDE.md section 2). `tests/a2-codec.spec.ts` is new. It pins:
+- the recorder's order: AAC by name first, then WebM, a bare MP4 last;
+- the codec check: an MP4 is AAC only when neither its type nor its sample description says
+  Opus;
+- the publish compliance check;
+- a Studio publish of a Chromium Opus-in-MP4 take, whose published bytes must carry no Opus
+  and must still decode.
+
+It fails on the old rule. Its fixture `tests/fixtures/chromium-opus-in-mp4.m4a` is a real
+recording by headless Chromium's fake microphone (a test tone). It also reads A12's
+`aac-tone.m4a`. `tests/fixtures/README.md` gains the fixture's row.
+
+`ops/mission/gates/aac_publish.sh` probed for the encoder on `about:blank`, which is not a
+secure context, so WebCodecs is absent there: a browser that has an AAC encoder would read as
+one that does not, and the gate would exit 77 where it can run. It now probes from a blank
+page it serves on 127.0.0.1, a secure origin. Here the answer is unchanged: this Chromium has
+WebCodecs, with Opus but no AAC (exit 77).
+
+A correction to A12's text: run here with the gate's flag set by hand, A12's Safari-path test
+does not pass. Its take is published as AAC, but this Chromium cannot decode AAC at all
+(`EncodingError: Unable to decode audio data`, the same at A12's own head 1b5532d), so the
+decode assertion fails. Neither of A12's tests can pass without an engine that encodes and
+decodes AAC, which is why the gate runs only after proving one exists. No existing test
+changes. `ops/mission/contract.md` changes by this appended section.
+
+### A14 · 2026-11-05 · P6: two judges meet Chromium 153
+
+The close runs on a new container image whose Chromium is 153 (it was 140). The early full run
+at 1ef8c89 found two judge problems, neither a product change:
+
+- `tests/fixtures/sends.ts`: `watchSends` recorded the browser's own favicon load as something
+  the page sent. After a client-side navigation, Chromium 153 fetches the app's declared
+  `/icons/icon-512x512.png` again: resource type "other", no initiating script. That failed
+  vision-revoice's "nothing on the network" check on both projects. The helper now leaves out
+  exactly that: a same-origin `/icons/…` or `/favicon.ico` request of resource type "other".
+  Every other request is still recorded. All ten specs that use the helper pass (388 tests).
+- `tests/vision-reader-end-card.spec.ts`: "the action pair stacks below 360 px" measured the
+  two buttons while the end card's rise-in animation was still moving them (2 px overlap,
+  flaky on mobile). It now waits for that card's animations to finish before measuring. The
+  file passes three times over with no retries (144 tests).
+
+No assertion is removed. The no-network helper is narrowed by exactly the one exclusion above:
+same-origin, the browser's own icon fetch. No request to any other origin, and no request a
+page script makes, can hide behind it (corrected per P6-R1-04). `ops/mission/contract.md`
+changes by this appended section.
+
+### A15 · 2026-11-05 · P6 round 1: republished takes re-checked, one-tap deletion pinned branch by branch
+
+- P6-R1-01: a take an earlier publish labelled `aac` was passed straight through on
+  republish. Before A13's check, that label could sit on Chromium's Opus-in-MP4. The Studio now
+  re-checks the bytes of every take labelled AAC (`recordedAsAac`). A take whose bytes say Opus
+  goes through the ladder. `tests/a2-codec.spec.ts` gains "Opus bytes labelled aac are
+  normalized, not passed through". It seeds a draft whose levelled takes are the Opus fixture
+  labelled `aac`, then republishes.
+- P6-R1-02: pulling a tape out is now `pullTapeOut` (src/lib/device-library.ts). It sweeps this
+  device's copy first, then the cloud half when a cloud is configured. It forgets the draft and
+  reading places only once a copy is really gone, and it reports what happened ("gone",
+  "cloud-unreached", "kept"). The Read Room no longer claims a cloud copy exists when the cloud
+  merely could not be reached. `tests/a2-pullout.spec.ts` is new and Node-side, with a stand-in
+  localStorage. It pins every branch, including the cloud-configured ones the e2e build cannot
+  reach, and fails if a cloud-only tape is reported removed.
+
+No existing assertion changes. `ops/mission/contract.md` changes by this appended section.
+
+### A16 · 2026-11-05 · P6 round 2: the pull-out wording is pinned
+
+P6-R2-03: the Read Room's words for each pull-out outcome were inline and untested. They are
+now `pullOutcomeLine` in `src/lib/device-library.ts`. `tests/a2-pullout.spec.ts` gains three
+tests for it, which pin:
+- no line when every copy is gone;
+- for an unreachable cloud, "a cloud copy may still be there", never a claim that one exists;
+- for a kept tape, the reason.
+
+No existing assertion changes. `ops/mission/contract.md` changes by this appended section.

@@ -298,11 +298,12 @@ export function codecBadge(
     return { label: "WAV", tone: "published", hint: "Permitted fallback when AAC encoding is unavailable." };
   }
   const mime = (meta?.mimeType || "").toLowerCase();
-  if (mime.includes("mp4") || mime.includes("aac")) {
-    return { label: "draft · AAC", tone: "draft", hint: "Recorded as AAC already — publish keeps it AAC." };
-  }
+  // Opus first: Chromium's "audio/mp4;codecs=opus" is MP4 holding Opus, not AAC
   if (mime.includes("webm") || mime.includes("opus")) {
     return { label: "draft · Opus", tone: "draft", hint: "Draft only. Normalized to AAC/M4A when you finish." };
+  }
+  if (mime.includes("mp4") || mime.includes("aac")) {
+    return { label: "draft · AAC", tone: "draft", hint: "Recorded as AAC already — publish keeps it AAC." };
   }
   return { label: "draft", tone: "draft", hint: "Normalized to AAC/M4A when you finish." };
 }

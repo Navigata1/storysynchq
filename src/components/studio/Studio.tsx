@@ -1294,7 +1294,13 @@ export default function Studio() {
           if (next.text && url && url.startsWith("data:")) {
             // A take is levelled once: a levelled clip passes straight through.
             const needsLevel = levelOn && !meta?.levelled;
-            if (original.text?.audioCodec && !needsLevel) {
+            // A take labelled AAC by an earlier publish is trusted only if its bytes agree: before
+            // the codec check, Chromium's Opus-in-MP4 was published labelled "aac" (P6-R1-01), and
+            // republishing must not carry that Opus on. Such a take goes through the ladder below.
+            const labelHolds =
+              original.text?.audioCodec !== "aac" ||
+              (await (await import("@/lib/audio/transcode")).recordedAsAac(await dataUrlToBlob(url), "audio/mp4"));
+            if (original.text?.audioCodec && !needsLevel && labelHolds) {
               // Already normalized by an earlier publish — decoding and
               // re-encoding it would only lose quality and time.
               if (levelOn) even += 1;

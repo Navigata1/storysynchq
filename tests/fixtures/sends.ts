@@ -15,6 +15,10 @@
  *   - same-origin `?_rsc=…`: Next's route prefetch. `next start` (CI) prefetches
  *     every visible <Link> as `?_rsc=…`; `next dev` (local) does not, so a check
  *     that counts it is green locally and red in CI
+ *   - the browser's own load of the app's declared icons: a same-origin
+ *     `/icons/…` or `/favicon.ico` request of resource type "other" (no page
+ *     script asks for it). Chromium 153 fetches the 512 px icon again after a
+ *     client-side navigation, inside a watch (contract A14)
  *
  * "Same origin" is the app's origin: `opts.origin`, else the project's
  * `baseURL`, else the page's current URL. `foreignTo: origin` records only
@@ -92,6 +96,8 @@ export function watchSends(page: Page, opts: WatchSendsOptions = {}): SendWatch 
     if (url.origin === origin) {
       if (url.pathname.startsWith("/_next/") || url.pathname.startsWith("/__nextjs")) return;
       if (url.searchParams.has("_rsc")) return;
+      // the browser's favicon loader, not the page: the app's declared icons, fetched as "other"
+      if (type === "other" && (url.pathname.startsWith("/icons/") || url.pathname === "/favicon.ico")) return;
     }
     if (foreignTo && url.origin === foreignTo) return;
     if (opts.ignore?.(url, request)) return;

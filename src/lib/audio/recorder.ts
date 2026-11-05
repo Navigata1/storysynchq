@@ -13,10 +13,15 @@ export interface RecordingResult {
   duration: number;
 }
 
+// AAC is asked for by name first. A bare "audio/mp4" is NOT AAC everywhere: Chromium (126+)
+// accepts it and records Opus inside MP4 ("audio/mp4;codecs=opus"), so it comes last, for an
+// engine that records MP4 and nothing else. Whatever comes back, transcode.ts checks the codec
+// before calling anything AAC (the published-codec rule, CLAUDE.md section 2).
 const MIME_PREFERENCE = [
-  "audio/mp4", // Safari — already AAC, publish becomes a passthrough
-  "audio/webm;codecs=opus", // Chromium / Firefox
+  "audio/mp4;codecs=mp4a.40.2", // AAC in MP4 (Safari; Chrome where it can) — publish passes it through
+  "audio/webm;codecs=opus", // Chromium / Firefox — a draft codec, converted at publish
   "audio/webm",
+  "audio/mp4", // an MP4-only engine; its codec is checked at publish
 ];
 
 export function pickRecordingMime(): string | undefined {
