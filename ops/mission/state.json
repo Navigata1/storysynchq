@@ -10,8 +10,8 @@
     "northStar": "The Child Journey (photos, a voice per page, auto music, publish, open the link) runs end to end in a production build and every step is pinned by a test that can fail; Every merge to main crosses the full ladder plus an isolated-seat review round with no open High; Every claim below is reported at the band its evidence reached; a claim this environment cannot check is reported unverified, never proven",
     "status": "active",
     "started": "2026-11-01",
-    "updated": "2026-11-01T22:15:07Z",
-    "sessionCount": 1
+    "updated": "2026-11-06T21:40:00Z",
+    "sessionCount": 2
   },
   "policies": {
     "merge": "review",
@@ -24,7 +24,7 @@
       "id": "P0",
       "title": "Baseline: PR #6 (M7 hardening + mission scaffolding)",
       "goal": "C1, C2, C3 at the PR #6 head through the full ladder and a review round, then the merge decision.",
-      "status": "in_progress",
+      "status": "done",
       "sessionsEstimate": "1",
       "gates": [
         {
@@ -91,13 +91,26 @@
           "notes": ""
         }
       ],
-      "tasks": []
+      "tasks": [
+        {
+          "id": "P0-PR",
+          "title": "Merge PR #6",
+          "status": "done",
+          "dependsOn": [],
+          "pr": {
+            "number": 6,
+            "url": "https://github.com/Navigata1/storysynchq/pull/6",
+            "mergedAt": "2026-11-01"
+          },
+          "notes": ""
+        }
+      ]
     },
     {
       "id": "P1",
       "title": "Cloud truth: the database posture and a production link",
       "goal": "C3b and C4. Needs the operator: an A2-ATTEST cloud-schema comment and an authorised cloud run. Moved first after P0 because C3b is a live COPPA question (S1 critic K5). P1 merges nothing itself: tests/a2-cloud.spec.ts and any fix land in the next merging phase's PR, which runs the full ladder (S1 critic K15).",
-      "status": "pending",
+      "status": "blocked",
       "sessionsEstimate": "1",
       "gates": [
         {
@@ -107,7 +120,7 @@
           "status": "pending",
           "evidence": null,
           "lastRun": null,
-          "notes": ""
+          "notes": "Needs migration 003 applied to pvtwlizzsbovwtkjvqix, then a Navigata1 comment 'A2-ATTEST cloud-schema'."
         },
         {
           "id": "P1-G2",
@@ -116,16 +129,25 @@
           "status": "pending",
           "evidence": null,
           "lastRun": null,
-          "notes": ""
+          "notes": "Judge tests/a2-cloud.spec.ts written and registered on claude/project-thread-w5dmsa (2026-11-06); dry-run 5/5 against a local Supabase stand-in. Needs A2_CLOUD_E2E=1, production URL + anon key, A2_CLOUD_EMAIL/A2_CLOUD_PASSWORD."
         }
       ],
-      "tasks": []
+      "tasks": [
+        {
+          "id": "P1-T1",
+          "title": "Write and register the cloud judge tests/a2-cloud.spec.ts (POA 1.1)",
+          "status": "in_progress",
+          "dependsOn": [],
+          "pr": null,
+          "notes": "Own PR off main, no src/ change (judges/order.json)."
+        }
+      ]
     },
     {
       "id": "P2",
       "title": "Layout at every width and on landscape phones",
       "goal": "C5. The judge tests/a2-layout.spec.ts is committed and registered in SHA256SUMS before any fix commit.",
-      "status": "in_progress",
+      "status": "done",
       "sessionsEstimate": "1-2",
       "gates": [
         {
@@ -183,13 +205,26 @@
           "notes": ""
         }
       ],
-      "tasks": []
+      "tasks": [
+        {
+          "id": "P2-PR",
+          "title": "Merge PR #7",
+          "status": "done",
+          "dependsOn": [],
+          "pr": {
+            "number": 7,
+            "url": "https://github.com/Navigata1/storysynchq/pull/7",
+            "mergedAt": "2026-11-01"
+          },
+          "notes": ""
+        }
+      ]
     },
     {
       "id": "P3",
       "title": "Accessibility: zero serious or critical axe violations",
       "goal": "C6. The judge tests/a2-a11y.spec.ts is committed and registered before any fix commit; it runs inside the full suite on the production build.",
-      "status": "in_progress",
+      "status": "done",
       "sessionsEstimate": "1-2",
       "gates": [
         {
@@ -247,13 +282,26 @@
           "notes": ""
         }
       ],
-      "tasks": []
+      "tasks": [
+        {
+          "id": "P3-PR",
+          "title": "Merge PR #8",
+          "status": "done",
+          "dependsOn": [],
+          "pr": {
+            "number": 8,
+            "url": "https://github.com/Navigata1/storysynchq/pull/8",
+            "mergedAt": "2026-11-01"
+          },
+          "notes": ""
+        }
+      ]
     },
     {
       "id": "P4",
       "title": "Performance budget",
       "goal": "C7. The budget is a reasoned target registered by contract amendment before P4's work; js_budget.py reads the production build.",
-      "status": "in_progress",
+      "status": "done",
       "sessionsEstimate": "1",
       "gates": [
         {
@@ -320,32 +368,45 @@
           "notes": ""
         }
       ],
-      "tasks": []
+      "tasks": [
+        {
+          "id": "P4-PR",
+          "title": "Merge PR #9",
+          "status": "done",
+          "dependsOn": [],
+          "pr": {
+            "number": 9,
+            "url": "https://github.com/Navigata1/storysynchq/pull/9",
+            "mergedAt": "2026-11-01"
+          },
+          "notes": ""
+        }
+      ]
     },
     {
       "id": "P5",
       "title": "WebKit playback and the AAC path",
       "goal": "C8 and C2b. Needs a WebKit browser and a browser with a WebCodecs AAC encoder, neither installed here (both gates exit 77). P5 merges nothing itself: the webkit project and tests/a2-aac.spec.ts land in a merging phase's PR.",
-      "status": "in_progress",
+      "status": "blocked",
       "sessionsEstimate": "1",
       "gates": [
         {
           "id": "P5-G1",
           "title": "Player specs pass under WebKit on a production build of HEAD",
           "command": "bash ops/mission/gates/webkit_player.sh",
-          "status": "failed",
+          "status": "pending",
           "evidence": "ops/mission/evidence/P5-G1-2026-11-01.txt",
           "lastRun": "2026-11-01T22:15:06Z",
-          "notes": ""
+          "notes": "Exit 77 at 3bda1de (2026-11-01): no WebKit and no AAC encoder in the cloud runner. Run on the operator's Mac (POA 0.4)."
         },
         {
           "id": "P5-G2",
           "title": "The AAC publish path runs and plays on a browser with a WebCodecs AAC encoder",
           "command": "bash ops/mission/gates/aac_publish.sh",
-          "status": "failed",
+          "status": "pending",
           "evidence": "ops/mission/evidence/P5-G2-2026-11-01.txt",
           "lastRun": "2026-11-01T22:15:07Z",
-          "notes": ""
+          "notes": "Exit 77 at 3bda1de (2026-11-01): no WebKit and no AAC encoder in the cloud runner. Run on the operator's Mac (POA 0.4)."
         }
       ],
       "tasks": []
@@ -354,7 +415,7 @@
       "id": "P6",
       "title": "Close: every gate again at the final head, merges scanned, band reported as computed",
       "goal": "The close PR (governance, evidence bundle) through the full ladder; every mission merge scanned; the band declared as the evidence computes it.",
-      "status": "pending",
+      "status": "done",
       "sessionsEstimate": "1",
       "gates": [
         {
@@ -364,7 +425,7 @@
           "status": "pending",
           "evidence": null,
           "lastRun": null,
-          "notes": ""
+          "notes": "Not recorded on main: ops/mission/ledger.jsonl has no P6 phase-run and evidence/bundle.json is absent. governance.md lists the result expected at the close head (band 3/5)."
         },
         {
           "id": "P6-G2",
@@ -373,7 +434,7 @@
           "status": "pending",
           "evidence": null,
           "lastRun": null,
-          "notes": ""
+          "notes": "Not recorded on main: ops/mission/ledger.jsonl has no P6 phase-run and evidence/bundle.json is absent. governance.md lists the result expected at the close head (band 3/5)."
         },
         {
           "id": "P6-G3",
@@ -382,7 +443,7 @@
           "status": "pending",
           "evidence": null,
           "lastRun": null,
-          "notes": ""
+          "notes": "Not recorded on main: ops/mission/ledger.jsonl has no P6 phase-run and evidence/bundle.json is absent. governance.md lists the result expected at the close head (band 3/5)."
         },
         {
           "id": "P6-G4",
@@ -391,7 +452,7 @@
           "status": "pending",
           "evidence": null,
           "lastRun": null,
-          "notes": ""
+          "notes": "Not recorded on main: ops/mission/ledger.jsonl has no P6 phase-run and evidence/bundle.json is absent. governance.md lists the result expected at the close head (band 3/5)."
         },
         {
           "id": "P6-G5",
@@ -400,7 +461,7 @@
           "status": "pending",
           "evidence": null,
           "lastRun": null,
-          "notes": ""
+          "notes": "Not recorded on main: ops/mission/ledger.jsonl has no P6 phase-run and evidence/bundle.json is absent. governance.md lists the result expected at the close head (band 3/5)."
         },
         {
           "id": "P6-G6",
@@ -409,7 +470,7 @@
           "status": "pending",
           "evidence": null,
           "lastRun": null,
-          "notes": ""
+          "notes": "Not recorded on main: ops/mission/ledger.jsonl has no P6 phase-run and evidence/bundle.json is absent. governance.md lists the result expected at the close head (band 3/5)."
         },
         {
           "id": "P6-G7",
@@ -418,7 +479,7 @@
           "status": "pending",
           "evidence": null,
           "lastRun": null,
-          "notes": ""
+          "notes": "Not recorded on main: ops/mission/ledger.jsonl has no P6 phase-run and evidence/bundle.json is absent. governance.md lists the result expected at the close head (band 3/5)."
         },
         {
           "id": "P6-G8",
@@ -427,7 +488,7 @@
           "status": "pending",
           "evidence": null,
           "lastRun": null,
-          "notes": ""
+          "notes": "Not recorded on main: ops/mission/ledger.jsonl has no P6 phase-run and evidence/bundle.json is absent. governance.md lists the result expected at the close head (band 3/5)."
         },
         {
           "id": "P6-G9",
@@ -436,7 +497,7 @@
           "status": "pending",
           "evidence": null,
           "lastRun": null,
-          "notes": ""
+          "notes": "Not recorded on main: ops/mission/ledger.jsonl has no P6 phase-run and evidence/bundle.json is absent. governance.md lists the result expected at the close head (band 3/5)."
         },
         {
           "id": "P6-G10",
@@ -445,35 +506,106 @@
           "status": "pending",
           "evidence": null,
           "lastRun": null,
-          "notes": ""
+          "notes": "Not recorded on main: ops/mission/ledger.jsonl has no P6 phase-run and evidence/bundle.json is absent. governance.md lists the result expected at the close head (band 3/5)."
         }
       ],
-      "tasks": []
+      "tasks": [
+        {
+          "id": "P6-PR",
+          "title": "Merge PR #10",
+          "status": "done",
+          "dependsOn": [],
+          "pr": {
+            "number": 10,
+            "url": "https://github.com/Navigata1/storysynchq/pull/10",
+            "mergedAt": "2026-11-05"
+          },
+          "notes": ""
+        }
+      ]
     }
   ],
   "metrics": [
     {
       "label": "Definition-of-done claims verified",
       "baseline": "0",
-      "current": "0",
+      "current": "8",
       "target": "12",
       "direction": "up"
     }
   ],
   "risks": [
     {
-      "title": "C2b, C3b, C4 and C8 cannot be checked from this environment (production Supabase reads are denied by the session's permission policy; only Chromium is installed, without an AAC encoder), so the honest ceiling is band 3 until the operator supplies that access.",
+      "title": "C2b, C3b, C4 and C8 are unverified (exit 77)",
       "severity": "medium",
-      "note": "from idea.lock (confidence 6/10)"
+      "note": "Band stays 3/5 until the operator applies 003 and authorises the cloud run (C3b, C4) and P5 runs on a WebKit/AAC machine (C2b, C8)."
+    },
+    {
+      "title": "Production still allows anonymous listing until migration 003 is applied",
+      "severity": "high",
+      "note": "001's broad read policies stand; the app reads through the by-code function where it exists. COPPA posture depends on 003 (POA 0.2)."
+    },
+    {
+      "title": "P6's close records are not on main",
+      "severity": "medium",
+      "note": "No P6 phase-run in ledger.jsonl and no evidence/bundle.json; governance.md's claim table is the expected result, not a committed record. Rerun at a future merging head."
+    },
+    {
+      "title": "Player first-load JS headroom is 2 KB (168 of 170 KB)",
+      "severity": "medium",
+      "note": "Re-feel (POA 2.1) and any Player work must be weighed against C7's budget."
     }
   ],
-  "prLog": [],
+  "prLog": [
+    {
+      "number": 6,
+      "title": "M7 hardening: fix the REPORT §6 known bugs that need no product decision",
+      "url": "https://github.com/Navigata1/storysynchq/pull/6",
+      "phase": "P0",
+      "mergedAt": "2026-11-01"
+    },
+    {
+      "number": 7,
+      "title": "Mission P2: layout at every width and on landscape phones (C5)",
+      "url": "https://github.com/Navigata1/storysynchq/pull/7",
+      "phase": "P2",
+      "mergedAt": "2026-11-01"
+    },
+    {
+      "number": 8,
+      "title": "Mission P3: accessibility, zero serious or critical axe violations (C6)",
+      "url": "https://github.com/Navigata1/storysynchq/pull/8",
+      "phase": "P3",
+      "mergedAt": "2026-11-01"
+    },
+    {
+      "number": 9,
+      "title": "Mission P4: first-load JavaScript within a reasoned budget (C7)",
+      "url": "https://github.com/Navigata1/storysynchq/pull/9",
+      "phase": "P4",
+      "mergedAt": "2026-11-01"
+    },
+    {
+      "number": 10,
+      "title": "Mission P6: close (every gate at the final head, band 3/5) + P5's codec and offline-delete fixes",
+      "url": "https://github.com/Navigata1/storysynchq/pull/10",
+      "phase": "P6",
+      "mergedAt": "2026-11-05"
+    }
+  ],
   "resume": {
-    "activePhase": "P0",
+    "activePhase": "P1",
     "nextActions": [
-      "Run the blind plan critic on these locks, then carry PR #6 through P0."
+      "Operator: apply supabase/migrations/003_share_lookup_by_code.sql to pvtwlizzsbovwtkjvqix in the SQL editor, check SELECT policyname FROM pg_policies WHERE policyname IN ('Anyone reads shared links','Anyone reads public storybooks','Public media readable') returns no rows, then comment 'A2-ATTEST cloud-schema'.",
+      "Operator: turn on main's ruleset per ops/mission/hitl/ruleset.md and comment 'A2-ATTEST ruleset'.",
+      "Operator: run bash ops/mission/gates/cloud_e2e.sh with A2_CLOUD_E2E=1, production's NEXT_PUBLIC_SUPABASE_URL/ANON_KEY and a dedicated test account (A2_CLOUD_EMAIL, A2_CLOUD_PASSWORD) to verify C3b and C4.",
+      "Operator's Mac: python3 ops/mission/run_phase.py P5 (WebKit + AAC) to verify C8 and C2b.",
+      "Then Plan of Attack Stage 2 (mission M2): register each m2-* gate before its fix; 2.1 re-feel first, inside the Player's 2 KB headroom."
     ],
-    "blockers": [],
+    "blockers": [
+      "P1-G1/P1-G2 need the operator (production database and credentials).",
+      "P5-G1/P5-G2 need WebKit and an AAC encoder (exit 77 in the cloud)."
+    ],
     "conventions": [
       "One task = one branch = one PR",
       "Update state.json + render + commit after every merge",
