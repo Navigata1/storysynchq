@@ -384,3 +384,22 @@ tests for it, which pin:
 - for a kept tape, the reason.
 
 No existing assertion changes. `ops/mission/contract.md` changes by this appended section.
+
+### A17 · 2026-11-08 · P1: C3b and C4's judge is written
+
+P1's judge `tests/a2-cloud.spec.ts` (judges/order.json) is new. It is the first registered
+change on a branch that holds no `src/` change, so it precedes any `src/` change it may share a
+PR with (S1b K40). It is collected only under `cloud_e2e.sh` (A2_CLOUD_E2E=1 with production's
+public URL and anon key). It also needs a grown-up test account the operator provides,
+A2_CLOUD_EMAIL and A2_CLOUD_PASSWORD, and fails without one rather than pass on nothing.
+
+It publishes one public test tape as that account: a storybook row, its 128-bit link
+(`shareLinkRow`) and a page_media row. It then pins three things:
+- C3b: anonymous listing of storybooks, shared_links and page_media returns none of it;
+- C4: the link opens the tape in a fresh browser context with no account;
+- once the tape is deleted, the same link opens nothing.
+
+It deletes the tape whatever fails. Its five tests carry the exact keys
+`judges/required-P1-cloud.json` names. Before migration 003 is applied to production, the
+three listing tests are expected to fail: 001's broad read policies list those rows.
+`ops/mission/contract.md` changes by this appended section.
