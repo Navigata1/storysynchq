@@ -1,0 +1,6 @@
+$ python3 ops/mission/gates/review_closed.py P0
+exit 0
+--- stdout ---
+[PASS] P0: 1 round(s) closed at 4846c5856c9a, 0 findings, none open
+
+--- stderr ---

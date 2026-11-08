@@ -1,0 +1,6 @@
+$ python3 protocol/scripts/loop.py verify-ledger
+exit 0
+--- stdout ---
+[PASS] ledger: chain intact
+
+--- stderr ---

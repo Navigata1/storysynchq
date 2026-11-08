@@ -1,0 +1,236 @@
+$ bash ops/mission/gates/e2e_prod.sh
+exit 0
+--- stdout ---
+serving HEAD 22b45e23d9df669761ad49518e8b144b689268c6
+
+Running 2138 tests using 2 workers
+················································································
+····[critic-p] ultrawide-2560x1080 (textTop=114): [{"x":6,"y":108,"r":38,"g":41,"b":60},{"x":2554,"y":108,"r":47,"g":41,"b":69},{"x":6,"y":108,"r":38,"g":41,"b":60},{"x":2554,"y":108,"r":47,"g":41,"b":69},{"x":484,"y":108,"r":81,"g":62,"b":69},{"x":1384,"y":108,"r":78,"g":65,"b":85},{"x":640,"y":6,"r":61,"g":57,"b":61},{"x":1920,"y":6,"r":46,"g":44,"b":66},{"x":1280,"y":57,"r":67,"g":61,"b":86}]
+·····[critic-p] tablet-tall-1024x1366 (textTop=1102.71875): [{"x":6,"y":566,"r":38,"g":41,"b":77},{"x":1018,"y":566,"r":53,"g":58,"b":90},{"x":6,"y":278,"r":46,"g":42,"b":55},{"x":1018,"y":278,"r":38,"g":38,"b":70},{"x":21,"y":566,"r":39,"g":39,"b":75},{"x":1003,"y":566,"r":53,"g":57,"b":87},{"x":256,"y":6,"r":48,"g":44,"b":51},{"x":768,"y":6,"r":35,"g":37,"b":60},{"x":512,"y":43,"r":51,"g":46,"b":67}]
+···[critic-p] phone-small-320x568 (textTop=319.375): [{"x":6,"y":166,"r":46,"g":45,"b":57},{"x":314,"y":166,"r":55,"g":50,"b":60},{"x":6,"y":77,"r":50,"g":42,"b":47},{"x":314,"y":77,"r":43,"g":42,"b":52},{"x":6,"y":166,"r":46,"g":45,"b":57},{"x":314,"y":166,"r":55,"g":50,"b":60},{"x":80,"y":6,"r":51,"g":42,"b":44},{"x":240,"y":6,"r":45,"g":42,"b":51},{"x":160,"y":9,"r":50,"g":45,"b":52}]
+···[critic-p] laptop-short-1440x720 (textTop=98): [{"x":6,"y":92,"r":47,"g":48,"b":61},{"x":1434,"y":92,"r":47,"g":42,"b":73},{"x":6,"y":92,"r":47,"g":48,"b":61},{"x":1434,"y":92,"r":47,"g":42,"b":73},{"x":217,"y":92,"r":67,"g":51,"b":63},{"x":789,"y":92,"r":79,"g":68,"b":95},{"x":360,"y":6,"r":60,"g":52,"b":58},{"x":1080,"y":6,"r":49,"g":52,"b":67},{"x":720,"y":49,"r":62,"g":57,"b":85}]
+···[critic-p] demo audio nodes: {"osc":6,"buf":1,"contexts":2}
+·[critic-p] silent tape audio nodes: {"osc":0,"buf":0,"contexts":2}
+··[critic-p] cue nodes before/after: {"before":{"osc":0,"buf":0,"contexts":2},"after":{"osc":1,"buf":1,"contexts":2}}
+····[critic-p] (absent) end card after 8 presses, errors=0
+···[critic-p] (throws) end card after 8 presses, errors=0
+····[critic-p] mobile full-bleed contrast → 18.48:1 over 30800 px
+··[critic-p] prose: {"wide":{"family":"Fraunces, \"Fraunces Fallback\", Literata, Georgia, \"Iowan Old Style\", serif","size":28.8,"maxWidth":641.302,"chWidth":18.91953125,"rendered":470.125},"narrow":{"family":"Fraunces, \"Fraunces Fallback\", Literata, Georgia, \"Iowan Old Style\", serif","size":18.815,"maxWidth":771.501,"chWidth":12.48125,"rendered":342}}
+···[critic-p] drift matrices: matrix(1.14037, 0, 0, 1.14037, -17.9293, -7.13096) → matrix(1.1411, 0, 0, 1.1411, -17.678, -7.03102)
+·[critic-p] reduced-motion matrices: matrix(1.18, 0, 0, 1.18, 0, 0) → matrix(1.18, 0, 0, 1.18, 0, 0)
+····[critic-p] tts read-along: {"before":{"now":-1,"past":0,"total":24},"at4":{"now":4,"past":4,"total":24},"at9":{"now":9,"past":9,"total":24}}
+··[critic-p] blind tape desktop-1440x900: [{"x":8,"y":450,"r":29,"g":28,"b":51},{"x":1432,"y":450,"r":23,"g":26,"b":40},{"x":8,"y":8,"r":44,"g":34,"b":25},{"x":1432,"y":8,"r":30,"g":26,"b":28},{"x":8,"y":892,"r":39,"g":31,"b":32},{"x":1432,"y":892,"r":24,"g":22,"b":35},{"x":720,"y":8,"r":48,"g":38,"b":33},{"x":720,"y":892,"r":36,"g":30,"b":24},{"x":40,"y":450,"r":29,"g":29,"b":52},{"x":1400,"y":450,"r":23,"g":26,"b":41}] chroma spread: [23,17,19,4,8,13,15,12,23,18]
+··[critic-p] blind tape phone-390x844: [{"x":8,"y":422,"r":13,"g":15,"b":28},{"x":382,"y":422,"r":11,"g":14,"b":24},{"x":8,"y":8,"r":26,"g":22,"b":20},{"x":382,"y":8,"r":21,"g":19,"b":21},{"x":8,"y":836,"r":12,"g":13,"b":23},{"x":382,"y":836,"r":11,"g":12,"b":23},{"x":195,"y":8,"r":34,"g":30,"b":26},{"x":195,"y":836,"r":10,"g":12,"b":20},{"x":40,"y":422,"r":13,"g":15,"b":29},{"x":350,"y":422,"r":11,"g":14,"b":25}] chroma spread: [15,13,6,2,11,12,8,10,16,14]
+···[critic-p] white-art scrim desktop-1440x900: text L=0.909 p25 L=0.0788 → 7.44:1 · p90 L=0.223 over 63920 px
+··[critic-p] white-art scrim phone-390x844: text L=0.909 p25 L=0.0019 → 18.46:1 · p90 L=0.391 over 20178 px
+····[critic-p] moods per page: ["Wonder","Wonder","Adventure","Adventure","Calm","Calm","Calm"] engine moods: {"drops":0,"moods":["Wonder","Adventure","Calm"],"samples":107} audio: {"osc":39,"buf":9,"contexts":2}
+···[critic-p] QR: url=http://localhost:3000/read?story=critic-silent version-size=33 rendered=320px modules=1089 mismatched=0
+····[critic-p] nodes after Music off: {"quiet":{"osc":10,"buf":2,"contexts":2},"later":{"osc":10,"buf":2,"contexts":2}}
+··················
+················································································
+··················°··········°··················································
+················································································
+················································································
+················································································
+········································································°·······
+············[T10] per-page moods: [{"dom":"Hush","engine":"Hush","seconds":4},{"dom":"Rain","engine":"Rain","seconds":1.6},{"dom":"Wonder","engine":"Wonder","seconds":1.6}] watch: {"drops":0,"samples":49}
+······[T11] hold after the voice with timingMultiplier 3 × autoPause 1s: 3248 ms
+·····[t09a] chime row on page 1: [{"text":"CHIME · after the voice","page":"1","t":732.1000000014901},{"text":"CHIME · next turn in 0:04","page":"1","t":3401},{"text":"CHIME · next turn in 0:03","page":"1","t":4416.10000000149},{"text":"CHIME · next turn in 0:02","page":"1","t":5415.800000000745},{"text":"CHIME · next turn in 0:01","page":"1","t":6415.9000000003725}]
+································[m6-b] tab stops 1120: ["Music on","Reading options","Close story","Previous page","Pause","Next page",""]
+··[m6-b] tab stops 375: ["Music on","Reading options","Close story","Previous page","Pause","Next page",""]
+·[m6-b] ink: {"past":"rgb(243, 230, 200)","now":"rgb(255, 201, 60)","nowShadow":"rgba(255, 201, 60, 0.7) 0px 0px 26px, rgba(255, 201, 60, 0.35) 0px 0px 8px","nowBox":"rgba(255, 201, 60, 0.55) 0px -2.96218px 0px 0px inset","label":"rgb(255, 201, 60)"}
+[m6-b] hc ink: {"past":"rgb(255, 255, 255)","now":"rgb(255, 227, 106)","nowShadow":"none","nowBox":"rgb(255, 227, 106) 0px -2.96218px 0px 0px inset","label":"rgb(255, 201, 60)"}
+··[m6-b] future words 375: rgba(233, 240, 250, 0.6) p25 6.51:1 over 10621 px
+····················
+······[m6-b] future words 390: rgba(233, 240, 250, 0.6) p25 6.51:1 over 10716 px
+·[t08] 1120x700 page 2: {"vw":1120,"vh":700,"spread":{"x":85,"y":98,"w":949.984375,"h":532},"art":{"x":85,"y":98,"w":532,"h":532},"img":{"x":85,"y":98,"w":532,"h":532},"imgFit":"contain","natural":{"w":1024,"h":1024},"text":{"x":617,"y":98,"w":417.984375,"h":532},"deck":{"x":16,"y":14,"w":448.734375,"h":67},"chips":[{"x":759.765625,"y":12,"w":102.390625,"h":44},{"x":870.15625,"y":12,"w":145.1875,"h":44},{"x":1023.34375,"y":12,"w":82.65625,"h":44}],"transport":{"x":460,"y":642,"w":200,"h":48}}
+·[t08] 1280x720 page 2: {"vw":1280,"vh":720,"spread":{"x":147.140625,"y":98,"w":985.703125,"h":552},"art":{"x":147.140625,"y":98,"w":552,"h":552},"img":{"x":147.140625,"y":98,"w":552,"h":552},"imgFit":"contain","natural":{"w":1024,"h":1024},"text":{"x":699.140625,"y":98,"w":433.703125,"h":552},"deck":{"x":16,"y":14,"w":448.734375,"h":67},"chips":[{"x":919.765625,"y":12,"w":102.390625,"h":44},{"x":1030.15625,"y":12,"w":145.1875,"h":44},{"x":1183.34375,"y":12,"w":82.65625,"h":44}],"transport":{"x":540,"y":662,"w":200,"h":48}}
+·[t08] 1440x900 page 2: {"vw":1440,"vh":900,"spread":{"x":66.4375,"y":98,"w":1307.125,"h":732},"art":{"x":66.4375,"y":98,"w":732,"h":732},"img":{"x":66.4375,"y":98,"w":732,"h":732},"imgFit":"contain","natural":{"w":1024,"h":1024},"text":{"x":798.4375,"y":98,"w":575.125,"h":732},"deck":{"x":16,"y":14,"w":448.734375,"h":67},"chips":[{"x":1079.765625,"y":12,"w":102.390625,"h":44},{"x":1190.15625,"y":12,"w":145.1875,"h":44},{"x":1343.34375,"y":12,"w":82.65625,"h":44}],"transport":{"x":620,"y":842,"w":200,"h":48}}
+·[m6-b] scrim sharpness peak 0.0277, worst one-row drop 0.0043
+[m6-b] scrim edges: left 0.0000 inner 0.0429 right 0.0000
+·[t08] 2560x1080 page 2: {"vw":2560,"vh":1080,"spread":{"x":494.296875,"y":114,"w":1571.40625,"h":880},"art":{"x":494.296875,"y":114,"w":880,"h":880},"img":{"x":494.296875,"y":114,"w":880,"h":880},"imgFit":"contain","natural":{"w":1024,"h":1024},"text":{"x":1374.296875,"y":114,"w":691.40625,"h":880},"deck":{"x":16,"y":14,"w":448.734375,"h":67},"chips":[{"x":2199.765625,"y":12,"w":102.390625,"h":44},{"x":2310.15625,"y":12,"w":145.1875,"h":44},{"x":2463.34375,"y":12,"w":82.65625,"h":44}],"transport":{"x":1180,"y":1022,"w":200,"h":48}}
+·····[m6-b] transport: {"pill":{"w":200,"h":48},"keys":[{"label":"Previous page","w":32,"hits":[true,true,true,true],"shadow":"none","active":false},{"label":"Pause","w":40,"hits":[true,true,true,true],"shadow":"rgba(255, 201, 60, 0.7) 0px 6px 22px -4px","active":true},{"label":"Next page","w":32,"hits":[true,true,true,true],"shadow":"none","active":false}],"musicBg":"rgba(245, 158, 11, 0.18)"}
+···[m6-b] qr code 390: {"lines":1,"right":337.203125,"inner":358,"text":"d341e2f07ced7d94251045a4b060c978"}
+··[t08] prose @1120x700: {"family":"Fraunces, \"Fraunces Fallback\", Literata, Georgia, \"Iowan Old Style\", serif","size":24.6848,"maxWidth":549.446,"rendered":341.015625,"ch":16.2096875,"words":19}
+·[m6-b] qr code 375: {"lines":1,"right":327.609375,"inner":343,"text":"86f81c6a9f70e84972c73b4187fb6f24"}
+·[t08] largest: {"overflowY":"auto","scrollH":615,"clientH":530,"size":37.0272}
+·[m6-b] privacy line rgb(141, 150, 173): p5 6.52:1
+·[t08] vision-reader-spread-contrast-house: text L=0.909 bg(p25) L=0.0315 → 11.77:1
+·[m6-wb] 375 band column sd 0.0510, hue drift 7.7
+[t08] vision-reader-spread-contrast-white: text L=0.909 bg(p25) L=0.0788 → 7.44:1
+·[t08] 4:3 page 1: {"img":{"x":60,"y":101.640625,"w":726.28125,"h":544.71875},"art":{"x":60,"y":101.640625,"w":726.28125,"h":544.71875},"text":{"x":786.28125,"y":101.640625,"w":433.703125,"h":544.71875}}
+[t08] 4:3 page 2: {"img":{"x":60,"y":101.640625,"w":726.28125,"h":544.71875},"art":{"x":60,"y":101.640625,"w":726.28125,"h":544.71875},"text":{"x":786.28125,"y":101.640625,"w":433.703125,"h":544.71875}}
+·[t08] text-only page: {"x":423.140625,"y":98,"w":433.703125,"h":552}
+······[t09b] house page 1 packs: {"left":31,"right":21,"leftH":31,"rightH":21}
+·[t09b] packs while turning forward: [{"page":2,"left":31,"right":21},{"page":2,"left":28.6875,"right":23.296875},{"page":3,"left":28.5,"right":23.5},{"page":4,"left":27.25,"right":24.75},{"page":5,"left":26,"right":26},{"page":6,"left":24.75,"right":27.25},{"page":7,"left":23.5,"right":28.5},{"page":8,"left":22.25,"right":29.734375}]
+×·[t09b] 6 s clip: {"atOne":{"fill":0.08494710241045271,"right":21.78125,"t":1.256234},"atFour":{"fill":0.32556217738560267,"right":24.125,"t":4.167858}}
+[m6-wb] 375 band column sd 0.0510, hue drift 7.7
+±·[m6-wb] 390 band column sd 0.0526, hue drift 6.0
+·····[t09b] phone strip: {"x":16,"y":822,"w":358,"h":3}
+···[t09b] Twinkle page 3 segments: [1,1,0.8956461421207448,0,0]
+··········[m6-wb] gate top 76.6 foot 50.6
+·······················
+················································································
+················································································
+··············································································[wp-p] 1440x900 page 1 samples: [{"x":40,"y":450,"r":36,"g":54,"b":95},{"x":1400,"y":450,"r":58,"g":57,"b":102},{"x":40,"y":120,"r":46,"g":46,"b":59},{"x":1400,"y":120,"r":48,"g":43,"b":73},{"x":720,"y":60,"r":49,"g":50,"b":77}]
+·[wp-p] 390x844 page 1 samples: [{"x":20,"y":450,"r":11,"g":22,"b":54},{"x":370,"y":450,"r":62,"g":88,"b":139},{"x":20,"y":120,"r":59,"g":50,"b":62},{"x":370,"y":120,"r":47,"g":50,"b":68}]
+·[wp-p] text-only page samples: [{"x":40,"y":450,"r":57,"g":77,"b":117},{"x":1400,"y":450,"r":66,"g":77,"b":107},{"x":720,"y":80,"r":110,"g":101,"b":94}]
+
+·····[wp-p] wp-player-desktop-full-scrim: text L=0.909 bg(p25) L=0.031 → 11.80:1 over 64719 px
+···[wp-p] wp-player-mobile-full-scrim: text L=0.909 bg(p25) L=0.002 → 18.48:1 over 30800 px
+··[wp-p] wp-player-desktop-panel-contrast: text L=0.909 bg(p25) L=0.030 → 11.97:1 over 64719 px
+·[wp-p] wp-player-mobile-panel-contrast: text L=0.909 bg(p25) L=0.002 → 18.49:1 over 30800 px
+··[wp-p] prose @1440: {"fontFamily":"Fraunces, \"Fraunces Fallback\", Literata, Georgia, \"Iowan Old Style\", serif","fontSize":28.8,"maxWidth":641.302,"ch":18.921875,"rem":16,"vw":1440}
+[wp-p] prose @390: {"fontFamily":"Fraunces, \"Fraunces Fallback\", Literata, Georgia, \"Iowan Old Style\", serif","fontSize":18.815,"maxWidth":771.501,"ch":12.484375,"rem":16,"vw":390}
+············[wp-p] read-along probes: {"count":12,"now":1,"past":1}
+[wp-p] read-along @52%: {"count":12,"now":6,"past":6}
+[wp-p] read-along @95%: {"count":12,"now":11,"past":11}
+···[wp-p] end card reached after 8 ArrowRight presses
+············[wp-p] (absent) end card after 8 presses, errors=0
+···[wp-p] (throws) end card after 8 presses, errors=0
+··[wp-p] rAF frames playing/paused: {"whilePlaying":6,"whilePaused":0}
+···································
+····························[critic-p] ultrawide-2560x1080 (textTop=114): [{"x":6,"y":108,"r":38,"g":41,"b":60},{"x":2554,"y":108,"r":47,"g":41,"b":69},{"x":6,"y":108,"r":38,"g":41,"b":60},{"x":2554,"y":108,"r":47,"g":41,"b":69},{"x":484,"y":108,"r":81,"g":62,"b":69},{"x":1384,"y":108,"r":78,"g":65,"b":85},{"x":640,"y":6,"r":61,"g":57,"b":61},{"x":1920,"y":6,"r":46,"g":44,"b":66},{"x":1280,"y":57,"r":67,"g":61,"b":86}]
+·····[critic-p] tablet-tall-1024x1366 (textTop=1102.71875): [{"x":6,"y":566,"r":38,"g":41,"b":77},{"x":1018,"y":566,"r":53,"g":58,"b":90},{"x":6,"y":278,"r":46,"g":42,"b":55},{"x":1018,"y":278,"r":38,"g":38,"b":70},{"x":21,"y":566,"r":39,"g":39,"b":75},{"x":1003,"y":566,"r":53,"g":57,"b":87},{"x":256,"y":6,"r":48,"g":44,"b":51},{"x":768,"y":6,"r":35,"g":37,"b":60},{"x":512,"y":43,"r":51,"g":46,"b":67}]
+····[critic-p] phone-small-320x568 (textTop=319.375): [{"x":6,"y":166,"r":46,"g":45,"b":57},{"x":314,"y":166,"r":55,"g":50,"b":60},{"x":6,"y":77,"r":50,"g":42,"b":47},{"x":314,"y":77,"r":43,"g":42,"b":52},{"x":6,"y":166,"r":46,"g":45,"b":57},{"x":314,"y":166,"r":55,"g":50,"b":60},{"x":80,"y":6,"r":51,"g":42,"b":44},{"x":240,"y":6,"r":45,"g":42,"b":51},{"x":160,"y":9,"r":50,"g":45,"b":52}]
+···[critic-p] laptop-short-1440x720 (textTop=98): [{"x":6,"y":92,"r":47,"g":48,"b":61},{"x":1434,"y":92,"r":47,"g":42,"b":73},{"x":6,"y":92,"r":47,"g":48,"b":61},{"x":1434,"y":92,"r":47,"g":42,"b":73},{"x":217,"y":92,"r":67,"g":51,"b":63},{"x":789,"y":92,"r":79,"g":68,"b":95},{"x":360,"y":6,"r":60,"g":52,"b":58},{"x":1080,"y":6,"r":49,"g":52,"b":67},{"x":720,"y":49,"r":62,"g":57,"b":85}]
+···[critic-p] demo audio nodes: {"osc":6,"buf":1,"contexts":2}
+··[critic-p] silent tape audio nodes: {"osc":0,"buf":0,"contexts":2}
+··[critic-p] cue nodes before/after: {"before":{"osc":0,"buf":0,"contexts":2},"after":{"osc":1,"buf":1,"contexts":2}}
+····[critic-p] (absent) end card after 8 presses, errors=0
+····[critic-p] (throws) end card after 8 presses, errors=0
+···[critic-p] mobile full-bleed contrast → 18.48:1 over 30800 px
+··[critic-p] prose: {"wide":{"family":"Fraunces, \"Fraunces Fallback\", Literata, Georgia, \"Iowan Old Style\", serif","size":28.8,"maxWidth":641.302,"chWidth":18.91953125,"rendered":470.125},"narrow":{"family":"Fraunces, \"Fraunces Fallback\", Literata, Georgia, \"Iowan Old Style\", serif","size":18.815,"maxWidth":771.501,"chWidth":12.48125,"rendered":342}}
+···[critic-p] drift matrices: matrix(1.14036, 0, 0, 1.14036, -17.9349, -7.13319) → matrix(1.14107, 0, 0, 1.14107, -17.6879, -7.03494)
+·[critic-p] reduced-motion matrices: matrix(1.18, 0, 0, 1.18, 0, 0) → matrix(1.18, 0, 0, 1.18, 0, 0)
+·····[critic-p] tts read-along: {"before":{"now":-1,"past":0,"total":24},"at4":{"now":4,"past":4,"total":24},"at9":{"now":9,"past":9,"total":24}}
+··[critic-p] blind tape desktop-1440x900: [{"x":8,"y":450,"r":29,"g":28,"b":51},{"x":1432,"y":450,"r":23,"g":26,"b":40},{"x":8,"y":8,"r":44,"g":34,"b":25},{"x":1432,"y":8,"r":30,"g":26,"b":28},{"x":8,"y":892,"r":39,"g":31,"b":32},{"x":1432,"y":892,"r":24,"g":22,"b":35},{"x":720,"y":8,"r":48,"g":38,"b":33},{"x":720,"y":892,"r":36,"g":30,"b":24},{"x":40,"y":450,"r":29,"g":29,"b":52},{"x":1400,"y":450,"r":23,"g":26,"b":41}] chroma spread: [23,17,19,4,8,13,15,12,23,18]
+··[critic-p] blind tape phone-390x844: [{"x":8,"y":422,"r":13,"g":15,"b":28},{"x":382,"y":422,"r":11,"g":14,"b":24},{"x":8,"y":8,"r":26,"g":22,"b":20},{"x":382,"y":8,"r":21,"g":19,"b":21},{"x":8,"y":836,"r":12,"g":13,"b":23},{"x":382,"y":836,"r":11,"g":12,"b":23},{"x":195,"y":8,"r":34,"g":30,"b":26},{"x":195,"y":836,"r":10,"g":12,"b":20},{"x":40,"y":422,"r":13,"g":15,"b":29},{"x":350,"y":422,"r":11,"g":14,"b":25}] chroma spread: [15,13,6,2,11,12,8,10,16,14]
+··[critic-p] white-art scrim desktop-1440x900: text L=0.909 p25 L=0.0788 → 7.44:1 · p90 L=0.223 over 63920 px
+···[critic-p] white-art scrim phone-390x844: text L=0.909 p25 L=0.0019 → 18.46:1 · p90 L=0.391 over 20178 px
+··
+·[critic-p] moods per page: ["Wonder","Wonder","Adventure","Adventure","Calm","Calm","Calm"] engine moods: {"drops":0,"moods":["Wonder","Adventure","Calm"],"samples":111} audio: {"osc":41,"buf":9,"contexts":2}
+··[critic-p] QR: url=http://localhost:3000/read?story=critic-silent version-size=33 rendered=320px modules=1089 mismatched=0
+·····[critic-p] nodes after Music off: {"quiet":{"osc":10,"buf":2,"contexts":2},"later":{"osc":10,"buf":2,"contexts":2}}
+········································································
+················································°°°········°°°················°°
+°°°°°°°°°°°°°°··································································
+················································································
+···············································°°°°°°°°°························
+················································································
+···················°·······················[T10] per-page moods: [{"dom":"Hush","engine":"Hush","seconds":4},{"dom":"Rain","engine":"Rain","seconds":1.6},{"dom":"Wonder","engine":"Wonder","seconds":1.6}] watch: {"drops":0,"samples":48}
+····[T11] hold after the voice with timingMultiplier 3 × autoPause 1s: 3249 ms
+·······[t09a] chime row on page 1: [{"text":"CHIME · after the voice","page":"1","t":996.4000000003725},{"text":"CHIME · next turn in 0:04","page":"1","t":3809.4000000003725},{"text":"CHIME · next turn in 0:03","page":"1","t":4830.300000000745},{"text":"CHIME · next turn in 0:02","page":"1","t":5824.60000000149},{"text":"CHIME · next turn in 0:01","page":"1","t":6825.4000000003725}]
+··························
+······[m6-b] tab stops 1120: ["Music on","Reading options","Close story","Previous page","Pause","Next page",""]
+·[m6-b] tab stops 375: ["Music on","Reading options","Close story","Previous page","Pause","Next page",""]
+··[m6-b] ink: {"past":"rgb(243, 230, 200)","now":"rgb(255, 201, 60)","nowShadow":"rgba(255, 201, 60, 0.7) 0px 0px 26px, rgba(255, 201, 60, 0.35) 0px 0px 8px","nowBox":"rgba(255, 201, 60, 0.55) 0px -2.96218px 0px 0px inset","label":"rgb(255, 201, 60)"}
+[m6-b] hc ink: {"past":"rgb(255, 255, 255)","now":"rgb(255, 227, 106)","nowShadow":"none","nowBox":"rgb(255, 227, 106) 0px -2.96218px 0px 0px inset","label":"rgb(255, 201, 60)"}
+··························[m6-b] future words 375: rgba(233, 240, 250, 0.6) p25 6.51:1 over 10621 px
+·[t08] 1120x700 page 2: {"vw":1120,"vh":700,"spread":{"x":85,"y":98,"w":949.984375,"h":532},"art":{"x":85,"y":98,"w":532,"h":532},"img":{"x":85,"y":98,"w":532,"h":532},"imgFit":"contain","natural":{"w":1024,"h":1024},"text":{"x":617,"y":98,"w":417.984375,"h":532},"deck":{"x":16,"y":14,"w":448.734375,"h":67},"chips":[{"x":759.765625,"y":12,"w":102.390625,"h":44},{"x":870.15625,"y":12,"w":145.1875,"h":44},{"x":1023.34375,"y":12,"w":82.65625,"h":44}],"transport":{"x":460,"y":642,"w":200,"h":48}}
+·[t08] 1280x720 page 2: {"vw":1280,"vh":720,"spread":{"x":147.140625,"y":98,"w":985.703125,"h":552},"art":{"x":147.140625,"y":98,"w":552,"h":552},"img":{"x":147.140625,"y":98,"w":552,"h":552},"imgFit":"contain","natural":{"w":1024,"h":1024},"text":{"x":699.140625,"y":98,"w":433.703125,"h":552},"deck":{"x":16,"y":14,"w":448.734375,"h":67},"chips":[{"x":919.765625,"y":12,"w":102.390625,"h":44},{"x":1030.15625,"y":12,"w":145.1875,"h":44},{"x":1183.34375,"y":12,"w":82.65625,"h":44}],"transport":{"x":540,"y":662,"w":200,"h":48}}
+[m6-b] future words 390: rgba(233, 240, 250, 0.6) p25 6.51:1 over 10716 px
+··[t08] 1440x900 page 2: {"vw":1440,"vh":900,"spread":{"x":66.4375,"y":98,"w":1307.125,"h":732},"art":{"x":66.4375,"y":98,"w":732,"h":732},"img":{"x":66.4375,"y":98,"w":732,"h":732},"imgFit":"contain","natural":{"w":1024,"h":1024},"text":{"x":798.4375,"y":98,"w":575.125,"h":732},"deck":{"x":16,"y":14,"w":448.734375,"h":67},"chips":[{"x":1079.765625,"y":12,"w":102.390625,"h":44},{"x":1190.15625,"y":12,"w":145.1875,"h":44},{"x":1343.34375,"y":12,"w":82.65625,"h":44}],"transport":{"x":620,"y":842,"w":200,"h":48}}
+·[t08] 2560x1080 page 2: {"vw":2560,"vh":1080,"spread":{"x":494.296875,"y":114,"w":1571.40625,"h":880},"art":{"x":494.296875,"y":114,"w":880,"h":880},"img":{"x":494.296875,"y":114,"w":880,"h":880},"imgFit":"contain","natural":{"w":1024,"h":1024},"text":{"x":1374.296875,"y":114,"w":691.40625,"h":880},"deck":{"x":16,"y":14,"w":448.734375,"h":67},"chips":[{"x":2199.765625,"y":12,"w":102.390625,"h":44},{"x":2310.15625,"y":12,"w":145.1875,"h":44},{"x":2463.34375,"y":12,"w":82.65625,"h":44}],"transport":{"x":1180,"y":1022,"w":200,"h":48}}
+[m6-b] scrim sharpness peak 0.0277, worst one-row drop 0.0043
+·[m6-b] scrim edges: left 0.0000 inner 0.0429 right 0.0000
+······[m6-b] transport: {"pill":{"w":200,"h":48},"keys":[{"label":"Previous page","w":32,"hits":[true,true,true,true],"shadow":"none","active":false},{"label":"Pause","w":40,"hits":[true,true,true,true],"shadow":"rgba(255, 201, 60, 0.7) 0px 6px 22px -4px","active":true},{"label":"Next page","w":32,"hits":[true,true,true,true],"shadow":"none","active":false}],"musicBg":"rgba(245, 158, 11, 0.18)"}
+···[t08] prose @1120x700: {"family":"Fraunces, \"Fraunces Fallback\", Literata, Georgia, \"Iowan Old Style\", serif","size":24.6848,"maxWidth":549.446,"rendered":341.015625,"ch":16.2096875,"words":19}
+·[m6-b] qr code 390: {"lines":1,"right":337.203125,"inner":358,"text":"42cf8f1008e642895db9f065325570ca"}
+·[t08] largest: {"overflowY":"auto","scrollH":615,"clientH":530,"size":37.0272}
+·[m6-b] qr code 375: {"lines":1,"right":327.609375,"inner":343,"text":"fc824940c701f8a59516e3b650051e2b"}
+·[m6-b] privacy line rgb(141, 150, 173): p5 6.52:1
+·[t08] vision-reader-spread-contrast-house: text L=0.909 bg(p25) L=0.0315 → 11.77:1
+·[m6-wb] 375 band column sd 0.0510, hue drift 7.7
+·[t08] vision-reader-spread-contrast-white: text L=0.909 bg(p25) L=0.0788 → 7.44:1
+·[t08] 4:3 page 1: {"img":{"x":60,"y":101.640625,"w":726.28125,"h":544.71875},"art":{"x":60,"y":101.640625,"w":726.28125,"h":544.71875},"text":{"x":786.28125,"y":101.640625,"w":433.703125,"h":544.71875}}
+[t08] 4:3 page 2: {"img":{"x":60,"y":101.640625,"w":726.28125,"h":544.71875},"art":{"x":60,"y":101.640625,"w":726.28125,"h":544.71875},"text":{"x":786.28125,"y":101.640625,"w":433.703125,"h":544.71875}}
+·[m6-wb] 390 band column sd 0.0526, hue drift 6.0
+·[t08] text-only page: {"x":423.140625,"y":98,"w":433.703125,"h":552}
+··········[t09b] house page 1 packs: {"left":31,"right":21,"leftH":31,"rightH":21}
+··[m6-wb] gate top 76.6 foot 50.6
+······[t09b] packs while turning forward: [{"page":2,"left":31,"right":21},{"page":2,"left":28.6875,"right":23.296875},{"page":3,"left":28.5,"right":23.484375},{"page":4,"left":27.25,"right":24.75},{"page":5,"left":26,"right":26},{"page":6,"left":24.765625,"right":27.21875},{"page":7,"left":23.5,"right":28.5},{"page":8,"left":22.25,"right":29.75}]
+··
+·[t09b] 6 s clip: {"atOne":{"fill":0.0853255135672433,"right":21.75,"t":1.292521},"atFour":{"fill":0.3268969672066825,"right":24.171875,"t":4.203633}}
+········[t09b] phone strip: {"x":16,"y":822,"w":358,"h":3}
+···[t09b] Twinkle page 3 segments: [1,1,0.900254749614462,0,0]
+··································································°°
+····························································°°°·················
+···········································°°°°°°°··°···························
+···························[wp-p] 1440x900 page 1 samples: [{"x":40,"y":450,"r":36,"g":54,"b":95},{"x":1400,"y":450,"r":58,"g":57,"b":102},{"x":40,"y":120,"r":44,"g":46,"b":59},{"x":1400,"y":120,"r":48,"g":43,"b":73},{"x":720,"y":60,"r":49,"g":50,"b":77}]
+·[wp-p] 390x844 page 1 samples: [{"x":20,"y":450,"r":11,"g":22,"b":54},{"x":370,"y":450,"r":62,"g":88,"b":139},{"x":20,"y":120,"r":59,"g":50,"b":62},{"x":370,"y":120,"r":47,"g":50,"b":68}]
+·[wp-p] text-only page samples: [{"x":40,"y":450,"r":58,"g":77,"b":119},{"x":1400,"y":450,"r":67,"g":78,"b":109},{"x":720,"y":80,"r":111,"g":102,"b":95}]
+······[wp-p] wp-player-desktop-full-scrim: text L=0.909 bg(p25) L=0.031 → 11.80:1 over 64719 px
+··[wp-p] wp-player-mobile-full-scrim: text L=0.909 bg(p25) L=0.002 → 18.48:1 over 30800 px
+····[wp-p] wp-player-desktop-panel-contrast: text L=0.909 bg(p25) L=0.030 → 11.97:1 over 64719 px
+·[wp-p] wp-player-mobile-panel-contrast: text L=0.909 bg(p25) L=0.002 → 18.50:1 over 30800 px
+··[wp-p] prose @1440: {"fontFamily":"Fraunces, \"Fraunces Fallback\", Literata, Georgia, \"Iowan Old Style\", serif","fontSize":28.8,"maxWidth":641.302,"ch":18.921875,"rem":16,"vw":1440}
+[wp-p] prose @390: {"fontFamily":"Fraunces, \"Fraunces Fallback\", Literata, Georgia, \"Iowan Old Style\", serif","fontSize":18.815,"maxWidth":771.501,"ch":12.484375,"rem":16,"vw":390}
+·······[wp-p] read-along probes: {"count":12,"now":1,"past":1}
+[wp-p] read-along @52%: {"count":12,"now":6,"past":6}
+[wp-p] read-along @95%: {"count":12,"now":11,"past":11}
+·[wp-p] end card reached after 8 ArrowRight presses
+···[wp-p] (absent) end card after 8 presses, errors=0
+·[wp-p] (throws) end card after 8 presses, errors=0
+··[wp-p] rAF frames playing/paused: {"whilePlaying":21,"whilePaused":0}
+·
+
+  1) [desktop] › tests/vision-reader-m6.spec.ts:748:9 › M6 wave B · s02 phone portrait-fit: under the picture's foot, the page's colours, not fog › 375×812 · the band below the faded foot carries the drawing (texture and hue), decoration only 
+
+    [31mTest timeout of 60000ms exceeded.[39m
+
+    Error: locator.click: Test timeout of 60000ms exceeded.
+    Call log:
+    [2m  - waiting for getByRole('button', { name: 'Reading options' })[22m
+    [2m    - locator resolved to <button type="button" aria-expanded="false" class="pl-chip sk-focus" aria-label="Reading options">…</button>[22m
+    [2m  - attempting click action[22m
+    [2m    2 × waiting for element to be visible, enabled and stable[22m
+    [2m      - element is not stable[22m
+    [2m    - retrying click action[22m
+    [2m    - waiting 20ms[22m
+    [2m    - waiting for element to be visible, enabled and stable[22m
+    [2m    - element is not stable[22m
+    [2m  2 × retrying click action[22m
+    [2m      - waiting 100ms[22m
+    [2m      - waiting for element to be visible, enabled and stable[22m
+    [2m      - element is visible, enabled and stable[22m
+    [2m      - scrolling into view if needed[22m
+    [2m      - done scrolling[22m
+    [2m      - <img src="/demo/images/page2.jpg" alt="The little star looking down at a peaceful village"/> from <div tabindex="-1" class="pl-stage outline-none">…</div> subtree intercepts pointer events[22m
+    [2m  90 × retrying click action[22m
+    [2m       - waiting 500ms[22m
+    [2m       - waiting for element to be visible, enabled and stable[22m
+    [2m       - element is visible, enabled and stable[22m
+    [2m       - scrolling into view if needed[22m
+    [2m       - done scrolling[22m
+    [2m       - <img src="/demo/images/page2.jpg" alt="The little star looking down at a peaceful village"/> from <div tabindex="-1" class="pl-stage outline-none">…</div> subtree intercepts pointer events[22m
+    [2m  - retrying click action[22m
+    [2m    - waiting 500ms[22m
+    [2m    - waiting for element to be visible, enabled and stable[22m
+    [2m    - element is visible, enabled and stable[22m
+    [2m    - scrolling into view if needed[22m
+    [2m    - done scrolling[22m
+
+
+      791 |       await expect(foot).toHaveAttribute("alt", "");
+      792 |       await page.mouse.move(vp.width / 2, vp.height / 3); // wake the idled chrome
+    > 793 |       await page.getByRole("button", { name: "Reading options" }).click();
+          |                                                                   ^
+      794 |       await page.getByRole("switch", { name: /High contrast/ }).click();
+      795 |       await page.keyboard.press("Escape");
+      796 |       await expect(page.locator(".pl-root")).toHaveClass(/\bis-hc\b/);
+        at /home/user/storysynchq/tests/vision-reader-m6.spec.ts:793:67
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/vision-reader-m6-M6-wave-B-745d5-ure-and-hue-decoration-only-desktop/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/vision-reader-m6-M6-wave-B-745d5-ure-and-hue-decoration-only-desktop/error-context.md
+
+  1 flaky
+    [desktop] › tests/vision-reader-m6.spec.ts:748:9 › M6 wave B · s02 phone portrait-fit: under the picture's foot, the page's colours, not fog › 375×812 · the band below the faded foot carries the drawing (texture and hue), decoration only 
+  48 skipped
+  2089 passed (45.2m)
+[PASS] 2090 passed, 48 skipped (all allow-listed), every required family met its minimum
+
+--- stderr ---

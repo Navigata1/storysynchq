@@ -1,0 +1,6 @@
+$ python3 ops/mission/gates/deployed.py
+exit 0
+--- stdout ---
+[PASS] https://storysynchq.vercel.app serves main's tip 4ddec560d6ca; /read and the demo tape load
+
+--- stderr ---

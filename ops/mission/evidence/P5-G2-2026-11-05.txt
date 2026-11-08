@@ -1,0 +1,6 @@
+$ bash ops/mission/gates/aac_publish.sh
+exit 77
+--- stdout ---
+[CANNOT RUN] no installed browser has a WebCodecs AAC encoder
+
+--- stderr ---
