@@ -875,3 +875,21 @@ deleting the story forgets it everywhere.**
   The cloud library could not be reached, so a cloud copy may still be there." A cloud-only
   tape whose cloud cannot be reached keeps its draft and places.
 - Judged by tests/a2-codec.spec.ts and tests/a2-pullout.spec.ts (contract A15, A16).
+
+## 2026-11-16 · C2b on a Mac: WebKit's AAC description is an ES_Descriptor
+- P5's gates ran on a Mac on 2026-11-09 (WebKit 26.0) and the AAC gate failed: every take
+  publish re-encoded in WebKit was AAC/MP4 that no browser could decode. Measured 2026-11-16:
+  WebKit's `AudioEncoder` gives `decoderConfig.description` as a 39-byte MPEG-4 ES_Descriptor
+  (the 2-byte AudioSpecificConfig 0x1188 inside tag 5); Chromium gives the bare 2 bytes.
+  mp4-muxer 5.2.2 writes whatever it is given into `esds`, so WebKit's was nested in a second
+  descriptor. The same chunks muxed with the bare config decode in WebKit, Chromium and Chrome.
+- Fix (`src/lib/audio/transcode.ts`): `aacSpecificConfig` reduces either shape to the bare
+  config before the muxer sees it (null, so the muxer's own config from rate and channels, for
+  anything else). `encodeAacM4a` also decodes what it wrote and throws if that fails, so the
+  existing ladders fall back (WAV, or the take as recorded) and no undecodable AAC is published.
+- Who met it: Safari records AAC/MP4 and publishes it as recorded, so only a take Safari
+  re-encodes was affected: one changed by "Evening out each voice", or a non-AAC draft
+  published from Safari.
+- `tests/aac-description.spec.ts` (new, registered): the two shapes Node-side, and in the
+  Studio an encoder standing in for WebKit's (real AAC frames, WebKit's own description bytes).
+  The real-WebKit proof is still the P5 gate on a Mac.
