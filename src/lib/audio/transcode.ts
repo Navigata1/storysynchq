@@ -9,8 +9,11 @@
 // Normalization ladder, all client-side (a child's voice never transits a
 // server just to be transcoded):
 //   1. Already AAC/MP4 (Safari recordings) → passthrough
-//   2. WebCodecs AudioEncoder supports AAC (Chromium) → decode + re-encode,
-//      mux to M4A with mp4-muxer
+//   2. WebCodecs AudioEncoder supports AAC (Chromium, Safari) → decode +
+//      re-encode, mux to M4A with mp4-muxer. The encoder's description is
+//      reduced to the bare AudioSpecificConfig first (Safari hands back a whole
+//      ES_Descriptor), and the file written must decode here or this step
+//      counts as failed
 //   3. Otherwise → decode + write 16 kHz mono WAV (universal, larger)
 //
 // With `{ level: true }` (the Studio's "Evening out each voice", T17) each
@@ -89,6 +92,70 @@ export async function recordedAsAac(blob: Blob, mimeType?: string): Promise<bool
   return !hasFourcc(head, "Opus") && !hasFourcc(head, "dOps");
 }
 
+/** One MPEG-4 descriptor header at `pos`: its tag, and where its body starts and ends. */
+function readDescriptor(bytes: Uint8Array, pos: number): { tag: number; start: number; end: number } | null {
+  if (pos >= bytes.length) return null;
+  const tag = bytes[pos++];
+  let size = 0;
+  for (let n = 0; n < 4; n++) {
+    if (pos >= bytes.length) return null;
+    const b = bytes[pos++];
+    size = (size << 7) | (b & 0x7f);
+    if (!(b & 0x80)) break;
+  }
+  return { tag, start: pos, end: Math.min(bytes.length, pos + size) };
+}
+
+/** Whether `asc` starts like an AudioSpecificConfig: a real object type and a real sample rate. */
+function looksLikeAsc(asc: Uint8Array): boolean {
+  if (asc.length < 2) return false;
+  const objectType = asc[0] >> 3;
+  const frequencyIndex = ((asc[0] & 0x07) << 1) | (asc[1] >> 7);
+  return objectType !== 0 && frequencyIndex !== 13 && frequencyIndex !== 14;
+}
+
+/**
+ * The AudioSpecificConfig an MP4 `esds` box needs, from the `description` an AAC encoder hands
+ * back with its first chunk. WebCodecs says that description is the bare AudioSpecificConfig
+ * (two bytes for AAC-LC), and Chromium gives that. WebKit (Safari) gives the whole MPEG-4
+ * ES_Descriptor with the config inside it (tag 3 > tag 4 > tag 5); written into `esds` as it
+ * is, the descriptor ends up nested in a second one and no browser can decode the file. So:
+ * a bare config is returned as it is, a descriptor gives up the config inside it, and
+ * anything else returns null (the muxer then writes a config from the rate and channels).
+ */
+export function aacSpecificConfig(description: AllowSharedBufferSource | null | undefined): Uint8Array | null {
+  if (!description) return null;
+  const bytes = ArrayBuffer.isView(description)
+    ? new Uint8Array(description.buffer, description.byteOffset, description.byteLength)
+    : new Uint8Array(description);
+  // An AudioSpecificConfig never starts 0x03 (that would be object type 0), so the tag is unambiguous.
+  if (bytes[0] !== 0x03) return looksLikeAsc(bytes) ? bytes.slice() : null;
+
+  const es = readDescriptor(bytes, 0);
+  if (!es || es.start + 3 > es.end) return null;
+  const flags = bytes[es.start + 2];
+  let pos = es.start + 3; // ES_ID (2), flags (1)
+  if (flags & 0x80) pos += 2; // dependsOn_ES_ID
+  if (flags & 0x40) pos += 1 + (bytes[pos] ?? 0); // URL
+  if (flags & 0x20) pos += 2; // OCR_ES_ID
+  const decoderConfig = readDescriptor(bytes, pos);
+  if (!decoderConfig || decoderConfig.tag !== 0x04) return null;
+  // objectTypeIndication (1), streamType (1), bufferSize (3), maxBitrate (4), avgBitrate (4)
+  const specific = readDescriptor(bytes, decoderConfig.start + 13);
+  if (!specific || specific.tag !== 0x05) return null;
+  const asc = bytes.slice(specific.start, specific.end);
+  return looksLikeAsc(asc) ? asc : null;
+}
+
+/** The encoder's chunk metadata with its description made the bare config mp4-muxer expects. */
+function metaForMuxer(meta: EncodedAudioChunkMetadata | undefined): EncodedAudioChunkMetadata | undefined {
+  const config = meta?.decoderConfig;
+  if (!config || !("description" in config)) return meta;
+  const { description, ...rest } = config;
+  const asc = aacSpecificConfig(description);
+  return { ...meta, decoderConfig: asc ? { ...rest, description: asc } : rest };
+}
+
 async function aacEncoderSupported(): Promise<boolean> {
   if (typeof AudioEncoder === "undefined") return false;
   try {
@@ -129,7 +196,7 @@ async function encodeAacM4a(pcm: Float32Array): Promise<Blob> {
 
   let encoderError: Error | null = null;
   const encoder = new AudioEncoder({
-    output: (chunk, meta) => muxer.addAudioChunk(chunk, meta),
+    output: (chunk, meta) => muxer.addAudioChunk(chunk, metaForMuxer(meta)),
     error: (e) => {
       encoderError = e instanceof Error ? e : new Error(String(e));
     },
@@ -160,7 +227,12 @@ async function encodeAacM4a(pcm: Float32Array): Promise<Blob> {
   encoder.close();
   if (encoderError) throw encoderError;
   muxer.finalize();
-  return new Blob([muxer.target.buffer], { type: "audio/mp4" });
+  const m4a = muxer.target.buffer;
+  // Never hand back a file that will not play: what was just written must decode here, or the
+  // caller falls back (WAV, or the take as recorded). A child's voice is not published broken.
+  const decoded = await new OfflineAudioContext(1, 1, AAC_SAMPLE_RATE).decodeAudioData(m4a.slice(0));
+  if (!(decoded.duration > 0)) throw new Error("The AAC that was written holds no sound.");
+  return new Blob([m4a], { type: "audio/mp4" });
 }
 
 function encodeWav(pcm: Float32Array, sampleRate: number): Blob {
