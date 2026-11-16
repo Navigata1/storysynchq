@@ -18,7 +18,10 @@ permissions:
 jobs:
   verify:
     name: verify
-    runs-on: ubuntu-latest
+    # Pinned: on 2026-11-16 `ubuntu-latest` became Ubuntu 26.04, which the pinned Playwright
+    # (1.58) has no Chromium build for ("does not support chromium on ubuntu26.04-x64").
+    # Move this together with a Playwright that supports the newer image.
+    runs-on: ubuntu-24.04
     # 1340 Playwright tests ran in ~17 min on the runner (Oct 2026); with install,
     # build and browser setup the old 30-minute cap cut a green run short.
     timeout-minutes: 45

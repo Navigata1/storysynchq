@@ -384,3 +384,17 @@ tests for it, which pin:
 - for a kept tape, the reason.
 
 No existing assertion changes. `ops/mission/contract.md` changes by this appended section.
+
+### A17 · 2026-11-16 · CI's runner is pinned to the image the pinned Playwright supports
+
+`.github/workflows/ci.yml` changes one line: `verify` runs on `ubuntu-24.04`, not
+`ubuntu-latest`. On 2026-11-16 GitHub's `ubuntu-latest` resolved to Ubuntu 26.04 (image
+20261111.196), and the repo's pinned Playwright (1.58.2) refuses to install Chromium there
+("Playwright does not support chromium on ubuntu26.04-x64"), so `verify` failed at "Install
+Chromium" before any test ran (PR #13, run 43959224447; main's last run, 2026-11-05, was on the
+older image and green). No step, check or judge changes; the suite runs as it did on 2026-11-05.
+`mission-guard.yml` installs no browser and stays on `ubuntu-latest`.
+
+The same PR registers `tests/aac-description.spec.ts`, a new judge for the WebKit AAC
+description fix (agent_docs/decisions.md, 2026-11-16). No existing assertion changes.
+`ops/mission/contract.md` changes by this appended section.

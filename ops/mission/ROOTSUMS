@@ -1,4 +1,4 @@
-7e31158e52f88ddb097037001a0c3348479958d998da7585149973ce78724ac7  .github/workflows/ci.yml
+fe27f59d9f64e5e07cc76874f7d7ddaeb4eb21b5418b71ff57172a6b4f10ec0e  .github/workflows/ci.yml
 d093f639f61a87a15984757eda9a737b429090da0b0cf28cef7219dc11856906  .github/workflows/mission-guard.yml
 65e228bc0f9a64b898b2949000eca8eb3752e6aa59d8f17c55823381f8712006  playwright.config.ts
 5a12b22dd5a7c460cd14f285fe82fea3fc74302fa06096a841588a38f4b3d3a7  protocol/a2/scripts/sums.py
